@@ -1,7 +1,7 @@
 import type { Exam, Submission, QuickScanResult, GradeResult } from './types';
 
 // Detect whether we are running in local Vite development server
-const API_BASE = window.location.port === '5173' ? 'http://localhost:8000' : '';
+const API_BASE = import.meta.env.VITE_API_BASE ?? '';
 
 export async function loginUser(email: string, password: string): Promise<{ id: string; name: string; email: string; role: string; programme?: string | null; department?: string | null }> {
   const response = await fetch(`${API_BASE}/api/auth/login`, {

@@ -19,7 +19,7 @@ import {
   UserCheck,
   ShieldCheck,
   LogOut,
-  LogIn,
+
 } from "lucide-react";
 import confetti from "canvas-confetti";
 import type {
@@ -432,24 +432,24 @@ export default function App() {
         permissions:
           backendUser.role === "dean"
             ? [
-                "Manage students",
-                "Manage teachers",
-                "Monitor examinations",
-                "View reports",
-              ]
+              "Manage students",
+              "Manage teachers",
+              "Monitor examinations",
+              "View reports",
+            ]
             : backendUser.role === "programme-head"
               ? [
-                  "View programme analytics",
-                  "Monitor students",
-                  "Review examinations",
-                ]
+                "View programme analytics",
+                "Monitor students",
+                "Review examinations",
+              ]
               : backendUser.role === "teacher"
                 ? [
-                    "Create examinations",
-                    "Upload answer keys",
-                    "Grade sheets",
-                    "Publish results",
-                  ]
+                  "Create examinations",
+                  "Upload answer keys",
+                  "Grade sheets",
+                  "Publish results",
+                ]
                 : ["View exams", "Review results", "See feedback"],
       };
 
@@ -480,11 +480,6 @@ export default function App() {
     );
   };
 
-  const handleReturnToLogin = () => {
-    resetAuthView(
-      "Returned to login. Choose a role to continue exploring the experience.",
-    );
-  };
 
   const activeExam = exams.find((e) => e.id === selectedExamId);
 
@@ -671,20 +666,6 @@ export default function App() {
               />
             </div>
 
-            <div className="form-group">
-              <label className="form-label">Select Role</label>
-              <select
-                className="form-input"
-                value={selectedAuthUserId}
-                onChange={(event) => setSelectedAuthUserId(event.target.value)}
-              >
-                {mockUsers.map((user) => (
-                  <option key={user.id} value={user.id}>
-                    {user.name} • {user.role.replace("-", " ")}
-                  </option>
-                ))}
-              </select>
-            </div>
 
             {loginError && (
               <div
@@ -843,14 +824,7 @@ export default function App() {
 
         {currentUser && (
           <div style={{ display: "grid", gap: "0.6rem", marginTop: "1rem" }}>
-            <button
-              className="btn btn-secondary"
-              style={{ width: "100%", justifyContent: "center" }}
-              onClick={handleReturnToLogin}
-            >
-              <LogIn size={16} style={{ marginRight: "0.4rem" }} />
-              Back to Login
-            </button>
+
             <button
               className="btn btn-danger"
               style={{ width: "100%", justifyContent: "center" }}
@@ -1756,13 +1730,13 @@ export default function App() {
                                   {["A", "B", "C", "D", "E"].map((opt) => (
                                     <span
                                       key={opt}
-                                      className={`bubble-btn ${detectedVal === opt ? "active" : ""}`}
-                                      style={{
-                                        width: "26px",
-                                        height: "26px",
-                                        fontSize: "0.75rem",
-                                        pointerEvents: "none",
-                                      }}
+                                      className={`bubble-btn ${detectedVal === null
+                                          ? "empty"
+                                          : detectedVal === opt
+                                            ? "active"
+                                            : ""
+                                        }`}
+                                      style={{ pointerEvents: "none" }}
                                     >
                                       {opt}
                                     </span>
@@ -1789,13 +1763,13 @@ export default function App() {
                                   {["A", "B", "C", "D", "E"].map((opt) => (
                                     <span
                                       key={opt}
-                                      className={`bubble-btn ${detectedVal === opt ? "active" : ""}`}
-                                      style={{
-                                        width: "26px",
-                                        height: "26px",
-                                        fontSize: "0.75rem",
-                                        pointerEvents: "none",
-                                      }}
+                                      className={`bubble-btn ${detectedVal === null
+                                          ? "empty"
+                                          : detectedVal === opt
+                                            ? "active"
+                                            : ""
+                                        }`}
+                                      style={{ pointerEvents: "none" }}
                                     >
                                       {opt}
                                     </span>
@@ -2330,19 +2304,44 @@ export default function App() {
                         className="card"
                         style={{ border: "1px solid var(--border)" }}
                       >
-                        <h4
+                        <div
                           style={{
                             display: "flex",
                             justifyContent: "space-between",
+                            alignItems: "flex-start",
+                            gap: "1rem",
                             marginBottom: "1rem",
+                            flexWrap: "wrap",
                           }}
                         >
-                          Latest Grade Result
+                          <div>
+                            <h4 style={{ marginBottom: "0.3rem" }}>Latest Grade Result</h4>
+                            <div
+                              style={{
+                                fontSize: "0.82rem",
+                                color: "var(--text-muted)",
+                                display: "flex",
+                                alignItems: "center",
+                                gap: "0.4rem",
+                              }}
+                            >
+                              <span>Student ID:</span>
+                              <strong
+                                style={{
+                                  color: "var(--srcb-gold-light)",
+                                  fontWeight: 700,
+                                  letterSpacing: "0.03em",
+                                }}
+                              >
+                                {latestGradeResult.student_id || "—"}
+                              </strong>
+                            </div>
+                          </div>
                           <StatusBadge
                             score={latestGradeResult.score}
                             totalQuestions={latestGradeResult.total_questions}
                           />
-                        </h4>
+                        </div>
 
                         <div className="grade-layout">
                           <div
@@ -2393,7 +2392,12 @@ export default function App() {
                                     <div className="bubble-options">
                                       {["A", "B", "C", "D", "E"].map((opt) => {
                                         let btnClass = "";
-                                        if (opt === correctAns) {
+                                        if (isAmbiguous) {
+                                          // Amber on the student's filled bubble
+                                          if (selected === opt) btnClass = "ambiguous";
+                                        } else if (isEmpty) {
+                                          btnClass = "empty";
+                                        } else if (opt === correctAns) {
                                           btnClass = "correct";
                                         } else if (selected === opt) {
                                           btnClass = "incorrect";
@@ -2402,12 +2406,7 @@ export default function App() {
                                           <span
                                             key={opt}
                                             className={`bubble-btn ${btnClass}`}
-                                            style={{
-                                              width: "22px",
-                                              height: "22px",
-                                              fontSize: "0.7rem",
-                                              pointerEvents: "none",
-                                            }}
+                                            style={{ pointerEvents: "none" }}
                                           >
                                             {opt}
                                           </span>
@@ -2416,14 +2415,21 @@ export default function App() {
                                       <span
                                         style={{
                                           fontSize: "0.75rem",
-                                          color: "var(--text-muted)",
+                                          color: isAmbiguous
+                                            ? "var(--srcb-gold-light)"
+                                            : isEmpty
+                                              ? "var(--text-muted)"
+                                              : selected === correctAns
+                                                ? "var(--success)"
+                                                : "var(--error)",
                                           marginLeft: "0.5rem",
+                                          fontWeight: 600,
                                         }}
                                       >
                                         {isEmpty
-                                          ? "(Empty)"
+                                          ? "— No Mark"
                                           : isAmbiguous
-                                            ? "(Ambiguous)"
+                                            ? "⚠ Ambiguous"
                                             : selected === correctAns
                                               ? "✓ Correct"
                                               : `✗ Marked ${selected}`}
@@ -2881,16 +2887,27 @@ export default function App() {
 
             <div className="card">
               {activeExam ? (
-                <ItemAnalysisTable
-                  examName={activeExam.name}
-                  answerKey={activeExam.answer_key}
-                  submissions={
-                    submissions.filter((s) => s.exam_id === activeExam.id)
-                      .length > 0
-                      ? submissions.filter((s) => s.exam_id === activeExam.id)
-                      : mockSubmissions
-                  }
-                />
+                <>
+                  {submissions.filter((s) => s.exam_id === activeExam.id).length === 0 && (
+                    <div className="alert-banner warning" style={{ marginBottom: "1.25rem" }}>
+                      <AlertTriangle size={16} style={{ flexShrink: 0, marginTop: "2px" }} />
+                      <span>
+                        <strong>No real submissions found</strong> for this exam — the table below uses{" "}
+                        <strong>sample demo data</strong> for illustration purposes. Grade actual student OMR sheets first to generate a real Item Analysis report.
+                      </span>
+                    </div>
+                  )}
+                  <ItemAnalysisTable
+                    examName={activeExam.name}
+                    answerKey={activeExam.answer_key}
+                    submissions={
+                      submissions.filter((s) => s.exam_id === activeExam.id)
+                        .length > 0
+                        ? submissions.filter((s) => s.exam_id === activeExam.id)
+                        : mockSubmissions
+                    }
+                  />
+                </>
               ) : (
                 <div
                   style={{

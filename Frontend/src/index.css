@@ -587,3 +587,322 @@ h1, h2, h3, h4, h5, h6, .font-heading {
   justify-content: space-between;
   align-items: center;
 }
+
+/* ================================================================
+   PAGE LAYOUT COMPONENTS
+   ================================================================ */
+
+/* Standard page header row (title + actions) */
+.header-container {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-bottom: 1.5rem;
+}
+
+/* Two-column grid: overlay image | parsed data / answer check */
+.grade-layout {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+  align-items: start;
+}
+
+@media (max-width: 900px) {
+  .grade-layout { grid-template-columns: 1fr; }
+}
+
+/* Two-column grid: key scan controls | interactive bubble grid */
+.exam-layout {
+  display: grid;
+  grid-template-columns: 1fr 1.6fr;
+  gap: 1.5rem;
+  margin: 1rem 0 1.5rem;
+}
+
+@media (max-width: 900px) {
+  .exam-layout { grid-template-columns: 1fr; }
+}
+
+/* ================================================================
+   FORM CONTROLS
+   ================================================================ */
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.form-label {
+  font-size: 0.84rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  letter-spacing: 0.01em;
+}
+
+.form-input {
+  width: 100%;
+  padding: 0.65rem 0.9rem;
+  background: rgba(8, 17, 32, 0.8);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 0.9rem;
+  outline: none;
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+  appearance: none;
+  -webkit-appearance: none;
+}
+
+.form-input:focus {
+  border-color: var(--srcb-gold-accent);
+  box-shadow: 0 0 0 3px var(--srcb-gold-glow);
+}
+
+.form-input::placeholder {
+  color: var(--text-muted);
+}
+
+/* Select arrow icon */
+select.form-input {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='%2394a3b8'%3E%3Cpath fill-rule='evenodd' d='M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z' clip-rule='evenodd'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.75rem center;
+  background-size: 1.1rem;
+  padding-right: 2.25rem;
+}
+
+/* ================================================================
+   IMAGE PREVIEW
+   ================================================================ */
+
+.image-preview-container {
+  width: 100%;
+  border-radius: var(--radius-md);
+  background: rgba(6, 11, 20, 0.7);
+  border: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.image-preview-container img {
+  width: 100%;
+  max-height: 480px;
+  object-fit: contain;
+  display: block;
+}
+
+/* ================================================================
+   SCROLLABLE CONTAINERS
+   ================================================================ */
+
+.bubble-sheet-card {
+  overflow-y: auto;
+  max-height: 420px;
+  padding-right: 0.25rem;
+  scrollbar-width: thin;
+}
+
+.results-scrollable {
+  overflow-y: auto;
+  max-height: 420px;
+  padding-right: 0.25rem;
+  scrollbar-width: thin;
+}
+
+/* ================================================================
+   BUBBLE SHEET ANSWER GRID
+   ================================================================ */
+
+/* Single question row */
+.bubble-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.28rem 0.5rem;
+  border-radius: 6px;
+  transition: background var(--transition-fast);
+}
+
+.bubble-row:hover {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+/* Question number label */
+.bubble-num {
+  font-size: 0.76rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  min-width: 22px;
+  text-align: right;
+  flex-shrink: 0;
+}
+
+/* Flex container for A–E option buttons */
+.bubble-options {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  flex-wrap: nowrap;
+}
+
+/* ---- Base bubble circle ---- */
+.bubble-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  font-size: 0.72rem;
+  font-weight: 700;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  border: 1.5px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.04);
+  color: rgba(255, 255, 255, 0.25);
+  cursor: default;
+  user-select: none;
+  transition: all var(--transition-fast);
+  flex-shrink: 0;
+}
+
+/* Detected / selected in Quick Scan */
+.bubble-btn.active {
+  background: rgba(16, 185, 129, 0.18);
+  border-color: #10b981;
+  color: #10b981;
+  box-shadow: 0 0 8px rgba(16, 185, 129, 0.3);
+}
+
+/* Correct answer overlay */
+.bubble-btn.correct {
+  background: rgba(16, 185, 129, 0.18);
+  border-color: #10b981;
+  color: #10b981;
+  box-shadow: 0 0 8px rgba(16, 185, 129, 0.25);
+}
+
+/* Student's incorrectly selected answer */
+.bubble-btn.incorrect {
+  background: rgba(244, 63, 94, 0.18);
+  border-color: #f43f5e;
+  color: #f43f5e;
+  box-shadow: 0 0 8px rgba(244, 63, 94, 0.25);
+}
+
+/* Multi-filled / ambiguous mark */
+.bubble-btn.ambiguous {
+  background: rgba(245, 158, 11, 0.18);
+  border-color: var(--srcb-gold-accent);
+  color: var(--srcb-gold-light);
+  box-shadow: 0 0 8px rgba(245, 158, 11, 0.25);
+}
+
+/* Unanswered / no mark detected */
+.bubble-btn.empty {
+  background: rgba(255, 255, 255, 0.01);
+  border-color: rgba(255, 255, 255, 0.05);
+  color: rgba(255, 255, 255, 0.1);
+}
+
+/* ---- Clickable bubble (exam key builder) ---- */
+button.bubble-btn {
+  cursor: pointer;
+}
+
+button.bubble-btn:hover:not(.active) {
+  border-color: rgba(245, 158, 11, 0.5);
+  color: var(--srcb-gold-light);
+  background: rgba(245, 158, 11, 0.1);
+  transform: scale(1.08);
+}
+
+/* Override active state for clickable exam-key buttons */
+button.bubble-btn.active {
+  background: var(--srcb-gold-primary);
+  border-color: var(--srcb-gold-accent);
+  color: #0b1329;
+  box-shadow: 0 0 10px rgba(245, 158, 11, 0.4);
+}
+
+/* ================================================================
+   EMPTY STATE
+   ================================================================ */
+
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 3rem 2rem;
+  color: var(--text-muted);
+  text-align: center;
+  gap: 0.75rem;
+  font-size: 0.9rem;
+}
+
+/* ================================================================
+   ALERT BANNERS
+   ================================================================ */
+
+.alert-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 0.9rem 1.1rem;
+  border-radius: var(--radius-md);
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
+.alert-banner.warning {
+  background: rgba(245, 158, 11, 0.1);
+  border: 1px solid rgba(245, 158, 11, 0.3);
+  color: var(--srcb-gold-light);
+}
+
+.alert-banner.info {
+  background: rgba(59, 130, 246, 0.1);
+  border: 1px solid rgba(59, 130, 246, 0.3);
+  color: #93c5fd;
+}
+
+.alert-banner.error {
+  background: rgba(244, 63, 94, 0.1);
+  border: 1px solid rgba(244, 63, 94, 0.3);
+  color: #fda4af;
+}
+
+.alert-banner.success {
+  background: rgba(16, 185, 129, 0.1);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  color: #6ee7b7;
+}
+
+/* ================================================================
+   TEXT COLOR UTILITIES
+   ================================================================ */
+
+.text-primary   { color: var(--srcb-blue-light); }
+.text-secondary { color: var(--text-secondary); }
+.text-muted     { color: var(--text-muted); }
+.text-success   { color: var(--success); }
+.text-warning   { color: var(--warning); }
+.text-error     { color: var(--error); }
+.text-gold      { color: var(--srcb-gold-accent); }
+
+/* ================================================================
+   BUTTON VARIANT — SMALL
+   ================================================================ */
+
+.btn-sm {
+  padding: 0.35rem 0.7rem;
+  font-size: 0.8rem;
+  border-radius: var(--radius-sm);
+}
