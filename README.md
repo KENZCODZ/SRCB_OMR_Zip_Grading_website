@@ -2,9 +2,13 @@
 
 cd "omr web/omr_engine"
 run this command:
+
 python -3 -m venv .venv
+
 .venv\Scripts\Activate.ps1
+
 pip install -r requirements.txt
+
 python main.py
 
 # → http://localhost:8000
@@ -15,6 +19,8 @@ python main.py
 
 cd "omr web/Frontend"
 run this command:
+npm install 
+
 npm run dev
 
 # → http://localhost:5173 (auto-proxies API calls to :8000)
