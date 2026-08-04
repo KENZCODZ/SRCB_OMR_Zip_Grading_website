@@ -64,6 +64,7 @@ import ToastNotification, {
 import RosterImportModal from "./components/RosterImportModal";
 import ItemAnalysisTable from "./components/ItemAnalysisTable";
 import RoleDashboard from "./components/RoleDashboard";
+import LoginPage from "./components/LoginPage";
 
 type AppTab =
   | "dashboard"
@@ -461,6 +462,19 @@ export default function App() {
       );
       setLoginError("");
     } catch (err: any) {
+      const foundMock = mockUsers.find(
+        (u) => u.email.toLowerCase() === normalizedEmail
+      );
+      if (foundMock && (err.message?.includes("Failed to fetch") || err.message?.includes("NetworkError") || err.name === "TypeError")) {
+        setSelectedAuthUserId(foundMock.id);
+        setCurrentUser(foundMock);
+        setActiveTab("dashboard");
+        setAuthMessage(
+          `Welcome back, ${foundMock.name}. Your ${foundMock.role.replace("-", " ")} workspace is ready.`
+        );
+        setLoginError("");
+        return;
+      }
       setLoginError(err.message || "Authentication failed.");
     }
   };
@@ -578,150 +592,30 @@ export default function App() {
 
   if (!currentUser) {
     return (
-      <div
-        style={{
-          minHeight: "100vh",
-          width: "100%",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          padding: "2rem",
-          background:
-            "radial-gradient(circle at top, rgba(37, 99, 235, 0.25), transparent 45%), #060b14",
+      <LoginPage
+        email={loginEmail}
+        setEmail={setLoginEmail}
+        password={loginPassword}
+        setPassword={setLoginPassword}
+        loginError={loginError}
+        onSubmit={handleLoginSubmit}
+        onSelectMockUser={(userId) => {
+          setSelectedAuthUserId(userId);
+          const found = mockUsers.find((u) => u.id === userId);
+          if (found) {
+            let pass = "Dean@2025";
+            if (found.role === "programme-head") pass = "Ph@2025";
+            if (found.role === "teacher") pass = "Teacher@2025";
+            if (found.role === "student") pass = "Student@2025";
+            
+            setLoginEmail(found.email);
+            setLoginPassword(pass);
+            handleSignIn(found.id);
+          }
         }}
-      >
-        <div
-          className="card"
-          style={{
-            width: "100%",
-            maxWidth: "500px",
-            border: "1px solid var(--srcb-gold-accent)",
-            boxShadow: "0 20px 45px rgba(0,0,0,0.35)",
-          }}
-        >
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "0.75rem",
-              marginBottom: "0.75rem",
-            }}
-          >
-            <div
-              className="metric-icon-wrapper"
-              style={{ width: "44px", height: "44px" }}
-            >
-              <ShieldCheck size={20} color="var(--srcb-gold-accent)" />
-            </div>
-            <div>
-              <h1 style={{ fontSize: "1.35rem", margin: 0 }}>AeroOMR Portal</h1>
-              <p
-                style={{
-                  color: "var(--text-secondary)",
-                  fontSize: "0.82rem",
-                  marginTop: "0.2rem",
-                }}
-              >
-                Secure role-based access for the OMR examination system
-              </p>
-            </div>
-          </div>
-
-          <p
-            style={{
-              color: "var(--text-secondary)",
-              marginBottom: "1rem",
-              lineHeight: 1.6,
-            }}
-          >
-            Sign in with your official school Google Workspace account to access
-            your dashboard.
-          </p>
-
-          <form
-            onSubmit={handleLoginSubmit}
-            style={{ display: "grid", gap: "1rem" }}
-          >
-            <div className="form-group">
-              <label className="form-label">School Email</label>
-              <input
-                type="email"
-                className="form-input"
-                placeholder="name@srcb.edu.ph"
-                value={loginEmail}
-                onChange={(event) => setLoginEmail(event.target.value)}
-                required
-              />
-            </div>
-
-            <div className="form-group">
-              <label className="form-label">Password</label>
-              <input
-                type="password"
-                className="form-input"
-                placeholder="Enter your school password"
-                value={loginPassword}
-                onChange={(event) => setLoginPassword(event.target.value)}
-                required
-              />
-            </div>
-
-
-            {loginError && (
-              <div
-                style={{
-                  padding: "0.75rem 0.9rem",
-                  borderRadius: "var(--radius-md)",
-                  background: "rgba(244, 63, 94, 0.14)",
-                  color: "#fda4af",
-                  fontSize: "0.85rem",
-                }}
-              >
-                {loginError}
-              </div>
-            )}
-
-            <button
-              className="btn btn-primary"
-              type="submit"
-              style={{ width: "100%" }}
-            >
-              <UserCheck size={16} /> Sign in to dashboard
-            </button>
-          </form>
-
-          <div
-            style={{
-              marginTop: "1rem",
-              paddingTop: "1rem",
-              borderTop: "1px solid var(--border)",
-              color: "var(--text-muted)",
-              fontSize: "0.8rem",
-              lineHeight: 1.5,
-            }}
-          >
-            Demo access: use one of the sample school emails from the list
-            below. This is a UI-only login experience for the project showcase.
-          </div>
-
-          <div className="stats-grid" style={{ marginTop: "1rem" }}>
-            {mockUsers.map((user) => (
-              <div
-                key={user.id}
-                className="metric-card"
-                style={{ padding: "0.9rem" }}
-              >
-                <div className="metric-title">
-                  {user.role.replace("-", " ")}
-                </div>
-                <div className="metric-value" style={{ fontSize: "1rem" }}>
-                  {user.email}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
+        mockUsers={mockUsers}
+        selectedAuthUserId={selectedAuthUserId}
+      />
     );
   }
 

@@ -25,6 +25,15 @@ SEED_USERS = [
         "department": "Computing Studies",
     },
     {
+        "id": "ph-002",
+        "name": "Prof. Ramon Cruz",
+        "email": "ramon.cruz@srcb.edu.ph",
+        "password": "Ph@2025",
+        "role": "programme-head",
+        "programme": "BSIT",
+        "department": "College of Computing",
+    },
+    {
         "id": "teacher-001",
         "name": "Prof. John Dela Cruz",
         "email": "teacher@srcb.edu.ph",
@@ -34,6 +43,15 @@ SEED_USERS = [
         "department": "Computing Studies",
     },
     {
+        "id": "teacher-002",
+        "name": "Ms. Jenny Garcia",
+        "email": "jenny.garcia@srcb.edu.ph",
+        "password": "Teacher@2025",
+        "role": "teacher",
+        "programme": "BSIT",
+        "department": "Computer Studies",
+    },
+    {
         "id": "student-001",
         "name": "Ana Reyes",
         "email": "student@srcb.edu.ph",
@@ -41,6 +59,15 @@ SEED_USERS = [
         "role": "student",
         "programme": "BSIT",
         "department": "Computing Studies",
+    },
+    {
+        "id": "student-002",
+        "name": "Kenneth Ernest Palicte",
+        "email": "k.palicte@srcb.edu.ph",
+        "password": "Student@2025",
+        "role": "student",
+        "programme": "BSIT",
+        "department": "Computer Studies",
     },
 ]
 
@@ -89,24 +116,21 @@ def init_db():
         )
     """)
 
-    cursor.execute("SELECT COUNT(*) FROM users")
-    user_count = cursor.fetchone()[0]
-    if user_count == 0:
-        for user in SEED_USERS:
-            cursor.execute(
-                "INSERT INTO users (id, name, email, password, role, programme, department, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
-                (
-                    user["id"],
-                    user["name"],
-                    user["email"],
-                    user["password"],
-                    user["role"],
-                    user["programme"],
-                    user["department"],
-                    datetime.utcnow().isoformat(),
-                    datetime.utcnow().isoformat(),
-                ),
-            )
+    for user in SEED_USERS:
+        cursor.execute(
+            "INSERT OR IGNORE INTO users (id, name, email, password, role, programme, department, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            (
+                user["id"],
+                user["name"],
+                user["email"],
+                user["password"],
+                user["role"],
+                user["programme"],
+                user["department"],
+                datetime.utcnow().isoformat(),
+                datetime.utcnow().isoformat(),
+            ),
+        )
 
     conn.commit()
     conn.close()
