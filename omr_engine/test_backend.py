@@ -38,8 +38,8 @@ class BackendAuthTests(unittest.TestCase):
         initial_summary = get_dashboard_summary()
         save_exam("demo-exam", "Demo Exam", {"1": "A"})
         save_submission(
-            submission_id="demo-submission",
-            exam_id="demo-exam",
+            submission_id=str(uuid.uuid4()),
+            exam_id=test_id,
             student_id="student-100",
             score=80,
             total_questions=100,
