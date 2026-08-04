@@ -3,6 +3,7 @@ import numpy as np
 import json
 import os
 import base64
+from image_normalizer import ImageNormalizer
 
 COORDS_PATH = os.path.join(os.path.dirname(__file__), "coordinates.json")
 
@@ -11,10 +12,8 @@ class OMRCornerDetectionError(Exception):
     pass
 
 class OMREngine:
-    def __init__(self):
-        # Coordinates are loaded fresh on each request so recalibration
-        # takes effect without restarting the server.
-        pass
+    def __init__(self, normalizer=None):
+        self.normalizer = normalizer or ImageNormalizer()
 
     def _load_coordinates(self):
         """Load coordinates from disk, raising an error if not calibrated."""
@@ -28,7 +27,10 @@ class OMREngine:
         Finds the 4 outermost black square markers in the image.
         Returns sorted corners: [Top-Left, Top-Right, Bottom-Left, Bottom-Right]
         """
-        gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+        if len(image.shape) == 3:
+            gray = self.normalizer.to_normalized_grayscale(image)
+        else:
+            gray = image
         blurred = cv2.GaussianBlur(gray, (5, 5), 0)
         thresh = cv2.adaptiveThreshold(
             blurred, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY_INV, 11, 2
@@ -155,6 +157,9 @@ class OMREngine:
         """
         # Load coordinates fresh from disk on every call
         coordinates = self._load_coordinates()
+
+        # 0. Image normalization
+        image = self.normalizer.normalize(image)
 
         # 1. Corner detection
         corners = self.detect_corners(image)
@@ -345,6 +350,9 @@ class OMREngine:
         """
         # Load coordinates fresh from disk on every call
         coordinates = self._load_coordinates()
+
+        # 0. Image normalization
+        image = self.normalizer.normalize(image)
 
         # 1. Corner detection
         corners = self.detect_corners(image)

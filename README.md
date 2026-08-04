@@ -2,7 +2,10 @@
 
 cd "omr web/omr_engine"
 run this command:
-.venv\Scripts\python main.py
+python -3 -m venv .venv
+.venv\Scripts\Activate.ps1
+pip install -r requirements.txt
+python main.py
 
 # → http://localhost:8000
 

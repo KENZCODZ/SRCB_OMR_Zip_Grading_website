@@ -4,10 +4,10 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
-    "build": "tsc -b && vite build",
-    "lint": "oxlint",
-    "preview": "vite preview"
+    "dev": "npx vite",
+    "build": "npx tsc -b && npx vite build",
+    "lint": "npx oxlint",
+    "preview": "npx vite preview"
   },
   "dependencies": {
     "canvas-confetti": "^1.9.4",

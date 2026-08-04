@@ -167,7 +167,7 @@ export default function App() {
         setExams(mockExams);
         if (!selectedExamId) setSelectedExamId(mockExams[0].id);
       }
-    } catch (err: any) {
+    } catch (_err: any) {
       addToast("info", "Using fallback mock exams (Backend API offline)");
       setExams(mockExams);
       if (!selectedExamId) setSelectedExamId(mockExams[0].id);
@@ -181,7 +181,7 @@ export default function App() {
     try {
       const data = await fetchSubmissions();
       setSubmissions(data && data.length > 0 ? data : mockSubmissions);
-    } catch (err: any) {
+    } catch (_err: any) {
       addToast("info", "Using fallback mock submissions (Backend API offline)");
       setSubmissions(mockSubmissions);
     } finally {
@@ -193,7 +193,7 @@ export default function App() {
     try {
       const data = await fetchDashboardSummary();
       setDashboardSummary(data);
-    } catch (err: any) {
+    } catch (_err: any) {
       setDashboardSummary({
         total_students: 4,
         total_exams: 0,
