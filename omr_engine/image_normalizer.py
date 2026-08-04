@@ -5,25 +5,21 @@ import numpy as np
 class ImageNormalizer:
     """
     ImageNormalizer standardizes OMR sheet images before processing.
-    Handles scale normalization, noise reduction, illumination/shadow flattening,
-    and adaptive contrast enhancement (CLAHE).
+    Handles scale normalization, noise reduction, smooth illumination flattening,
+    and adaptive contrast stretching without distorting bubble fill ratios.
     """
 
     def __init__(
         self,
         max_dimension: int = 1600,
         enable_illumination_correction: bool = True,
-        enable_clahe: bool = True,
+        enable_contrast_stretch: bool = True,
         enable_denoise: bool = True,
-        clahe_clip_limit: float = 2.0,
-        clahe_tile_grid_size: tuple = (8, 8),
     ):
         self.max_dimension = max_dimension
         self.enable_illumination_correction = enable_illumination_correction
-        self.enable_clahe = enable_clahe
+        self.enable_contrast_stretch = enable_contrast_stretch
         self.enable_denoise = enable_denoise
-        self.clahe_clip_limit = clahe_clip_limit
-        self.clahe_tile_grid_size = clahe_tile_grid_size
 
     def resize_standard(self, image: np.ndarray) -> np.ndarray:
         """
@@ -47,61 +43,54 @@ class ImageNormalizer:
 
     def denoise(self, image: np.ndarray) -> np.ndarray:
         """
-        Applies subtle noise reduction (bilateral filter) to smooth out camera grain
-        without blurring sharp geometric edges of bubbles and alignment markers.
+        Applies subtle bilateral noise reduction to smooth camera sensor grain
+        without smearing sharp edges of alignment boxes or bubbles.
         """
         if image is None or not self.enable_denoise:
             return image
 
-        if len(image.shape) == 3:
-            return cv2.bilateralFilter(image, d=5, sigmaColor=35, sigmaSpace=35)
-        else:
-            return cv2.bilateralFilter(image, d=5, sigmaColor=35, sigmaSpace=35)
+        return cv2.bilateralFilter(image, d=5, sigmaColor=35, sigmaSpace=35)
 
     def correct_illumination(self, gray: np.ndarray) -> np.ndarray:
         """
-        Estimates and eliminates uneven background illumination (shadows, flash falloff)
-        using morphological closing with a large kernel.
+        Smooth illumination flattening using large Gaussian background estimation.
+        Eliminates shadows and gradient falloff without creating blocky artifacts.
         """
         if gray is None or not self.enable_illumination_correction:
             return gray
 
         h, w = gray.shape[:2]
-        # Kernel size relative to image dimension (approx 5% of min dimension, odd number)
-        min_dim = min(h, w)
-        ksize = max(31, int(min_dim * 0.05))
+        # Smooth Gaussian background blur (kernel size ~ 10% of min dimension, odd number)
+        ksize = max(51, int(min(h, w) * 0.10))
         if ksize % 2 == 0:
             ksize += 1
 
-        kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (ksize, ksize))
-        # Morphological closing estimates background intensity pattern
-        background = cv2.morphologyEx(gray, cv2.MORPH_CLOSE, kernel)
+        background = cv2.GaussianBlur(gray, (ksize, ksize), 0)
+        background = np.maximum(background, 1).astype(np.float32)
 
-        # Avoid division by zero
-        background = np.maximum(background, 1)
-
-        # Divide gray by background and scale to 255
-        normalized = np.uint8(np.clip((gray.astype(np.float32) / background.astype(np.float32)) * 255.0, 0, 255))
+        # Divide gray by background and scale to target mean background (240)
+        normalized = np.uint8(np.clip((gray.astype(np.float32) / background) * 240.0, 0, 255))
         return normalized
 
-    def enhance_contrast(self, gray: np.ndarray) -> np.ndarray:
+    def contrast_stretch(self, gray: np.ndarray) -> np.ndarray:
         """
-        Applies Contrast Limited Adaptive Histogram Equalization (CLAHE) to bring out
-        pencil/pen marks and corner alignment boxes in low-contrast captures.
+        Percentile contrast stretching (1st to 99th percentile) to normalize overall brightness
+        and deepen blacks without distorting local tile fill ratios.
         """
-        if gray is None or not self.enable_clahe:
+        if gray is None or not self.enable_contrast_stretch:
             return gray
 
-        clahe = cv2.createCLAHE(
-            clipLimit=self.clahe_clip_limit,
-            tileGridSize=self.clahe_tile_grid_size,
-        )
-        return clahe.apply(gray)
+        p_low, p_high = np.percentile(gray, (1, 99))
+        if p_high <= p_low:
+            return gray
+
+        stretched = np.clip((gray.astype(np.float32) - p_low) * 255.0 / (p_high - p_low), 0, 255)
+        return np.uint8(stretched)
 
     def to_normalized_grayscale(self, image: np.ndarray) -> np.ndarray:
         """
-        Full grayscale pipeline: resize -> denoise -> grayscale -> illumination correction -> CLAHE.
-        Returns single-channel uint8 grayscale image optimal for OMR thresholding and corner finding.
+        Full grayscale normalization pipeline: resize -> denoise -> grayscale -> illumination -> contrast stretch.
+        Returns clean, single-channel uint8 grayscale image.
         """
         if image is None or image.size == 0:
             return image
@@ -115,14 +104,13 @@ class ImageNormalizer:
             gray = denoised.copy()
 
         corrected = self.correct_illumination(gray)
-        enhanced = self.enhance_contrast(corrected)
-        return enhanced
+        stretched = self.contrast_stretch(corrected)
+        return stretched
 
     def normalize(self, image: np.ndarray) -> np.ndarray:
         """
-        Full color image normalization pipeline:
-        Resizes, denoises, and normalizes light intensity/contrast across channels (in LAB color space).
-        Returns normalized BGR 3-channel uint8 image.
+        Full color image normalization pipeline.
+        Normalizes luminance channel in LAB color space and returns BGR image.
         """
         if image is None or image.size == 0:
             return image
@@ -131,17 +119,15 @@ class ImageNormalizer:
         denoised = self.denoise(resized)
 
         if len(denoised.shape) == 2:
-            # Grayscale image supplied; convert to BGR after grayscale normalization
             norm_gray = self.to_normalized_grayscale(denoised)
             return cv2.cvtColor(norm_gray, cv2.COLOR_GRAY2BGR)
 
-        # Process luminance (L) channel in LAB color space to preserve color balance
         lab = cv2.cvtColor(denoised, cv2.COLOR_BGR2LAB)
         l_channel, a_channel, b_channel = cv2.split(lab)
 
         l_corrected = self.correct_illumination(l_channel)
-        l_enhanced = self.enhance_contrast(l_corrected)
+        l_stretched = self.contrast_stretch(l_corrected)
 
-        merged_lab = cv2.merge([l_enhanced, a_channel, b_channel])
+        merged_lab = cv2.merge([l_stretched, a_channel, b_channel])
         normalized_bgr = cv2.cvtColor(merged_lab, cv2.COLOR_LAB2BGR)
         return normalized_bgr

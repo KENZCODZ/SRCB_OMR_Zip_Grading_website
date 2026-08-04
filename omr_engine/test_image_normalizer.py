@@ -12,11 +12,9 @@ class ImageNormalizerTests(unittest.TestCase):
         self.sample_path = os.path.join(os.path.dirname(__file__), "ZipGrade50QuestionV2.png")
 
     def test_resize_standard_large_image(self):
-        # Create a large 2000x3000 synthetic image
         large_img = np.zeros((2000, 3000, 3), dtype=np.uint8)
         resized = self.normalizer.resize_standard(large_img)
         self.assertLessEqual(max(resized.shape[:2]), 800)
-        # Check aspect ratio preservation (3000/2000 = 1.5 -> 800 / 533)
         self.assertEqual(resized.shape[1], 800)
         self.assertEqual(resized.shape[0], 533)
 
@@ -31,12 +29,14 @@ class ImageNormalizerTests(unittest.TestCase):
         corrected = self.normalizer.correct_illumination(gray)
         self.assertEqual(corrected.shape, gray.shape)
         self.assertEqual(corrected.dtype, np.uint8)
+        # After correction, pixel variance should be reduced (flattened)
+        self.assertLess(np.std(corrected), np.std(gray))
 
-    def test_contrast_enhancement(self):
+    def test_contrast_stretch(self):
         gray = np.full((100, 100), 128, dtype=np.uint8)
-        enhanced = self.normalizer.enhance_contrast(gray)
-        self.assertEqual(enhanced.shape, (100, 100))
-        self.assertEqual(enhanced.dtype, np.uint8)
+        stretched = self.normalizer.contrast_stretch(gray)
+        self.assertEqual(stretched.shape, (100, 100))
+        self.assertEqual(stretched.dtype, np.uint8)
 
     def test_to_normalized_grayscale(self):
         bgr = np.random.randint(0, 256, (500, 500, 3), dtype=np.uint8)

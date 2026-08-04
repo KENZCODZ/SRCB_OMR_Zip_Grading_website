@@ -48,7 +48,7 @@ class OMREngine:
             solidity = float(area) / (w * h) if (w * h) > 0 else 0
             
             # Area must be between 0.015% and 1.5% of total image area
-            if (0.8 <= aspect_ratio <= 1.25) and (0.8 <= solidity <= 1.0) and (0.00015 * img_area <= area <= 0.015 * img_area):
+            if (0.70 <= aspect_ratio <= 1.30) and (0.70 <= solidity <= 1.0) and (0.00015 * img_area <= area <= 0.015 * img_area):
                 M = cv2.moments(c)
                 if M["m00"] > 0:
                     cx = int(M["m10"] / M["m00"])
