@@ -71,7 +71,24 @@ export async function fetchExams(): Promise<Exam[]> {
   }
 }
 
-export async function createExam(name: string, answerKey: Record<string, string>): Promise<Exam> {
+export interface ExamPayload {
+  name: string;
+  answer_key: Record<string, string>;
+  exam_type?: string;
+  academic_year?: string;
+  semester?: string;
+  subject?: string;
+  course_code?: string;
+  section?: string;
+  program?: string;
+  instructor_name?: string;
+  num_items?: number;
+  passing_score?: number;
+  instructions?: string;
+  exam_date?: string;
+}
+
+export async function createExam(payload: ExamPayload): Promise<Exam> {
   try {
     const response = await fetch(`${API_BASE}/api/exams`, {
       method: 'POST',
@@ -79,8 +96,20 @@ export async function createExam(name: string, answerKey: Record<string, string>
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        name,
-        answer_key: answerKey,
+        name: payload.name,
+        answer_key: payload.answer_key,
+        exam_type: payload.exam_type ?? null,
+        academic_year: payload.academic_year ?? null,
+        semester: payload.semester ?? null,
+        subject: payload.subject ?? null,
+        course_code: payload.course_code ?? null,
+        section: payload.section ?? null,
+        program: payload.program ?? null,
+        instructor_name: payload.instructor_name ?? null,
+        num_items: payload.num_items ?? 50,
+        passing_score: payload.passing_score ?? null,
+        instructions: payload.instructions ?? null,
+        exam_date: payload.exam_date ?? null,
       }),
     });
     return await handleResponse(response, 'Failed to create exam');
