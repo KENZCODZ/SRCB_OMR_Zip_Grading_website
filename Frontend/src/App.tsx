@@ -181,10 +181,10 @@ export default function App() {
       }
 
       try {
-        const seededExam = await createExam(
-          mockExams[0].name,
-          mockExams[0].answer_key,
-        );
+        const seededExam = await createExam({
+          name: mockExams[0].name,
+          answer_key: mockExams[0].answer_key,
+        });
         setExams([seededExam]);
         setSelectedExamId(seededExam.id);
         addToast(
@@ -310,7 +310,10 @@ export default function App() {
     }
 
     try {
-      await createExam(newExamName, newExamKey);
+      await createExam({
+        name: newExamName,
+        answer_key: newExamKey,
+      });
       addToast("success", `Exam "${newExamName}" created successfully.`);
       setNewExamName("");
       setNewExamKey({});
