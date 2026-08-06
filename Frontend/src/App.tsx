@@ -65,6 +65,7 @@ import RosterImportModal from "./components/RosterImportModal";
 import ItemAnalysisTable from "./components/ItemAnalysisTable";
 import RoleDashboard from "./components/RoleDashboard";
 import LoginPage from "./components/LoginPage";
+import UserGuideModal from "./components/UserGuideModal";
 
 type AppTab =
   | "dashboard"
@@ -94,6 +95,7 @@ export default function App() {
   const [submissions, setSubmissions] = useState<Submission[]>([]);
   const [roster, setRoster] = useState<StudentRosterEntry[]>(mockClassRoster);
   const [isRosterModalOpen, setIsRosterModalOpen] = useState(false);
+  const [isUserGuideOpen, setIsUserGuideOpen] = useState(false);
 
   const [loadingExams, setLoadingExams] = useState(false);
   const [loadingSubmissions, setLoadingSubmissions] = useState(false);
@@ -394,6 +396,7 @@ export default function App() {
     if (!selectedUser) return;
 
     setCurrentUser(selectedUser);
+    setIsUserGuideOpen(false);
     setActiveTab("dashboard");
     setAuthMessage(
       `Welcome back, ${selectedUser.name}. Your ${selectedUser.role.replace("-", " ")} workspace is ready.`,
@@ -456,6 +459,7 @@ export default function App() {
 
       setSelectedAuthUserId(mappedUser.id);
       setCurrentUser(mappedUser);
+      setIsUserGuideOpen(false);
       setActiveTab("dashboard");
       setAuthMessage(
         `Welcome back, ${mappedUser.name}. Your ${mappedUser.role.replace("-", " ")} workspace is ready.`,
@@ -468,6 +472,7 @@ export default function App() {
       if (foundMock && (err.message?.includes("Failed to fetch") || err.message?.includes("NetworkError") || err.name === "TypeError")) {
         setSelectedAuthUserId(foundMock.id);
         setCurrentUser(foundMock);
+        setIsUserGuideOpen(false);
         setActiveTab("dashboard");
         setAuthMessage(
           `Welcome back, ${foundMock.name}. Your ${foundMock.role.replace("-", " ")} workspace is ready.`
@@ -481,6 +486,7 @@ export default function App() {
 
   const resetAuthView = (message: string) => {
     setCurrentUser(null);
+    setIsUserGuideOpen(false);
     setLoginEmail("");
     setLoginPassword("");
     setLoginError("");
@@ -637,6 +643,13 @@ export default function App() {
         }}
       />
 
+      <UserGuideModal
+        isOpen={isUserGuideOpen}
+        onClose={() => setIsUserGuideOpen(false)}
+        initialRole={currentUser?.role ?? "teacher"}
+        onNavigateTab={(tab) => handleTabSelect(tab as AppTab)}
+      />
+
       {/* Sidebar Navigation */}
       <aside className="sidebar">
         <div
@@ -718,6 +731,14 @@ export default function App() {
 
         {currentUser && (
           <div style={{ display: "grid", gap: "0.6rem", marginTop: "1rem" }}>
+            <button
+              className="btn btn-outline"
+              style={{ width: "100%", justifyContent: "center" }}
+              onClick={() => setIsUserGuideOpen(true)}
+            >
+              <BookOpen size={16} style={{ marginRight: "0.4rem" }} />
+              Open User Guide
+            </button>
 
             <button
               className="btn btn-danger"
@@ -740,7 +761,7 @@ export default function App() {
       {/* Main Content View */}
       <main className="main-content">
         {/* SRCB Institutional Header Banner (Displayed across all pages) */}
-        <HeaderBanner />
+        <HeaderBanner onOpenGuide={() => setIsUserGuideOpen(true)} />
 
         {/* DASHBOARD TAB */}
         {activeTab === "dashboard" && (
