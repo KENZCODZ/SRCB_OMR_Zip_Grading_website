@@ -19,7 +19,7 @@ import {
   UserCheck,
   ShieldCheck,
   LogOut,
-  LogIn,
+
 } from "lucide-react";
 import confetti from "canvas-confetti";
 import type {
@@ -64,6 +64,7 @@ import ToastNotification, {
 import RosterImportModal from "./components/RosterImportModal";
 import ItemAnalysisTable from "./components/ItemAnalysisTable";
 import RoleDashboard from "./components/RoleDashboard";
+import LoginPage from "./components/LoginPage";
 
 type AppTab =
   | "dashboard"
@@ -167,7 +168,7 @@ export default function App() {
         setExams(mockExams);
         if (!selectedExamId) setSelectedExamId(mockExams[0].id);
       }
-    } catch (err: any) {
+    } catch (_err: any) {
       addToast("info", "Using fallback mock exams (Backend API offline)");
       setExams(mockExams);
       if (!selectedExamId) setSelectedExamId(mockExams[0].id);
@@ -181,7 +182,7 @@ export default function App() {
     try {
       const data = await fetchSubmissions();
       setSubmissions(data && data.length > 0 ? data : mockSubmissions);
-    } catch (err: any) {
+    } catch (_err: any) {
       addToast("info", "Using fallback mock submissions (Backend API offline)");
       setSubmissions(mockSubmissions);
     } finally {
@@ -193,7 +194,7 @@ export default function App() {
     try {
       const data = await fetchDashboardSummary();
       setDashboardSummary(data);
-    } catch (err: any) {
+    } catch (_err: any) {
       setDashboardSummary({
         total_students: 4,
         total_exams: 0,
@@ -432,24 +433,24 @@ export default function App() {
         permissions:
           backendUser.role === "dean"
             ? [
-                "Manage students",
-                "Manage teachers",
-                "Monitor examinations",
-                "View reports",
-              ]
+              "Manage students",
+              "Manage teachers",
+              "Monitor examinations",
+              "View reports",
+            ]
             : backendUser.role === "programme-head"
               ? [
-                  "View programme analytics",
-                  "Monitor students",
-                  "Review examinations",
-                ]
+                "View programme analytics",
+                "Monitor students",
+                "Review examinations",
+              ]
               : backendUser.role === "teacher"
                 ? [
-                    "Create examinations",
-                    "Upload answer keys",
-                    "Grade sheets",
-                    "Publish results",
-                  ]
+                  "Create examinations",
+                  "Upload answer keys",
+                  "Grade sheets",
+                  "Publish results",
+                ]
                 : ["View exams", "Review results", "See feedback"],
       };
 
@@ -461,6 +462,19 @@ export default function App() {
       );
       setLoginError("");
     } catch (err: any) {
+      const foundMock = mockUsers.find(
+        (u) => u.email.toLowerCase() === normalizedEmail
+      );
+      if (foundMock && (err.message?.includes("Failed to fetch") || err.message?.includes("NetworkError") || err.name === "TypeError")) {
+        setSelectedAuthUserId(foundMock.id);
+        setCurrentUser(foundMock);
+        setActiveTab("dashboard");
+        setAuthMessage(
+          `Welcome back, ${foundMock.name}. Your ${foundMock.role.replace("-", " ")} workspace is ready.`
+        );
+        setLoginError("");
+        return;
+      }
       setLoginError(err.message || "Authentication failed.");
     }
   };
@@ -480,11 +494,6 @@ export default function App() {
     );
   };
 
-  const handleReturnToLogin = () => {
-    resetAuthView(
-      "Returned to login. Choose a role to continue exploring the experience.",
-    );
-  };
 
   const activeExam = exams.find((e) => e.id === selectedExamId);
 
@@ -583,164 +592,30 @@ export default function App() {
 
   if (!currentUser) {
     return (
-      <div
-        style={{
-          minHeight: "100vh",
-          width: "100%",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          padding: "2rem",
-          background:
-            "radial-gradient(circle at top, rgba(37, 99, 235, 0.25), transparent 45%), #060b14",
+      <LoginPage
+        email={loginEmail}
+        setEmail={setLoginEmail}
+        password={loginPassword}
+        setPassword={setLoginPassword}
+        loginError={loginError}
+        onSubmit={handleLoginSubmit}
+        onSelectMockUser={(userId) => {
+          setSelectedAuthUserId(userId);
+          const found = mockUsers.find((u) => u.id === userId);
+          if (found) {
+            let pass = "Dean@2025";
+            if (found.role === "programme-head") pass = "Ph@2025";
+            if (found.role === "teacher") pass = "Teacher@2025";
+            if (found.role === "student") pass = "Student@2025";
+            
+            setLoginEmail(found.email);
+            setLoginPassword(pass);
+            handleSignIn(found.id);
+          }
         }}
-      >
-        <div
-          className="card"
-          style={{
-            width: "100%",
-            maxWidth: "500px",
-            border: "1px solid var(--srcb-gold-accent)",
-            boxShadow: "0 20px 45px rgba(0,0,0,0.35)",
-          }}
-        >
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "0.75rem",
-              marginBottom: "0.75rem",
-            }}
-          >
-            <div
-              className="metric-icon-wrapper"
-              style={{ width: "44px", height: "44px" }}
-            >
-              <ShieldCheck size={20} color="var(--srcb-gold-accent)" />
-            </div>
-            <div>
-              <h1 style={{ fontSize: "1.35rem", margin: 0 }}>AeroOMR Portal</h1>
-              <p
-                style={{
-                  color: "var(--text-secondary)",
-                  fontSize: "0.82rem",
-                  marginTop: "0.2rem",
-                }}
-              >
-                Secure role-based access for the OMR examination system
-              </p>
-            </div>
-          </div>
-
-          <p
-            style={{
-              color: "var(--text-secondary)",
-              marginBottom: "1rem",
-              lineHeight: 1.6,
-            }}
-          >
-            Sign in with your official school Google Workspace account to access
-            your dashboard.
-          </p>
-
-          <form
-            onSubmit={handleLoginSubmit}
-            style={{ display: "grid", gap: "1rem" }}
-          >
-            <div className="form-group">
-              <label className="form-label">School Email</label>
-              <input
-                type="email"
-                className="form-input"
-                placeholder="name@srcb.edu.ph"
-                value={loginEmail}
-                onChange={(event) => setLoginEmail(event.target.value)}
-                required
-              />
-            </div>
-
-            <div className="form-group">
-              <label className="form-label">Password</label>
-              <input
-                type="password"
-                className="form-input"
-                placeholder="Enter your school password"
-                value={loginPassword}
-                onChange={(event) => setLoginPassword(event.target.value)}
-                required
-              />
-            </div>
-
-            <div className="form-group">
-              <label className="form-label">Select Role</label>
-              <select
-                className="form-input"
-                value={selectedAuthUserId}
-                onChange={(event) => setSelectedAuthUserId(event.target.value)}
-              >
-                {mockUsers.map((user) => (
-                  <option key={user.id} value={user.id}>
-                    {user.name} • {user.role.replace("-", " ")}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {loginError && (
-              <div
-                style={{
-                  padding: "0.75rem 0.9rem",
-                  borderRadius: "var(--radius-md)",
-                  background: "rgba(244, 63, 94, 0.14)",
-                  color: "#fda4af",
-                  fontSize: "0.85rem",
-                }}
-              >
-                {loginError}
-              </div>
-            )}
-
-            <button
-              className="btn btn-primary"
-              type="submit"
-              style={{ width: "100%" }}
-            >
-              <UserCheck size={16} /> Sign in to dashboard
-            </button>
-          </form>
-
-          <div
-            style={{
-              marginTop: "1rem",
-              paddingTop: "1rem",
-              borderTop: "1px solid var(--border)",
-              color: "var(--text-muted)",
-              fontSize: "0.8rem",
-              lineHeight: 1.5,
-            }}
-          >
-            Demo access: use one of the sample school emails from the list
-            below. This is a UI-only login experience for the project showcase.
-          </div>
-
-          <div className="stats-grid" style={{ marginTop: "1rem" }}>
-            {mockUsers.map((user) => (
-              <div
-                key={user.id}
-                className="metric-card"
-                style={{ padding: "0.9rem" }}
-              >
-                <div className="metric-title">
-                  {user.role.replace("-", " ")}
-                </div>
-                <div className="metric-value" style={{ fontSize: "1rem" }}>
-                  {user.email}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
+        mockUsers={mockUsers}
+        selectedAuthUserId={selectedAuthUserId}
+      />
     );
   }
 
@@ -843,14 +718,7 @@ export default function App() {
 
         {currentUser && (
           <div style={{ display: "grid", gap: "0.6rem", marginTop: "1rem" }}>
-            <button
-              className="btn btn-secondary"
-              style={{ width: "100%", justifyContent: "center" }}
-              onClick={handleReturnToLogin}
-            >
-              <LogIn size={16} style={{ marginRight: "0.4rem" }} />
-              Back to Login
-            </button>
+
             <button
               className="btn btn-danger"
               style={{ width: "100%", justifyContent: "center" }}
@@ -1756,13 +1624,13 @@ export default function App() {
                                   {["A", "B", "C", "D", "E"].map((opt) => (
                                     <span
                                       key={opt}
-                                      className={`bubble-btn ${detectedVal === opt ? "active" : ""}`}
-                                      style={{
-                                        width: "26px",
-                                        height: "26px",
-                                        fontSize: "0.75rem",
-                                        pointerEvents: "none",
-                                      }}
+                                      className={`bubble-btn ${detectedVal === null
+                                          ? "empty"
+                                          : detectedVal === opt
+                                            ? "active"
+                                            : ""
+                                        }`}
+                                      style={{ pointerEvents: "none" }}
                                     >
                                       {opt}
                                     </span>
@@ -1789,13 +1657,13 @@ export default function App() {
                                   {["A", "B", "C", "D", "E"].map((opt) => (
                                     <span
                                       key={opt}
-                                      className={`bubble-btn ${detectedVal === opt ? "active" : ""}`}
-                                      style={{
-                                        width: "26px",
-                                        height: "26px",
-                                        fontSize: "0.75rem",
-                                        pointerEvents: "none",
-                                      }}
+                                      className={`bubble-btn ${detectedVal === null
+                                          ? "empty"
+                                          : detectedVal === opt
+                                            ? "active"
+                                            : ""
+                                        }`}
+                                      style={{ pointerEvents: "none" }}
                                     >
                                       {opt}
                                     </span>
@@ -2330,19 +2198,44 @@ export default function App() {
                         className="card"
                         style={{ border: "1px solid var(--border)" }}
                       >
-                        <h4
+                        <div
                           style={{
                             display: "flex",
                             justifyContent: "space-between",
+                            alignItems: "flex-start",
+                            gap: "1rem",
                             marginBottom: "1rem",
+                            flexWrap: "wrap",
                           }}
                         >
-                          Latest Grade Result
+                          <div>
+                            <h4 style={{ marginBottom: "0.3rem" }}>Latest Grade Result</h4>
+                            <div
+                              style={{
+                                fontSize: "0.82rem",
+                                color: "var(--text-muted)",
+                                display: "flex",
+                                alignItems: "center",
+                                gap: "0.4rem",
+                              }}
+                            >
+                              <span>Student ID:</span>
+                              <strong
+                                style={{
+                                  color: "var(--srcb-gold-light)",
+                                  fontWeight: 700,
+                                  letterSpacing: "0.03em",
+                                }}
+                              >
+                                {latestGradeResult.student_id || "—"}
+                              </strong>
+                            </div>
+                          </div>
                           <StatusBadge
                             score={latestGradeResult.score}
                             totalQuestions={latestGradeResult.total_questions}
                           />
-                        </h4>
+                        </div>
 
                         <div className="grade-layout">
                           <div
@@ -2393,7 +2286,12 @@ export default function App() {
                                     <div className="bubble-options">
                                       {["A", "B", "C", "D", "E"].map((opt) => {
                                         let btnClass = "";
-                                        if (opt === correctAns) {
+                                        if (isAmbiguous) {
+                                          // Amber on the student's filled bubble
+                                          if (selected === opt) btnClass = "ambiguous";
+                                        } else if (isEmpty) {
+                                          btnClass = "empty";
+                                        } else if (opt === correctAns) {
                                           btnClass = "correct";
                                         } else if (selected === opt) {
                                           btnClass = "incorrect";
@@ -2402,12 +2300,7 @@ export default function App() {
                                           <span
                                             key={opt}
                                             className={`bubble-btn ${btnClass}`}
-                                            style={{
-                                              width: "22px",
-                                              height: "22px",
-                                              fontSize: "0.7rem",
-                                              pointerEvents: "none",
-                                            }}
+                                            style={{ pointerEvents: "none" }}
                                           >
                                             {opt}
                                           </span>
@@ -2416,14 +2309,21 @@ export default function App() {
                                       <span
                                         style={{
                                           fontSize: "0.75rem",
-                                          color: "var(--text-muted)",
+                                          color: isAmbiguous
+                                            ? "var(--srcb-gold-light)"
+                                            : isEmpty
+                                              ? "var(--text-muted)"
+                                              : selected === correctAns
+                                                ? "var(--success)"
+                                                : "var(--error)",
                                           marginLeft: "0.5rem",
+                                          fontWeight: 600,
                                         }}
                                       >
                                         {isEmpty
-                                          ? "(Empty)"
+                                          ? "— No Mark"
                                           : isAmbiguous
-                                            ? "(Ambiguous)"
+                                            ? "⚠ Ambiguous"
                                             : selected === correctAns
                                               ? "✓ Correct"
                                               : `✗ Marked ${selected}`}
@@ -2881,16 +2781,27 @@ export default function App() {
 
             <div className="card">
               {activeExam ? (
-                <ItemAnalysisTable
-                  examName={activeExam.name}
-                  answerKey={activeExam.answer_key}
-                  submissions={
-                    submissions.filter((s) => s.exam_id === activeExam.id)
-                      .length > 0
-                      ? submissions.filter((s) => s.exam_id === activeExam.id)
-                      : mockSubmissions
-                  }
-                />
+                <>
+                  {submissions.filter((s) => s.exam_id === activeExam.id).length === 0 && (
+                    <div className="alert-banner warning" style={{ marginBottom: "1.25rem" }}>
+                      <AlertTriangle size={16} style={{ flexShrink: 0, marginTop: "2px" }} />
+                      <span>
+                        <strong>No real submissions found</strong> for this exam — the table below uses{" "}
+                        <strong>sample demo data</strong> for illustration purposes. Grade actual student OMR sheets first to generate a real Item Analysis report.
+                      </span>
+                    </div>
+                  )}
+                  <ItemAnalysisTable
+                    examName={activeExam.name}
+                    answerKey={activeExam.answer_key}
+                    submissions={
+                      submissions.filter((s) => s.exam_id === activeExam.id)
+                        .length > 0
+                        ? submissions.filter((s) => s.exam_id === activeExam.id)
+                        : mockSubmissions
+                    }
+                  />
+                </>
               ) : (
                 <div
                   style={{
