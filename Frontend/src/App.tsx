@@ -146,9 +146,13 @@ export default function App() {
   );
   const [exportSingleSubmissionId, setExportSingleSubmissionId] =
     useState<string>("");
-  const [exportDbExamTypeFilter, setExportDbExamTypeFilter] = useState<string>("All");
-  const [exportDbSemesterFilter, setExportDbSemesterFilter] = useState<string>("All");
-  const [exportDbGroupBy, setExportDbGroupBy] = useState<"none" | "exam_type">("none");
+  const [exportDbExamTypeFilter, setExportDbExamTypeFilter] =
+    useState<string>("All");
+  const [exportDbSemesterFilter, setExportDbSemesterFilter] =
+    useState<string>("All");
+  const [exportDbGroupBy, setExportDbGroupBy] = useState<"none" | "exam_type">(
+    "none",
+  );
 
   // Toast State
   const [toasts, setToasts] = useState<ToastItem[]>([]);
@@ -278,7 +282,9 @@ export default function App() {
   };
 
   // Handle Exam Submission Creation
-  const handleSaveExamModal = async (examData: Omit<Exam, "id" | "created_at">) => {
+  const handleSaveExamModal = async (
+    examData: Omit<Exam, "id" | "created_at">,
+  ) => {
     try {
       const created = await createExam({
         name: examData.name,
@@ -976,19 +982,23 @@ export default function App() {
                   </>
                 ) : (
                   <>
-                    <button
-                      className="btn btn-secondary"
-                      onClick={() => setIsRosterModalOpen(true)}
-                    >
-                      <FileSpreadsheet size={16} /> Import Roster (
-                      {roster.length})
-                    </button>
-                    <button
-                      className="btn btn-primary"
-                      onClick={handleExportGradeSheet}
-                    >
-                      <Download size={16} /> Export CHED Grade Sheet (.xlsx)
-                    </button>
+                    {currentUser?.role !== "student" && (
+                      <>
+                        <button
+                          className="btn btn-secondary"
+                          onClick={() => setIsRosterModalOpen(true)}
+                        >
+                          <FileSpreadsheet size={16} /> Import Roster (
+                          {roster.length})
+                        </button>
+                        <button
+                          className="btn btn-primary"
+                          onClick={handleExportGradeSheet}
+                        >
+                          <Download size={16} /> Export CHED Grade Sheet (.xlsx)
+                        </button>
+                      </>
+                    )}
                   </>
                 )}
               </div>
@@ -1190,71 +1200,73 @@ export default function App() {
               </div>
 
               {/* Quick Action Panel */}
-              <div
-                className="card"
-                style={{
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: "1rem",
-                }}
-              >
-                <h2 style={{ fontSize: "1.2rem" }}>Academic Tools</h2>
-                <button
-                  className="btn btn-primary"
-                  style={{ width: "100%", justifyContent: "flex-start" }}
-                  onClick={() => setActiveTab("quick-scan")}
-                >
-                  <Sparkles size={18} /> Quick Bubble Reader
-                </button>
-                <button
-                  className="btn btn-secondary"
-                  style={{ width: "100%", justifyContent: "flex-start" }}
-                  onClick={() => setIsRosterModalOpen(true)}
-                >
-                  <UserCheck size={18} /> Match Student Roster
-                </button>
-                <button
-                  className="btn btn-secondary"
-                  style={{ width: "100%", justifyContent: "flex-start" }}
-                  onClick={() => setActiveTab("item-analysis")}
-                >
-                  <BarChart2 size={18} /> Run OBE Item Analysis
-                </button>
-
+              {currentUser?.role !== "student" && (
                 <div
+                  className="card"
                   style={{
-                    marginTop: "auto",
-                    background: "rgba(255, 255, 255, 0.02)",
-                    padding: "1rem",
-                    borderRadius: "var(--radius-md)",
-                    border: "1px solid var(--border)",
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: "1rem",
                   }}
                 >
-                  <h4
+                  <h2 style={{ fontSize: "1.2rem" }}>Academic Tools</h2>
+                  <button
+                    className="btn btn-primary"
+                    style={{ width: "100%", justifyContent: "flex-start" }}
+                    onClick={() => setActiveTab("quick-scan")}
+                  >
+                    <Sparkles size={18} /> Quick Bubble Reader
+                  </button>
+                  <button
+                    className="btn btn-secondary"
+                    style={{ width: "100%", justifyContent: "flex-start" }}
+                    onClick={() => setIsRosterModalOpen(true)}
+                  >
+                    <UserCheck size={18} /> Match Student Roster
+                  </button>
+                  <button
+                    className="btn btn-secondary"
+                    style={{ width: "100%", justifyContent: "flex-start" }}
+                    onClick={() => setActiveTab("item-analysis")}
+                  >
+                    <BarChart2 size={18} /> Run OBE Item Analysis
+                  </button>
+
+                  <div
                     style={{
-                      fontSize: "0.85rem",
-                      color: "var(--text-secondary)",
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "0.25rem",
-                      marginBottom: "0.5rem",
+                      marginTop: "auto",
+                      background: "rgba(255, 255, 255, 0.02)",
+                      padding: "1rem",
+                      borderRadius: "var(--radius-md)",
+                      border: "1px solid var(--border)",
                     }}
                   >
-                    <Info size={14} /> Philippine HEI Grading Standard
-                  </h4>
-                  <p
-                    style={{
-                      fontSize: "0.75rem",
-                      color: "var(--text-muted)",
-                      lineHeight: "1.4",
-                    }}
-                  >
-                    Calculates 50-Base Transmutations automatically:{" "}
-                    <code>Grade = 50 + (Raw / Total * 50)</code> mapped to
-                    official 1.00 - 5.00 numeric scales.
-                  </p>
+                    <h4
+                      style={{
+                        fontSize: "0.85rem",
+                        color: "var(--text-secondary)",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "0.25rem",
+                        marginBottom: "0.5rem",
+                      }}
+                    >
+                      <Info size={14} /> Philippine HEI Grading Standard
+                    </h4>
+                    <p
+                      style={{
+                        fontSize: "0.75rem",
+                        color: "var(--text-muted)",
+                        lineHeight: "1.4",
+                      }}
+                    >
+                      Calculates 50-Base Transmutations automatically:{" "}
+                      <code>Grade = 50 + (Raw / Total * 50)</code> mapped to
+                      official 1.00 - 5.00 numeric scales.
+                    </p>
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
           </div>
         )}
@@ -1884,10 +1896,13 @@ export default function App() {
                     margin: "0.2rem 0 0 0",
                   }}
                 >
-                  Manage complete examination details, answer keys, and grade student sheets.
+                  Manage complete examination details, answer keys, and grade
+                  student sheets.
                 </p>
               </div>
-              <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap" }}>
+              <div
+                style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap" }}
+              >
                 <button
                   className="btn btn-secondary"
                   onClick={handleExportGradeSheet}
@@ -1913,7 +1928,10 @@ export default function App() {
               }}
             >
               {/* Searchable & Filterable Exams Feed */}
-              <div className="card" style={{ display: "flex", flexDirection: "column" }}>
+              <div
+                className="card"
+                style={{ display: "flex", flexDirection: "column" }}
+              >
                 <div style={{ marginBottom: "1rem" }}>
                   <div
                     style={{
@@ -1926,7 +1944,10 @@ export default function App() {
                     <h3 style={{ fontSize: "1.1rem", margin: 0 }}>
                       Examinations Directory
                     </h3>
-                    <span className="badge badge-info" style={{ fontSize: "0.75rem" }}>
+                    <span
+                      className="badge badge-info"
+                      style={{ fontSize: "0.75rem" }}
+                    >
                       {exams.length} Total
                     </span>
                   </div>
@@ -1954,14 +1975,30 @@ export default function App() {
                   </div>
 
                   {/* Filter Selectors */}
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.5rem" }}>
+                  <div
+                    style={{
+                      display: "grid",
+                      gridTemplateColumns: "1fr 1fr",
+                      gap: "0.5rem",
+                    }}
+                  >
                     <div>
-                      <label style={{ fontSize: "0.7rem", color: "var(--text-muted)", display: "block", marginBottom: "2px" }}>
+                      <label
+                        style={{
+                          fontSize: "0.7rem",
+                          color: "var(--text-muted)",
+                          display: "block",
+                          marginBottom: "2px",
+                        }}
+                      >
                         Exam Type:
                       </label>
                       <select
                         className="form-input"
-                        style={{ fontSize: "0.78rem", padding: "0.3rem 0.5rem" }}
+                        style={{
+                          fontSize: "0.78rem",
+                          padding: "0.3rem 0.5rem",
+                        }}
                         value={examTypeFilter}
                         onChange={(e) => setExamTypeFilter(e.target.value)}
                       >
@@ -1974,12 +2011,22 @@ export default function App() {
                     </div>
 
                     <div>
-                      <label style={{ fontSize: "0.7rem", color: "var(--text-muted)", display: "block", marginBottom: "2px" }}>
+                      <label
+                        style={{
+                          fontSize: "0.7rem",
+                          color: "var(--text-muted)",
+                          display: "block",
+                          marginBottom: "2px",
+                        }}
+                      >
                         Semester:
                       </label>
                       <select
                         className="form-input"
-                        style={{ fontSize: "0.78rem", padding: "0.3rem 0.5rem" }}
+                        style={{
+                          fontSize: "0.78rem",
+                          padding: "0.3rem 0.5rem",
+                        }}
                         value={examSemesterFilter}
                         onChange={(e) => setExamSemesterFilter(e.target.value)}
                       >
@@ -1996,65 +2043,77 @@ export default function App() {
                   <div className="spinner-container">
                     <div className="spinner"></div>
                   </div>
-                ) : (() => {
-                  const filtered = exams.filter((ex) => {
-                    const q = examListSearch.toLowerCase().trim();
-                    const matchesSearch =
-                      !q ||
-                      ex.name.toLowerCase().includes(q) ||
-                      (ex.subject && ex.subject.toLowerCase().includes(q)) ||
-                      (ex.course_code && ex.course_code.toLowerCase().includes(q)) ||
-                      (ex.section && ex.section.toLowerCase().includes(q)) ||
-                      (ex.instructor_name && ex.instructor_name.toLowerCase().includes(q));
+                ) : (
+                  (() => {
+                    const filtered = exams.filter((ex) => {
+                      const q = examListSearch.toLowerCase().trim();
+                      const matchesSearch =
+                        !q ||
+                        ex.name.toLowerCase().includes(q) ||
+                        (ex.subject && ex.subject.toLowerCase().includes(q)) ||
+                        (ex.course_code &&
+                          ex.course_code.toLowerCase().includes(q)) ||
+                        (ex.section && ex.section.toLowerCase().includes(q)) ||
+                        (ex.instructor_name &&
+                          ex.instructor_name.toLowerCase().includes(q));
 
-                    const matchesType =
-                      examTypeFilter === "All" ||
-                      (ex.exam_type || "").toLowerCase() === examTypeFilter.toLowerCase();
+                      const matchesType =
+                        examTypeFilter === "All" ||
+                        (ex.exam_type || "").toLowerCase() ===
+                          examTypeFilter.toLowerCase();
 
-                    const matchesSem =
-                      examSemesterFilter === "All" ||
-                      (ex.semester || "1st Semester").toLowerCase() === examSemesterFilter.toLowerCase();
+                      const matchesSem =
+                        examSemesterFilter === "All" ||
+                        (ex.semester || "1st Semester").toLowerCase() ===
+                          examSemesterFilter.toLowerCase();
 
-                    return matchesSearch && matchesType && matchesSem;
-                  });
+                      return matchesSearch && matchesType && matchesSem;
+                    });
 
-                  if (filtered.length === 0) {
+                    if (filtered.length === 0) {
+                      return (
+                        <div
+                          style={{
+                            color: "var(--text-muted)",
+                            fontSize: "0.85rem",
+                            padding: "1.5rem 0",
+                            textAlign: "center",
+                          }}
+                        >
+                          No matching examinations found. Try adjusting your
+                          filters or click "Create Examination".
+                        </div>
+                      );
+                    }
+
                     return (
                       <div
-                        style={{ color: "var(--text-muted)", fontSize: "0.85rem", padding: "1.5rem 0", textAlign: "center" }}
+                        style={{
+                          display: "flex",
+                          flexDirection: "column",
+                          gap: "0.75rem",
+                          maxHeight: "520px",
+                          overflowY: "auto",
+                        }}
                       >
-                        No matching examinations found. Try adjusting your filters or click "Create Examination".
+                        {filtered.map((exam) => (
+                          <ExamCard
+                            key={exam.id}
+                            exam={exam}
+                            isSelected={selectedExamId === exam.id}
+                            onSelect={(id) => {
+                              setSelectedExamId(id);
+                              setLatestGradeResult(null);
+                            }}
+                            onInspect={(e) => setInspectExam(e)}
+                            onDelete={handleDeleteExam}
+                            formatDate={formatDate}
+                          />
+                        ))}
                       </div>
                     );
-                  }
-
-                  return (
-                    <div
-                      style={{
-                        display: "flex",
-                        flexDirection: "column",
-                        gap: "0.75rem",
-                        maxHeight: "520px",
-                        overflowY: "auto",
-                      }}
-                    >
-                      {filtered.map((exam) => (
-                        <ExamCard
-                          key={exam.id}
-                          exam={exam}
-                          isSelected={selectedExamId === exam.id}
-                          onSelect={(id) => {
-                            setSelectedExamId(id);
-                            setLatestGradeResult(null);
-                          }}
-                          onInspect={(e) => setInspectExam(e)}
-                          onDelete={handleDeleteExam}
-                          formatDate={formatDate}
-                        />
-                      ))}
-                    </div>
-                  );
-                })()}
+                  })()
+                )}
               </div>
 
               {/* Active Exam Grading Controls */}
@@ -2911,7 +2970,9 @@ export default function App() {
                         lineHeight: 1.4,
                       }}
                     >
-                      Exports filtered or grouped master database reports with full institutional headers and complete examination details.
+                      Exports filtered or grouped master database reports with
+                      full institutional headers and complete examination
+                      details.
                     </p>
 
                     <div
@@ -2926,14 +2987,26 @@ export default function App() {
                       }}
                     >
                       <div>
-                        <label style={{ fontSize: "0.72rem", color: "var(--text-muted)", display: "block", marginBottom: "2px" }}>
+                        <label
+                          style={{
+                            fontSize: "0.72rem",
+                            color: "var(--text-muted)",
+                            display: "block",
+                            marginBottom: "2px",
+                          }}
+                        >
                           Filter by Exam Type:
                         </label>
                         <select
                           className="form-input"
-                          style={{ fontSize: "0.78rem", padding: "0.3rem 0.5rem" }}
+                          style={{
+                            fontSize: "0.78rem",
+                            padding: "0.3rem 0.5rem",
+                          }}
                           value={exportDbExamTypeFilter}
-                          onChange={(e) => setExportDbExamTypeFilter(e.target.value)}
+                          onChange={(e) =>
+                            setExportDbExamTypeFilter(e.target.value)
+                          }
                         >
                           <option value="All">All Exam Types</option>
                           <option value="Preliminary">Preliminary Only</option>
@@ -2944,14 +3017,26 @@ export default function App() {
                       </div>
 
                       <div>
-                        <label style={{ fontSize: "0.72rem", color: "var(--text-muted)", display: "block", marginBottom: "2px" }}>
+                        <label
+                          style={{
+                            fontSize: "0.72rem",
+                            color: "var(--text-muted)",
+                            display: "block",
+                            marginBottom: "2px",
+                          }}
+                        >
                           Filter by Semester:
                         </label>
                         <select
                           className="form-input"
-                          style={{ fontSize: "0.78rem", padding: "0.3rem 0.5rem" }}
+                          style={{
+                            fontSize: "0.78rem",
+                            padding: "0.3rem 0.5rem",
+                          }}
                           value={exportDbSemesterFilter}
-                          onChange={(e) => setExportDbSemesterFilter(e.target.value)}
+                          onChange={(e) =>
+                            setExportDbSemesterFilter(e.target.value)
+                          }
                         >
                           <option value="All">All Semesters</option>
                           <option value="1st Semester">1st Semester</option>
@@ -2961,17 +3046,33 @@ export default function App() {
                       </div>
 
                       <div>
-                        <label style={{ fontSize: "0.72rem", color: "var(--text-muted)", display: "block", marginBottom: "2px" }}>
+                        <label
+                          style={{
+                            fontSize: "0.72rem",
+                            color: "var(--text-muted)",
+                            display: "block",
+                            marginBottom: "2px",
+                          }}
+                        >
                           Multi-Sheet Grouping:
                         </label>
                         <select
                           className="form-input"
-                          style={{ fontSize: "0.78rem", padding: "0.3rem 0.5rem" }}
+                          style={{
+                            fontSize: "0.78rem",
+                            padding: "0.3rem 0.5rem",
+                          }}
                           value={exportDbGroupBy}
-                          onChange={(e) => setExportDbGroupBy(e.target.value as "none" | "exam_type")}
+                          onChange={(e) =>
+                            setExportDbGroupBy(
+                              e.target.value as "none" | "exam_type",
+                            )
+                          }
                         >
                           <option value="none">Standard Master Sheets</option>
-                          <option value="exam_type">Group Sheets by Exam Type</option>
+                          <option value="exam_type">
+                            Group Sheets by Exam Type
+                          </option>
                         </select>
                       </div>
                     </div>
@@ -3000,7 +3101,8 @@ export default function App() {
                         textAlign: "center",
                       }}
                     >
-                      🗄️ Filtered Workbook: Full Metadata, Metrics & Grouped Sheets
+                      🗄️ Filtered Workbook: Full Metadata, Metrics & Grouped
+                      Sheets
                     </div>
                   </div>
                 </div>
