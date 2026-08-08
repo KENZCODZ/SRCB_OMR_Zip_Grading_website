@@ -71,6 +71,8 @@ import ItemAnalysisTable from "./components/ItemAnalysisTable";
 import RoleDashboard from "./components/RoleDashboard";
 import LoginPage from "./components/LoginPage";
 import UserGuideModal from "./components/UserGuideModal";
+import ExamCreationModal from "./components/ExamCreationModal";
+import ExamDetailsModal from "./components/ExamDetailsModal";
 
 type AppTab =
   | "dashboard"
@@ -116,11 +118,12 @@ export default function App() {
   const [quickScanResult, setQuickScanResult] =
     useState<QuickScanResult | null>(null);
 
-  // Exam Creation State
-  const [showCreateExam, setShowCreateExam] = useState(false);
-  const [newExamName, setNewExamName] = useState("");
-  const [newExamKey, setNewExamKey] = useState<Record<string, string>>({});
-  const [keyUploadLoading, setKeyUploadLoading] = useState(false);
+  // Exam Creation, Inspect & Filtering State
+  const [isExamModalOpen, setIsExamModalOpen] = useState(false);
+  const [inspectExam, setInspectExam] = useState<Exam | null>(null);
+  const [examListSearch, setExamListSearch] = useState("");
+  const [examTypeFilter, setExamTypeFilter] = useState("All");
+  const [examSemesterFilter, setExamSemesterFilter] = useState("All");
 
   // Active Exam Inspection & Grading State
   const [selectedExamId, setSelectedExamId] = useState<string>("");
@@ -143,13 +146,15 @@ export default function App() {
   );
   const [exportSingleSubmissionId, setExportSingleSubmissionId] =
     useState<string>("");
+  const [exportDbExamTypeFilter, setExportDbExamTypeFilter] = useState<string>("All");
+  const [exportDbSemesterFilter, setExportDbSemesterFilter] = useState<string>("All");
+  const [exportDbGroupBy, setExportDbGroupBy] = useState<"none" | "exam_type">("none");
 
   // Toast State
   const [toasts, setToasts] = useState<ToastItem[]>([]);
 
   // Refs for file uploads
   const quickScanInputRef = useRef<HTMLInputElement>(null);
-  const keyScanInputRef = useRef<HTMLInputElement>(null);
   const studentScanInputRef = useRef<HTMLInputElement>(null);
 
   // Add a Toast Notification
@@ -272,59 +277,55 @@ export default function App() {
     }
   };
 
-  // Handle Answer Key Image Upload
-  const handleKeySheetUpload = async (file: File) => {
-    if (!file) return;
-    setKeyUploadLoading(true);
-    try {
-      const res = await extractSheet(file);
-      const extractedKey: Record<string, string> = {};
-      Object.entries(res.answers).forEach(([q, val]) => {
-        if (val) extractedKey[q] = val;
-      });
-      setNewExamKey(extractedKey);
-      addToast(
-        "success",
-        "Answer key extracted from sheet image successfully!",
-      );
-    } catch (err: any) {
-      addToast(
-        "error",
-        err.message || "Failed to extract answer key from image.",
-      );
-    } finally {
-      setKeyUploadLoading(false);
-    }
-  };
-
   // Handle Exam Submission Creation
-  const handleCreateExamSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newExamName.trim()) {
-      addToast("error", "Exam name is required.");
-      return;
-    }
-    if (Object.keys(newExamKey).length === 0) {
-      addToast("error", "Please configure at least one answer in the key.");
-      return;
-    }
-
+  const handleSaveExamModal = async (examData: Omit<Exam, "id" | "created_at">) => {
     try {
-      await createExam({
-        name: newExamName,
-        answer_key: newExamKey,
+      const created = await createExam({
+        name: examData.name,
+        answer_key: examData.answer_key,
+        exam_type: examData.exam_type,
+        academic_year: examData.academic_year,
+        semester: examData.semester,
+        subject: examData.subject,
+        course_code: examData.course_code,
+        section: examData.section,
+        program: examData.program,
+        instructor_name: examData.instructor_name,
+        num_items: examData.num_items,
+        passing_score: examData.passing_score,
+        instructions: examData.instructions,
+        exam_date: examData.exam_date,
       });
-      addToast("success", `Exam "${newExamName}" created successfully.`);
-      setNewExamName("");
-      setNewExamKey({});
-      setShowCreateExam(false);
+
+      setSelectedExamId(created.id);
       await Promise.all([
         loadExams(),
         loadSubmissions(),
         loadDashboardSummary(),
       ]);
     } catch (err: any) {
-      addToast("error", err.message || "Failed to create exam.");
+      // In mock / offline mode fallback
+      const fallbackId = `ex-${Date.now()}`;
+      const fallbackExam: Exam = {
+        id: fallbackId,
+        name: examData.name,
+        answer_key: examData.answer_key,
+        exam_type: examData.exam_type,
+        academic_year: examData.academic_year,
+        semester: examData.semester,
+        subject: examData.subject,
+        course_code: examData.course_code,
+        section: examData.section,
+        program: examData.program,
+        instructor_name: examData.instructor_name,
+        num_items: examData.num_items,
+        passing_score: examData.passing_score,
+        instructions: examData.instructions,
+        exam_date: examData.exam_date,
+        created_at: new Date().toISOString(),
+      };
+      setExams((prev) => [fallbackExam, ...prev]);
+      setSelectedExamId(fallbackId);
     }
   };
 
@@ -416,6 +417,7 @@ export default function App() {
       examName,
       examSubs.length > 0 ? examSubs : mockSubmissions,
       roster,
+      targetExam,
     );
     addToast(
       "success",
@@ -431,6 +433,7 @@ export default function App() {
       targetExam.name,
       targetExam.answer_key,
       examSubs.length > 0 ? examSubs : mockSubmissions,
+      targetExam,
     );
     addToast(
       "success",
@@ -488,7 +491,7 @@ export default function App() {
     exportExamBatchExcel(targetExam, finalSubs, roster, exportExamType);
     addToast(
       "success",
-      `Exam-Based Batch Export: Compiled ${finalSubs.length} submissions for "${targetExam.name}" (${exportExamType}) into Excel (.xlsx)`,
+      `Exam-Based Batch Export: Compiled ${finalSubs.length} submissions for "${targetExam.name}" (${exportExamType}) with complete metadata into Excel (.xlsx)`,
     );
   };
 
@@ -496,10 +499,14 @@ export default function App() {
     const activeSubmissions =
       submissions.length > 0 ? submissions : mockSubmissions;
     const activeExams = exams.length > 0 ? exams : mockExams;
-    exportCompleteDatabaseExcel(activeExams, activeSubmissions, roster);
+    exportCompleteDatabaseExcel(activeExams, activeSubmissions, roster, {
+      examTypeFilter: exportDbExamTypeFilter,
+      semesterFilter: exportDbSemesterFilter,
+      groupBy: exportDbGroupBy,
+    });
     addToast(
       "success",
-      `Complete Database Export: Exported all ${activeSubmissions.length} submissions across ${activeExams.length} examinations into master Excel report (.xlsx)`,
+      `Teacher Database Export: Exported filtered master database report (.xlsx)`,
     );
   };
 
@@ -767,6 +774,27 @@ export default function App() {
             `Successfully imported class roster with ${newRoster.length} students.`,
           );
         }}
+      />
+
+      {/* Comprehensive Exam Creation Modal */}
+      <ExamCreationModal
+        isOpen={isExamModalOpen}
+        onClose={() => setIsExamModalOpen(false)}
+        onSave={handleSaveExamModal}
+        currentUser={currentUser}
+        addToast={addToast}
+      />
+
+      {/* Exam Details / Inspect Modal */}
+      <ExamDetailsModal
+        exam={inspectExam}
+        isOpen={inspectExam !== null}
+        onClose={() => setInspectExam(null)}
+        onDelete={(id) => {
+          handleDeleteExam(id);
+          setInspectExam(null);
+        }}
+        formatDate={formatDate}
       />
 
       <UserGuideModal
@@ -1841,6 +1869,8 @@ export default function App() {
                 display: "flex",
                 justifyContent: "space-between",
                 alignItems: "center",
+                flexWrap: "wrap",
+                gap: "1rem",
               }}
             >
               <div>
@@ -1854,10 +1884,10 @@ export default function App() {
                     margin: "0.2rem 0 0 0",
                   }}
                 >
-                  Manage exam answer keys and grade student sheets.
+                  Manage complete examination details, answer keys, and grade student sheets.
                 </p>
               </div>
-              <div style={{ display: "flex", gap: "0.75rem" }}>
+              <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap" }}>
                 <button
                   className="btn btn-secondary"
                   onClick={handleExportGradeSheet}
@@ -1866,228 +1896,13 @@ export default function App() {
                 </button>
                 <button
                   className="btn btn-primary"
-                  onClick={() => setShowCreateExam(true)}
+                  onClick={() => setIsExamModalOpen(true)}
+                  style={{ fontWeight: 700 }}
                 >
-                  <Plus size={18} /> Create Exam
+                  <Plus size={18} /> Create Examination
                 </button>
               </div>
             </div>
-
-            {/* Create Exam Form Modal */}
-            {showCreateExam && (
-              <div
-                className="card"
-                style={{
-                  marginBottom: "2rem",
-                  border: "1px solid var(--primary)",
-                }}
-              >
-                <h3
-                  style={{
-                    marginBottom: "1.25rem",
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                  }}
-                >
-                  Configure New Exam
-                  <button
-                    className="btn btn-danger"
-                    style={{ padding: "0.35rem 0.75rem", fontSize: "0.8rem" }}
-                    onClick={() => setShowCreateExam(false)}
-                  >
-                    Cancel
-                  </button>
-                </h3>
-
-                <form onSubmit={handleCreateExamSubmit}>
-                  <div className="form-group">
-                    <label className="form-label">Exam Name</label>
-                    <input
-                      type="text"
-                      className="form-input"
-                      placeholder="e.g. Midterm Physics, Quiz 1"
-                      value={newExamName}
-                      onChange={(e) => setNewExamName(e.target.value)}
-                      required
-                    />
-                  </div>
-
-                  <div className="exam-layout">
-                    <div
-                      style={{
-                        display: "flex",
-                        flexDirection: "column",
-                        gap: "1rem",
-                      }}
-                    >
-                      <h4
-                        style={{
-                          fontSize: "0.9rem",
-                          color: "var(--text-secondary)",
-                        }}
-                      >
-                        Configure Official Answer Key
-                      </h4>
-                      <input
-                        type="file"
-                        ref={keyScanInputRef}
-                        style={{ display: "none" }}
-                        accept="image/*"
-                        onChange={(e) => {
-                          if (e.target.files && e.target.files[0]) {
-                            handleKeySheetUpload(e.target.files[0]);
-                          }
-                          e.target.value = "";
-                        }}
-                      />
-                      <button
-                        type="button"
-                        className="btn btn-secondary"
-                        onClick={() => keyScanInputRef.current?.click()}
-                        disabled={keyUploadLoading}
-                        style={{ width: "100%" }}
-                      >
-                        {keyUploadLoading
-                          ? "Extracting..."
-                          : "Scan Answer Key Sheet"}
-                      </button>
-                      <p
-                        style={{
-                          fontSize: "0.75rem",
-                          color: "var(--text-muted)",
-                          lineHeight: "1.4",
-                        }}
-                      >
-                        💡 Tip: You can scan a pre-filled OMR sheet containing
-                        the correct answers to auto-fill this form!
-                      </p>
-                    </div>
-
-                    <div>
-                      <h4
-                        style={{
-                          fontSize: "0.9rem",
-                          color: "var(--text-secondary)",
-                          marginBottom: "0.5rem",
-                        }}
-                      >
-                        Bubble Sheet Answer Key (Click to set)
-                      </h4>
-                      <div
-                        className="bubble-sheet-card"
-                        style={{
-                          border: "1px solid var(--border)",
-                          borderRadius: "var(--radius-md)",
-                          padding: "1rem",
-                          maxHeight: "400px",
-                        }}
-                      >
-                        <div
-                          style={{
-                            display: "grid",
-                            gridTemplateColumns: "1fr 1fr",
-                            gap: "1rem",
-                          }}
-                        >
-                          <div>
-                            {Array.from({ length: 25 }, (_, i) => i + 1).map(
-                              (qNum) => {
-                                const qStr = qNum.toString();
-                                return (
-                                  <div
-                                    key={qStr}
-                                    className="bubble-row"
-                                    style={{ padding: "0.25rem 0.5rem" }}
-                                  >
-                                    <span className="bubble-num">{qNum}.</span>
-                                    <div className="bubble-options">
-                                      {["A", "B", "C", "D", "E"].map((opt) => (
-                                        <button
-                                          key={opt}
-                                          type="button"
-                                          className={`bubble-btn ${newExamKey[qStr] === opt ? "active" : ""}`}
-                                          style={{
-                                            width: "24px",
-                                            height: "24px",
-                                            fontSize: "0.75rem",
-                                          }}
-                                          onClick={() =>
-                                            setNewExamKey((prev) => ({
-                                              ...prev,
-                                              [qStr]:
-                                                prev[qStr] === opt ? "" : opt,
-                                            }))
-                                          }
-                                        >
-                                          {opt}
-                                        </button>
-                                      ))}
-                                    </div>
-                                  </div>
-                                );
-                              },
-                            )}
-                          </div>
-                          <div>
-                            {Array.from({ length: 25 }, (_, i) => i + 26).map(
-                              (qNum) => {
-                                const qStr = qNum.toString();
-                                return (
-                                  <div
-                                    key={qStr}
-                                    className="bubble-row"
-                                    style={{ padding: "0.25rem 0.5rem" }}
-                                  >
-                                    <span className="bubble-num">{qNum}.</span>
-                                    <div className="bubble-options">
-                                      {["A", "B", "C", "D", "E"].map((opt) => (
-                                        <button
-                                          key={opt}
-                                          type="button"
-                                          className={`bubble-btn ${newExamKey[qStr] === opt ? "active" : ""}`}
-                                          style={{
-                                            width: "24px",
-                                            height: "24px",
-                                            fontSize: "0.75rem",
-                                          }}
-                                          onClick={() =>
-                                            setNewExamKey((prev) => ({
-                                              ...prev,
-                                              [qStr]:
-                                                prev[qStr] === opt ? "" : opt,
-                                            }))
-                                          }
-                                        >
-                                          {opt}
-                                        </button>
-                                      ))}
-                                    </div>
-                                  </div>
-                                );
-                              },
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div
-                    style={{
-                      display: "flex",
-                      justifyContent: "flex-end",
-                      gap: "1rem",
-                      marginTop: "1.5rem",
-                    }}
-                  >
-                    <button type="submit" className="btn btn-primary">
-                      Save Exam & Answer Key
-                    </button>
-                  </div>
-                </form>
-              </div>
-            )}
 
             {/* Exam List and Grading Section */}
             <div
@@ -2097,44 +1912,149 @@ export default function App() {
                 gap: "2rem",
               }}
             >
-              {/* Decomposed ExamCard Component Feed */}
-              <div className="card">
-                <h3 style={{ fontSize: "1.1rem", marginBottom: "1rem" }}>
-                  Exams List
-                </h3>
+              {/* Searchable & Filterable Exams Feed */}
+              <div className="card" style={{ display: "flex", flexDirection: "column" }}>
+                <div style={{ marginBottom: "1rem" }}>
+                  <div
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      marginBottom: "0.75rem",
+                    }}
+                  >
+                    <h3 style={{ fontSize: "1.1rem", margin: 0 }}>
+                      Examinations Directory
+                    </h3>
+                    <span className="badge badge-info" style={{ fontSize: "0.75rem" }}>
+                      {exams.length} Total
+                    </span>
+                  </div>
+
+                  {/* Search Bar */}
+                  <div style={{ position: "relative", marginBottom: "0.6rem" }}>
+                    <Search
+                      size={15}
+                      style={{
+                        position: "absolute",
+                        left: "0.6rem",
+                        top: "50%",
+                        transform: "translateY(-50%)",
+                        color: "var(--text-muted)",
+                      }}
+                    />
+                    <input
+                      type="text"
+                      className="form-input"
+                      placeholder="Search title, subject, code, section..."
+                      style={{ paddingLeft: "2rem", fontSize: "0.8rem" }}
+                      value={examListSearch}
+                      onChange={(e) => setExamListSearch(e.target.value)}
+                    />
+                  </div>
+
+                  {/* Filter Selectors */}
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.5rem" }}>
+                    <div>
+                      <label style={{ fontSize: "0.7rem", color: "var(--text-muted)", display: "block", marginBottom: "2px" }}>
+                        Exam Type:
+                      </label>
+                      <select
+                        className="form-input"
+                        style={{ fontSize: "0.78rem", padding: "0.3rem 0.5rem" }}
+                        value={examTypeFilter}
+                        onChange={(e) => setExamTypeFilter(e.target.value)}
+                      >
+                        <option value="All">All Types</option>
+                        <option value="Preliminary">Preliminary</option>
+                        <option value="Midterm">Midterm</option>
+                        <option value="Pre-Final">Pre-Final</option>
+                        <option value="Final">Final</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label style={{ fontSize: "0.7rem", color: "var(--text-muted)", display: "block", marginBottom: "2px" }}>
+                        Semester:
+                      </label>
+                      <select
+                        className="form-input"
+                        style={{ fontSize: "0.78rem", padding: "0.3rem 0.5rem" }}
+                        value={examSemesterFilter}
+                        onChange={(e) => setExamSemesterFilter(e.target.value)}
+                      >
+                        <option value="All">All Semesters</option>
+                        <option value="1st Semester">1st Semester</option>
+                        <option value="2nd Semester">2nd Semester</option>
+                        <option value="Summer">Summer</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+
                 {loadingExams ? (
                   <div className="spinner-container">
                     <div className="spinner"></div>
                   </div>
-                ) : exams.length === 0 ? (
-                  <div
-                    style={{ color: "var(--text-muted)", fontSize: "0.85rem" }}
-                  >
-                    No exams found. Click "Create Exam" to configure one.
-                  </div>
-                ) : (
-                  <div
-                    style={{
-                      display: "flex",
-                      flexDirection: "column",
-                      gap: "0.75rem",
-                    }}
-                  >
-                    {exams.map((exam) => (
-                      <ExamCard
-                        key={exam.id}
-                        exam={exam}
-                        isSelected={selectedExamId === exam.id}
-                        onSelect={(id) => {
-                          setSelectedExamId(id);
-                          setLatestGradeResult(null);
-                        }}
-                        onDelete={handleDeleteExam}
-                        formatDate={formatDate}
-                      />
-                    ))}
-                  </div>
-                )}
+                ) : (() => {
+                  const filtered = exams.filter((ex) => {
+                    const q = examListSearch.toLowerCase().trim();
+                    const matchesSearch =
+                      !q ||
+                      ex.name.toLowerCase().includes(q) ||
+                      (ex.subject && ex.subject.toLowerCase().includes(q)) ||
+                      (ex.course_code && ex.course_code.toLowerCase().includes(q)) ||
+                      (ex.section && ex.section.toLowerCase().includes(q)) ||
+                      (ex.instructor_name && ex.instructor_name.toLowerCase().includes(q));
+
+                    const matchesType =
+                      examTypeFilter === "All" ||
+                      (ex.exam_type || "").toLowerCase() === examTypeFilter.toLowerCase();
+
+                    const matchesSem =
+                      examSemesterFilter === "All" ||
+                      (ex.semester || "1st Semester").toLowerCase() === examSemesterFilter.toLowerCase();
+
+                    return matchesSearch && matchesType && matchesSem;
+                  });
+
+                  if (filtered.length === 0) {
+                    return (
+                      <div
+                        style={{ color: "var(--text-muted)", fontSize: "0.85rem", padding: "1.5rem 0", textAlign: "center" }}
+                      >
+                        No matching examinations found. Try adjusting your filters or click "Create Examination".
+                      </div>
+                    );
+                  }
+
+                  return (
+                    <div
+                      style={{
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: "0.75rem",
+                        maxHeight: "520px",
+                        overflowY: "auto",
+                      }}
+                    >
+                      {filtered.map((exam) => (
+                        <ExamCard
+                          key={exam.id}
+                          exam={exam}
+                          isSelected={selectedExamId === exam.id}
+                          onSelect={(id) => {
+                            setSelectedExamId(id);
+                            setLatestGradeResult(null);
+                          }}
+                          onInspect={(e) => setInspectExam(e)}
+                          onDelete={handleDeleteExam}
+                          formatDate={formatDate}
+                        />
+                      ))}
+                    </div>
+                  );
+                })()}
               </div>
 
               {/* Active Exam Grading Controls */}
@@ -2306,7 +2226,7 @@ export default function App() {
                             }}
                           >
                             <tbody>
-                              {Object.entries(activeExam.answer_key)
+                              {Object.entries(activeExam.answer_key || {})
                                 .sort((a, b) => parseInt(a[0]) - parseInt(b[0]))
                                 .map(([q, ans]) => (
                                   <tr
@@ -2987,52 +2907,72 @@ export default function App() {
                       style={{
                         fontSize: "0.8rem",
                         color: "var(--text-secondary)",
-                        marginBottom: "1rem",
+                        marginBottom: "0.75rem",
                         lineHeight: 1.4,
                       }}
                     >
-                      Exports every scanned submission across all examinations
-                      regardless of title or type into one comprehensive Excel
-                      file.
+                      Exports filtered or grouped master database reports with full institutional headers and complete examination details.
                     </p>
 
                     <div
                       style={{
+                        display: "grid",
+                        gap: "0.5rem",
+                        marginBottom: "1rem",
                         background: "rgba(8, 17, 32, 0.8)",
                         padding: "0.75rem",
                         borderRadius: "var(--radius-sm)",
-                        marginBottom: "1rem",
                         border: "1px solid var(--border)",
                       }}
                     >
-                      <div
-                        style={{
-                          display: "flex",
-                          justifyContent: "space-between",
-                          fontSize: "0.8rem",
-                          marginBottom: "4px",
-                        }}
-                      >
-                        <span style={{ color: "var(--text-muted)" }}>
-                          Scanned Submissions:
-                        </span>
-                        <strong style={{ color: "var(--text-primary)" }}>
-                          {submissions.length || mockSubmissions.length}
-                        </strong>
+                      <div>
+                        <label style={{ fontSize: "0.72rem", color: "var(--text-muted)", display: "block", marginBottom: "2px" }}>
+                          Filter by Exam Type:
+                        </label>
+                        <select
+                          className="form-input"
+                          style={{ fontSize: "0.78rem", padding: "0.3rem 0.5rem" }}
+                          value={exportDbExamTypeFilter}
+                          onChange={(e) => setExportDbExamTypeFilter(e.target.value)}
+                        >
+                          <option value="All">All Exam Types</option>
+                          <option value="Preliminary">Preliminary Only</option>
+                          <option value="Midterm">Midterm Only</option>
+                          <option value="Pre-Final">Pre-Final Only</option>
+                          <option value="Final">Final Only</option>
+                        </select>
                       </div>
-                      <div
-                        style={{
-                          display: "flex",
-                          justifyContent: "space-between",
-                          fontSize: "0.8rem",
-                        }}
-                      >
-                        <span style={{ color: "var(--text-muted)" }}>
-                          Active Examinations:
-                        </span>
-                        <strong style={{ color: "var(--text-primary)" }}>
-                          {exams.length || mockExams.length}
-                        </strong>
+
+                      <div>
+                        <label style={{ fontSize: "0.72rem", color: "var(--text-muted)", display: "block", marginBottom: "2px" }}>
+                          Filter by Semester:
+                        </label>
+                        <select
+                          className="form-input"
+                          style={{ fontSize: "0.78rem", padding: "0.3rem 0.5rem" }}
+                          value={exportDbSemesterFilter}
+                          onChange={(e) => setExportDbSemesterFilter(e.target.value)}
+                        >
+                          <option value="All">All Semesters</option>
+                          <option value="1st Semester">1st Semester</option>
+                          <option value="2nd Semester">2nd Semester</option>
+                          <option value="Summer">Summer Term</option>
+                        </select>
+                      </div>
+
+                      <div>
+                        <label style={{ fontSize: "0.72rem", color: "var(--text-muted)", display: "block", marginBottom: "2px" }}>
+                          Multi-Sheet Grouping:
+                        </label>
+                        <select
+                          className="form-input"
+                          style={{ fontSize: "0.78rem", padding: "0.3rem 0.5rem" }}
+                          value={exportDbGroupBy}
+                          onChange={(e) => setExportDbGroupBy(e.target.value as "none" | "exam_type")}
+                        >
+                          <option value="none">Standard Master Sheets</option>
+                          <option value="exam_type">Group Sheets by Exam Type</option>
+                        </select>
                       </div>
                     </div>
                   </div>
@@ -3050,7 +2990,7 @@ export default function App() {
                       }}
                       onClick={handleExportCompleteDatabase}
                     >
-                      <Database size={14} /> Export Complete Database (.xlsx)
+                      <Database size={14} /> Export Master Database (.xlsx)
                     </button>
                     <div
                       style={{
@@ -3060,7 +3000,7 @@ export default function App() {
                         textAlign: "center",
                       }}
                     >
-                      🗄️ Master Workbook: Submissions, Exam Metrics & Roster
+                      🗄️ Filtered Workbook: Full Metadata, Metrics & Grouped Sheets
                     </div>
                   </div>
                 </div>
