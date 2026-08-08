@@ -2,9 +2,9 @@ from fastapi import FastAPI, UploadFile, File, Form, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
+from typing import Optional
 import uuid
 import os
-import io
 import sys
 import cv2
 import numpy as np
@@ -26,9 +26,20 @@ async def lifespan(app: FastAPI):
 app = FastAPI(title="OMR Grading System API", lifespan=lifespan)
 
 # Enable CORS for frontend integration
+# NOTE: allow_origins=["*"] is incompatible with allow_credentials=True per the CORS spec
+# (browsers will reject the response). Listing the actual dev + production origins instead.
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=[
+        "http://localhost:5173",   # Vite dev server
+        "http://localhost:5174",   # Vite dev server fallback port
+        "http://localhost:8000",   # FastAPI production serve
+        "http://127.0.0.1:5173",
+        "http://127.0.0.1:5174",
+        "http://127.0.0.1:8000",
+        "http://0.0.0.0:5173",
+        "http://0.0.0.0:5174",
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -36,11 +47,43 @@ app.add_middleware(
 
 # Pydantic Schemas
 class ExamCreate(BaseModel):
-    name: str = Field(..., min_length=1, description="Name of the exam")
-    answer_key: dict = Field(..., description="Mapping of question numbers (1-50) to answers (A-E)")
+    name: str = Field(..., min_length=1, description="Full examination title")
+    answer_key: dict[str, str] = Field(..., description="Mapping of question numbers (1-100) to answers (A-E)")
+
+    # ── Academic metadata (all optional for backwards compatibility) ───────────
+    exam_type: Optional[str] = Field(None, description="Preliminary | Midterm | Pre-Final | Final")
+    academic_year: Optional[str] = Field(None, description="e.g. 2025-2026")
+    semester: Optional[str] = Field(None, description="1st Semester | 2nd Semester | Summer")
+    subject: Optional[str] = Field(None, description="Course / Subject name")
+    course_code: Optional[str] = Field(None, description="Course code e.g. ITP305")
+    section: Optional[str] = Field(None, description="Class section e.g. BSIT 3-A")
+    program: Optional[str] = Field(None, description="Programme / Department")
+    instructor_name: Optional[str] = Field(None, description="Name of the instructor")
+
+    # ── Examination settings ───────────────────────────────────────────────────
+    num_items: Optional[int] = Field(50, ge=1, le=100, description="Total number of test items (1-100)")
+    passing_score: Optional[int] = Field(None, ge=0, description="Optional raw score threshold")
+    instructions: Optional[str] = Field(None, description="Optional instructions for students")
+    exam_date: Optional[str] = Field(None, description="Scheduled exam date (YYYY-MM-DD)")
+
 
 class ExamUpdate(BaseModel):
-    answer_key: dict = Field(..., description="Mapping of question numbers (1-50) to answers (A-E)")
+    answer_key: dict[str, str] = Field(..., description="Mapping of question numbers (1-100) to answers (A-E)")
+
+    # All metadata fields are optional on update (PATCH-like semantics)
+    exam_type: Optional[str] = None
+    academic_year: Optional[str] = None
+    semester: Optional[str] = None
+    subject: Optional[str] = None
+    course_code: Optional[str] = None
+    section: Optional[str] = None
+    program: Optional[str] = None
+    instructor_name: Optional[str] = None
+    num_items: Optional[int] = Field(None, ge=1, le=100)
+    passing_score: Optional[int] = Field(None, ge=0)
+    instructions: Optional[str] = None
+    exam_date: Optional[str] = None
+
 
 class LoginRequest(BaseModel):
     email: str = Field(..., min_length=1)
@@ -66,19 +109,35 @@ def dashboard_summary():
 @app.post("/api/exams", status_code=status.HTTP_201_CREATED)
 def create_new_exam(exam: ExamCreate):
     exam_id = str(uuid.uuid4())
-    # Validate answer key format: keys should be string representations of 1-50
+    # Validate answer key format: keys must be integer strings between 1 and 100
     for q, ans in exam.answer_key.items():
         try:
             q_num = int(q)
-            if q_num < 1 or q_num > 50:
-                raise HTTPException(status_code=400, detail="Question number must be between 1 and 50.")
+            if q_num < 1 or q_num > 100:
+                raise HTTPException(status_code=400, detail="Question number must be between 1 and 100.")
         except ValueError:
             raise HTTPException(status_code=400, detail="Question keys must be integers.")
-            
+
         if ans not in ["A", "B", "C", "D", "E"]:
             raise HTTPException(status_code=400, detail=f"Invalid option '{ans}' for question {q}. Must be A, B, C, D, or E.")
-            
-    res = save_exam(exam_id, exam.name, exam.answer_key)
+
+    res = save_exam(
+        exam_id=exam_id,
+        name=exam.name,
+        answer_key=exam.answer_key,
+        exam_type=exam.exam_type,
+        academic_year=exam.academic_year,
+        semester=exam.semester,
+        subject=exam.subject,
+        course_code=exam.course_code,
+        section=exam.section,
+        program=exam.program,
+        instructor_name=exam.instructor_name,
+        num_items=exam.num_items or 50,
+        passing_score=exam.passing_score,
+        instructions=exam.instructions,
+        exam_date=exam.exam_date,
+    )
     return res
 
 @app.put("/api/exams/{exam_id}")
@@ -86,23 +145,38 @@ def edit_exam_key(exam_id: str, exam: ExamUpdate):
     existing = get_exam(exam_id)
     if not existing:
         raise HTTPException(status_code=404, detail="Exam not found.")
-        
+
     for q, ans in exam.answer_key.items():
         try:
             q_num = int(q)
-            if q_num < 1 or q_num > 50:
-                raise HTTPException(status_code=400, detail="Question number must be between 1 and 50.")
+            if q_num < 1 or q_num > 100:
+                raise HTTPException(status_code=400, detail="Question number must be between 1 and 100.")
         except ValueError:
             raise HTTPException(status_code=400, detail="Question keys must be integers.")
-            
+
         if ans not in ["A", "B", "C", "D", "E"]:
             raise HTTPException(status_code=400, detail=f"Invalid option '{ans}' for question {q}. Must be A, B, C, D, or E.")
-            
-    success = update_exam(exam_id, exam.answer_key)
+
+    success = update_exam(
+        exam_id=exam_id,
+        answer_key=exam.answer_key,
+        exam_type=exam.exam_type,
+        academic_year=exam.academic_year,
+        semester=exam.semester,
+        subject=exam.subject,
+        course_code=exam.course_code,
+        section=exam.section,
+        program=exam.program,
+        instructor_name=exam.instructor_name,
+        num_items=exam.num_items,
+        passing_score=exam.passing_score,
+        instructions=exam.instructions,
+        exam_date=exam.exam_date,
+    )
     if success:
-        return {"status": "success", "message": "Exam key updated successfully."}
+        return {"status": "success", "message": "Exam updated successfully."}
     else:
-        raise HTTPException(status_code=500, detail="Failed to update exam key.")
+        raise HTTPException(status_code=500, detail="Failed to update exam.")
 
 @app.get("/api/exams")
 def get_all_exams():
@@ -176,7 +250,7 @@ async def grade_exam_sheet(
     }
 
 @app.get("/api/submissions")
-def get_all_submissions(exam_id: str = None):
+def get_all_submissions(exam_id: str | None = None):
     return list_submissions(exam_id)
 
 @app.post("/api/extract")
@@ -214,12 +288,12 @@ async def extract_sheet_answers(
         "overlay_image": results["overlay_base64"]
     }
 
-# Ensure frontend/dist exists before mounting to avoid FastAPI startup crash
-frontend_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "frontend", "dist"))
+# Ensure Frontend/dist exists before mounting to avoid FastAPI startup crash
+frontend_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "Frontend", "dist"))
 if not os.path.exists(frontend_dir):
     os.makedirs(frontend_dir, exist_ok=True)
     with open(os.path.join(frontend_dir, "index.html"), "w") as f:
-        f.write("<h1>OMR Frontend Building... Please run npm run build in frontend/ directory.</h1>")
+        f.write("<h1>OMR Frontend Building... Please run npm run build in Frontend/ directory.</h1>")
 
 app.mount("/", StaticFiles(directory=frontend_dir, html=True), name="frontend")
 

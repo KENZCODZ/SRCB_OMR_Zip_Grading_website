@@ -1,5 +1,7 @@
 import unittest
 
+from fastapi.testclient import TestClient
+
 from database import (
     init_db,
     authenticate_user,
@@ -9,9 +11,13 @@ from database import (
 )
 
 
+from main import app
+
+
 class BackendAuthTests(unittest.TestCase):
     def setUp(self):
         init_db()
+        self.client = TestClient(app)
         from database import get_db_connection
         conn = get_db_connection()
         conn.execute("DELETE FROM submissions WHERE exam_id = 'demo-exam'")
@@ -49,6 +55,15 @@ class BackendAuthTests(unittest.TestCase):
         summary = get_dashboard_summary()
         self.assertEqual(summary["total_exams"], initial_summary["total_exams"] + 1)
         self.assertEqual(summary["total_submissions"], initial_summary["total_submissions"] + 1)
+
+    def test_vite_dev_server_origin_is_allowed(self):
+        response = self.client.get(
+            "/api/dashboard/summary",
+            headers={"origin": "http://127.0.0.1:5174"},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.headers.get("access-control-allow-origin"), "http://127.0.0.1:5174")
 
 
 if __name__ == "__main__":

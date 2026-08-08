@@ -2,15 +2,24 @@ import cv2
 import numpy as np
 import os
 
+# Resolve template path relative to this script's location so the script
+# can be run from any working directory (not just omr_engine/).
+_SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+
 def main():
-    template_path = "ZipGrade50QuestionV2.png"
+    template_path = os.path.join(_SCRIPT_DIR, "ZipGrade50QuestionV2.png")
     if not os.path.exists(template_path):
-        print("Template not found.")
+        print(f"Template not found: {template_path}")
         return
-        
+
     image = cv2.imread(template_path)
-    
-    # Simple hardcoded corners from previous run
+
+    # Guard against corrupt or unreadable files — cv2.imread returns None silently.
+    if image is None:
+        print(f"Failed to decode image: {template_path}")
+        return
+
+    # Simple hardcoded corners for ZipGrade50QuestionV2.png from previous calibration run
     corners = [[497.0, 615.0], [2045.0, 615.0], [497.0, 2728.0], [2045.0, 2728.0]]
     
     src_pts = np.array(corners, dtype=np.float32)
@@ -34,7 +43,7 @@ def main():
     
     print(f"Total raw contours: {len(contours)}")
     
-    # Sort contours by area to see the sizes of candidate bubbles
+    # Collect contours within a size range likely to match answer bubbles
     stats = []
     for c in contours:
         x, y, w, h = cv2.boundingRect(c)
@@ -43,12 +52,12 @@ def main():
         perimeter = cv2.arcLength(c, True)
         circularity = (4 * np.pi * area) / (perimeter * perimeter) if perimeter > 0 else 0
         
-        # Store all contours within a wide size range
         if 5 <= w <= 50 and 5 <= h <= 50:
             stats.append((w, h, area, circularity, aspect_ratio, x, y))
             
-    # Print the top 350 stats sorted by y then x
+    # Print the top 40 contours sorted by position (top-to-bottom, left-to-right)
     stats_sorted = sorted(stats, key=lambda s: (s[6], s[5]))
+    print(f"Bubble-range contours found: {len(stats_sorted)}")
     print("Sample contours (w, h, area, circularity, aspect_ratio, x, y):")
     for i, s in enumerate(stats_sorted[:40]):
         print(f"{i}: w={s[0]}, h={s[1]}, area={s[2]:.1f}, circ={s[3]:.2f}, aspect={s[4]:.2f}, x={s[5]}, y={s[6]}")
