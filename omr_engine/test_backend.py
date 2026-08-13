@@ -65,6 +65,24 @@ class BackendAuthTests(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.headers.get("access-control-allow-origin"), "http://127.0.0.1:5174")
 
+    def test_exam_creation_rejects_answer_key_size_mismatch(self):
+        payload = {
+            "name": "Short Quiz",
+            "exam_type": "Quiz",
+            "subject": "Math",
+            "course_code": "MATH101",
+            "section": "A",
+            "program": "BSIT",
+            "instructor_name": "Prof. Test",
+            "num_items": 20,
+            "answer_key": {str(i): "A" for i in range(1, 11)},
+        }
+
+        response = self.client.post("/api/exams", json=payload)
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("20", response.json()["detail"])
+
 
 if __name__ == "__main__":
     unittest.main()

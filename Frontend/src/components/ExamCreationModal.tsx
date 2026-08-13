@@ -17,9 +17,13 @@ import { extractSheet } from "../api";
 interface ExamCreationModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (examData: Omit<Exam, "id" | "created_at">) => Promise<void>;
+  onSave: (
+    examData: Omit<Exam, "id" | "created_at">,
+    examId?: string,
+  ) => Promise<void>;
   currentUser: AuthUser | null;
   addToast: (type: "success" | "error" | "info", message: string) => void;
+  editingExam?: Exam | null;
 }
 
 export const ExamCreationModal: React.FC<ExamCreationModalProps> = ({
@@ -28,6 +32,7 @@ export const ExamCreationModal: React.FC<ExamCreationModalProps> = ({
   onSave,
   currentUser,
   addToast,
+  editingExam,
 }) => {
   // Form State - Exam Information
   const [examTitle, setExamTitle] = useState("");
@@ -52,14 +57,50 @@ export const ExamCreationModal: React.FC<ExamCreationModalProps> = ({
 
   const keyScanInputRef = useRef<HTMLInputElement>(null);
 
-  // Auto-fill instructor name from currentUser when modal opens or user changes
+  const isEditMode = Boolean(editingExam);
+
   useEffect(() => {
-    if (currentUser?.name) {
-      setInstructorName(currentUser.name);
-    } else {
-      setInstructorName("Prof. Faculty Member");
+    if (!isOpen) return;
+
+    if (editingExam) {
+      setExamTitle(editingExam.name ?? "");
+      setExamType(editingExam.exam_type ?? "Midterm");
+      setAcademicYear(editingExam.academic_year ?? "2025-2026");
+      setSemester(editingExam.semester ?? "1st Semester");
+      setSubject(editingExam.subject ?? "");
+      setCourseCode(editingExam.course_code ?? "");
+      setSection(editingExam.section ?? "");
+      setProgram(editingExam.program ?? "BSIT");
+      setInstructorName(
+        editingExam.instructor_name ??
+          currentUser?.name ??
+          "Prof. Faculty Member",
+      );
+      setNumItems(editingExam.num_items ?? 50);
+      setPassingScore(editingExam.passing_score?.toString() ?? "");
+      setInstructions(editingExam.instructions ?? "");
+      setExamDate(editingExam.exam_date ?? "");
+      setAnswerKey(editingExam.answer_key ?? {});
+      setErrors({});
+      return;
     }
-  }, [currentUser, isOpen]);
+
+    setExamTitle("");
+    setExamType("Midterm");
+    setAcademicYear("2025-2026");
+    setSemester("1st Semester");
+    setSubject("");
+    setCourseCode("");
+    setSection("");
+    setProgram("BSIT");
+    setInstructorName(currentUser?.name ?? "Prof. Faculty Member");
+    setNumItems(50);
+    setPassingScore("");
+    setInstructions("");
+    setExamDate("");
+    setAnswerKey({});
+    setErrors({});
+  }, [currentUser, editingExam, isOpen]);
 
   if (!isOpen) return null;
 
@@ -75,17 +116,28 @@ export const ExamCreationModal: React.FC<ExamCreationModalProps> = ({
     if (!courseCode.trim()) errs.courseCode = "Course Code is required.";
     if (!section.trim()) errs.section = "Section is required.";
     if (!program.trim()) errs.program = "Program/Department is required.";
-    if (!instructorName.trim()) errs.instructorName = "Instructor Name is required.";
+    if (!instructorName.trim())
+      errs.instructorName = "Instructor Name is required.";
     if (!numItems || numItems < 1 || numItems > 100) {
       errs.numItems = "Number of items must be between 1 and 100.";
     }
 
-    // Answer Key completeness validation
-    const configuredCount = Object.values(answerKey).filter(Boolean).length;
+    const filteredKey = Object.fromEntries(
+      Object.entries(answerKey).filter(([qNum]) => {
+        const parsed = Number(qNum);
+        return Number.isFinite(parsed) && parsed >= 1 && parsed <= numItems;
+      }),
+    );
+    const configuredCount = Object.values(filteredKey).filter(Boolean).length;
+    const extraEntries = Object.keys(answerKey).filter((qNum) => {
+      const parsed = Number(qNum);
+      return !Number.isFinite(parsed) || parsed < 1 || parsed > numItems;
+    }).length;
+
     if (configuredCount === 0) {
       errs.answerKey = "Please configure an answer key with at least 1 item.";
-    } else if (configuredCount < numItems) {
-      errs.answerKey = `Incomplete answer key! Configured ${configuredCount} of ${numItems} items. Please fill all options.`;
+    } else if (configuredCount !== numItems || extraEntries > 0) {
+      errs.answerKey = `Answer key mismatch! Configured ${configuredCount} of ${numItems} items. Please set the official answer for each question in this exam.`;
     }
 
     setErrors(errs);
@@ -101,7 +153,7 @@ export const ExamCreationModal: React.FC<ExamCreationModalProps> = ({
       const extractedKey: Record<string, string> = {};
       Object.entries(res.answers).forEach(([q, val]) => {
         const qNum = parseInt(q, 10);
-        if (qNum <= numItems && val) {
+        if (qNum >= 1 && qNum <= numItems && val) {
           extractedKey[q] = val;
         }
       });
@@ -156,7 +208,7 @@ export const ExamCreationModal: React.FC<ExamCreationModalProps> = ({
         }
       }
 
-      await onSave({
+      const examPayload = {
         name: examTitle.trim(),
         exam_type: examType,
         academic_year: academicYear.trim(),
@@ -171,9 +223,14 @@ export const ExamCreationModal: React.FC<ExamCreationModalProps> = ({
         instructions: instructions.trim() || undefined,
         exam_date: examDate || undefined,
         answer_key: trimmedKey,
-      });
+      };
 
-      addToast("success", `Examination "${examTitle}" created successfully!`);
+      await onSave(examPayload, editingExam?.id);
+
+      addToast(
+        "success",
+        `Examination "${examTitle}" ${isEditMode ? "updated" : "created"} successfully!`,
+      );
       onClose();
     } catch (err: any) {
       addToast("error", err.message || "Failed to save examination.");
@@ -228,7 +285,9 @@ export const ExamCreationModal: React.FC<ExamCreationModalProps> = ({
             background: "rgba(15, 23, 42, 0.8)",
           }}
         >
-          <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+          <div
+            style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}
+          >
             <div
               style={{
                 width: "40px",
@@ -254,7 +313,8 @@ export const ExamCreationModal: React.FC<ExamCreationModalProps> = ({
                   margin: "0.2rem 0 0 0",
                 }}
               >
-                Define examination details and configure the official answer key before scanning.
+                Define examination details and configure the official answer key
+                before scanning.
               </p>
             </div>
           </div>
@@ -315,7 +375,14 @@ export const ExamCreationModal: React.FC<ExamCreationModalProps> = ({
                     onChange={(e) => setExamTitle(e.target.value)}
                   />
                   {errors.examTitle && (
-                    <span style={{ fontSize: "0.75rem", color: "var(--error)", marginTop: "4px", display: "block" }}>
+                    <span
+                      style={{
+                        fontSize: "0.75rem",
+                        color: "var(--error)",
+                        marginTop: "4px",
+                        display: "block",
+                      }}
+                    >
                       {errors.examTitle}
                     </span>
                   )}
@@ -341,7 +408,8 @@ export const ExamCreationModal: React.FC<ExamCreationModalProps> = ({
                 {/* Number of Items */}
                 <div>
                   <label className="form-label" style={{ fontWeight: 600 }}>
-                    Number of Items (1-100) <span style={{ color: "var(--error)" }}>*</span>
+                    Number of Items (1-100){" "}
+                    <span style={{ color: "var(--error)" }}>*</span>
                   </label>
                   <input
                     type="number"
@@ -350,12 +418,34 @@ export const ExamCreationModal: React.FC<ExamCreationModalProps> = ({
                     className="form-input"
                     value={numItems}
                     onChange={(e) => {
-                      const val = Math.max(1, Math.min(100, parseInt(e.target.value, 10) || 1));
+                      const val = Math.max(
+                        1,
+                        Math.min(100, parseInt(e.target.value, 10) || 1),
+                      );
                       setNumItems(val);
+                      setAnswerKey((prev) =>
+                        Object.fromEntries(
+                          Object.entries(prev).filter(([qNum]) => {
+                            const parsed = Number(qNum);
+                            return (
+                              Number.isFinite(parsed) &&
+                              parsed >= 1 &&
+                              parsed <= val
+                            );
+                          }),
+                        ),
+                      );
                     }}
                   />
                   {errors.numItems && (
-                    <span style={{ fontSize: "0.75rem", color: "var(--error)", marginTop: "4px", display: "block" }}>
+                    <span
+                      style={{
+                        fontSize: "0.75rem",
+                        color: "var(--error)",
+                        marginTop: "4px",
+                        display: "block",
+                      }}
+                    >
                       {errors.numItems}
                     </span>
                   )}
@@ -364,7 +454,8 @@ export const ExamCreationModal: React.FC<ExamCreationModalProps> = ({
                 {/* Course/Subject */}
                 <div>
                   <label className="form-label" style={{ fontWeight: 600 }}>
-                    Course / Subject Title <span style={{ color: "var(--error)" }}>*</span>
+                    Course / Subject Title{" "}
+                    <span style={{ color: "var(--error)" }}>*</span>
                   </label>
                   <input
                     type="text"
@@ -374,7 +465,14 @@ export const ExamCreationModal: React.FC<ExamCreationModalProps> = ({
                     onChange={(e) => setSubject(e.target.value)}
                   />
                   {errors.subject && (
-                    <span style={{ fontSize: "0.75rem", color: "var(--error)", marginTop: "4px", display: "block" }}>
+                    <span
+                      style={{
+                        fontSize: "0.75rem",
+                        color: "var(--error)",
+                        marginTop: "4px",
+                        display: "block",
+                      }}
+                    >
                       {errors.subject}
                     </span>
                   )}
@@ -393,7 +491,14 @@ export const ExamCreationModal: React.FC<ExamCreationModalProps> = ({
                     onChange={(e) => setCourseCode(e.target.value)}
                   />
                   {errors.courseCode && (
-                    <span style={{ fontSize: "0.75rem", color: "var(--error)", marginTop: "4px", display: "block" }}>
+                    <span
+                      style={{
+                        fontSize: "0.75rem",
+                        color: "var(--error)",
+                        marginTop: "4px",
+                        display: "block",
+                      }}
+                    >
                       {errors.courseCode}
                     </span>
                   )}
@@ -412,7 +517,14 @@ export const ExamCreationModal: React.FC<ExamCreationModalProps> = ({
                     onChange={(e) => setSection(e.target.value)}
                   />
                   {errors.section && (
-                    <span style={{ fontSize: "0.75rem", color: "var(--error)", marginTop: "4px", display: "block" }}>
+                    <span
+                      style={{
+                        fontSize: "0.75rem",
+                        color: "var(--error)",
+                        marginTop: "4px",
+                        display: "block",
+                      }}
+                    >
                       {errors.section}
                     </span>
                   )}
@@ -421,7 +533,8 @@ export const ExamCreationModal: React.FC<ExamCreationModalProps> = ({
                 {/* Academic Year */}
                 <div>
                   <label className="form-label" style={{ fontWeight: 600 }}>
-                    Academic Year <span style={{ color: "var(--error)" }}>*</span>
+                    Academic Year{" "}
+                    <span style={{ color: "var(--error)" }}>*</span>
                   </label>
                   <input
                     type="text"
@@ -431,7 +544,14 @@ export const ExamCreationModal: React.FC<ExamCreationModalProps> = ({
                     onChange={(e) => setAcademicYear(e.target.value)}
                   />
                   {errors.academicYear && (
-                    <span style={{ fontSize: "0.75rem", color: "var(--error)", marginTop: "4px", display: "block" }}>
+                    <span
+                      style={{
+                        fontSize: "0.75rem",
+                        color: "var(--error)",
+                        marginTop: "4px",
+                        display: "block",
+                      }}
+                    >
                       {errors.academicYear}
                     </span>
                   )}
@@ -456,7 +576,8 @@ export const ExamCreationModal: React.FC<ExamCreationModalProps> = ({
                 {/* Program/Department */}
                 <div>
                   <label className="form-label" style={{ fontWeight: 600 }}>
-                    Program / Department <span style={{ color: "var(--error)" }}>*</span>
+                    Program / Department{" "}
+                    <span style={{ color: "var(--error)" }}>*</span>
                   </label>
                   <input
                     type="text"
@@ -466,7 +587,14 @@ export const ExamCreationModal: React.FC<ExamCreationModalProps> = ({
                     onChange={(e) => setProgram(e.target.value)}
                   />
                   {errors.program && (
-                    <span style={{ fontSize: "0.75rem", color: "var(--error)", marginTop: "4px", display: "block" }}>
+                    <span
+                      style={{
+                        fontSize: "0.75rem",
+                        color: "var(--error)",
+                        marginTop: "4px",
+                        display: "block",
+                      }}
+                    >
                       {errors.program}
                     </span>
                   )}
@@ -475,7 +603,8 @@ export const ExamCreationModal: React.FC<ExamCreationModalProps> = ({
                 {/* Instructor Name */}
                 <div style={{ gridColumn: "span 2" }}>
                   <label className="form-label" style={{ fontWeight: 600 }}>
-                    Instructor Name <span style={{ color: "var(--error)" }}>*</span>
+                    Instructor Name{" "}
+                    <span style={{ color: "var(--error)" }}>*</span>
                   </label>
                   <input
                     type="text"
@@ -485,7 +614,14 @@ export const ExamCreationModal: React.FC<ExamCreationModalProps> = ({
                     onChange={(e) => setInstructorName(e.target.value)}
                   />
                   {errors.instructorName && (
-                    <span style={{ fontSize: "0.75rem", color: "var(--error)", marginTop: "4px", display: "block" }}>
+                    <span
+                      style={{
+                        fontSize: "0.75rem",
+                        color: "var(--error)",
+                        marginTop: "4px",
+                        display: "block",
+                      }}
+                    >
                       {errors.instructorName}
                     </span>
                   )}
@@ -513,7 +649,8 @@ export const ExamCreationModal: React.FC<ExamCreationModalProps> = ({
                   gap: "0.5rem",
                 }}
               >
-                <Calendar size={18} /> 2. Exam Schedule & Administration Settings (Optional)
+                <Calendar size={18} /> 2. Exam Schedule & Administration
+                Settings (Optional)
               </h3>
 
               <div
@@ -536,7 +673,9 @@ export const ExamCreationModal: React.FC<ExamCreationModalProps> = ({
 
                 {/* Passing Score */}
                 <div>
-                  <label className="form-label">Passing Raw Score Benchmark</label>
+                  <label className="form-label">
+                    Passing Raw Score Benchmark
+                  </label>
                   <input
                     type="number"
                     min="0"
@@ -550,7 +689,9 @@ export const ExamCreationModal: React.FC<ExamCreationModalProps> = ({
 
                 {/* Instructions */}
                 <div style={{ gridColumn: "span 2" }}>
-                  <label className="form-label">Exam Instructions for Students</label>
+                  <label className="form-label">
+                    Exam Instructions for Students
+                  </label>
                   <textarea
                     className="form-input"
                     rows={2}
@@ -569,7 +710,9 @@ export const ExamCreationModal: React.FC<ExamCreationModalProps> = ({
                 background: "rgba(15, 23, 42, 0.6)",
                 padding: "1.25rem",
                 borderRadius: "var(--radius-md)",
-                border: errors.answerKey ? "1px solid var(--error)" : "1px solid var(--border)",
+                border: errors.answerKey
+                  ? "1px solid var(--error)"
+                  : "1px solid var(--border)",
               }}
             >
               <div
@@ -594,7 +737,8 @@ export const ExamCreationModal: React.FC<ExamCreationModalProps> = ({
                       gap: "0.5rem",
                     }}
                   >
-                    <CheckSquare size={18} /> 3. Answer Key Editor ({numItems} Items)
+                    <CheckSquare size={18} /> 3. Answer Key Editor ({numItems}{" "}
+                    Items)
                   </h3>
                   <p
                     style={{
@@ -603,11 +747,19 @@ export const ExamCreationModal: React.FC<ExamCreationModalProps> = ({
                       margin: "0.25rem 0 0 0",
                     }}
                   >
-                    Click bubbles to set official answers or scan a completed key sheet.
+                    Click bubbles to set official answers or scan a completed
+                    key sheet.
                   </p>
                 </div>
 
-                <div style={{ display: "flex", gap: "0.5rem", alignItems: "center", flexWrap: "wrap" }}>
+                <div
+                  style={{
+                    display: "flex",
+                    gap: "0.5rem",
+                    alignItems: "center",
+                    flexWrap: "wrap",
+                  }}
+                >
                   <span
                     className={`badge ${isKeyComplete ? "badge-success" : "badge-warning"}`}
                     style={{ padding: "0.35rem 0.75rem", fontSize: "0.8rem" }}
@@ -645,7 +797,8 @@ export const ExamCreationModal: React.FC<ExamCreationModalProps> = ({
                     onClick={handleAutoFillDemoKey}
                     style={{ padding: "0.35rem 0.75rem", fontSize: "0.8rem" }}
                   >
-                    <Sparkles size={14} style={{ marginRight: "4px" }} /> Auto-Fill Demo
+                    <Sparkles size={14} style={{ marginRight: "4px" }} />{" "}
+                    Auto-Fill Demo
                   </button>
 
                   <button
@@ -701,7 +854,12 @@ export const ExamCreationModal: React.FC<ExamCreationModalProps> = ({
                   {/* First Column */}
                   <div>
                     {Array.from(
-                      { length: Math.min(numItems, Math.ceil(numItems / (numItems > 25 ? 2 : 1))) },
+                      {
+                        length: Math.min(
+                          numItems,
+                          Math.ceil(numItems / (numItems > 25 ? 2 : 1)),
+                        ),
+                      },
                       (_, i) => i + 1,
                     ).map((qNum) => {
                       const qStr = qNum.toString();
@@ -711,7 +869,10 @@ export const ExamCreationModal: React.FC<ExamCreationModalProps> = ({
                           className="bubble-row"
                           style={{ padding: "0.3rem 0.5rem" }}
                         >
-                          <span className="bubble-num" style={{ minWidth: "30px" }}>
+                          <span
+                            className="bubble-num"
+                            style={{ minWidth: "30px" }}
+                          >
                             {qNum}.
                           </span>
                           <div className="bubble-options">
@@ -756,7 +917,10 @@ export const ExamCreationModal: React.FC<ExamCreationModalProps> = ({
                             className="bubble-row"
                             style={{ padding: "0.3rem 0.5rem" }}
                           >
-                            <span className="bubble-num" style={{ minWidth: "30px" }}>
+                            <span
+                              className="bubble-num"
+                              style={{ minWidth: "30px" }}
+                            >
                               {qNum}.
                             </span>
                             <div className="bubble-options">
@@ -825,7 +989,9 @@ export const ExamCreationModal: React.FC<ExamCreationModalProps> = ({
               }}
             >
               <CheckCircle2 size={18} />
-              {isSubmitting ? "Saving Examination..." : "Save Examination & Answer Key"}
+              {isSubmitting
+                ? "Saving Examination..."
+                : "Save Examination & Answer Key"}
             </button>
           </div>
         </form>

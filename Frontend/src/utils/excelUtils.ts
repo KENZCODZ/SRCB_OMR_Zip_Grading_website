@@ -597,6 +597,7 @@ export function exportCompleteDatabaseExcel(
     const studentSubs = filteredSubmissions.filter(s => (s.student_id || '').toLowerCase() === student.student_id.toLowerCase());
     const count = studentSubs.length;
     const avg = count > 0 ? Number((studentSubs.reduce((a, b) => a + b.score, 0) / count).toFixed(2)) : 0;
+    const sampleTotal = studentSubs.length > 0 ? studentSubs[0].total_questions : 50;
 
     return {
       'Student ID': student.student_id,
@@ -604,7 +605,7 @@ export function exportCompleteDatabaseExcel(
       'Course & Section': student.course_section || 'N/A',
       'Email': student.email || 'N/A',
       'Exams Completed': count,
-      'Overall Average Score': count > 0 ? `${avg} / 50` : 'No submissions'
+      'Overall Average Score': count > 0 ? `${avg} / ${sampleTotal} (${Math.round(50 + (avg / sampleTotal * 50))}%)` : 'No submissions'
     };
   });
 

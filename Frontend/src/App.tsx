@@ -35,6 +35,7 @@ import type {
 import {
   fetchExams,
   createExam,
+  updateExam,
   gradeSheet,
   extractSheet,
   fetchSubmissions,
@@ -120,6 +121,7 @@ export default function App() {
 
   // Exam Creation, Inspect & Filtering State
   const [isExamModalOpen, setIsExamModalOpen] = useState(false);
+  const [editingExam, setEditingExam] = useState<Exam | null>(null);
   const [inspectExam, setInspectExam] = useState<Exam | null>(null);
   const [examListSearch, setExamListSearch] = useState("");
   const [examTypeFilter, setExamTypeFilter] = useState("All");
@@ -193,6 +195,18 @@ export default function App() {
         const seededExam = await createExam({
           name: mockExams[0].name,
           answer_key: mockExams[0].answer_key,
+          exam_type: mockExams[0].exam_type,
+          academic_year: mockExams[0].academic_year,
+          semester: mockExams[0].semester,
+          subject: mockExams[0].subject,
+          course_code: mockExams[0].course_code,
+          section: mockExams[0].section,
+          program: mockExams[0].program,
+          instructor_name: mockExams[0].instructor_name,
+          num_items: mockExams[0].num_items,
+          passing_score: mockExams[0].passing_score,
+          instructions: mockExams[0].instructions,
+          exam_date: mockExams[0].exam_date,
         });
         setExams([seededExam]);
         setSelectedExamId(seededExam.id);
@@ -284,8 +298,64 @@ export default function App() {
   // Handle Exam Submission Creation
   const handleSaveExamModal = async (
     examData: Omit<Exam, "id" | "created_at">,
+    examId?: string,
   ) => {
     try {
+      if (examId) {
+        const updated = await updateExam(examId, {
+          name: examData.name,
+          answer_key: examData.answer_key,
+          exam_type: examData.exam_type,
+          academic_year: examData.academic_year,
+          semester: examData.semester,
+          subject: examData.subject,
+          course_code: examData.course_code,
+          section: examData.section,
+          program: examData.program,
+          instructor_name: examData.instructor_name,
+          num_items: examData.num_items,
+          passing_score: examData.passing_score,
+          instructions: examData.instructions,
+          exam_date: examData.exam_date,
+        });
+
+        const mergedExam: Exam = {
+          ...updated,
+          id: examId,
+          name: examData.name,
+          answer_key: examData.answer_key,
+          exam_type: examData.exam_type,
+          academic_year: examData.academic_year,
+          semester: examData.semester,
+          subject: examData.subject,
+          course_code: examData.course_code,
+          section: examData.section,
+          program: examData.program,
+          instructor_name: examData.instructor_name,
+          num_items: examData.num_items,
+          passing_score: examData.passing_score,
+          instructions: examData.instructions,
+          exam_date: examData.exam_date,
+          created_at:
+            editingExam?.created_at ??
+            updated.created_at ??
+            new Date().toISOString(),
+        };
+
+        setExams((prev) =>
+          prev.map((exam) => (exam.id === examId ? mergedExam : exam)),
+        );
+        setSelectedExamId(examId);
+        setInspectExam(null);
+        setEditingExam(null);
+        await Promise.all([
+          loadExams(),
+          loadSubmissions(),
+          loadDashboardSummary(),
+        ]);
+        return;
+      }
+
       const created = await createExam({
         name: examData.name,
         answer_key: examData.answer_key,
@@ -785,10 +855,15 @@ export default function App() {
       {/* Comprehensive Exam Creation Modal */}
       <ExamCreationModal
         isOpen={isExamModalOpen}
-        onClose={() => setIsExamModalOpen(false)}
+        onClose={() => {
+          setIsExamModalOpen(false);
+          setEditingExam(null);
+          setInspectExam(null);
+        }}
         onSave={handleSaveExamModal}
         currentUser={currentUser}
         addToast={addToast}
+        editingExam={editingExam}
       />
 
       {/* Exam Details / Inspect Modal */}
@@ -799,6 +874,11 @@ export default function App() {
         onDelete={(id) => {
           handleDeleteExam(id);
           setInspectExam(null);
+        }}
+        onEdit={(exam) => {
+          setInspectExam(null);
+          setEditingExam(exam);
+          setIsExamModalOpen(true);
         }}
         formatDate={formatDate}
       />
@@ -1053,7 +1133,19 @@ export default function App() {
 
             {currentUser && (
               <div style={{ marginBottom: "2rem" }}>
-                <RoleDashboard user={currentUser} summary={dashboardSummary} />
+                <RoleDashboard
+                  user={currentUser}
+                  summary={dashboardSummary}
+                  exams={exams.length > 0 ? exams : mockExams}
+                  submissions={
+                    submissions.length > 0 ? submissions : mockSubmissions
+                  }
+                  roster={roster}
+                  onSelectSubmission={(sub) => setSelectedSubmission(sub)}
+                  onInspectExam={(exam) => setInspectExam(exam)}
+                  addToast={addToast}
+                  formatDate={formatDate}
+                />
               </div>
             )}
 

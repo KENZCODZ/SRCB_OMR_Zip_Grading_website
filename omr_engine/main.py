@@ -68,6 +68,7 @@ class ExamCreate(BaseModel):
 
 
 class ExamUpdate(BaseModel):
+    name: Optional[str] = Field(None, min_length=1, description="Full examination title")
     answer_key: dict[str, str] = Field(..., description="Mapping of question numbers (1-100) to answers (A-E)")
 
     # All metadata fields are optional on update (PATCH-like semantics)
@@ -109,17 +110,27 @@ def dashboard_summary():
 @app.post("/api/exams", status_code=status.HTTP_201_CREATED)
 def create_new_exam(exam: ExamCreate):
     exam_id = str(uuid.uuid4())
-    # Validate answer key format: keys must be integer strings between 1 and 100
+    num_items = exam.num_items or 50
+
+    if num_items < 1 or num_items > 100:
+        raise HTTPException(status_code=400, detail="Number of items must be between 1 and 100.")
+
+    valid_answer_key: dict[str, str] = {}
     for q, ans in exam.answer_key.items():
         try:
             q_num = int(q)
-            if q_num < 1 or q_num > 100:
-                raise HTTPException(status_code=400, detail="Question number must be between 1 and 100.")
+            if q_num < 1 or q_num > num_items:
+                raise HTTPException(status_code=400, detail=f"Question number {q_num} is outside the configured range of 1 to {num_items} for this exam.")
         except ValueError:
             raise HTTPException(status_code=400, detail="Question keys must be integers.")
 
         if ans not in ["A", "B", "C", "D", "E"]:
             raise HTTPException(status_code=400, detail=f"Invalid option '{ans}' for question {q}. Must be A, B, C, D, or E.")
+
+        valid_answer_key[str(q_num)] = ans
+
+    if len(valid_answer_key) != num_items:
+        raise HTTPException(status_code=400, detail=f"Answer key mismatch! This exam is configured for {num_items} items, but {len(valid_answer_key)} answers were provided.")
 
     res = save_exam(
         exam_id=exam_id,
@@ -133,7 +144,7 @@ def create_new_exam(exam: ExamCreate):
         section=exam.section,
         program=exam.program,
         instructor_name=exam.instructor_name,
-        num_items=exam.num_items or 50,
+        num_items=num_items,
         passing_score=exam.passing_score,
         instructions=exam.instructions,
         exam_date=exam.exam_date,
@@ -146,20 +157,31 @@ def edit_exam_key(exam_id: str, exam: ExamUpdate):
     if not existing:
         raise HTTPException(status_code=404, detail="Exam not found.")
 
+    target_num_items = exam.num_items if exam.num_items is not None else (existing.get("num_items") or 50)
+    if target_num_items < 1 or target_num_items > 100:
+        raise HTTPException(status_code=400, detail="Number of items must be between 1 and 100.")
+
+    valid_answer_key: dict[str, str] = {}
     for q, ans in exam.answer_key.items():
         try:
             q_num = int(q)
-            if q_num < 1 or q_num > 100:
-                raise HTTPException(status_code=400, detail="Question number must be between 1 and 100.")
+            if q_num < 1 or q_num > target_num_items:
+                raise HTTPException(status_code=400, detail=f"Question number {q_num} is outside the configured range of 1 to {target_num_items} for this exam.")
         except ValueError:
             raise HTTPException(status_code=400, detail="Question keys must be integers.")
 
         if ans not in ["A", "B", "C", "D", "E"]:
             raise HTTPException(status_code=400, detail=f"Invalid option '{ans}' for question {q}. Must be A, B, C, D, or E.")
 
+        valid_answer_key[str(q_num)] = ans
+
+    if len(valid_answer_key) != target_num_items:
+        raise HTTPException(status_code=400, detail=f"Answer key mismatch! This exam is configured for {target_num_items} items, but {len(valid_answer_key)} answers were provided.")
+
     success = update_exam(
         exam_id=exam_id,
-        answer_key=exam.answer_key,
+        answer_key=valid_answer_key,
+        name=exam.name,
         exam_type=exam.exam_type,
         academic_year=exam.academic_year,
         semester=exam.semester,
@@ -168,7 +190,7 @@ def edit_exam_key(exam_id: str, exam: ExamUpdate):
         section=exam.section,
         program=exam.program,
         instructor_name=exam.instructor_name,
-        num_items=exam.num_items,
+        num_items=target_num_items,
         passing_score=exam.passing_score,
         instructions=exam.instructions,
         exam_date=exam.exam_date,
@@ -222,7 +244,15 @@ async def grade_exam_sheet(
         
     # 5. Process through OMR engine
     try:
-        results = omr_engine.grade_sheet(image, exam["answer_key"])
+        num_items = exam.get("num_items") or len(exam.get("answer_key", {})) or 50
+        answer_key = {
+            str(q): ans
+            for q, ans in exam.get("answer_key", {}).items()
+            if 1 <= int(q) <= num_items
+        }
+        if len(answer_key) != num_items:
+            raise HTTPException(status_code=400, detail=f"Exam is configured for {num_items} items, but the stored answer key contains {len(answer_key)} valid entries.")
+        results = omr_engine.grade_sheet(image, answer_key)
     except OMRCornerDetectionError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
