@@ -118,6 +118,36 @@ export async function createExam(payload: ExamPayload): Promise<Exam> {
   }
 }
 
+export async function updateExam(examId: string, payload: ExamPayload): Promise<Exam> {
+  try {
+    const response = await fetch(`${API_BASE}/api/exams/${examId}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        name: payload.name,
+        answer_key: payload.answer_key,
+        exam_type: payload.exam_type ?? null,
+        academic_year: payload.academic_year ?? null,
+        semester: payload.semester ?? null,
+        subject: payload.subject ?? null,
+        course_code: payload.course_code ?? null,
+        section: payload.section ?? null,
+        program: payload.program ?? null,
+        instructor_name: payload.instructor_name ?? null,
+        num_items: payload.num_items ?? 50,
+        passing_score: payload.passing_score ?? null,
+        instructions: payload.instructions ?? null,
+        exam_date: payload.exam_date ?? null,
+      }),
+    });
+    return await handleResponse(response, 'Failed to update exam');
+  } catch (err) {
+    catchNetworkError(err, 'Failed to update exam');
+  }
+}
+
 export async function gradeSheet(examId: string, file: File): Promise<GradeResult> {
   try {
     const formData = new FormData();

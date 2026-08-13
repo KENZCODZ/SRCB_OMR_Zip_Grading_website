@@ -260,6 +260,7 @@ def save_exam(
 def update_exam(
     exam_id: str,
     answer_key: dict,
+    name: str = None,
     exam_type: str = None,
     academic_year: str = None,
     semester: str = None,
@@ -279,6 +280,7 @@ def update_exam(
 
     cursor.execute(
         """UPDATE exams SET
+            name = COALESCE(?, name),
             answer_key = ?,
             exam_type = COALESCE(?, exam_type),
             academic_year = COALESCE(?, academic_year),
@@ -294,7 +296,7 @@ def update_exam(
             exam_date = COALESCE(?, exam_date)
         WHERE id = ?""",
         (
-            answer_key_str,
+            name, answer_key_str,
             exam_type, academic_year, semester, subject, course_code,
             section, program, instructor_name,
             num_items, passing_score, instructions, exam_date,
