@@ -19,7 +19,7 @@ import {
   UserCheck,
   ShieldCheck,
   LogOut,
-
+  Camera,
 } from "lucide-react";
 import confetti from "canvas-confetti";
 import type {
@@ -66,6 +66,7 @@ import ItemAnalysisTable from "./components/ItemAnalysisTable";
 import RoleDashboard from "./components/RoleDashboard";
 import LoginPage from "./components/LoginPage";
 import UserGuideModal from "./components/UserGuideModal";
+import { CameraScanner } from "./components/CameraScanner";
 
 type AppTab =
   | "dashboard"
@@ -107,6 +108,7 @@ export default function App() {
   });
 
   // Quick Scanner State
+  const [quickScanMode, setQuickScanMode] = useState<"upload" | "camera">("upload");
   const [quickScanLoading, setQuickScanLoading] = useState(false);
   const [quickScanResult, setQuickScanResult] =
     useState<QuickScanResult | null>(null);
@@ -1489,44 +1491,70 @@ export default function App() {
               </p>
             </div>
 
-            <div className="card" style={{ marginBottom: "2rem" }}>
-              <input
-                type="file"
-                ref={quickScanInputRef}
-                style={{ display: "none" }}
-                accept="image/*"
-                onChange={(e) => {
-                  if (e.target.files && e.target.files[0]) {
-                    handleQuickScanUpload(e.target.files[0]);
-                  }
-                  e.target.value = "";
-                }}
-              />
-              <div
-                className="dropzone"
-                onClick={() => quickScanInputRef.current?.click()}
-                onDragOver={(e) => e.preventDefault()}
-                onDrop={(e) => {
-                  e.preventDefault();
-                  if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-                    handleQuickScanUpload(e.dataTransfer.files[0]);
-                  }
-                }}
+            <div className="scan-mode-tabs">
+              <button
+                type="button"
+                className={`scan-mode-tab-btn ${quickScanMode === "upload" ? "active" : ""}`}
+                onClick={() => setQuickScanMode("upload")}
               >
-                <UploadCloud size={48} className="dropzone-icon" />
-                <h3>Drag & drop a ZipGrade sheet image here</h3>
-                <p
-                  style={{
-                    color: "var(--text-secondary)",
-                    fontSize: "0.85rem",
-                    marginTop: "0.5rem",
+                <UploadCloud size={16} /> Upload File
+              </button>
+              <button
+                type="button"
+                className={`scan-mode-tab-btn ${quickScanMode === "camera" ? "active" : ""}`}
+                onClick={() => setQuickScanMode("camera")}
+              >
+                <Camera size={16} /> Scan with Camera
+              </button>
+            </div>
+
+            {quickScanMode === "camera" ? (
+              <CameraScanner
+                onCapture={handleQuickScanUpload}
+                onSwitchToUpload={() => setQuickScanMode("upload")}
+                title="Quick Bubble Camera Scanner"
+                subtitle="Point camera at the ZipGrade answer sheet. Align corners and hold steady to auto-capture."
+              />
+            ) : (
+              <div className="card" style={{ marginBottom: "2rem" }}>
+                <input
+                  type="file"
+                  ref={quickScanInputRef}
+                  style={{ display: "none" }}
+                  accept="image/*"
+                  onChange={(e) => {
+                    if (e.target.files && e.target.files[0]) {
+                      handleQuickScanUpload(e.target.files[0]);
+                    }
+                    e.target.value = "";
+                  }}
+                />
+                <div
+                  className="dropzone"
+                  onClick={() => quickScanInputRef.current?.click()}
+                  onDragOver={(e) => e.preventDefault()}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+                      handleQuickScanUpload(e.dataTransfer.files[0]);
+                    }
                   }}
                 >
-                  or click to browse from local computer files (Supports JPG,
-                  PNG up to 10MB)
-                </p>
+                  <UploadCloud size={48} className="dropzone-icon" />
+                  <h3>Drag & drop a ZipGrade sheet image here</h3>
+                  <p
+                    style={{
+                      color: "var(--text-secondary)",
+                      fontSize: "0.85rem",
+                      marginTop: "0.5rem",
+                    }}
+                  >
+                    or click to browse from local computer files (Supports JPG,
+                    PNG up to 10MB)
+                  </p>
+                </div>
               </div>
-            </div>
+            )}
 
             {quickScanLoading && (
               <div className="card spinner-container">
@@ -2064,11 +2092,13 @@ export default function App() {
                           paddingRight: "1.5rem",
                         }}
                       >
-                        <h4
-                          style={{ marginBottom: "1rem", fontSize: "0.95rem" }}
-                        >
-                          Grade Student OMR Sheets
-                        </h4>
+                        <div style={{ marginBottom: "0.75rem" }}>
+                          <h4
+                            style={{ margin: 0, fontSize: "0.95rem" }}
+                          >
+                            Grade Student OMR Sheets
+                          </h4>
+                        </div>
 
                         <input
                           type="file"
@@ -2085,37 +2115,37 @@ export default function App() {
                           }}
                         />
 
-                        <div
-                          className="dropzone"
-                          style={{ padding: "2rem 1rem" }}
-                          onClick={() => studentScanInputRef.current?.click()}
-                          onDragOver={(e) => e.preventDefault()}
-                          onDrop={(e) => {
-                            e.preventDefault();
-                            if (e.dataTransfer.files) {
-                              const filesArr = Array.from(e.dataTransfer.files);
-                              handleGradeSheetsSubmit(filesArr);
-                            }
-                          }}
-                        >
-                          <FileUp
-                            size={36}
-                            className="text-secondary"
-                            style={{ marginBottom: "0.5rem" }}
-                          />
-                          <h4 style={{ fontSize: "0.85rem" }}>
-                            Upload Student OMR Sheets
-                          </h4>
-                          <p
-                            style={{
-                              fontSize: "0.7rem",
-                              color: "var(--text-muted)",
-                              marginTop: "0.25rem",
-                            }}
-                          >
-                            (Select one or multiple images at once)
-                          </p>
-                        </div>
+                            <div
+                              className="dropzone"
+                              style={{ padding: "2rem 1rem" }}
+                              onClick={() => studentScanInputRef.current?.click()}
+                              onDragOver={(e) => e.preventDefault()}
+                              onDrop={(e) => {
+                                e.preventDefault();
+                                if (e.dataTransfer.files) {
+                                  const filesArr = Array.from(e.dataTransfer.files);
+                                  handleGradeSheetsSubmit(filesArr);
+                                }
+                              }}
+                            >
+                              <FileUp
+                                size={36}
+                                className="text-secondary"
+                                style={{ marginBottom: "0.5rem" }}
+                              />
+                              <h4 style={{ fontSize: "0.85rem" }}>
+                                Upload Student OMR Sheets
+                              </h4>
+                              <p
+                                style={{
+                                  fontSize: "0.7rem",
+                                  color: "var(--text-muted)",
+                                  marginTop: "0.25rem",
+                                }}
+                              >
+                                (Select one or multiple images at once)
+                              </p>
+                            </div>
 
                         {gradingProgress && (
                           <div style={{ marginTop: "1rem" }}>

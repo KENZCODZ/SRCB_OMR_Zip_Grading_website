@@ -1,21 +1,25 @@
-# Terminal 1 — Start the backend (serves both API and frontend)
+# Terminal 1 — Start the Python Backend (FastAPI)
 
-cd "omr_engine"
-run this command:
-python -m venv .venv
-.venv\Scripts\Activate.ps1
+```powershell
+cd omr_engine
+py -m venv .venv
+.\.venv\Scripts\Activate.ps1
 pip install -r requirements.txt
 python main.py
+```
+*(Or without activating: `.\.venv\Scripts\python.exe main.py`)*
 
-# → http://localhost:8000
+→ Backend running at: **http://localhost:8000** (API Docs: **http://localhost:8000/docs**)
 
-# Terminal 2 — Start Vite dev server for hot-reload during development
+---
 
-cd "Frontend"
-run this command:
-npm install 
+# Terminal 2 — Start the Frontend (Vite React + Camera Scanner)
 
+```powershell
+cd Frontend
+npm install
 npm run dev
+```
 
-# → http://localhost:5173 (auto-proxies API calls to :8000)
+→ Web App running at: **http://localhost:5173** (auto-proxies API calls to :8000)
 
