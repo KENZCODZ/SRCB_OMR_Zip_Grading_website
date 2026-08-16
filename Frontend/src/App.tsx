@@ -65,7 +65,7 @@ import RosterImportModal from "./components/RosterImportModal";
 import ItemAnalysisTable from "./components/ItemAnalysisTable";
 import RoleDashboard from "./components/RoleDashboard";
 import LoginPage from "./components/LoginPage";
-import UserGuideModal from "./components/UserGuideModal";
+import UserGuideModal, { UserGuideCard } from "./components/UserGuideModal";
 import { CameraScanner } from "./components/CameraScanner";
 
 type AppTab =
@@ -77,7 +77,8 @@ type AppTab =
   | "quick-scan"
   | "exams"
   | "history"
-  | "item-analysis";
+  | "item-analysis"
+  | "user-guide";
 
 export default function App() {
   // Navigation State
@@ -399,7 +400,6 @@ export default function App() {
     if (!selectedUser) return;
 
     setCurrentUser(selectedUser);
-    setIsUserGuideOpen(false);
     setActiveTab("dashboard");
     setAuthMessage(
       `Welcome back, ${selectedUser.name}. Your ${selectedUser.role.replace("-", " ")} workspace is ready.`,
@@ -462,7 +462,6 @@ export default function App() {
 
       setSelectedAuthUserId(mappedUser.id);
       setCurrentUser(mappedUser);
-      setIsUserGuideOpen(false);
       setActiveTab("dashboard");
       setAuthMessage(
         `Welcome back, ${mappedUser.name}. Your ${mappedUser.role.replace("-", " ")} workspace is ready.`,
@@ -475,7 +474,6 @@ export default function App() {
       if (foundMock && (err.message?.includes("Failed to fetch") || err.message?.includes("NetworkError") || err.name === "TypeError")) {
         setSelectedAuthUserId(foundMock.id);
         setCurrentUser(foundMock);
-        setIsUserGuideOpen(false);
         setActiveTab("dashboard");
         setAuthMessage(
           `Welcome back, ${foundMock.name}. Your ${foundMock.role.replace("-", " ")} workspace is ready.`
@@ -489,7 +487,6 @@ export default function App() {
 
   const resetAuthView = (message: string) => {
     setCurrentUser(null);
-    setIsUserGuideOpen(false);
     setLoginEmail("");
     setLoginPassword("");
     setLoginError("");
@@ -531,6 +528,11 @@ export default function App() {
           label: "Reports & Analytics",
           icon: BarChart3,
         },
+        {
+          key: "user-guide" as AppTab,
+          label: "User Guide",
+          icon: BookOpen,
+        },
         { key: "settings" as AppTab, label: "Settings", icon: ShieldCheck },
       ];
     }
@@ -549,6 +551,11 @@ export default function App() {
           icon: BookOpen,
         },
         { key: "reports" as AppTab, label: "Reports", icon: BarChart3 },
+        {
+          key: "user-guide" as AppTab,
+          label: "User Guide",
+          icon: BookOpen,
+        },
       ];
     }
 
@@ -563,6 +570,11 @@ export default function App() {
           label: "OBE Analysis",
           icon: BarChart2,
         },
+        {
+          key: "user-guide" as AppTab,
+          label: "User Guide",
+          icon: BookOpen,
+        },
       ];
     }
 
@@ -570,6 +582,7 @@ export default function App() {
       { key: "dashboard" as AppTab, label: "Dashboard", icon: BarChart3 },
       { key: "examinations" as AppTab, label: "My Exams", icon: BookOpen },
       { key: "reports" as AppTab, label: "Results", icon: BarChart3 },
+      { key: "user-guide" as AppTab, label: "User Guide", icon: BookOpen },
     ];
   })();
 
@@ -608,7 +621,7 @@ export default function App() {
         setPassword={setLoginPassword}
         loginError={loginError}
         onSubmit={handleLoginSubmit}
-        onSelectMockUser={(userId) => {
+        onSelectMockUser={(userId: string) => {
           setSelectedAuthUserId(userId);
           const found = mockUsers.find((u) => u.id === userId);
           if (found) {
@@ -650,7 +663,10 @@ export default function App() {
         isOpen={isUserGuideOpen}
         onClose={() => setIsUserGuideOpen(false)}
         initialRole={currentUser?.role ?? "teacher"}
-        onNavigateTab={(tab) => handleTabSelect(tab as AppTab)}
+        onNavigateTab={(tab) => {
+          setIsUserGuideOpen(false);
+          handleTabSelect(tab as AppTab);
+        }}
       />
 
       {/* Sidebar Navigation */}
@@ -715,6 +731,10 @@ export default function App() {
                 key={item.key}
                 className={`sidebar-item ${activeTab === item.key ? "active" : ""}`}
                 onClick={() => {
+                  if (item.key === "user-guide") {
+                    setIsUserGuideOpen(true);
+                    return;
+                  }
                   handleTabSelect(item.key);
                   if (
                     item.key === "exams" &&
@@ -3013,6 +3033,43 @@ export default function App() {
                 </div>
               )}
             </div>
+          </div>
+        )}
+
+        {/* USER GUIDE TAB (DEDICATED IN-PAGE CONTAINER CARD) */}
+        {activeTab === "user-guide" && (
+          <div>
+            <div
+              className="header-container"
+              style={{
+                marginBottom: "1.5rem",
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                gap: "1rem",
+                flexWrap: "wrap",
+              }}
+            >
+              <div>
+                <h2 style={{ fontSize: "1.4rem", fontWeight: 800, margin: 0 }}>
+                  AeroOMR User Guide & System Manual
+                </h2>
+                <p
+                  style={{
+                    fontSize: "0.85rem",
+                    color: "var(--text-secondary)",
+                    margin: "0.2rem 0 0 0",
+                  }}
+                >
+                  Role-specific instructions, OMR bubble sheet scanning standards, and OBE item analysis guidelines.
+                </p>
+              </div>
+            </div>
+
+            <UserGuideCard
+              initialRole={currentUser?.role ?? "teacher"}
+              onNavigateTab={(tab) => handleTabSelect(tab as AppTab)}
+            />
           </div>
         )}
       </main>

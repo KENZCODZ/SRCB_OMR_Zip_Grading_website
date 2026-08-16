@@ -54,8 +54,31 @@ export interface AuthUser {
   programme?: string;
   department?: string;
   studentId?: string;
+  status?: 'pending' | 'active' | 'rejected';
   scope: string;
   permissions: string[];
+}
+
+export interface PendingUser {
+  id: string;
+  name: string;
+  email: string;
+  role: UserRole;
+  programme?: string;
+  department?: string;
+  student_id?: string;
+  status: 'pending' | 'active' | 'rejected';
+  created_at: string;
+}
+
+export interface RegisterPayload {
+  name: string;
+  email: string;
+  password: string;
+  role: 'teacher' | 'student';
+  programme?: string;
+  department?: string;
+  student_id?: string;
 }
 
 // Philippine Transmuted Grade Summary

@@ -1,4 +1,4 @@
-import type { Exam, Submission, QuickScanResult, GradeResult } from './types';
+import type { Exam, Submission, QuickScanResult, GradeResult, PendingUser, RegisterPayload } from './types';
 
 // Detect whether we are running in local Vite development server
 const API_BASE = import.meta.env.VITE_API_BASE ?? '';
@@ -40,6 +40,19 @@ function catchNetworkError(err: any, fallbackMsg: string): never {
   throw new Error(typeof err === 'string' && err ? err : fallbackMsg);
 }
 
+export async function registerUser(payload: RegisterPayload): Promise<{ status: string; message: string; user: any }> {
+  try {
+    const response = await fetch(`${API_BASE}/api/auth/register`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    return await handleResponse(response, 'Registration failed');
+  } catch (err) {
+    catchNetworkError(err, 'Registration failed');
+  }
+}
+
 export async function loginUser(email: string, password: string): Promise<{ id: string; name: string; email: string; role: string; programme?: string | null; department?: string | null }> {
   try {
     const response = await fetch(`${API_BASE}/api/auth/login`, {
@@ -50,6 +63,38 @@ export async function loginUser(email: string, password: string): Promise<{ id: 
     return await handleResponse(response, 'Invalid email or password');
   } catch (err) {
     catchNetworkError(err, 'Login failed');
+  }
+}
+
+export async function fetchPendingUsers(programme?: string): Promise<PendingUser[]> {
+  try {
+    const query = programme ? `?programme=${encodeURIComponent(programme)}` : '';
+    const response = await fetch(`${API_BASE}/api/users/pending${query}`);
+    return await handleResponse(response, 'Failed to fetch pending registrations');
+  } catch (err) {
+    catchNetworkError(err, 'Failed to fetch pending registrations');
+  }
+}
+
+export async function approveUser(userId: string): Promise<{ status: string; message: string }> {
+  try {
+    const response = await fetch(`${API_BASE}/api/users/${userId}/approve`, {
+      method: 'POST',
+    });
+    return await handleResponse(response, 'Failed to approve registration');
+  } catch (err) {
+    catchNetworkError(err, 'Failed to approve registration');
+  }
+}
+
+export async function rejectUser(userId: string): Promise<{ status: string; message: string }> {
+  try {
+    const response = await fetch(`${API_BASE}/api/users/${userId}/reject`, {
+      method: 'POST',
+    });
+    return await handleResponse(response, 'Failed to reject registration');
+  } catch (err) {
+    catchNetworkError(err, 'Failed to reject registration');
   }
 }
 

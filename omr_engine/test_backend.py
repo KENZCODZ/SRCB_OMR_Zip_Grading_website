@@ -6,18 +6,14 @@ from database import (
     get_dashboard_summary,
     save_exam,
     save_submission,
+    delete_exam,
 )
 
 
 class BackendAuthTests(unittest.TestCase):
     def setUp(self):
         init_db()
-        from database import get_db_connection
-        conn = get_db_connection()
-        conn.execute("DELETE FROM submissions WHERE exam_id = 'demo-exam'")
-        conn.execute("DELETE FROM exams WHERE id = 'demo-exam'")
-        conn.commit()
-        conn.close()
+        delete_exam("demo-exam")
 
     def test_authentication_accepts_seeded_user(self):
         user = authenticate_user("dean@srcb.edu.ph", "Dean@2025")
@@ -25,8 +21,8 @@ class BackendAuthTests(unittest.TestCase):
         self.assertEqual(user["role"], "dean")
 
     def test_authentication_rejects_bad_password(self):
-        user = authenticate_user("dean@srcb.edu.ph", "wrong-password")
-        self.assertIsNone(user)
+        res = authenticate_user("dean@srcb.edu.ph", "wrong-password")
+        self.assertFalse(res.get("success", False))
 
     def test_dashboard_summary_returns_metrics(self):
         summary = get_dashboard_summary()
