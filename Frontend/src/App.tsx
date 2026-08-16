@@ -121,6 +121,7 @@ export default function App() {
 
   // Active Exam Inspection & Grading State
   const [selectedExamId, setSelectedExamId] = useState<string>("");
+  const [studentScanMode, setStudentScanMode] = useState<"upload" | "camera">("upload");
   const [gradingProgress, setGradingProgress] = useState<{
     current: number;
     total: number;
@@ -2078,42 +2079,187 @@ export default function App() {
                       </button>
                     </div>
 
-                    <div
-                      style={{
-                        display: "grid",
-                        gridTemplateColumns: "1.2fr 1fr",
-                        gap: "1.5rem",
-                        marginBottom: "2rem",
-                      }}
-                    >
+                    <div style={{ marginBottom: "1.5rem" }}>
                       <div
                         style={{
-                          borderRight: "1px solid var(--border)",
-                          paddingRight: "1.5rem",
+                          display: "flex",
+                          justifyContent: "space-between",
+                          alignItems: "center",
+                          marginBottom: "1rem",
+                          flexWrap: "wrap",
+                          gap: "0.75rem",
                         }}
                       >
-                        <div style={{ marginBottom: "0.75rem" }}>
-                          <h4
-                            style={{ margin: 0, fontSize: "0.95rem" }}
+                        <h4 style={{ margin: 0, fontSize: "0.95rem" }}>
+                          Grade Student OMR Sheets
+                        </h4>
+                        <div className="scan-mode-tabs" style={{ margin: 0 }}>
+                          <button
+                            type="button"
+                            className={`scan-mode-tab-btn ${studentScanMode === "upload" ? "active" : ""}`}
+                            onClick={() => setStudentScanMode("upload")}
                           >
-                            Grade Student OMR Sheets
-                          </h4>
+                            <UploadCloud size={15} /> Upload Files
+                          </button>
+                          <button
+                            type="button"
+                            className={`scan-mode-tab-btn ${studentScanMode === "camera" ? "active" : ""}`}
+                            onClick={() => setStudentScanMode("camera")}
+                          >
+                            <Camera size={15} /> Scan with Camera
+                          </button>
                         </div>
+                      </div>
 
-                        <input
-                          type="file"
-                          ref={studentScanInputRef}
-                          style={{ display: "none" }}
-                          accept="image/*"
-                          multiple
-                          onChange={(e) => {
-                            if (e.target.files) {
-                              const filesArr = Array.from(e.target.files);
-                              handleGradeSheetsSubmit(filesArr);
-                            }
-                            e.target.value = "";
+                      {studentScanMode === "camera" ? (
+                        <div style={{ marginBottom: "1.5rem" }}>
+                          <CameraScanner
+                            onCapture={async (file) => {
+                              await handleGradeSheetsSubmit([file]);
+                            }}
+                            onSwitchToUpload={() => setStudentScanMode("upload")}
+                            onClose={() => setStudentScanMode("upload")}
+                            title={`Grade Student Sheet — ${activeExam.name}`}
+                            subtitle={`Point camera at the ZipGrade answer sheet. Live corner detection and automatic scoring against ${activeExam.name}.`}
+                          />
+
+                          {gradingProgress && (
+                            <div style={{ marginTop: "1rem" }}>
+                              <div
+                                style={{
+                                  display: "flex",
+                                  justifyContent: "space-between",
+                                  fontSize: "0.75rem",
+                                  marginBottom: "0.25rem",
+                                }}
+                              >
+                                <span>Grading captured student sheet...</span>
+                                <span>
+                                  {gradingProgress.current} /{" "}
+                                  {gradingProgress.total}
+                                </span>
+                              </div>
+                              <div
+                                style={{
+                                  width: "100%",
+                                  height: "6px",
+                                  background: "var(--bg-base)",
+                                  borderRadius: "3px",
+                                  overflow: "hidden",
+                                }}
+                              >
+                                <div
+                                  style={{
+                                    height: "100%",
+                                    background: "var(--primary)",
+                                    width: `${(gradingProgress.current / gradingProgress.total) * 100}%`,
+                                    transition: "width 0.2s",
+                                  }}
+                                ></div>
+                              </div>
+                            </div>
+                          )}
+
+                          <details
+                            style={{
+                              marginTop: "1rem",
+                              background: "rgba(15, 23, 42, 0.5)",
+                              border: "1px solid var(--border)",
+                              borderRadius: "var(--radius-md)",
+                              padding: "0.75rem 1rem",
+                            }}
+                          >
+                            <summary
+                              style={{
+                                fontSize: "0.85rem",
+                                fontWeight: 600,
+                                cursor: "pointer",
+                                color: "var(--text-secondary)",
+                              }}
+                            >
+                              View Configured Answer Key ({Object.keys(activeExam.answer_key || {}).length} Questions)
+                            </summary>
+                            <div
+                              style={{
+                                maxHeight: "160px",
+                                overflowY: "auto",
+                                marginTop: "0.75rem",
+                                borderTop: "1px solid var(--border)",
+                                paddingTop: "0.5rem",
+                              }}
+                            >
+                              <table
+                                style={{
+                                  width: "100%",
+                                  fontSize: "0.8rem",
+                                  borderCollapse: "collapse",
+                                }}
+                              >
+                                <tbody>
+                                  {Object.entries(activeExam.answer_key)
+                                    .sort((a, b) => parseInt(a[0]) - parseInt(b[0]))
+                                    .map(([q, ans]) => (
+                                      <tr
+                                        key={q}
+                                        style={{
+                                          borderBottom:
+                                            "1px solid rgba(255,255,255,0.02)",
+                                        }}
+                                      >
+                                        <td
+                                          style={{
+                                            padding: "0.25rem",
+                                            color: "var(--text-muted)",
+                                            fontWeight: 600,
+                                          }}
+                                        >
+                                          Q{q}
+                                        </td>
+                                        <td
+                                          style={{
+                                            padding: "0.25rem",
+                                            fontWeight: 800,
+                                            color: "var(--primary)",
+                                          }}
+                                        >
+                                          {ans}
+                                        </td>
+                                      </tr>
+                                    ))}
+                                </tbody>
+                              </table>
+                            </div>
+                          </details>
+                        </div>
+                      ) : (
+                        <div
+                          style={{
+                            display: "grid",
+                            gridTemplateColumns: "1.2fr 1fr",
+                            gap: "1.5rem",
+                            marginBottom: "2rem",
                           }}
-                        />
+                        >
+                          <div
+                            style={{
+                              borderRight: "1px solid var(--border)",
+                              paddingRight: "1.5rem",
+                            }}
+                          >
+                            <input
+                              type="file"
+                              ref={studentScanInputRef}
+                              style={{ display: "none" }}
+                              accept="image/*"
+                              multiple
+                              onChange={(e) => {
+                                if (e.target.files) {
+                                  const filesArr = Array.from(e.target.files);
+                                  handleGradeSheetsSubmit(filesArr);
+                                }
+                                e.target.value = "";
+                              }}
+                            />
 
                             <div
                               className="dropzone"
@@ -2147,101 +2293,103 @@ export default function App() {
                               </p>
                             </div>
 
-                        {gradingProgress && (
-                          <div style={{ marginTop: "1rem" }}>
+                            {gradingProgress && (
+                              <div style={{ marginTop: "1rem" }}>
+                                <div
+                                  style={{
+                                    display: "flex",
+                                    justifyContent: "space-between",
+                                    fontSize: "0.75rem",
+                                    marginBottom: "0.25rem",
+                                  }}
+                                >
+                                  <span>Grading student sheets...</span>
+                                  <span>
+                                    {gradingProgress.current} /{" "}
+                                    {gradingProgress.total}
+                                  </span>
+                                </div>
+                                <div
+                                  style={{
+                                    width: "100%",
+                                    height: "6px",
+                                    background: "var(--bg-base)",
+                                    borderRadius: "3px",
+                                    overflow: "hidden",
+                                  }}
+                                >
+                                  <div
+                                    style={{
+                                      height: "100%",
+                                      background: "var(--primary)",
+                                      width: `${(gradingProgress.current / gradingProgress.total) * 100}%`,
+                                      transition: "width 0.2s",
+                                    }}
+                                  ></div>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+
+                          <div>
+                            <h4
+                              style={{ marginBottom: "1rem", fontSize: "0.95rem" }}
+                            >
+                              Configured Answer Key
+                            </h4>
                             <div
                               style={{
-                                display: "flex",
-                                justifyContent: "space-between",
-                                fontSize: "0.75rem",
-                                marginBottom: "0.25rem",
+                                maxHeight: "180px",
+                                overflowY: "auto",
+                                border: "1px solid var(--border)",
+                                borderRadius: "var(--radius-sm)",
+                                padding: "0.5rem",
                               }}
                             >
-                              <span>Grading student sheets...</span>
-                              <span>
-                                {gradingProgress.current} /{" "}
-                                {gradingProgress.total}
-                              </span>
-                            </div>
-                            <div
-                              style={{
-                                width: "100%",
-                                height: "6px",
-                                background: "var(--bg-base)",
-                                borderRadius: "3px",
-                                overflow: "hidden",
-                              }}
-                            >
-                              <div
+                              <table
                                 style={{
-                                  height: "100%",
-                                  background: "var(--primary)",
-                                  width: `${(gradingProgress.current / gradingProgress.total) * 100}%`,
-                                  transition: "width 0.2s",
+                                  width: "100%",
+                                  fontSize: "0.8rem",
+                                  borderCollapse: "collapse",
                                 }}
-                              ></div>
+                              >
+                                <tbody>
+                                  {Object.entries(activeExam.answer_key)
+                                    .sort((a, b) => parseInt(a[0]) - parseInt(b[0]))
+                                    .map(([q, ans]) => (
+                                      <tr
+                                        key={q}
+                                        style={{
+                                          borderBottom:
+                                            "1px solid rgba(255,255,255,0.02)",
+                                        }}
+                                      >
+                                        <td
+                                          style={{
+                                            padding: "0.25rem",
+                                            color: "var(--text-muted)",
+                                            fontWeight: 600,
+                                          }}
+                                        >
+                                          Q{q}
+                                        </td>
+                                        <td
+                                          style={{
+                                            padding: "0.25rem",
+                                            fontWeight: 800,
+                                            color: "var(--primary)",
+                                          }}
+                                        >
+                                          {ans}
+                                        </td>
+                                      </tr>
+                                    ))}
+                                </tbody>
+                              </table>
                             </div>
                           </div>
-                        )}
-                      </div>
-
-                      <div>
-                        <h4
-                          style={{ marginBottom: "1rem", fontSize: "0.95rem" }}
-                        >
-                          Configured Answer Key
-                        </h4>
-                        <div
-                          style={{
-                            maxHeight: "180px",
-                            overflowY: "auto",
-                            border: "1px solid var(--border)",
-                            borderRadius: "var(--radius-sm)",
-                            padding: "0.5rem",
-                          }}
-                        >
-                          <table
-                            style={{
-                              width: "100%",
-                              fontSize: "0.8rem",
-                              borderCollapse: "collapse",
-                            }}
-                          >
-                            <tbody>
-                              {Object.entries(activeExam.answer_key)
-                                .sort((a, b) => parseInt(a[0]) - parseInt(b[0]))
-                                .map(([q, ans]) => (
-                                  <tr
-                                    key={q}
-                                    style={{
-                                      borderBottom:
-                                        "1px solid rgba(255,255,255,0.02)",
-                                    }}
-                                  >
-                                    <td
-                                      style={{
-                                        padding: "0.25rem",
-                                        color: "var(--text-muted)",
-                                        fontWeight: 600,
-                                      }}
-                                    >
-                                      Q{q}
-                                    </td>
-                                    <td
-                                      style={{
-                                        padding: "0.25rem",
-                                        fontWeight: 800,
-                                        color: "var(--primary)",
-                                      }}
-                                    >
-                                      {ans}
-                                    </td>
-                                  </tr>
-                                ))}
-                            </tbody>
-                          </table>
                         </div>
-                      </div>
+                      )}
                     </div>
 
                     {latestGradeResult && (

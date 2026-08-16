@@ -199,7 +199,7 @@ const ROLE_GUIDES: RoleGuide[] = [
           },
           {
             title: "Grading Student Sheets for an Exam",
-            description: "Go to 'Exams & Grading', select your target exam, and click 'Grade Student Sheet'. Upload the student's sheet image. The system auto-detects alignment corner boxes, calculates scores, and generates visual bubble overlays.",
+            description: "Go to 'Exams & Grading', select your target exam. Choose between 'Upload Files' or 'Scan with Camera'. With the camera scanner, the system auto-detects alignment corner boxes in real time, locks bubbles, and automatically calculates scores and visual overlays.",
             tip: "Green circles indicate correct answers; Red circles highlight incorrect marks or ambiguous fills.",
           },
         ],
