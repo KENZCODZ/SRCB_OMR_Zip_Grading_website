@@ -232,7 +232,7 @@ def create_new_exam(exam: ExamCreate):
         except ValueError:
             raise HTTPException(status_code=400, detail="Question keys must be integers.")
 
-        ans_clean = str(ans).strip().upper()
+        ans_clean = ans.strip().upper()
         if ans_clean not in ["A", "B", "C", "D", "E"]:
             raise HTTPException(
                 status_code=400,
@@ -289,7 +289,7 @@ def edit_exam_key(exam_id: str, exam: ExamUpdate):
         except ValueError:
             raise HTTPException(status_code=400, detail="Question keys must be integers.")
 
-        ans_clean = str(ans).strip().upper()
+        ans_clean = ans.strip().upper()
         if ans_clean not in ["A", "B", "C", "D", "E"]:
             raise HTTPException(
                 status_code=400,
@@ -360,7 +360,7 @@ async def grade_exam_sheet(
         raise HTTPException(status_code=413, detail="File size exceeds maximum limit of 10MB.")
 
     # 3. Validate content type
-    if not file.content_type.startswith("image/"):
+    if not file.content_type or not file.content_type.startswith("image/"):
         raise HTTPException(status_code=415, detail="Unsupported media type. Only image uploads are allowed.")
 
     # 4. Convert bytes to OpenCV image
@@ -427,7 +427,7 @@ async def extract_sheet_answers(
         raise HTTPException(status_code=413, detail="File size exceeds maximum limit of 10MB.")
 
     # 2. Validate content type
-    if not file.content_type.startswith("image/"):
+    if not file.content_type or not file.content_type.startswith("image/"):
         raise HTTPException(status_code=415, detail="Unsupported media type. Only image uploads are allowed.")
 
     # 3. Convert bytes to OpenCV image

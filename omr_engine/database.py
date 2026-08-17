@@ -188,7 +188,7 @@ def init_db():
             (
                 user["id"],
                 user["name"],
-                user["email"].strip().lower(),
+                (user.get("email") or "").strip().lower(),
                 user["password"],
                 user["role"],
                 user["programme"],
