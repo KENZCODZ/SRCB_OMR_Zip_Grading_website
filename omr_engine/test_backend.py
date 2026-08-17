@@ -20,6 +20,11 @@ class BackendIntegrationTests(unittest.TestCase):
     def setUp(self):
         init_db()
         delete_exam("demo-test-exam")
+        from database import get_db_connection
+        conn = get_db_connection()
+        conn.execute("DELETE FROM users WHERE email = 'test.teacher@srcb.edu.ph'")
+        conn.commit()
+        conn.close()
 
     def test_authentication_accepts_seeded_user(self):
         res = authenticate_user("dean@srcb.edu.ph", "Dean@2025")
