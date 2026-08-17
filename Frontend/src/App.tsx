@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import {
   BarChart3,
   UploadCloud,
@@ -20,6 +20,9 @@ import {
   ShieldCheck,
   LogOut,
   Camera,
+  FileText,
+  Layers,
+  Database,
 } from "lucide-react";
 import confetti from "canvas-confetti";
 import type {
@@ -33,6 +36,7 @@ import type {
 import {
   fetchExams,
   createExam,
+  updateExam,
   gradeSheet,
   extractSheet,
   fetchSubmissions,
@@ -50,6 +54,9 @@ import {
 import {
   exportCHEDGradeSheet,
   exportItemAnalysisExcel,
+  exportSingleSubmissionExcel,
+  exportExamBatchExcel,
+  exportCompleteDatabaseExcel,
 } from "./utils/excelUtils";
 
 // Imported Isolated UI Components
@@ -67,6 +74,8 @@ import RoleDashboard from "./components/RoleDashboard";
 import LoginPage from "./components/LoginPage";
 import UserGuideModal, { UserGuideCard } from "./components/UserGuideModal";
 import { CameraScanner } from "./components/CameraScanner";
+import ExamCreationModal from "./components/ExamCreationModal";
+import ExamDetailsModal from "./components/ExamDetailsModal";
 
 type AppTab =
   | "dashboard"
@@ -114,11 +123,13 @@ export default function App() {
   const [quickScanResult, setQuickScanResult] =
     useState<QuickScanResult | null>(null);
 
-  // Exam Creation State
-  const [showCreateExam, setShowCreateExam] = useState(false);
-  const [newExamName, setNewExamName] = useState("");
-  const [newExamKey, setNewExamKey] = useState<Record<string, string>>({});
-  const [keyUploadLoading, setKeyUploadLoading] = useState(false);
+  // Exam Creation, Inspect & Filtering State
+  const [isExamModalOpen, setIsExamModalOpen] = useState(false);
+  const [editingExam, setEditingExam] = useState<Exam | null>(null);
+  const [inspectExam, setInspectExam] = useState<Exam | null>(null);
+  const [examListSearch, setExamListSearch] = useState("");
+  const [examTypeFilter, setExamTypeFilter] = useState("All");
+  const [examSemesterFilter, setExamSemesterFilter] = useState("All");
 
   // Active Exam Inspection & Grading State
   const [selectedExamId, setSelectedExamId] = useState<string>("");
@@ -135,12 +146,26 @@ export default function App() {
   const [selectedSubmission, setSelectedSubmission] =
     useState<Submission | null>(null);
 
+  // Flexible Export System State
+  const [exportBatchExamId, setExportBatchExamId] = useState<string>("");
+  const [exportExamType, setExportExamType] = useState<string>(
+    "Midterm Examination",
+  );
+  const [exportSingleSubmissionId, setExportSingleSubmissionId] =
+    useState<string>("");
+  const [exportDbExamTypeFilter, setExportDbExamTypeFilter] =
+    useState<string>("All");
+  const [exportDbSemesterFilter, setExportDbSemesterFilter] =
+    useState<string>("All");
+  const [exportDbGroupBy, setExportDbGroupBy] = useState<"none" | "exam_type">(
+    "none",
+  );
+
   // Toast State
   const [toasts, setToasts] = useState<ToastItem[]>([]);
 
   // Refs for file uploads
   const quickScanInputRef = useRef<HTMLInputElement>(null);
-  const keyScanInputRef = useRef<HTMLInputElement>(null);
   const studentScanInputRef = useRef<HTMLInputElement>(null);
 
   // Add a Toast Notification
@@ -156,51 +181,81 @@ export default function App() {
     setToasts((prev) => prev.filter((t) => t.id !== id));
   };
 
-  // Initial Data Fetch
-  useEffect(() => {
-    loadExams();
-    loadSubmissions();
-    loadDashboardSummary();
-  }, []);
-
-  const loadExams = async () => {
+  const loadExams = useCallback(async () => {
     setLoadingExams(true);
     try {
       const data = await fetchExams();
       if (data && data.length > 0) {
         setExams(data);
-        if (!selectedExamId) setSelectedExamId(data[0].id);
-      } else {
-        setExams(mockExams);
-        if (!selectedExamId) setSelectedExamId(mockExams[0].id);
+        setSelectedExamId((prev) => {
+          if (prev && data.some((exam) => exam.id === prev)) {
+            return prev;
+          }
+          return data[0]?.id ?? "";
+        });
+        return;
       }
-    } catch (_err: any) {
+
+      try {
+        const seededExam = await createExam({
+          name: mockExams[0].name,
+          answer_key: mockExams[0].answer_key,
+          exam_type: mockExams[0].exam_type,
+          academic_year: mockExams[0].academic_year,
+          semester: mockExams[0].semester,
+          subject: mockExams[0].subject,
+          course_code: mockExams[0].course_code,
+          section: mockExams[0].section,
+          program: mockExams[0].program,
+          instructor_name: mockExams[0].instructor_name,
+          num_items: mockExams[0].num_items,
+          passing_score: mockExams[0].passing_score,
+          instructions: mockExams[0].instructions,
+          exam_date: mockExams[0].exam_date,
+        });
+        setExams([seededExam]);
+        setSelectedExamId(seededExam.id);
+        addToast(
+          "info",
+          `A starter exam was created automatically so grading can begin.`,
+        );
+      } catch {
+        setExams(mockExams);
+        setSelectedExamId(mockExams[0]?.id ?? "");
+        addToast(
+          "info",
+          "No exams were found in the backend. Using demo data until you create a real exam.",
+        );
+      }
+    } catch {
       addToast("info", "Using fallback mock exams (Backend API offline)");
       setExams(mockExams);
-      if (!selectedExamId) setSelectedExamId(mockExams[0].id);
+      setSelectedExamId(mockExams[0]?.id ?? "");
     } finally {
       setLoadingExams(false);
     }
-  };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
-  const loadSubmissions = async () => {
+  const loadSubmissions = useCallback(async () => {
     setLoadingSubmissions(true);
     try {
       const data = await fetchSubmissions();
       setSubmissions(data && data.length > 0 ? data : mockSubmissions);
-    } catch (_err: any) {
+    } catch {
       addToast("info", "Using fallback mock submissions (Backend API offline)");
       setSubmissions(mockSubmissions);
     } finally {
       setLoadingSubmissions(false);
     }
-  };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
-  const loadDashboardSummary = async () => {
+  const loadDashboardSummary = useCallback(async () => {
     try {
       const data = await fetchDashboardSummary();
       setDashboardSummary(data);
-    } catch (_err: any) {
+    } catch {
       setDashboardSummary({
         total_students: 4,
         total_exams: 0,
@@ -208,7 +263,15 @@ export default function App() {
         total_submissions: 0,
       });
     }
-  };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Initial Data Fetch
+  useEffect(() => {
+    loadExams();
+    loadSubmissions();
+    loadDashboardSummary();
+  }, [loadExams, loadSubmissions, loadDashboardSummary]);
 
   // Trigger Confetti Effect
   const triggerConfetti = () => {
@@ -237,62 +300,134 @@ export default function App() {
     }
   };
 
-  // Handle Answer Key Image Upload
-  const handleKeySheetUpload = async (file: File) => {
-    if (!file) return;
-    setKeyUploadLoading(true);
-    try {
-      const res = await extractSheet(file);
-      const extractedKey: Record<string, string> = {};
-      Object.entries(res.answers).forEach(([q, val]) => {
-        if (val) extractedKey[q] = val;
-      });
-      setNewExamKey(extractedKey);
-      addToast(
-        "success",
-        "Answer key extracted from sheet image successfully!",
-      );
-    } catch (err: any) {
-      addToast(
-        "error",
-        err.message || "Failed to extract answer key from image.",
-      );
-    } finally {
-      setKeyUploadLoading(false);
-    }
-  };
-
   // Handle Exam Submission Creation
-  const handleCreateExamSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newExamName.trim()) {
-      addToast("error", "Exam name is required.");
-      return;
-    }
-    if (Object.keys(newExamKey).length === 0) {
-      addToast("error", "Please configure at least one answer in the key.");
-      return;
-    }
-
+  const handleSaveExamModal = async (
+    examData: Omit<Exam, "id" | "created_at">,
+    examId?: string,
+  ) => {
     try {
-      await createExam(newExamName, newExamKey);
-      addToast("success", `Exam "${newExamName}" created successfully.`);
-      setNewExamName("");
-      setNewExamKey({});
-      setShowCreateExam(false);
+      if (examId) {
+        const updated = await updateExam(examId, {
+          name: examData.name,
+          answer_key: examData.answer_key,
+          exam_type: examData.exam_type,
+          academic_year: examData.academic_year,
+          semester: examData.semester,
+          subject: examData.subject,
+          course_code: examData.course_code,
+          section: examData.section,
+          program: examData.program,
+          instructor_name: examData.instructor_name,
+          num_items: examData.num_items,
+          passing_score: examData.passing_score,
+          instructions: examData.instructions,
+          exam_date: examData.exam_date,
+        });
+
+        const mergedExam: Exam = {
+          ...updated,
+          id: examId,
+          name: examData.name,
+          answer_key: examData.answer_key,
+          exam_type: examData.exam_type,
+          academic_year: examData.academic_year,
+          semester: examData.semester,
+          subject: examData.subject,
+          course_code: examData.course_code,
+          section: examData.section,
+          program: examData.program,
+          instructor_name: examData.instructor_name,
+          num_items: examData.num_items,
+          passing_score: examData.passing_score,
+          instructions: examData.instructions,
+          exam_date: examData.exam_date,
+          created_at:
+            editingExam?.created_at ??
+            updated.created_at ??
+            new Date().toISOString(),
+        };
+
+        setExams((prev) =>
+          prev.map((exam) => (exam.id === examId ? mergedExam : exam)),
+        );
+        setSelectedExamId(examId);
+        setInspectExam(null);
+        setEditingExam(null);
+        await Promise.all([
+          loadExams(),
+          loadSubmissions(),
+          loadDashboardSummary(),
+        ]);
+        return;
+      }
+
+      const created = await createExam({
+        name: examData.name,
+        answer_key: examData.answer_key,
+        exam_type: examData.exam_type,
+        academic_year: examData.academic_year,
+        semester: examData.semester,
+        subject: examData.subject,
+        course_code: examData.course_code,
+        section: examData.section,
+        program: examData.program,
+        instructor_name: examData.instructor_name,
+        num_items: examData.num_items,
+        passing_score: examData.passing_score,
+        instructions: examData.instructions,
+        exam_date: examData.exam_date,
+      });
+
+      setSelectedExamId(created.id);
       await Promise.all([
         loadExams(),
         loadSubmissions(),
         loadDashboardSummary(),
       ]);
     } catch (err: any) {
-      addToast("error", err.message || "Failed to create exam.");
+      // In mock / offline mode fallback
+      const fallbackId = `ex-${Date.now()}`;
+      const fallbackExam: Exam = {
+        id: fallbackId,
+        name: examData.name,
+        answer_key: examData.answer_key,
+        exam_type: examData.exam_type,
+        academic_year: examData.academic_year,
+        semester: examData.semester,
+        subject: examData.subject,
+        course_code: examData.course_code,
+        section: examData.section,
+        program: examData.program,
+        instructor_name: examData.instructor_name,
+        num_items: examData.num_items,
+        passing_score: examData.passing_score,
+        instructions: examData.instructions,
+        exam_date: examData.exam_date,
+        created_at: new Date().toISOString(),
+      };
+      setExams((prev) => [fallbackExam, ...prev]);
+      setSelectedExamId(fallbackId);
     }
   };
 
   // Handle Grading Student Sheets
   const handleGradeSheetsSubmit = async (files: File[]) => {
-    if (files.length === 0 || !selectedExamId) return;
+    if (files.length === 0) return;
+
+    const activeExamId =
+      selectedExamId && exams.some((exam) => exam.id === selectedExamId)
+        ? selectedExamId
+        : exams[0]?.id || "";
+
+    if (!activeExamId) {
+      addToast(
+        "error",
+        "Create or select an exam before uploading student sheets.",
+      );
+      return;
+    }
+
+    setSelectedExamId(activeExamId);
     setGradingProgress({ current: 0, total: files.length });
     setLatestGradeResult(null);
 
@@ -301,7 +436,7 @@ export default function App() {
     for (let i = 0; i < files.length; i++) {
       setGradingProgress({ current: i + 1, total: files.length });
       try {
-        const res = await gradeSheet(selectedExamId, files[i]);
+        const res = await gradeSheet(activeExamId, files[i]);
         setLatestGradeResult(res);
         successCount++;
       } catch (err: any) {
@@ -363,6 +498,7 @@ export default function App() {
       examName,
       examSubs.length > 0 ? examSubs : mockSubmissions,
       roster,
+      targetExam,
     );
     addToast(
       "success",
@@ -378,10 +514,80 @@ export default function App() {
       targetExam.name,
       targetExam.answer_key,
       examSubs.length > 0 ? examSubs : mockSubmissions,
+      targetExam,
     );
     addToast(
       "success",
       `Exported OBE Item Analysis Report for "${targetExam.name}" (.xlsx)`,
+    );
+  };
+
+  const handleExportSingleSubmission = (targetSub?: Submission | null) => {
+    const activeSubmissions =
+      submissions.length > 0 ? submissions : mockSubmissions;
+    const subToExport =
+      targetSub ||
+      activeSubmissions.find((s) => s.id === exportSingleSubmissionId) ||
+      selectedSubmission ||
+      activeSubmissions[0];
+    if (!subToExport) {
+      addToast("error", "No submission selected for single file export.");
+      return;
+    }
+    const targetExam =
+      exams.find((e) => e.id === subToExport.exam_id) ||
+      mockExams.find((e) => e.id === subToExport.exam_id);
+    exportSingleSubmissionExcel(subToExport, targetExam, roster);
+    const matchedStudent = roster.find(
+      (r) =>
+        r.student_id.toLowerCase() ===
+        (subToExport.student_id || "").toLowerCase(),
+    );
+    const studentLabel = matchedStudent
+      ? matchedStudent.name
+      : subToExport.student_id || "Student";
+    addToast(
+      "success",
+      `Single File Export: Exported result for ${studentLabel} (.xlsx)`,
+    );
+  };
+
+  const handleExportExamBatch = () => {
+    const activeExams = exams.length > 0 ? exams : mockExams;
+    const activeSubmissions =
+      submissions.length > 0 ? submissions : mockSubmissions;
+    const targetExamId =
+      exportBatchExamId || selectedExamId || activeExams[0]?.id || "";
+    const targetExam =
+      activeExams.find((e) => e.id === targetExamId) || activeExams[0];
+    if (!targetExam) {
+      addToast("error", "No examination selected for batch export.");
+      return;
+    }
+    const examSubs = activeSubmissions.filter(
+      (s) => s.exam_id === targetExam.id,
+    );
+    const finalSubs = examSubs.length > 0 ? examSubs : activeSubmissions;
+
+    exportExamBatchExcel(targetExam, finalSubs, roster, exportExamType);
+    addToast(
+      "success",
+      `Exam-Based Batch Export: Compiled ${finalSubs.length} submissions for "${targetExam.name}" (${exportExamType}) with complete metadata into Excel (.xlsx)`,
+    );
+  };
+
+  const handleExportCompleteDatabase = () => {
+    const activeSubmissions =
+      submissions.length > 0 ? submissions : mockSubmissions;
+    const activeExams = exams.length > 0 ? exams : mockExams;
+    exportCompleteDatabaseExcel(activeExams, activeSubmissions, roster, {
+      examTypeFilter: exportDbExamTypeFilter,
+      semesterFilter: exportDbSemesterFilter,
+      groupBy: exportDbGroupBy,
+    });
+    addToast(
+      "success",
+      `Teacher Database Export: Exported filtered master database report (.xlsx)`,
     );
   };
 
@@ -439,24 +645,24 @@ export default function App() {
         permissions:
           backendUser.role === "dean"
             ? [
-              "Manage students",
-              "Manage teachers",
-              "Monitor examinations",
-              "View reports",
-            ]
+                "Manage students",
+                "Manage teachers",
+                "Monitor examinations",
+                "View reports",
+              ]
             : backendUser.role === "programme-head"
               ? [
-                "View programme analytics",
-                "Monitor students",
-                "Review examinations",
-              ]
+                  "View programme analytics",
+                  "Monitor students",
+                  "Review examinations",
+                ]
               : backendUser.role === "teacher"
                 ? [
-                  "Create examinations",
-                  "Upload answer keys",
-                  "Grade sheets",
-                  "Publish results",
-                ]
+                    "Create examinations",
+                    "Upload answer keys",
+                    "Grade sheets",
+                    "Publish results",
+                  ]
                 : ["View exams", "Review results", "See feedback"],
       };
 
@@ -469,14 +675,19 @@ export default function App() {
       setLoginError("");
     } catch (err: any) {
       const foundMock = mockUsers.find(
-        (u) => u.email.toLowerCase() === normalizedEmail
+        (u) => u.email.toLowerCase() === normalizedEmail,
       );
-      if (foundMock && (err.message?.includes("Failed to fetch") || err.message?.includes("NetworkError") || err.name === "TypeError")) {
+      if (
+        foundMock &&
+        (err.message?.includes("Failed to fetch") ||
+          err.message?.includes("NetworkError") ||
+          err.name === "TypeError")
+      ) {
         setSelectedAuthUserId(foundMock.id);
         setCurrentUser(foundMock);
         setActiveTab("dashboard");
         setAuthMessage(
-          `Welcome back, ${foundMock.name}. Your ${foundMock.role.replace("-", " ")} workspace is ready.`
+          `Welcome back, ${foundMock.name}. Your ${foundMock.role.replace("-", " ")} workspace is ready.`,
         );
         setLoginError("");
         return;
@@ -499,7 +710,6 @@ export default function App() {
       "Signed out. Choose a role to continue exploring the experience.",
     );
   };
-
 
   const activeExam = exams.find((e) => e.id === selectedExamId);
 
@@ -629,7 +839,7 @@ export default function App() {
             if (found.role === "programme-head") pass = "Ph@2025";
             if (found.role === "teacher") pass = "Teacher@2025";
             if (found.role === "student") pass = "Student@2025";
-            
+
             setLoginEmail(found.email);
             setLoginPassword(pass);
             handleSignIn(found.id);
@@ -657,6 +867,37 @@ export default function App() {
             `Successfully imported class roster with ${newRoster.length} students.`,
           );
         }}
+      />
+
+      {/* Comprehensive Exam Creation Modal */}
+      <ExamCreationModal
+        isOpen={isExamModalOpen}
+        onClose={() => {
+          setIsExamModalOpen(false);
+          setEditingExam(null);
+          setInspectExam(null);
+        }}
+        onSave={handleSaveExamModal}
+        currentUser={currentUser}
+        addToast={addToast}
+        editingExam={editingExam}
+      />
+
+      {/* Exam Details / Inspect Modal */}
+      <ExamDetailsModal
+        exam={inspectExam}
+        isOpen={inspectExam !== null}
+        onClose={() => setInspectExam(null)}
+        onDelete={(id) => {
+          handleDeleteExam(id);
+          setInspectExam(null);
+        }}
+        onEdit={(exam) => {
+          setInspectExam(null);
+          setEditingExam(exam);
+          setIsExamModalOpen(true);
+        }}
+        formatDate={formatDate}
       />
 
       <UserGuideModal
@@ -845,19 +1086,23 @@ export default function App() {
                   </>
                 ) : (
                   <>
-                    <button
-                      className="btn btn-secondary"
-                      onClick={() => setIsRosterModalOpen(true)}
-                    >
-                      <FileSpreadsheet size={16} /> Import Roster (
-                      {roster.length})
-                    </button>
-                    <button
-                      className="btn btn-primary"
-                      onClick={handleExportGradeSheet}
-                    >
-                      <Download size={16} /> Export CHED Grade Sheet (.xlsx)
-                    </button>
+                    {currentUser?.role !== "student" && (
+                      <>
+                        <button
+                          className="btn btn-secondary"
+                          onClick={() => setIsRosterModalOpen(true)}
+                        >
+                          <FileSpreadsheet size={16} /> Import Roster (
+                          {roster.length})
+                        </button>
+                        <button
+                          className="btn btn-primary"
+                          onClick={handleExportGradeSheet}
+                        >
+                          <Download size={16} /> Export CHED Grade Sheet (.xlsx)
+                        </button>
+                      </>
+                    )}
                   </>
                 )}
               </div>
@@ -912,7 +1157,19 @@ export default function App() {
 
             {currentUser && (
               <div style={{ marginBottom: "2rem" }}>
-                <RoleDashboard user={currentUser} summary={dashboardSummary} />
+                <RoleDashboard
+                  user={currentUser}
+                  summary={dashboardSummary}
+                  exams={exams.length > 0 ? exams : mockExams}
+                  submissions={
+                    submissions.length > 0 ? submissions : mockSubmissions
+                  }
+                  roster={roster}
+                  onSelectSubmission={(sub) => setSelectedSubmission(sub)}
+                  onInspectExam={(exam) => setInspectExam(exam)}
+                  addToast={addToast}
+                  formatDate={formatDate}
+                />
               </div>
             )}
 
@@ -1059,71 +1316,73 @@ export default function App() {
               </div>
 
               {/* Quick Action Panel */}
-              <div
-                className="card"
-                style={{
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: "1rem",
-                }}
-              >
-                <h2 style={{ fontSize: "1.2rem" }}>Academic Tools</h2>
-                <button
-                  className="btn btn-primary"
-                  style={{ width: "100%", justifyContent: "flex-start" }}
-                  onClick={() => setActiveTab("quick-scan")}
-                >
-                  <Sparkles size={18} /> Quick Bubble Reader
-                </button>
-                <button
-                  className="btn btn-secondary"
-                  style={{ width: "100%", justifyContent: "flex-start" }}
-                  onClick={() => setIsRosterModalOpen(true)}
-                >
-                  <UserCheck size={18} /> Match Student Roster
-                </button>
-                <button
-                  className="btn btn-secondary"
-                  style={{ width: "100%", justifyContent: "flex-start" }}
-                  onClick={() => setActiveTab("item-analysis")}
-                >
-                  <BarChart2 size={18} /> Run OBE Item Analysis
-                </button>
-
+              {currentUser?.role !== "student" && (
                 <div
+                  className="card"
                   style={{
-                    marginTop: "auto",
-                    background: "rgba(255, 255, 255, 0.02)",
-                    padding: "1rem",
-                    borderRadius: "var(--radius-md)",
-                    border: "1px solid var(--border)",
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: "1rem",
                   }}
                 >
-                  <h4
+                  <h2 style={{ fontSize: "1.2rem" }}>Academic Tools</h2>
+                  <button
+                    className="btn btn-primary"
+                    style={{ width: "100%", justifyContent: "flex-start" }}
+                    onClick={() => setActiveTab("quick-scan")}
+                  >
+                    <Sparkles size={18} /> Quick Bubble Reader
+                  </button>
+                  <button
+                    className="btn btn-secondary"
+                    style={{ width: "100%", justifyContent: "flex-start" }}
+                    onClick={() => setIsRosterModalOpen(true)}
+                  >
+                    <UserCheck size={18} /> Match Student Roster
+                  </button>
+                  <button
+                    className="btn btn-secondary"
+                    style={{ width: "100%", justifyContent: "flex-start" }}
+                    onClick={() => setActiveTab("item-analysis")}
+                  >
+                    <BarChart2 size={18} /> Run OBE Item Analysis
+                  </button>
+
+                  <div
                     style={{
-                      fontSize: "0.85rem",
-                      color: "var(--text-secondary)",
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "0.25rem",
-                      marginBottom: "0.5rem",
+                      marginTop: "auto",
+                      background: "rgba(255, 255, 255, 0.02)",
+                      padding: "1rem",
+                      borderRadius: "var(--radius-md)",
+                      border: "1px solid var(--border)",
                     }}
                   >
-                    <Info size={14} /> Philippine HEI Grading Standard
-                  </h4>
-                  <p
-                    style={{
-                      fontSize: "0.75rem",
-                      color: "var(--text-muted)",
-                      lineHeight: "1.4",
-                    }}
-                  >
-                    Calculates 50-Base Transmutations automatically:{" "}
-                    <code>Grade = 50 + (Raw / Total * 50)</code> mapped to
-                    official 1.00 - 5.00 numeric scales.
-                  </p>
+                    <h4
+                      style={{
+                        fontSize: "0.85rem",
+                        color: "var(--text-secondary)",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "0.25rem",
+                        marginBottom: "0.5rem",
+                      }}
+                    >
+                      <Info size={14} /> Philippine HEI Grading Standard
+                    </h4>
+                    <p
+                      style={{
+                        fontSize: "0.75rem",
+                        color: "var(--text-muted)",
+                        lineHeight: "1.4",
+                      }}
+                    >
+                      Calculates 50-Base Transmutations automatically:{" "}
+                      <code>Grade = 50 + (Raw / Total * 50)</code> mapped to
+                      official 1.00 - 5.00 numeric scales.
+                    </p>
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
           </div>
         )}
@@ -1694,12 +1953,13 @@ export default function App() {
                                   {["A", "B", "C", "D", "E"].map((opt) => (
                                     <span
                                       key={opt}
-                                      className={`bubble-btn ${detectedVal === null
+                                      className={`bubble-btn ${
+                                        detectedVal === null
                                           ? "empty"
                                           : detectedVal === opt
                                             ? "active"
                                             : ""
-                                        }`}
+                                      }`}
                                       style={{ pointerEvents: "none" }}
                                     >
                                       {opt}
@@ -1727,12 +1987,13 @@ export default function App() {
                                   {["A", "B", "C", "D", "E"].map((opt) => (
                                     <span
                                       key={opt}
-                                      className={`bubble-btn ${detectedVal === null
+                                      className={`bubble-btn ${
+                                        detectedVal === null
                                           ? "empty"
                                           : detectedVal === opt
                                             ? "active"
                                             : ""
-                                        }`}
+                                      }`}
                                       style={{ pointerEvents: "none" }}
                                     >
                                       {opt}
@@ -1762,6 +2023,8 @@ export default function App() {
                 display: "flex",
                 justifyContent: "space-between",
                 alignItems: "center",
+                flexWrap: "wrap",
+                gap: "1rem",
               }}
             >
               <div>
@@ -1775,10 +2038,13 @@ export default function App() {
                     margin: "0.2rem 0 0 0",
                   }}
                 >
-                  Manage exam answer keys and grade student sheets.
+                  Manage complete examination details, answer keys, and grade
+                  student sheets.
                 </p>
               </div>
-              <div style={{ display: "flex", gap: "0.75rem" }}>
+              <div
+                style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap" }}
+              >
                 <button
                   className="btn btn-secondary"
                   onClick={handleExportGradeSheet}
@@ -1787,228 +2053,13 @@ export default function App() {
                 </button>
                 <button
                   className="btn btn-primary"
-                  onClick={() => setShowCreateExam(true)}
+                  onClick={() => setIsExamModalOpen(true)}
+                  style={{ fontWeight: 700 }}
                 >
-                  <Plus size={18} /> Create Exam
+                  <Plus size={18} /> Create Examination
                 </button>
               </div>
             </div>
-
-            {/* Create Exam Form Modal */}
-            {showCreateExam && (
-              <div
-                className="card"
-                style={{
-                  marginBottom: "2rem",
-                  border: "1px solid var(--primary)",
-                }}
-              >
-                <h3
-                  style={{
-                    marginBottom: "1.25rem",
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                  }}
-                >
-                  Configure New Exam
-                  <button
-                    className="btn btn-danger"
-                    style={{ padding: "0.35rem 0.75rem", fontSize: "0.8rem" }}
-                    onClick={() => setShowCreateExam(false)}
-                  >
-                    Cancel
-                  </button>
-                </h3>
-
-                <form onSubmit={handleCreateExamSubmit}>
-                  <div className="form-group">
-                    <label className="form-label">Exam Name</label>
-                    <input
-                      type="text"
-                      className="form-input"
-                      placeholder="e.g. Midterm Physics, Quiz 1"
-                      value={newExamName}
-                      onChange={(e) => setNewExamName(e.target.value)}
-                      required
-                    />
-                  </div>
-
-                  <div className="exam-layout">
-                    <div
-                      style={{
-                        display: "flex",
-                        flexDirection: "column",
-                        gap: "1rem",
-                      }}
-                    >
-                      <h4
-                        style={{
-                          fontSize: "0.9rem",
-                          color: "var(--text-secondary)",
-                        }}
-                      >
-                        Configure Official Answer Key
-                      </h4>
-                      <input
-                        type="file"
-                        ref={keyScanInputRef}
-                        style={{ display: "none" }}
-                        accept="image/*"
-                        onChange={(e) => {
-                          if (e.target.files && e.target.files[0]) {
-                            handleKeySheetUpload(e.target.files[0]);
-                          }
-                          e.target.value = "";
-                        }}
-                      />
-                      <button
-                        type="button"
-                        className="btn btn-secondary"
-                        onClick={() => keyScanInputRef.current?.click()}
-                        disabled={keyUploadLoading}
-                        style={{ width: "100%" }}
-                      >
-                        {keyUploadLoading
-                          ? "Extracting..."
-                          : "Scan Answer Key Sheet"}
-                      </button>
-                      <p
-                        style={{
-                          fontSize: "0.75rem",
-                          color: "var(--text-muted)",
-                          lineHeight: "1.4",
-                        }}
-                      >
-                        💡 Tip: You can scan a pre-filled OMR sheet containing
-                        the correct answers to auto-fill this form!
-                      </p>
-                    </div>
-
-                    <div>
-                      <h4
-                        style={{
-                          fontSize: "0.9rem",
-                          color: "var(--text-secondary)",
-                          marginBottom: "0.5rem",
-                        }}
-                      >
-                        Bubble Sheet Answer Key (Click to set)
-                      </h4>
-                      <div
-                        className="bubble-sheet-card"
-                        style={{
-                          border: "1px solid var(--border)",
-                          borderRadius: "var(--radius-md)",
-                          padding: "1rem",
-                          maxHeight: "400px",
-                        }}
-                      >
-                        <div
-                          style={{
-                            display: "grid",
-                            gridTemplateColumns: "1fr 1fr",
-                            gap: "1rem",
-                          }}
-                        >
-                          <div>
-                            {Array.from({ length: 25 }, (_, i) => i + 1).map(
-                              (qNum) => {
-                                const qStr = qNum.toString();
-                                return (
-                                  <div
-                                    key={qStr}
-                                    className="bubble-row"
-                                    style={{ padding: "0.25rem 0.5rem" }}
-                                  >
-                                    <span className="bubble-num">{qNum}.</span>
-                                    <div className="bubble-options">
-                                      {["A", "B", "C", "D", "E"].map((opt) => (
-                                        <button
-                                          key={opt}
-                                          type="button"
-                                          className={`bubble-btn ${newExamKey[qStr] === opt ? "active" : ""}`}
-                                          style={{
-                                            width: "24px",
-                                            height: "24px",
-                                            fontSize: "0.75rem",
-                                          }}
-                                          onClick={() =>
-                                            setNewExamKey((prev) => ({
-                                              ...prev,
-                                              [qStr]:
-                                                prev[qStr] === opt ? "" : opt,
-                                            }))
-                                          }
-                                        >
-                                          {opt}
-                                        </button>
-                                      ))}
-                                    </div>
-                                  </div>
-                                );
-                              },
-                            )}
-                          </div>
-                          <div>
-                            {Array.from({ length: 25 }, (_, i) => i + 26).map(
-                              (qNum) => {
-                                const qStr = qNum.toString();
-                                return (
-                                  <div
-                                    key={qStr}
-                                    className="bubble-row"
-                                    style={{ padding: "0.25rem 0.5rem" }}
-                                  >
-                                    <span className="bubble-num">{qNum}.</span>
-                                    <div className="bubble-options">
-                                      {["A", "B", "C", "D", "E"].map((opt) => (
-                                        <button
-                                          key={opt}
-                                          type="button"
-                                          className={`bubble-btn ${newExamKey[qStr] === opt ? "active" : ""}`}
-                                          style={{
-                                            width: "24px",
-                                            height: "24px",
-                                            fontSize: "0.75rem",
-                                          }}
-                                          onClick={() =>
-                                            setNewExamKey((prev) => ({
-                                              ...prev,
-                                              [qStr]:
-                                                prev[qStr] === opt ? "" : opt,
-                                            }))
-                                          }
-                                        >
-                                          {opt}
-                                        </button>
-                                      ))}
-                                    </div>
-                                  </div>
-                                );
-                              },
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div
-                    style={{
-                      display: "flex",
-                      justifyContent: "flex-end",
-                      gap: "1rem",
-                      marginTop: "1.5rem",
-                    }}
-                  >
-                    <button type="submit" className="btn btn-primary">
-                      Save Exam & Answer Key
-                    </button>
-                  </div>
-                </form>
-              </div>
-            )}
 
             {/* Exam List and Grading Section */}
             <div
@@ -2018,43 +2069,192 @@ export default function App() {
                 gap: "2rem",
               }}
             >
-              {/* Decomposed ExamCard Component Feed */}
-              <div className="card">
-                <h3 style={{ fontSize: "1.1rem", marginBottom: "1rem" }}>
-                  Exams List
-                </h3>
+              {/* Searchable & Filterable Exams Feed */}
+              <div
+                className="card"
+                style={{ display: "flex", flexDirection: "column" }}
+              >
+                <div style={{ marginBottom: "1rem" }}>
+                  <div
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      marginBottom: "0.75rem",
+                    }}
+                  >
+                    <h3 style={{ fontSize: "1.1rem", margin: 0 }}>
+                      Examinations Directory
+                    </h3>
+                    <span
+                      className="badge badge-info"
+                      style={{ fontSize: "0.75rem" }}
+                    >
+                      {exams.length} Total
+                    </span>
+                  </div>
+
+                  {/* Search Bar */}
+                  <div style={{ position: "relative", marginBottom: "0.6rem" }}>
+                    <Search
+                      size={15}
+                      style={{
+                        position: "absolute",
+                        left: "0.6rem",
+                        top: "50%",
+                        transform: "translateY(-50%)",
+                        color: "var(--text-muted)",
+                      }}
+                    />
+                    <input
+                      type="text"
+                      className="form-input"
+                      placeholder="Search title, subject, code, section..."
+                      style={{ paddingLeft: "2rem", fontSize: "0.8rem" }}
+                      value={examListSearch}
+                      onChange={(e) => setExamListSearch(e.target.value)}
+                    />
+                  </div>
+
+                  {/* Filter Selectors */}
+                  <div
+                    style={{
+                      display: "grid",
+                      gridTemplateColumns: "1fr 1fr",
+                      gap: "0.5rem",
+                    }}
+                  >
+                    <div>
+                      <label
+                        style={{
+                          fontSize: "0.7rem",
+                          color: "var(--text-muted)",
+                          display: "block",
+                          marginBottom: "2px",
+                        }}
+                      >
+                        Exam Type:
+                      </label>
+                      <select
+                        className="form-input"
+                        style={{
+                          fontSize: "0.78rem",
+                          padding: "0.3rem 0.5rem",
+                        }}
+                        value={examTypeFilter}
+                        onChange={(e) => setExamTypeFilter(e.target.value)}
+                      >
+                        <option value="All">All Types</option>
+                        <option value="Preliminary">Preliminary</option>
+                        <option value="Midterm">Midterm</option>
+                        <option value="Pre-Final">Pre-Final</option>
+                        <option value="Final">Final</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label
+                        style={{
+                          fontSize: "0.7rem",
+                          color: "var(--text-muted)",
+                          display: "block",
+                          marginBottom: "2px",
+                        }}
+                      >
+                        Semester:
+                      </label>
+                      <select
+                        className="form-input"
+                        style={{
+                          fontSize: "0.78rem",
+                          padding: "0.3rem 0.5rem",
+                        }}
+                        value={examSemesterFilter}
+                        onChange={(e) => setExamSemesterFilter(e.target.value)}
+                      >
+                        <option value="All">All Semesters</option>
+                        <option value="1st Semester">1st Semester</option>
+                        <option value="2nd Semester">2nd Semester</option>
+                        <option value="Summer">Summer</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+
                 {loadingExams ? (
                   <div className="spinner-container">
                     <div className="spinner"></div>
                   </div>
-                ) : exams.length === 0 ? (
-                  <div
-                    style={{ color: "var(--text-muted)", fontSize: "0.85rem" }}
-                  >
-                    No exams found. Click "Create Exam" to configure one.
-                  </div>
                 ) : (
-                  <div
-                    style={{
-                      display: "flex",
-                      flexDirection: "column",
-                      gap: "0.75rem",
-                    }}
-                  >
-                    {exams.map((exam) => (
-                      <ExamCard
-                        key={exam.id}
-                        exam={exam}
-                        isSelected={selectedExamId === exam.id}
-                        onSelect={(id) => {
-                          setSelectedExamId(id);
-                          setLatestGradeResult(null);
+                  (() => {
+                    const filtered = exams.filter((ex) => {
+                      const q = examListSearch.toLowerCase().trim();
+                      const matchesSearch =
+                        !q ||
+                        ex.name.toLowerCase().includes(q) ||
+                        (ex.subject && ex.subject.toLowerCase().includes(q)) ||
+                        (ex.course_code &&
+                          ex.course_code.toLowerCase().includes(q)) ||
+                        (ex.section && ex.section.toLowerCase().includes(q)) ||
+                        (ex.instructor_name &&
+                          ex.instructor_name.toLowerCase().includes(q));
+
+                      const matchesType =
+                        examTypeFilter === "All" ||
+                        (ex.exam_type || "").toLowerCase() ===
+                          examTypeFilter.toLowerCase();
+
+                      const matchesSem =
+                        examSemesterFilter === "All" ||
+                        (ex.semester || "1st Semester").toLowerCase() ===
+                          examSemesterFilter.toLowerCase();
+
+                      return matchesSearch && matchesType && matchesSem;
+                    });
+
+                    if (filtered.length === 0) {
+                      return (
+                        <div
+                          style={{
+                            color: "var(--text-muted)",
+                            fontSize: "0.85rem",
+                            padding: "1.5rem 0",
+                            textAlign: "center",
+                          }}
+                        >
+                          No matching examinations found. Try adjusting your
+                          filters or click "Create Examination".
+                        </div>
+                      );
+                    }
+
+                    return (
+                      <div
+                        style={{
+                          display: "flex",
+                          flexDirection: "column",
+                          gap: "0.75rem",
+                          maxHeight: "520px",
+                          overflowY: "auto",
                         }}
-                        onDelete={handleDeleteExam}
-                        formatDate={formatDate}
-                      />
-                    ))}
-                  </div>
+                      >
+                        {filtered.map((exam) => (
+                          <ExamCard
+                            key={exam.id}
+                            exam={exam}
+                            isSelected={selectedExamId === exam.id}
+                            onSelect={(id) => {
+                              setSelectedExamId(id);
+                              setLatestGradeResult(null);
+                            }}
+                            onInspect={(e) => setInspectExam(e)}
+                            onDelete={handleDeleteExam}
+                            formatDate={formatDate}
+                          />
+                        ))}
+                      </div>
+                    );
+                  })()
                 )}
               </div>
 
@@ -2216,7 +2416,7 @@ export default function App() {
                                 }}
                               >
                                 <tbody>
-                                  {Object.entries(activeExam.answer_key)
+                                  {Object.entries(activeExam.answer_key || {})
                                     .sort((a, b) => parseInt(a[0]) - parseInt(b[0]))
                                     .map(([q, ans]) => (
                                       <tr
@@ -2428,7 +2628,9 @@ export default function App() {
                           }}
                         >
                           <div>
-                            <h4 style={{ marginBottom: "0.3rem" }}>Latest Grade Result</h4>
+                            <h4 style={{ marginBottom: "0.3rem" }}>
+                              Latest Grade Result
+                            </h4>
                             <div
                               style={{
                                 fontSize: "0.82rem",
@@ -2507,7 +2709,8 @@ export default function App() {
                                         let btnClass = "";
                                         if (isAmbiguous) {
                                           // Amber on the student's filled bubble
-                                          if (selected === opt) btnClass = "ambiguous";
+                                          if (selected === opt)
+                                            btnClass = "ambiguous";
                                         } else if (isEmpty) {
                                           btnClass = "empty";
                                         } else if (opt === correctAns) {
@@ -2573,7 +2776,7 @@ export default function App() {
           </div>
         )}
 
-        {/* SUBMISSIONS HISTORY TAB */}
+        {/* SUBMISSIONS HISTORY TAB / TEACHER DATABASE */}
         {activeTab === "history" && (
           <div>
             <div
@@ -2587,7 +2790,7 @@ export default function App() {
             >
               <div>
                 <h2 style={{ fontSize: "1.4rem", fontWeight: 800, margin: 0 }}>
-                  Grading History & Records
+                  Teacher Database & Grading Records
                 </h2>
                 <p
                   style={{
@@ -2596,7 +2799,8 @@ export default function App() {
                     margin: "0.2rem 0 0 0",
                   }}
                 >
-                  Review, search, and audit all graded student submissions.
+                  Review, audit, and export scanned student submissions using
+                  multiple flexible export methods.
                 </p>
               </div>
               <div style={{ display: "flex", gap: "0.75rem" }}>
@@ -2606,12 +2810,593 @@ export default function App() {
                 >
                   <FileSpreadsheet size={16} /> Import Roster
                 </button>
-                <button
-                  className="btn btn-primary"
-                  onClick={handleExportGradeSheet}
+              </div>
+            </div>
+
+            {/* Flexible Multi-Method Export Center */}
+            <div
+              className="card"
+              style={{
+                marginBottom: "1.5rem",
+                background:
+                  "linear-gradient(180deg, rgba(15, 23, 42, 0.95) 0%, rgba(8, 17, 32, 0.95) 100%)",
+                border: "1px solid var(--srcb-gold-accent)",
+              }}
+            >
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  marginBottom: "1rem",
+                  flexWrap: "wrap",
+                  gap: "0.75rem",
+                }}
+              >
+                <div>
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "0.5rem",
+                    }}
+                  >
+                    <FileSpreadsheet
+                      size={20}
+                      color="var(--srcb-gold-accent)"
+                    />
+                    <h3
+                      style={{
+                        fontSize: "1.15rem",
+                        fontWeight: 800,
+                        margin: 0,
+                      }}
+                    >
+                      Teacher Database Export System
+                    </h3>
+                    <span
+                      className="badge"
+                      style={{
+                        background: "rgba(245, 158, 11, 0.2)",
+                        color: "var(--srcb-gold-light)",
+                      }}
+                    >
+                      3 Export Methods
+                    </span>
+                  </div>
+                  <p
+                    style={{
+                      fontSize: "0.82rem",
+                      color: "var(--text-secondary)",
+                      margin: "0.25rem 0 0 0",
+                    }}
+                  >
+                    Select an export option below to download formatted Excel
+                    (.xlsx) reports with organized columns and examination
+                    details.
+                  </p>
+                </div>
+              </div>
+
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "repeat(auto-fit, minmax(290px, 1fr))",
+                  gap: "1.25rem",
+                }}
+              >
+                {/* Method 1: Single File Export */}
+                <div
+                  style={{
+                    background: "rgba(30, 41, 59, 0.7)",
+                    borderRadius: "var(--radius-md)",
+                    padding: "1.25rem",
+                    border: "1px solid var(--border)",
+                    display: "flex",
+                    flexDirection: "column",
+                    justifyContent: "space-between",
+                  }}
                 >
-                  <Download size={16} /> Export CHED Grade Sheet (.xlsx)
-                </button>
+                  <div>
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        marginBottom: "0.75rem",
+                      }}
+                    >
+                      <span
+                        className="badge"
+                        style={{
+                          background: "rgba(59, 130, 246, 0.15)",
+                          color: "#60a5fa",
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: "4px",
+                        }}
+                      >
+                        <FileText size={12} /> Method 1
+                      </span>
+                      <span
+                        style={{
+                          fontSize: "0.75rem",
+                          color: "var(--text-muted)",
+                        }}
+                      >
+                        Individual File
+                      </span>
+                    </div>
+                    <h4
+                      style={{
+                        fontSize: "0.98rem",
+                        fontWeight: 700,
+                        marginBottom: "0.35rem",
+                      }}
+                    >
+                      Single File Export
+                    </h4>
+                    <p
+                      style={{
+                        fontSize: "0.8rem",
+                        color: "var(--text-secondary)",
+                        marginBottom: "1rem",
+                        lineHeight: 1.4,
+                      }}
+                    >
+                      Export an individual scanned submission directly with
+                      score, CHED transmuted grade, and bubble breakdown.
+                    </p>
+
+                    <div style={{ marginBottom: "1rem" }}>
+                      <label
+                        style={{
+                          fontSize: "0.75rem",
+                          color: "var(--text-muted)",
+                          display: "block",
+                          marginBottom: "4px",
+                        }}
+                      >
+                        Select Submission:
+                      </label>
+                      <select
+                        className="form-input"
+                        style={{ fontSize: "0.8rem", padding: "0.4rem 0.6rem" }}
+                        value={
+                          exportSingleSubmissionId ||
+                          (submissions.length > 0
+                            ? submissions[0].id
+                            : mockSubmissions[0].id)
+                        }
+                        onChange={(e) =>
+                          setExportSingleSubmissionId(e.target.value)
+                        }
+                      >
+                        {(submissions.length > 0
+                          ? submissions
+                          : mockSubmissions
+                        ).map((sub) => {
+                          const matchedStudent = roster.find(
+                            (r) =>
+                              r.student_id.toLowerCase() ===
+                              (sub.student_id || "").toLowerCase(),
+                          );
+                          const matchedExam = (
+                            exams.length > 0 ? exams : mockExams
+                          ).find((e) => e.id === sub.exam_id);
+                          const nameLabel = matchedStudent
+                            ? matchedStudent.name
+                            : sub.student_id;
+                          const examLabel = matchedExam
+                            ? matchedExam.name
+                            : "Exam";
+                          return (
+                            <option key={sub.id} value={sub.id}>
+                              {nameLabel} - {examLabel} ({sub.score}/50)
+                            </option>
+                          );
+                        })}
+                      </select>
+                    </div>
+                  </div>
+
+                  <div>
+                    <button
+                      className="btn btn-secondary"
+                      style={{
+                        width: "100%",
+                        justifyContent: "center",
+                        fontSize: "0.82rem",
+                      }}
+                      onClick={() => {
+                        const activeSubs =
+                          submissions.length > 0
+                            ? submissions
+                            : mockSubmissions;
+                        const targetId =
+                          exportSingleSubmissionId || activeSubs[0].id;
+                        const targetSub =
+                          activeSubs.find((s) => s.id === targetId) ||
+                          activeSubs[0];
+                        if (targetSub) handleExportSingleSubmission(targetSub);
+                      }}
+                    >
+                      <Download size={14} /> Export Single File (.xlsx)
+                    </button>
+                    <div
+                      style={{
+                        fontSize: "0.72rem",
+                        color: "var(--text-muted)",
+                        marginTop: "6px",
+                        textAlign: "center",
+                      }}
+                    >
+                      💡 Available on any submission inspect page
+                    </div>
+                  </div>
+                </div>
+
+                {/* Method 2: Exam-Based Batch Export */}
+                <div
+                  style={{
+                    background: "rgba(30, 41, 59, 0.7)",
+                    borderRadius: "var(--radius-md)",
+                    padding: "1.25rem",
+                    border: "1px solid var(--border)",
+                    display: "flex",
+                    flexDirection: "column",
+                    justifyContent: "space-between",
+                  }}
+                >
+                  <div>
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        marginBottom: "0.75rem",
+                      }}
+                    >
+                      <span
+                        className="badge"
+                        style={{
+                          background: "rgba(16, 185, 129, 0.15)",
+                          color: "#34d399",
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: "4px",
+                        }}
+                      >
+                        <Layers size={12} /> Method 2
+                      </span>
+                      <span
+                        style={{
+                          fontSize: "0.75rem",
+                          color: "var(--text-muted)",
+                        }}
+                      >
+                        Exam Title & Type
+                      </span>
+                    </div>
+                    <h4
+                      style={{
+                        fontSize: "0.98rem",
+                        fontWeight: 700,
+                        marginBottom: "0.35rem",
+                      }}
+                    >
+                      Exam-Based Batch Export
+                    </h4>
+                    <p
+                      style={{
+                        fontSize: "0.8rem",
+                        color: "var(--text-secondary)",
+                        marginBottom: "1rem",
+                        lineHeight: 1.4,
+                      }}
+                    >
+                      Compiles all student submissions belonging to the same
+                      examination (Title & Type) into a single report.
+                    </p>
+
+                    <div
+                      style={{
+                        display: "grid",
+                        gap: "0.6rem",
+                        marginBottom: "1rem",
+                      }}
+                    >
+                      <div>
+                        <label
+                          style={{
+                            fontSize: "0.75rem",
+                            color: "var(--text-muted)",
+                            display: "block",
+                            marginBottom: "4px",
+                          }}
+                        >
+                          Select Examination Title:
+                        </label>
+                        <select
+                          className="form-input"
+                          style={{
+                            fontSize: "0.8rem",
+                            padding: "0.4rem 0.6rem",
+                          }}
+                          value={
+                            exportBatchExamId ||
+                            selectedExamId ||
+                            (exams.length > 0 ? exams[0].id : mockExams[0].id)
+                          }
+                          onChange={(e) => setExportBatchExamId(e.target.value)}
+                        >
+                          {(exams.length > 0 ? exams : mockExams).map((ex) => (
+                            <option key={ex.id} value={ex.id}>
+                              {ex.name}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div>
+                        <label
+                          style={{
+                            fontSize: "0.75rem",
+                            color: "var(--text-muted)",
+                            display: "block",
+                            marginBottom: "4px",
+                          }}
+                        >
+                          Specify Exam Type / Category:
+                        </label>
+                        <select
+                          className="form-input"
+                          style={{
+                            fontSize: "0.8rem",
+                            padding: "0.4rem 0.6rem",
+                          }}
+                          value={exportExamType}
+                          onChange={(e) => setExportExamType(e.target.value)}
+                        >
+                          <option value="Midterm Examination">
+                            Midterm Examination
+                          </option>
+                          <option value="Final Examination">
+                            Final Examination
+                          </option>
+                          <option value="Quiz">Quiz / Long Quiz</option>
+                          <option value="Diagnostic Test">
+                            Diagnostic Test
+                          </option>
+                          <option value="Unit Test">Unit / Chapter Test</option>
+                          <option value="Major Examination">
+                            Major Examination
+                          </option>
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div>
+                    <button
+                      className="btn btn-primary"
+                      style={{
+                        width: "100%",
+                        justifyContent: "center",
+                        fontSize: "0.82rem",
+                      }}
+                      onClick={handleExportExamBatch}
+                    >
+                      <Layers size={14} /> Export Exam Batch Report (.xlsx)
+                    </button>
+                    <div
+                      style={{
+                        fontSize: "0.72rem",
+                        color: "var(--text-muted)",
+                        marginTop: "6px",
+                        textAlign: "center",
+                      }}
+                    >
+                      📊 Multi-sheet: Batch Roster, Answer Matrix & OBE Analysis
+                    </div>
+                  </div>
+                </div>
+
+                {/* Method 3: Complete Database Export */}
+                <div
+                  style={{
+                    background: "rgba(30, 41, 59, 0.7)",
+                    borderRadius: "var(--radius-md)",
+                    padding: "1.25rem",
+                    border: "1px solid var(--srcb-gold-accent)",
+                    display: "flex",
+                    flexDirection: "column",
+                    justifyContent: "space-between",
+                  }}
+                >
+                  <div>
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        marginBottom: "0.75rem",
+                      }}
+                    >
+                      <span
+                        className="badge"
+                        style={{
+                          background: "rgba(245, 158, 11, 0.2)",
+                          color: "var(--srcb-gold-light)",
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: "4px",
+                        }}
+                      >
+                        <Database size={12} /> Method 3
+                      </span>
+                      <span
+                        style={{
+                          fontSize: "0.75rem",
+                          color: "var(--text-muted)",
+                        }}
+                      >
+                        All Examinations
+                      </span>
+                    </div>
+                    <h4
+                      style={{
+                        fontSize: "0.98rem",
+                        fontWeight: 700,
+                        marginBottom: "0.35rem",
+                      }}
+                    >
+                      Complete Database Export
+                    </h4>
+                    <p
+                      style={{
+                        fontSize: "0.8rem",
+                        color: "var(--text-secondary)",
+                        marginBottom: "0.75rem",
+                        lineHeight: 1.4,
+                      }}
+                    >
+                      Exports filtered or grouped master database reports with
+                      full institutional headers and complete examination
+                      details.
+                    </p>
+
+                    <div
+                      style={{
+                        display: "grid",
+                        gap: "0.5rem",
+                        marginBottom: "1rem",
+                        background: "rgba(8, 17, 32, 0.8)",
+                        padding: "0.75rem",
+                        borderRadius: "var(--radius-sm)",
+                        border: "1px solid var(--border)",
+                      }}
+                    >
+                      <div>
+                        <label
+                          style={{
+                            fontSize: "0.72rem",
+                            color: "var(--text-muted)",
+                            display: "block",
+                            marginBottom: "2px",
+                          }}
+                        >
+                          Filter by Exam Type:
+                        </label>
+                        <select
+                          className="form-input"
+                          style={{
+                            fontSize: "0.78rem",
+                            padding: "0.3rem 0.5rem",
+                          }}
+                          value={exportDbExamTypeFilter}
+                          onChange={(e) =>
+                            setExportDbExamTypeFilter(e.target.value)
+                          }
+                        >
+                          <option value="All">All Exam Types</option>
+                          <option value="Preliminary">Preliminary Only</option>
+                          <option value="Midterm">Midterm Only</option>
+                          <option value="Pre-Final">Pre-Final Only</option>
+                          <option value="Final">Final Only</option>
+                        </select>
+                      </div>
+
+                      <div>
+                        <label
+                          style={{
+                            fontSize: "0.72rem",
+                            color: "var(--text-muted)",
+                            display: "block",
+                            marginBottom: "2px",
+                          }}
+                        >
+                          Filter by Semester:
+                        </label>
+                        <select
+                          className="form-input"
+                          style={{
+                            fontSize: "0.78rem",
+                            padding: "0.3rem 0.5rem",
+                          }}
+                          value={exportDbSemesterFilter}
+                          onChange={(e) =>
+                            setExportDbSemesterFilter(e.target.value)
+                          }
+                        >
+                          <option value="All">All Semesters</option>
+                          <option value="1st Semester">1st Semester</option>
+                          <option value="2nd Semester">2nd Semester</option>
+                          <option value="Summer">Summer Term</option>
+                        </select>
+                      </div>
+
+                      <div>
+                        <label
+                          style={{
+                            fontSize: "0.72rem",
+                            color: "var(--text-muted)",
+                            display: "block",
+                            marginBottom: "2px",
+                          }}
+                        >
+                          Multi-Sheet Grouping:
+                        </label>
+                        <select
+                          className="form-input"
+                          style={{
+                            fontSize: "0.78rem",
+                            padding: "0.3rem 0.5rem",
+                          }}
+                          value={exportDbGroupBy}
+                          onChange={(e) =>
+                            setExportDbGroupBy(
+                              e.target.value as "none" | "exam_type",
+                            )
+                          }
+                        >
+                          <option value="none">Standard Master Sheets</option>
+                          <option value="exam_type">
+                            Group Sheets by Exam Type
+                          </option>
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div>
+                    <button
+                      className="btn"
+                      style={{
+                        width: "100%",
+                        justifyContent: "center",
+                        fontSize: "0.82rem",
+                        background: "var(--srcb-gold-accent)",
+                        color: "#000",
+                        fontWeight: 700,
+                      }}
+                      onClick={handleExportCompleteDatabase}
+                    >
+                      <Database size={14} /> Export Master Database (.xlsx)
+                    </button>
+                    <div
+                      style={{
+                        fontSize: "0.72rem",
+                        color: "var(--text-muted)",
+                        marginTop: "6px",
+                        textAlign: "center",
+                      }}
+                    >
+                      🗄️ Filtered Workbook: Full Metadata, Metrics & Grouped
+                      Sheets
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
 
@@ -2694,13 +3479,39 @@ export default function App() {
                     }}
                   >
                     <h3 style={{ fontSize: "1.2rem" }}>Grading Summary</h3>
-                    <button
-                      className="btn btn-danger"
-                      style={{ padding: "0.25rem 0.5rem", fontSize: "0.8rem" }}
-                      onClick={() => setSelectedSubmission(null)}
+                    <div
+                      style={{
+                        display: "flex",
+                        gap: "0.5rem",
+                        alignItems: "center",
+                      }}
                     >
-                      Close
-                    </button>
+                      <button
+                        className="btn btn-success"
+                        style={{
+                          padding: "0.25rem 0.65rem",
+                          fontSize: "0.8rem",
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: "5px",
+                        }}
+                        onClick={() =>
+                          handleExportSingleSubmission(selectedSubmission)
+                        }
+                      >
+                        <Download size={14} /> Export Single File (.xlsx)
+                      </button>
+                      <button
+                        className="btn btn-danger"
+                        style={{
+                          padding: "0.25rem 0.5rem",
+                          fontSize: "0.8rem",
+                        }}
+                        onClick={() => setSelectedSubmission(null)}
+                      >
+                        Close
+                      </button>
+                    </div>
                   </div>
 
                   <div
@@ -3001,12 +3812,21 @@ export default function App() {
             <div className="card">
               {activeExam ? (
                 <>
-                  {submissions.filter((s) => s.exam_id === activeExam.id).length === 0 && (
-                    <div className="alert-banner warning" style={{ marginBottom: "1.25rem" }}>
-                      <AlertTriangle size={16} style={{ flexShrink: 0, marginTop: "2px" }} />
+                  {submissions.filter((s) => s.exam_id === activeExam.id)
+                    .length === 0 && (
+                    <div
+                      className="alert-banner warning"
+                      style={{ marginBottom: "1.25rem" }}
+                    >
+                      <AlertTriangle
+                        size={16}
+                        style={{ flexShrink: 0, marginTop: "2px" }}
+                      />
                       <span>
-                        <strong>No real submissions found</strong> for this exam — the table below uses{" "}
-                        <strong>sample demo data</strong> for illustration purposes. Grade actual student OMR sheets first to generate a real Item Analysis report.
+                        <strong>No real submissions found</strong> for this exam
+                        — the table below uses <strong>sample demo data</strong>{" "}
+                        for illustration purposes. Grade actual student OMR
+                        sheets first to generate a real Item Analysis report.
                       </span>
                     </div>
                   )}

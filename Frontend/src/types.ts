@@ -1,8 +1,24 @@
 export interface Exam {
   id: string;
   name: string;
-  answer_key: Record<string, string>; // Maps question number "1" - "50" to answer "A"-"E"
+  answer_key: Record<string, string>; // Maps question number "1"–"100" to answer "A"–"E"
   created_at: string;
+
+  // ── Academic metadata ──────────────────────────────────────────────────────
+  exam_type?: string;        // "Preliminary" | "Midterm" | "Pre-Final" | "Final"
+  academic_year?: string;    // e.g. "2025-2026"
+  semester?: string;         // "1st Semester" | "2nd Semester" | "Summer"
+  subject?: string;          // Course / Subject name
+  course_code?: string;      // e.g. "ITP305"
+  section?: string;          // e.g. "BSIT 3-A"
+  program?: string;          // Programme / Department
+  instructor_name?: string;  // Instructor full name
+
+  // ── Examination settings ───────────────────────────────────────────────────
+  num_items?: number;        // Total number of test items (1–100), defaults to 50
+  passing_score?: number;    // Optional raw score threshold
+  instructions?: string;     // Optional instructions text
+  exam_date?: string;        // Scheduled date "YYYY-MM-DD"
 }
 
 export interface SubmissionAnswerDetail {

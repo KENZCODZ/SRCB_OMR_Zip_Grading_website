@@ -1,9 +1,7 @@
-from fastapi import FastAPI, UploadFile, File, Form, HTTPException, Depends, status
+from fastapi import FastAPI, UploadFile, File, Form, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
-from sqlalchemy.orm import Session
-from sqlalchemy import func
 from contextlib import asynccontextmanager
 from typing import Optional, Dict, Any, List
 import uuid
@@ -18,16 +16,23 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 from database import (
     init_db,
-    get_db,
-    User,
-    Exam,
-    AnswerKey,
-    Submission,
-    SubmissionAnswer,
+    save_exam,
+    update_exam,
+    get_exam,
+    list_exams,
+    delete_exam,
+    save_submission,
+    list_submissions,
+    get_dashboard_summary,
+    get_user_by_email,
+    register_user,
+    list_pending_users,
+    update_user_status,
+    authenticate_user,
 )
 from omr import OMREngine, OMRCornerDetectionError
 
-# Lifespan events handler (modern replacement for startup/shutdown events)
+# Lifespan events handler
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     init_db()
@@ -39,7 +44,16 @@ app = FastAPI(title="OMR Grading System API", lifespan=lifespan)
 # Enable CORS for frontend integration
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=[
+        "http://localhost:5173",   # Vite dev server
+        "http://localhost:5174",   # Vite dev server fallback port
+        "http://localhost:8000",   # FastAPI production serve
+        "http://127.0.0.1:5173",
+        "http://127.0.0.1:5174",
+        "http://127.0.0.1:8000",
+        "http://0.0.0.0:5173",
+        "http://0.0.0.0:5174",
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -47,15 +61,49 @@ app.add_middleware(
 
 # Pydantic Schemas
 class ExamCreate(BaseModel):
-    name: str = Field(..., min_length=1, description="Name of the exam")
-    answer_key: dict = Field(..., description="Mapping of question numbers (1-50) to answers (A-E)")
+    name: str = Field(..., min_length=1, description="Full examination title")
+    answer_key: dict[str, str] = Field(..., description="Mapping of question numbers (1-100) to answers (A-E)")
+
+    # Academic metadata
+    exam_type: Optional[str] = Field(None, description="Preliminary | Midterm | Pre-Final | Final")
+    academic_year: Optional[str] = Field(None, description="e.g. 2025-2026")
+    semester: Optional[str] = Field(None, description="1st Semester | 2nd Semester | Summer")
+    subject: Optional[str] = Field(None, description="Course / Subject name")
+    course_code: Optional[str] = Field(None, description="Course code e.g. ITP305")
+    section: Optional[str] = Field(None, description="Class section e.g. BSIT 3-A")
+    program: Optional[str] = Field(None, description="Programme / Department")
+    instructor_name: Optional[str] = Field(None, description="Name of the instructor")
+
+    # Examination settings
+    num_items: Optional[int] = Field(50, ge=1, le=100, description="Total number of test items (1-100)")
+    passing_score: Optional[int] = Field(None, ge=0, description="Optional raw score threshold")
+    instructions: Optional[str] = Field(None, description="Optional instructions for students")
+    exam_date: Optional[str] = Field(None, description="Scheduled exam date (YYYY-MM-DD)")
+
 
 class ExamUpdate(BaseModel):
-    answer_key: dict = Field(..., description="Mapping of question numbers (1-50) to answers (A-E)")
+    name: Optional[str] = Field(None, min_length=1, description="Full examination title")
+    answer_key: dict[str, str] = Field(..., description="Mapping of question numbers (1-100) to answers (A-E)")
+
+    # All metadata fields are optional on update (PATCH-like semantics)
+    exam_type: Optional[str] = None
+    academic_year: Optional[str] = None
+    semester: Optional[str] = None
+    subject: Optional[str] = None
+    course_code: Optional[str] = None
+    section: Optional[str] = None
+    program: Optional[str] = None
+    instructor_name: Optional[str] = None
+    num_items: Optional[int] = Field(None, ge=1, le=100)
+    passing_score: Optional[int] = Field(None, ge=0)
+    instructions: Optional[str] = None
+    exam_date: Optional[str] = None
+
 
 class LoginRequest(BaseModel):
     email: str = Field(..., min_length=1)
     password: str = Field(..., min_length=1)
+
 
 class RegisterRequest(BaseModel):
     name: str = Field(..., min_length=2, description="Full Name")
@@ -65,6 +113,7 @@ class RegisterRequest(BaseModel):
     programme: str = Field(default="BSIT", description="Academic Programme")
     department: str = Field(default="Computing Studies", description="Academic Department")
     student_id: str = Field(default="", description="Student ID number if student")
+
 
 # Max file size: 10MB
 MAX_FILE_SIZE = 10 * 1024 * 1024
@@ -78,12 +127,9 @@ omr_engine = OMREngine()
 # ==========================================
 
 @app.post("/api/auth/register", status_code=status.HTTP_201_CREATED)
-def register_new_user(payload: RegisterRequest, db: Session = Depends(get_db)):
+def register_new_user(payload: RegisterRequest):
     # Check if email is already registered
-    existing_user = db.query(User).filter(
-        func.lower(User.email) == payload.email.strip().lower()
-    ).first()
-
+    existing_user = get_user_by_email(payload.email)
     if existing_user:
         raise HTTPException(
             status_code=400,
@@ -97,114 +143,69 @@ def register_new_user(payload: RegisterRequest, db: Session = Depends(get_db)):
     if role_normalized == "faculty":
         role_normalized = "teacher"
 
-    user_id = str(uuid.uuid4())
-    now_iso = datetime.now(timezone.utc).isoformat()
-    status_val = "pending"
-
-    new_user = User(
-        id=user_id,
-        name=payload.name.strip(),
-        email=payload.email.strip().lower(),
+    created_user = register_user(
+        name=payload.name,
+        email=payload.email,
         password=payload.password,
         role=role_normalized,
-        programme=payload.programme.strip() if payload.programme else "BSIT",
-        department=payload.department.strip() if payload.department else "Computing Studies",
-        status=status_val,
-        created_at=now_iso,
-        updated_at=now_iso,
+        programme=payload.programme,
+        department=payload.department,
     )
-
-    db.add(new_user)
-    db.commit()
-    db.refresh(new_user)
 
     return {
         "status": "success",
         "message": "Registration submitted successfully! Your account is pending confirmation by the Programme Head.",
-        "user": new_user.to_dict(),
+        "user": created_user,
     }
 
 
 @app.post("/api/auth/login")
-def login_user(payload: LoginRequest, db: Session = Depends(get_db)):
-    user = db.query(User).filter(
-        func.lower(User.email) == payload.email.strip().lower()
-    ).first()
-
-    if not user or user.password != payload.password:
-        raise HTTPException(
-            status_code=401,
-            detail="Invalid school email or password.",
-        )
-
-    user_status = user.status or "active"
-    if user_status == "pending":
-        raise HTTPException(
-            status_code=403,
-            detail="Your registration is currently pending confirmation by the Programme Head. Please await approval before signing in.",
-        )
-    elif user_status == "rejected":
-        raise HTTPException(
-            status_code=403,
-            detail="Your registration request was not approved by the Programme Head.",
-        )
-
-    return user.to_dict()
+def login_user(payload: LoginRequest):
+    res = authenticate_user(payload.email, payload.password)
+    if not res.get("success"):
+        error_code = res.get("error")
+        if error_code == "pending_approval":
+            raise HTTPException(
+                status_code=403,
+                detail="Your registration is currently pending confirmation by the Programme Head. Please await approval before signing in.",
+            )
+        elif error_code == "account_rejected":
+            raise HTTPException(
+                status_code=403,
+                detail="Your registration request was not approved by the Programme Head.",
+            )
+        else:
+            raise HTTPException(
+                status_code=401,
+                detail="Invalid school email or password.",
+            )
+    return res.get("user")
 
 
 @app.get("/api/users/pending")
-def get_pending_registrations(programme: Optional[str] = None, db: Session = Depends(get_db)):
-    query = db.query(User).filter(User.status == "pending")
-    if programme:
-        query = query.filter((User.programme == programme) | (User.programme.is_(None)))
-    users = query.order_by(User.created_at.desc()).all()
-    return [u.to_dict() for u in users]
+def get_pending_registrations(programme: Optional[str] = None):
+    return list_pending_users(programme)
 
 
 @app.post("/api/users/{user_id}/approve")
-def approve_pending_user(user_id: str, db: Session = Depends(get_db)):
-    user = db.query(User).filter(User.id == user_id).first()
-    if not user:
+def approve_pending_user(user_id: str):
+    success = update_user_status(user_id, "active")
+    if not success:
         raise HTTPException(status_code=404, detail="Pending user not found or already processed.")
-    
-    user.status = "active"
-    user.updated_at = datetime.now(timezone.utc).isoformat()
-    db.commit()
     return {"status": "success", "message": "User registration confirmed and account activated."}
 
 
 @app.post("/api/users/{user_id}/reject")
-def reject_pending_user(user_id: str, db: Session = Depends(get_db)):
-    user = db.query(User).filter(User.id == user_id).first()
-    if not user:
+def reject_pending_user(user_id: str):
+    success = update_user_status(user_id, "rejected")
+    if not success:
         raise HTTPException(status_code=404, detail="Pending user not found or already processed.")
-    
-    user.status = "rejected"
-    user.updated_at = datetime.now(timezone.utc).isoformat()
-    db.commit()
     return {"status": "success", "message": "User registration request has been rejected."}
 
 
 @app.get("/api/dashboard/summary")
-def dashboard_summary(db: Session = Depends(get_db)):
-    total_students = db.query(func.count(User.id)).filter(
-        User.role == "student",
-        User.status == "active",
-    ).scalar() or 0
-
-    total_exams = db.query(func.count(Exam.exam_id)).scalar() or 0
-
-    avg_score_raw = db.query(func.avg(Submission.score)).scalar()
-    average_score = round(float(avg_score_raw), 2) if avg_score_raw is not None else 0.0
-
-    total_submissions = db.query(func.count(Submission.submission_id)).scalar() or 0
-
-    return {
-        "total_students": int(total_students),
-        "total_exams": int(total_exams),
-        "average_score": average_score,
-        "total_submissions": int(total_submissions),
-    }
+def dashboard_summary():
+    return get_dashboard_summary()
 
 
 # ==========================================
@@ -212,96 +213,130 @@ def dashboard_summary(db: Session = Depends(get_db)):
 # ==========================================
 
 @app.post("/api/exams", status_code=status.HTTP_201_CREATED)
-def create_new_exam(exam_data: ExamCreate, db: Session = Depends(get_db)):
+def create_new_exam(exam: ExamCreate):
     exam_id = str(uuid.uuid4())
-    now_iso = datetime.now(timezone.utc).isoformat()
+    num_items = exam.num_items or 50
 
-    # Validate answer key format: keys should be string representations of 1-50
-    validated_keys = {}
-    for q, ans in exam_data.answer_key.items():
+    if num_items < 1 or num_items > 100:
+        raise HTTPException(status_code=400, detail="Number of items must be between 1 and 100.")
+
+    valid_answer_key: dict[str, str] = {}
+    for q, ans in exam.answer_key.items():
         try:
             q_num = int(q)
-            if q_num < 1 or q_num > 50:
-                raise HTTPException(status_code=400, detail="Question number must be between 1 and 50.")
+            if q_num < 1 or q_num > num_items:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Question number {q_num} is outside the configured range of 1 to {num_items} for this exam.",
+                )
         except ValueError:
             raise HTTPException(status_code=400, detail="Question keys must be integers.")
 
         ans_clean = str(ans).strip().upper()
         if ans_clean not in ["A", "B", "C", "D", "E"]:
-            raise HTTPException(status_code=400, detail=f"Invalid option '{ans}' for question {q}. Must be A, B, C, D, or E.")
-        validated_keys[q_num] = ans_clean
+            raise HTTPException(
+                status_code=400,
+                detail=f"Invalid option '{ans}' for question {q}. Must be A, B, C, D, or E.",
+            )
 
-    new_exam = Exam(
-        exam_id=exam_id,
-        exam_name=exam_data.name.strip(),
-        created_at=now_iso,
-    )
-    db.add(new_exam)
-    db.flush()
+        valid_answer_key[str(q_num)] = ans_clean
 
-    for q_num, ans_opt in validated_keys.items():
-        ak = AnswerKey(
-            exam_id=exam_id,
-            question_number=q_num,
-            correct_option=ans_opt,
+    if len(valid_answer_key) != num_items:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Answer key mismatch! This exam is configured for {num_items} items, but {len(valid_answer_key)} answers were provided.",
         )
-        db.add(ak)
 
-    db.commit()
-    db.refresh(new_exam)
-    return new_exam.to_dict()
+    res = save_exam(
+        exam_id=exam_id,
+        name=exam.name,
+        answer_key=valid_answer_key,
+        exam_type=exam.exam_type,
+        academic_year=exam.academic_year,
+        semester=exam.semester,
+        subject=exam.subject,
+        course_code=exam.course_code,
+        section=exam.section,
+        program=exam.program,
+        instructor_name=exam.instructor_name,
+        num_items=num_items,
+        passing_score=exam.passing_score,
+        instructions=exam.instructions,
+        exam_date=exam.exam_date,
+    )
+    return res
 
 
 @app.put("/api/exams/{exam_id}")
-def edit_exam_key(exam_id: str, exam_data: ExamUpdate, db: Session = Depends(get_db)):
-    existing = db.query(Exam).filter(Exam.exam_id == exam_id).first()
+def edit_exam_key(exam_id: str, exam: ExamUpdate):
+    existing = get_exam(exam_id)
     if not existing:
         raise HTTPException(status_code=404, detail="Exam not found.")
 
-    validated_keys = {}
-    for q, ans in exam_data.answer_key.items():
+    target_num_items = exam.num_items if exam.num_items is not None else (existing.get("num_items") or 50)
+    if target_num_items < 1 or target_num_items > 100:
+        raise HTTPException(status_code=400, detail="Number of items must be between 1 and 100.")
+
+    valid_answer_key: dict[str, str] = {}
+    for q, ans in exam.answer_key.items():
         try:
             q_num = int(q)
-            if q_num < 1 or q_num > 50:
-                raise HTTPException(status_code=400, detail="Question number must be between 1 and 50.")
+            if q_num < 1 or q_num > target_num_items:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Question number {q_num} is outside the configured range of 1 to {target_num_items} for this exam.",
+                )
         except ValueError:
             raise HTTPException(status_code=400, detail="Question keys must be integers.")
 
         ans_clean = str(ans).strip().upper()
         if ans_clean not in ["A", "B", "C", "D", "E"]:
-            raise HTTPException(status_code=400, detail=f"Invalid option '{ans}' for question {q}. Must be A, B, C, D, or E.")
-        validated_keys[q_num] = ans_clean
+            raise HTTPException(
+                status_code=400,
+                detail=f"Invalid option '{ans}' for question {q}. Must be A, B, C, D, or E.",
+            )
 
-    # Clear old answer keys and add new ones
-    db.query(AnswerKey).filter(AnswerKey.exam_id == exam_id).delete()
-    db.flush()
+        valid_answer_key[str(q_num)] = ans_clean
 
-    for q_num, ans_opt in validated_keys.items():
-        ak = AnswerKey(
-            exam_id=exam_id,
-            question_number=q_num,
-            correct_option=ans_opt,
+    if len(valid_answer_key) != target_num_items:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Answer key mismatch! This exam is configured for {target_num_items} items, but {len(valid_answer_key)} answers were provided.",
         )
-        db.add(ak)
 
-    db.commit()
-    return {"status": "success", "message": "Exam key updated successfully."}
+    success = update_exam(
+        exam_id=exam_id,
+        answer_key=valid_answer_key,
+        name=exam.name,
+        exam_type=exam.exam_type,
+        academic_year=exam.academic_year,
+        semester=exam.semester,
+        subject=exam.subject,
+        course_code=exam.course_code,
+        section=exam.section,
+        program=exam.program,
+        instructor_name=exam.instructor_name,
+        num_items=target_num_items,
+        passing_score=exam.passing_score,
+        instructions=exam.instructions,
+        exam_date=exam.exam_date,
+    )
+    if success:
+        return {"status": "success", "message": "Exam updated successfully."}
+    else:
+        raise HTTPException(status_code=500, detail="Failed to update exam.")
 
 
 @app.get("/api/exams")
-def get_all_exams(db: Session = Depends(get_db)):
-    exams = db.query(Exam).order_by(Exam.created_at.desc()).all()
-    return [exam.to_dict() for exam in exams]
+def get_all_exams():
+    return list_exams()
 
 
 @app.delete("/api/exams/{exam_id}")
-def delete_existing_exam(exam_id: str, db: Session = Depends(get_db)):
-    existing = db.query(Exam).filter(Exam.exam_id == exam_id).first()
-    if not existing:
+def delete_existing_exam(exam_id: str):
+    success = delete_exam(exam_id)
+    if not success:
         raise HTTPException(status_code=404, detail="Exam not found.")
-
-    db.delete(existing)
-    db.commit()
     return {"status": "success", "message": "Exam and all its submissions deleted successfully."}
 
 
@@ -313,10 +348,9 @@ def delete_existing_exam(exam_id: str, db: Session = Depends(get_db)):
 async def grade_exam_sheet(
     exam_id: str = Form(...),
     file: UploadFile = File(...),
-    db: Session = Depends(get_db),
 ):
     # 1. Validate exam exists
-    exam = db.query(Exam).filter(Exam.exam_id == exam_id).first()
+    exam = get_exam(exam_id)
     if not exam:
         raise HTTPException(status_code=404, detail="Exam not found.")
 
@@ -337,54 +371,35 @@ async def grade_exam_sheet(
         raise HTTPException(status_code=400, detail="Could not decode the uploaded image file.")
 
     # 5. Process through OMR engine
-    exam_dict = exam.to_dict()
+    num_items = exam.get("num_items") or len(exam.get("answer_key", {})) or 50
+    answer_key = {
+        str(q): ans
+        for q, ans in exam.get("answer_key", {}).items()
+        if 1 <= int(q) <= num_items
+    }
+    if len(answer_key) != num_items:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Exam is configured for {num_items} items, but the stored answer key contains {len(answer_key)} valid entries.",
+        )
+
     try:
-        results = omr_engine.grade_sheet(image, exam_dict["answer_key"])
+        results = omr_engine.grade_sheet(image, answer_key)
     except OMRCornerDetectionError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"An unexpected error occurred during grading: {str(e)}")
 
-    # 6. Save submission to MySQL database via SQLAlchemy
+    # 6. Save submission to database
     submission_id = str(uuid.uuid4())
-    now_iso = datetime.now(timezone.utc).isoformat()
-
-    sub = Submission(
+    save_submission(
         submission_id=submission_id,
         exam_id=exam_id,
         student_id=results["student_id"],
         score=results["score"],
         total_questions=results["total_questions"],
-        graded_at=now_iso,
+        answers=results["answers"],
     )
-    db.add(sub)
-    db.flush()
-
-    for q_str, ans_data in results["answers"].items():
-        try:
-            q_num = int(q_str)
-        except ValueError:
-            continue
-
-        if isinstance(ans_data, dict):
-            sel = ans_data.get("selected")
-            is_amb = bool(ans_data.get("is_ambiguous", False))
-            is_emp = bool(ans_data.get("is_empty", False))
-        else:
-            sel = str(ans_data) if ans_data else None
-            is_amb = False
-            is_emp = (sel is None or sel == "")
-
-        sa = SubmissionAnswer(
-            submission_id=submission_id,
-            question_number=q_num,
-            selected_option=sel,
-            is_ambiguous=is_amb,
-            is_empty=is_emp,
-        )
-        db.add(sa)
-
-    db.commit()
 
     # 7. Return graded results
     return {
@@ -398,12 +413,8 @@ async def grade_exam_sheet(
 
 
 @app.get("/api/submissions")
-def get_all_submissions(exam_id: Optional[str] = None, db: Session = Depends(get_db)):
-    query = db.query(Submission)
-    if exam_id:
-        query = query.filter(Submission.exam_id == exam_id)
-    submissions = query.order_by(Submission.graded_at.desc()).all()
-    return [sub.to_dict() for sub in submissions]
+def get_all_submissions(exam_id: Optional[str] = None):
+    return list_submissions(exam_id)
 
 
 @app.post("/api/extract")
@@ -442,12 +453,12 @@ async def extract_sheet_answers(
     }
 
 
-# Ensure frontend/dist exists before mounting to avoid FastAPI startup crash
+# Ensure Frontend/dist exists before mounting to avoid FastAPI startup crash
 frontend_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "Frontend", "dist"))
 if not os.path.exists(frontend_dir):
     os.makedirs(frontend_dir, exist_ok=True)
     with open(os.path.join(frontend_dir, "index.html"), "w") as f:
-        f.write("<h1>OMR Frontend Building... Please run npm run build in frontend/ directory.</h1>")
+        f.write("<h1>OMR Frontend Building... Please run npm run build in Frontend/ directory.</h1>")
 
 app.mount("/", StaticFiles(directory=frontend_dir, html=True), name="frontend")
 

@@ -17,8 +17,9 @@ import {
   UserPlus,
   Mail,
 } from "lucide-react";
-import type { AuthUser, PendingUser } from "../types";
+import type { AuthUser, PendingUser, Exam, Submission, StudentRosterEntry } from "../types";
 import { fetchPendingUsers, approveUser, rejectUser } from "../api";
+import TeacherExamCompiler from "./TeacherExamCompiler";
 
 interface RoleDashboardProps {
   user: AuthUser;
@@ -28,6 +29,13 @@ interface RoleDashboardProps {
     average_score: number;
     total_submissions: number;
   };
+  exams?: Exam[];
+  submissions?: Submission[];
+  roster?: StudentRosterEntry[];
+  onSelectSubmission?: (submission: Submission) => void;
+  onInspectExam?: (exam: Exam) => void;
+  addToast?: (type: "success" | "error" | "info", message: string) => void;
+  formatDate?: (iso: string) => string;
 }
 
 const roleTitles: Record<AuthUser["role"], string> = {
@@ -189,7 +197,17 @@ const dashboardCards = (
   ];
 };
 
-export default function RoleDashboard({ user, summary }: RoleDashboardProps) {
+export default function RoleDashboard({
+  user,
+  summary,
+  exams = [],
+  submissions = [],
+  roster = [],
+  onSelectSubmission,
+  onInspectExam,
+  addToast,
+  formatDate = (iso) => new Date(iso).toLocaleDateString(),
+}: RoleDashboardProps) {
   const [pendingUsers, setPendingUsers] = useState<PendingUser[]>([]);
   const [loadingPending, setLoadingPending] = useState(false);
   const [actionLoadingId, setActionLoadingId] = useState<string | null>(null);
@@ -674,68 +692,17 @@ export default function RoleDashboard({ user, summary }: RoleDashboardProps) {
       )}
 
       {user.role === "teacher" && (
-        <div style={{ display: "grid", gap: "1rem" }}>
-          <div
-            className="card"
-            style={{ padding: "1rem", background: "rgba(8, 17, 32, 0.8)" }}
-          >
-            <h3 style={{ marginBottom: "0.75rem" }}>Daily workflow</h3>
-            <div
-              style={{
-                display: "grid",
-                gap: "0.6rem",
-                color: "var(--text-secondary)",
-              }}
-            >
-              <div style={{ display: "flex", justifyContent: "space-between" }}>
-                <span>Created exams</span>
-                <strong style={{ color: "var(--text-primary)" }}>
-                  {summary?.total_exams ?? 0}
-                </strong>
-              </div>
-              <div style={{ display: "flex", justifyContent: "space-between" }}>
-                <span>Graded sheets</span>
-                <strong style={{ color: "var(--text-primary)" }}>
-                  {summary?.total_submissions ?? 0}
-                </strong>
-              </div>
-              <div style={{ display: "flex", justifyContent: "space-between" }}>
-                <span>Ready for review</span>
-                <strong style={{ color: "var(--text-primary)" }}>3</strong>
-              </div>
-            </div>
-          </div>
-
-          <div
-            className="card"
-            style={{ padding: "1rem", background: "rgba(8, 17, 32, 0.8)" }}
-          >
-            <h3 style={{ marginBottom: "0.75rem" }}>Teaching tools</h3>
-            <div
-              style={{
-                display: "grid",
-                gap: "0.5rem",
-                color: "var(--text-secondary)",
-              }}
-            >
-              <div
-                style={{
-                  borderLeft: "3px solid var(--accent)",
-                  paddingLeft: "0.6rem",
-                }}
-              >
-                Create an exam and upload an answer key quickly.
-              </div>
-              <div
-                style={{
-                  borderLeft: "3px solid var(--success)",
-                  paddingLeft: "0.6rem",
-                }}
-              >
-                Grade student sheets and export result reports.
-              </div>
-            </div>
-          </div>
+        <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem", marginTop: "0.5rem" }}>
+          <TeacherExamCompiler
+            exams={exams}
+            submissions={submissions}
+            roster={roster}
+            currentUser={user}
+            onSelectSubmission={onSelectSubmission}
+            onInspectExam={onInspectExam}
+            addToast={addToast}
+            formatDate={formatDate}
+          />
         </div>
       )}
 
