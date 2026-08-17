@@ -307,7 +307,7 @@ export default function App() {
   ) => {
     try {
       if (examId) {
-        const updated = await updateExam(examId, {
+        await updateExam(examId, {
           name: examData.name,
           answer_key: examData.answer_key,
           exam_type: examData.exam_type,
@@ -324,32 +324,6 @@ export default function App() {
           exam_date: examData.exam_date,
         });
 
-        const mergedExam: Exam = {
-          ...updated,
-          id: examId,
-          name: examData.name,
-          answer_key: examData.answer_key,
-          exam_type: examData.exam_type,
-          academic_year: examData.academic_year,
-          semester: examData.semester,
-          subject: examData.subject,
-          course_code: examData.course_code,
-          section: examData.section,
-          program: examData.program,
-          instructor_name: examData.instructor_name,
-          num_items: examData.num_items,
-          passing_score: examData.passing_score,
-          instructions: examData.instructions,
-          exam_date: examData.exam_date,
-          created_at:
-            editingExam?.created_at ??
-            updated.created_at ??
-            new Date().toISOString(),
-        };
-
-        setExams((prev) =>
-          prev.map((exam) => (exam.id === examId ? mergedExam : exam)),
-        );
         setSelectedExamId(examId);
         setInspectExam(null);
         setEditingExam(null);
@@ -3442,310 +3416,6 @@ export default function App() {
               )}
             </div>
 
-            {/* Submission Detail Inspection Modal */}
-            {selectedSubmission && (
-              <div
-                style={{
-                  position: "fixed",
-                  top: 0,
-                  left: 0,
-                  width: "100%",
-                  height: "100%",
-                  background: "rgba(0,0,0,0.8)",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  zIndex: 999,
-                  padding: "2rem",
-                }}
-              >
-                <div
-                  className="card"
-                  style={{
-                    width: "100%",
-                    maxWidth: "650px",
-                    maxHeight: "90vh",
-                    overflowY: "auto",
-                  }}
-                >
-                  <div
-                    style={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      alignItems: "center",
-                      marginBottom: "1rem",
-                      borderBottom: "1px solid var(--border)",
-                      paddingBottom: "0.75rem",
-                    }}
-                  >
-                    <h3 style={{ fontSize: "1.2rem" }}>Grading Summary</h3>
-                    <div
-                      style={{
-                        display: "flex",
-                        gap: "0.5rem",
-                        alignItems: "center",
-                      }}
-                    >
-                      <button
-                        className="btn btn-success"
-                        style={{
-                          padding: "0.25rem 0.65rem",
-                          fontSize: "0.8rem",
-                          display: "inline-flex",
-                          alignItems: "center",
-                          gap: "5px",
-                        }}
-                        onClick={() =>
-                          handleExportSingleSubmission(selectedSubmission)
-                        }
-                      >
-                        <Download size={14} /> Export Single File (.xlsx)
-                      </button>
-                      <button
-                        className="btn btn-danger"
-                        style={{
-                          padding: "0.25rem 0.5rem",
-                          fontSize: "0.8rem",
-                        }}
-                        onClick={() => setSelectedSubmission(null)}
-                      >
-                        Close
-                      </button>
-                    </div>
-                  </div>
-
-                  <div
-                    style={{
-                      display: "grid",
-                      gridTemplateColumns: "1fr 1fr",
-                      gap: "1rem",
-                      marginBottom: "1.5rem",
-                    }}
-                  >
-                    <div>
-                      <span
-                        style={{
-                          fontSize: "0.75rem",
-                          color: "var(--text-muted)",
-                        }}
-                      >
-                        Student Roster
-                      </span>
-                      <p
-                        style={{
-                          fontSize: "1rem",
-                          fontWeight: 800,
-                          margin: "2px 0 0 0",
-                        }}
-                      >
-                        {roster.find(
-                          (r) =>
-                            r.student_id.toLowerCase() ===
-                            (selectedSubmission.student_id || "").toLowerCase(),
-                        )?.name ||
-                          selectedSubmission.student_id ||
-                          "N/A"}
-                      </p>
-                      <span
-                        style={{
-                          fontSize: "0.75rem",
-                          color: "var(--text-muted)",
-                        }}
-                      >
-                        ID: {selectedSubmission.student_id}
-                      </span>
-                    </div>
-                    <div>
-                      <span
-                        style={{
-                          fontSize: "0.75rem",
-                          color: "var(--text-muted)",
-                        }}
-                      >
-                        Graded On
-                      </span>
-                      <p
-                        style={{
-                          fontSize: "0.9rem",
-                          fontWeight: 600,
-                          margin: "2px 0 0 0",
-                        }}
-                      >
-                        {formatDate(selectedSubmission.created_at)}
-                      </p>
-                    </div>
-                    <div>
-                      <span
-                        style={{
-                          fontSize: "0.75rem",
-                          color: "var(--text-muted)",
-                        }}
-                      >
-                        Exam Title
-                      </span>
-                      <p
-                        style={{
-                          fontSize: "0.95rem",
-                          fontWeight: 700,
-                          margin: "2px 0 0 0",
-                        }}
-                      >
-                        {exams.find((e) => e.id === selectedSubmission.exam_id)
-                          ?.name || "Unknown Exam"}
-                      </p>
-                    </div>
-                    <div>
-                      <span
-                        style={{
-                          fontSize: "0.75rem",
-                          color: "var(--text-muted)",
-                        }}
-                      >
-                        Score Status
-                      </span>
-                      <div style={{ marginTop: "4px" }}>
-                        <StatusBadge
-                          score={selectedSubmission.score}
-                          totalQuestions={selectedSubmission.total_questions}
-                        />
-                      </div>
-                    </div>
-                  </div>
-
-                  <h4
-                    style={{
-                      fontSize: "0.9rem",
-                      color: "var(--text-secondary)",
-                      marginBottom: "0.5rem",
-                    }}
-                  >
-                    Bubble Check
-                  </h4>
-                  <div
-                    className="bubble-sheet-card"
-                    style={{
-                      maxHeight: "350px",
-                      border: "1px solid var(--border)",
-                      borderRadius: "var(--radius-md)",
-                      padding: "1rem",
-                    }}
-                  >
-                    <div
-                      style={{
-                        display: "grid",
-                        gridTemplateColumns: "1fr 1fr",
-                        gap: "1rem",
-                      }}
-                    >
-                      <div>
-                        {Object.entries(selectedSubmission.answers)
-                          .sort((a, b) => parseInt(a[0]) - parseInt(b[0]))
-                          .slice(0, 25)
-                          .map(([qStr, ansObj]) => {
-                            const exam = exams.find(
-                              (e) => e.id === selectedSubmission.exam_id,
-                            );
-                            const correctAns = exam?.answer_key[qStr];
-                            const selected = ansObj.selected;
-                            const isCorrect = selected === correctAns;
-
-                            return (
-                              <div
-                                key={qStr}
-                                className="bubble-row"
-                                style={{
-                                  padding: "0.2rem 0.5rem",
-                                  justifyContent: "space-between",
-                                }}
-                              >
-                                <span
-                                  className="bubble-num"
-                                  style={{ width: "20px" }}
-                                >
-                                  {qStr}.
-                                </span>
-                                <span
-                                  style={{
-                                    fontSize: "0.8rem",
-                                    color: isCorrect
-                                      ? "var(--success)"
-                                      : "var(--error)",
-                                    fontWeight: 600,
-                                  }}
-                                >
-                                  {ansObj.is_empty
-                                    ? "No Mark"
-                                    : `Marked "${selected}"`}
-                                </span>
-                                <span
-                                  style={{
-                                    fontSize: "0.8rem",
-                                    color: "var(--text-muted)",
-                                  }}
-                                >
-                                  (Key: {correctAns})
-                                </span>
-                              </div>
-                            );
-                          })}
-                      </div>
-                      <div>
-                        {Object.entries(selectedSubmission.answers)
-                          .sort((a, b) => parseInt(a[0]) - parseInt(b[0]))
-                          .slice(25)
-                          .map(([qStr, ansObj]) => {
-                            const exam = exams.find(
-                              (e) => e.id === selectedSubmission.exam_id,
-                            );
-                            const correctAns = exam?.answer_key[qStr];
-                            const selected = ansObj.selected;
-                            const isCorrect = selected === correctAns;
-
-                            return (
-                              <div
-                                key={qStr}
-                                className="bubble-row"
-                                style={{
-                                  padding: "0.2rem 0.5rem",
-                                  justifyContent: "space-between",
-                                }}
-                              >
-                                <span
-                                  className="bubble-num"
-                                  style={{ width: "20px" }}
-                                >
-                                  {qStr}.
-                                </span>
-                                <span
-                                  style={{
-                                    fontSize: "0.8rem",
-                                    color: isCorrect
-                                      ? "var(--success)"
-                                      : "var(--error)",
-                                    fontWeight: 600,
-                                  }}
-                                >
-                                  {ansObj.is_empty
-                                    ? "No Mark"
-                                    : `Marked "${selected}"`}
-                                </span>
-                                <span
-                                  style={{
-                                    fontSize: "0.8rem",
-                                    color: "var(--text-muted)",
-                                  }}
-                                >
-                                  (Key: {correctAns})
-                                </span>
-                              </div>
-                            );
-                          })}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
           </div>
         )}
 
@@ -3890,6 +3560,311 @@ export default function App() {
               initialRole={currentUser?.role ?? "teacher"}
               onNavigateTab={(tab) => handleTabSelect(tab as AppTab)}
             />
+          </div>
+        )}
+
+        {/* Submission Detail Inspection Modal - Global (works from any tab) */}
+        {selectedSubmission && (
+          <div
+            style={{
+              position: "fixed",
+              top: 0,
+              left: 0,
+              width: "100%",
+              height: "100%",
+              background: "rgba(0,0,0,0.8)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              zIndex: 999,
+              padding: "2rem",
+            }}
+          >
+            <div
+              className="card"
+              style={{
+                width: "100%",
+                maxWidth: "650px",
+                maxHeight: "90vh",
+                overflowY: "auto",
+              }}
+            >
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  marginBottom: "1rem",
+                  borderBottom: "1px solid var(--border)",
+                  paddingBottom: "0.75rem",
+                }}
+              >
+                <h3 style={{ fontSize: "1.2rem" }}>Grading Summary</h3>
+                <div
+                  style={{
+                    display: "flex",
+                    gap: "0.5rem",
+                    alignItems: "center",
+                  }}
+                >
+                  <button
+                    className="btn btn-success"
+                    style={{
+                      padding: "0.25rem 0.65rem",
+                      fontSize: "0.8rem",
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: "5px",
+                    }}
+                    onClick={() =>
+                      handleExportSingleSubmission(selectedSubmission)
+                    }
+                  >
+                    <Download size={14} /> Export Single File (.xlsx)
+                  </button>
+                  <button
+                    className="btn btn-danger"
+                    style={{
+                      padding: "0.25rem 0.5rem",
+                      fontSize: "0.8rem",
+                    }}
+                    onClick={() => setSelectedSubmission(null)}
+                  >
+                    Close
+                  </button>
+                </div>
+              </div>
+
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "1fr 1fr",
+                  gap: "1rem",
+                  marginBottom: "1.5rem",
+                }}
+              >
+                <div>
+                  <span
+                    style={{
+                      fontSize: "0.75rem",
+                      color: "var(--text-muted)",
+                    }}
+                  >
+                    Student Roster
+                  </span>
+                  <p
+                    style={{
+                      fontSize: "1rem",
+                      fontWeight: 800,
+                      margin: "2px 0 0 0",
+                    }}
+                  >
+                    {roster.find(
+                      (r) =>
+                        r.student_id.toLowerCase() ===
+                        (selectedSubmission.student_id || "").toLowerCase(),
+                    )?.name ||
+                      selectedSubmission.student_id ||
+                      "N/A"}
+                  </p>
+                  <span
+                    style={{
+                      fontSize: "0.75rem",
+                      color: "var(--text-muted)",
+                    }}
+                  >
+                    ID: {selectedSubmission.student_id}
+                  </span>
+                </div>
+                <div>
+                  <span
+                    style={{
+                      fontSize: "0.75rem",
+                      color: "var(--text-muted)",
+                    }}
+                  >
+                    Graded On
+                  </span>
+                  <p
+                    style={{
+                      fontSize: "0.9rem",
+                      fontWeight: 600,
+                      margin: "2px 0 0 0",
+                    }}
+                  >
+                    {formatDate(selectedSubmission.created_at)}
+                  </p>
+                </div>
+                <div>
+                  <span
+                    style={{
+                      fontSize: "0.75rem",
+                      color: "var(--text-muted)",
+                    }}
+                  >
+                    Exam Title
+                  </span>
+                  <p
+                    style={{
+                      fontSize: "0.95rem",
+                      fontWeight: 700,
+                      margin: "2px 0 0 0",
+                    }}
+                  >
+                    {exams.find((e) => e.id === selectedSubmission.exam_id)
+                      ?.name || "Unknown Exam"}
+                  </p>
+                </div>
+                <div>
+                  <span
+                    style={{
+                      fontSize: "0.75rem",
+                      color: "var(--text-muted)",
+                    }}
+                  >
+                    Score Status
+                  </span>
+                  <div style={{ marginTop: "4px" }}>
+                    <StatusBadge
+                      score={selectedSubmission.score}
+                      totalQuestions={selectedSubmission.total_questions}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <h4
+                style={{
+                  fontSize: "0.9rem",
+                  color: "var(--text-secondary)",
+                  marginBottom: "0.5rem",
+                }}
+              >
+                Bubble Check
+              </h4>
+              <div
+                className="bubble-sheet-card"
+                style={{
+                  maxHeight: "350px",
+                  border: "1px solid var(--border)",
+                  borderRadius: "var(--radius-md)",
+                  padding: "1rem",
+                }}
+              >
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "1fr 1fr",
+                    gap: "1rem",
+                  }}
+                >
+                  <div>
+                    {Object.entries(selectedSubmission.answers)
+                      .sort((a, b) => parseInt(a[0]) - parseInt(b[0]))
+                      .slice(0, 25)
+                      .map(([qStr, ansObj]) => {
+                        const exam = exams.find(
+                          (e) => e.id === selectedSubmission.exam_id,
+                        );
+                        const correctAns = exam?.answer_key[qStr];
+                        const selected = ansObj.selected;
+                        const isCorrect = selected === correctAns;
+
+                        return (
+                          <div
+                            key={qStr}
+                            className="bubble-row"
+                            style={{
+                              padding: "0.2rem 0.5rem",
+                              justifyContent: "space-between",
+                            }}
+                          >
+                            <span
+                              className="bubble-num"
+                              style={{ width: "20px" }}
+                            >
+                              {qStr}.
+                            </span>
+                            <span
+                              style={{
+                                fontSize: "0.8rem",
+                                color: isCorrect
+                                  ? "var(--success)"
+                                  : "var(--error)",
+                                fontWeight: 600,
+                              }}
+                            >
+                              {ansObj.is_empty
+                                ? "No Mark"
+                                : `Marked "${selected}"`}
+                            </span>
+                            <span
+                              style={{
+                                fontSize: "0.8rem",
+                                color: "var(--text-muted)",
+                              }}
+                            >
+                              (Key: {correctAns})
+                            </span>
+                          </div>
+                        );
+                      })}
+                  </div>
+                  <div>
+                    {Object.entries(selectedSubmission.answers)
+                      .sort((a, b) => parseInt(a[0]) - parseInt(b[0]))
+                      .slice(25)
+                      .map(([qStr, ansObj]) => {
+                        const exam = exams.find(
+                          (e) => e.id === selectedSubmission.exam_id,
+                        );
+                        const correctAns = exam?.answer_key[qStr];
+                        const selected = ansObj.selected;
+                        const isCorrect = selected === correctAns;
+
+                        return (
+                          <div
+                            key={qStr}
+                            className="bubble-row"
+                            style={{
+                              padding: "0.2rem 0.5rem",
+                              justifyContent: "space-between",
+                            }}
+                          >
+                            <span
+                              className="bubble-num"
+                              style={{ width: "20px" }}
+                            >
+                              {qStr}.
+                            </span>
+                            <span
+                              style={{
+                                fontSize: "0.8rem",
+                                color: isCorrect
+                                  ? "var(--success)"
+                                  : "var(--error)",
+                                fontWeight: 600,
+                              }}
+                            >
+                              {ansObj.is_empty
+                                ? "No Mark"
+                                : `Marked "${selected}"`}
+                            </span>
+                            <span
+                              style={{
+                                fontSize: "0.8rem",
+                                color: "var(--text-muted)",
+                              }}
+                            >
+                              (Key: {correctAns})
+                            </span>
+                          </div>
+                        );
+                      })}
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         )}
       </main>
