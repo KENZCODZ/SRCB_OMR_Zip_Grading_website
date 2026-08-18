@@ -1,6 +1,5 @@
 import React, { useState } from "react";
 import {
-  User,
   Mail,
   Lock,
   Eye,
@@ -22,14 +21,19 @@ interface RegisterFormProps {
 }
 
 export default function RegisterForm({ onSwitchToLogin, onRegisteredSuccess }: RegisterFormProps) {
-  const [name, setName] = useState("");
+  const [honorific, setHonorific] = useState("Prof.");
+  const [firstName, setFirstName] = useState("");
+  const [middleName, setMiddleName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const [suffix, setSuffix] = useState("");
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [role, setRole] = useState<"teacher" | "student">("teacher");
   const [programme, setProgramme] = useState("BSIT");
   const [department, setDepartment] = useState("Computing Studies");
-  const [studentId, setStudentId] = useState("");
+  const [idSuffix, setIdSuffix] = useState("");
 
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -37,10 +41,37 @@ export default function RegisterForm({ onSwitchToLogin, onRegisteredSuccess }: R
   const [errorMessage, setErrorMessage] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
 
+  const getFullName = () => {
+    const parts: string[] = [];
+    if (role === "teacher" && honorific && honorific !== "None") {
+      parts.push(honorific);
+    }
+    if (firstName.trim()) parts.push(firstName.trim());
+    if (middleName.trim()) {
+      const mid = middleName.trim();
+      parts.push(mid.length === 1 ? `${mid}.` : mid);
+    }
+    if (lastName.trim()) parts.push(lastName.trim());
+    if (suffix.trim() && suffix !== "None") parts.push(suffix.trim());
+    return parts.join(" ");
+  };
+
+  const getFormattedId = () => {
+    const raw = idSuffix.trim();
+    if (!raw) return "";
+    const clean = raw.replace(/^C[-_]?/i, "");
+    return `C${clean}`;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMessage("");
     setSuccessMessage("");
+
+    if (!firstName.trim() || !lastName.trim()) {
+      setErrorMessage("Please enter both your First Name and Last Name.");
+      return;
+    }
 
     if (password !== confirmPassword) {
       setErrorMessage("Passwords do not match. Please double-check.");
@@ -57,16 +88,23 @@ export default function RegisterForm({ onSwitchToLogin, onRegisteredSuccess }: R
       return;
     }
 
+    const finalId = getFormattedId();
+    if (role === "student" && !finalId) {
+      setErrorMessage("Please enter your Student ID number.");
+      return;
+    }
+
     setLoading(true);
     try {
+      const fullName = getFullName();
       const res = await registerUser({
-        name,
+        name: fullName,
         email,
         password,
         role,
         programme,
         department,
-        student_id: role === "student" ? studentId : undefined,
+        student_id: role === "student" ? finalId : undefined,
       });
 
       setSuccessMessage(
@@ -195,23 +233,154 @@ export default function RegisterForm({ onSwitchToLogin, onRegisteredSuccess }: R
             </div>
           </div>
 
-          {/* Full Name */}
+          {/* NAME PARTS */}
           <div className="form-group">
             <label className="form-label" style={{ fontSize: "0.82rem", fontWeight: 600 }}>
-              Full Name
+              Name Information <span style={{ color: "var(--danger)" }}>*</span>
             </label>
-            <div className="input-icon-group">
+
+            {/* Row 1: Title (if Teacher), First Name, Middle Name */}
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: role === "teacher" ? "90px 1fr 1fr" : "1fr 1fr",
+                gap: "0.5rem",
+                marginBottom: "0.5rem",
+              }}
+            >
+              {role === "teacher" && (
+                <div>
+                  <select
+                    className="form-input"
+                    style={{ appearance: "auto", padding: "0.55rem 0.4rem", fontSize: "0.82rem" }}
+                    value={honorific}
+                    onChange={(e) => setHonorific(e.target.value)}
+                  >
+                    <option value="Prof.">Prof.</option>
+                    <option value="Dr.">Dr.</option>
+                    <option value="Engr.">Engr.</option>
+                    <option value="Mr.">Mr.</option>
+                    <option value="Ms.">Ms.</option>
+                    <option value="None">None</option>
+                  </select>
+                </div>
+              )}
+
               <input
                 type="text"
-                className="form-input input-with-icon"
-                placeholder={role === "teacher" ? "e.g. Prof. Juan Dela Cruz" : "e.g. Maria Clara Santos"}
-                value={name}
-                onChange={(e) => setName(e.target.value)}
+                className="form-input"
+                placeholder="First Name *"
+                value={firstName}
+                onChange={(e) => setFirstName(e.target.value)}
                 required
               />
-              <User size={17} className="input-icon-left" />
+
+              <input
+                type="text"
+                className="form-input"
+                placeholder="Middle Name / M.I."
+                value={middleName}
+                onChange={(e) => setMiddleName(e.target.value)}
+              />
             </div>
+
+            {/* Row 2: Last Name and Suffix */}
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "1fr 95px",
+                gap: "0.5rem",
+              }}
+            >
+              <input
+                type="text"
+                className="form-input"
+                placeholder="Last Name *"
+                value={lastName}
+                onChange={(e) => setLastName(e.target.value)}
+                required
+              />
+
+              <select
+                className="form-input"
+                style={{ appearance: "auto", padding: "0.55rem 0.4rem", fontSize: "0.82rem" }}
+                value={suffix}
+                onChange={(e) => setSuffix(e.target.value)}
+              >
+                <option value="">Suffix</option>
+                <option value="Jr.">Jr.</option>
+                <option value="Sr.">Sr.</option>
+                <option value="II">II</option>
+                <option value="III">III</option>
+                <option value="IV">IV</option>
+              </select>
+            </div>
+
+            {/* Live Name Preview */}
+            {(firstName.trim() || lastName.trim()) && (
+              <div
+                style={{
+                  marginTop: "0.35rem",
+                  padding: "0.25rem 0.5rem",
+                  borderRadius: "4px",
+                  background: "rgba(37, 99, 235, 0.1)",
+                  fontSize: "0.75rem",
+                  color: "#93c5fd",
+                }}
+              >
+                Formatted: <strong>{getFullName()}</strong>
+              </div>
+            )}
           </div>
+
+          {/* Student ID (If Student) with locked C prefix */}
+          {role === "student" && (
+            <div className="form-group">
+              <label className="form-label" style={{ fontSize: "0.82rem", fontWeight: 600 }}>
+                Student ID Number <span style={{ color: "var(--danger)" }}>*</span>
+              </label>
+              <div style={{ display: "flex", alignItems: "stretch" }}>
+                <span
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    padding: "0 0.85rem",
+                    background: "rgba(245, 158, 11, 0.18)",
+                    border: "1px solid rgba(245, 158, 11, 0.35)",
+                    borderRight: "none",
+                    borderRadius: "var(--radius-md) 0 0 var(--radius-md)",
+                    color: "var(--srcb-gold-accent)",
+                    fontWeight: 800,
+                    fontSize: "0.95rem",
+                    userSelect: "none",
+                  }}
+                >
+                  C
+                </span>
+                <input
+                  type="text"
+                  className="form-input"
+                  style={{
+                    borderRadius: "0 var(--radius-md) var(--radius-md) 0",
+                    flex: 1,
+                  }}
+                  placeholder="2024-00123"
+                  value={idSuffix}
+                  onChange={(e) => {
+                    const cleaned = e.target.value.replace(/^C[-_]?/i, "");
+                    setIdSuffix(cleaned);
+                  }}
+                  required
+                />
+              </div>
+              {idSuffix.trim() && (
+                <div style={{ fontSize: "0.72rem", color: "var(--text-muted)", marginTop: "0.2rem" }}>
+                  Assigned ID: <strong style={{ color: "var(--srcb-gold-accent)" }}>{getFormattedId()}</strong>
+                </div>
+              )}
+            </div>
+          )}
 
           {/* School Email */}
           <div className="form-group">
@@ -269,26 +438,6 @@ export default function RegisterForm({ onSwitchToLogin, onRegisteredSuccess }: R
               />
             </div>
           </div>
-
-          {/* Student ID (If Student) */}
-          {role === "student" && (
-            <div className="form-group">
-              <label className="form-label" style={{ fontSize: "0.82rem", fontWeight: 600 }}>
-                Student ID Number
-              </label>
-              <div className="input-icon-group">
-                <input
-                  type="text"
-                  className="form-input input-with-icon"
-                  placeholder="e.g. 2024-00123"
-                  value={studentId}
-                  onChange={(e) => setStudentId(e.target.value)}
-                  required
-                />
-                <GraduationCap size={17} className="input-icon-left" />
-              </div>
-            </div>
-          )}
 
           {/* Passwords */}
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem" }}>

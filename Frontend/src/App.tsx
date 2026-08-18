@@ -23,6 +23,7 @@ import {
   FileText,
   Layers,
   Database,
+  UserPlus,
 } from "lucide-react";
 import confetti from "canvas-confetti";
 import type {
@@ -76,6 +77,7 @@ import UserGuideModal, { UserGuideCard } from "./components/UserGuideModal";
 import { CameraScanner } from "./components/CameraScanner";
 import ExamCreationModal from "./components/ExamCreationModal";
 import ExamDetailsModal from "./components/ExamDetailsModal";
+import AdminUserManagement from "./components/AdminUserManagement";
 
 type AppTab =
   | "dashboard"
@@ -87,7 +89,8 @@ type AppTab =
   | "exams"
   | "history"
   | "item-analysis"
-  | "user-guide";
+  | "user-guide"
+  | "user-management";
 
 export default function App() {
   // Navigation State
@@ -580,7 +583,7 @@ export default function App() {
     if (!selectedUser) return;
 
     setCurrentUser(selectedUser);
-    setActiveTab("dashboard");
+    setActiveTab(selectedUser.role === "admin" ? "quick-scan" : "dashboard");
     setAuthMessage(
       `Welcome back, ${selectedUser.name}. Your ${selectedUser.role.replace("-", " ")} workspace is ready.`,
     );
@@ -609,40 +612,48 @@ export default function App() {
         programme: backendUser.programme ?? undefined,
         department: backendUser.department ?? undefined,
         scope:
-          backendUser.role === "dean"
-            ? "Institution-wide access across all departments and programmes"
-            : backendUser.role === "programme-head"
-              ? `Restricted to ${backendUser.programme ?? "assigned programme"}`
-              : backendUser.role === "teacher"
-                ? `Teaching access for ${backendUser.department ?? "assigned department"}`
-                : `Student access for ${backendUser.programme ?? "assigned programme"}`,
+          backendUser.role === "admin"
+            ? "Quick OMR Scanner & Account Provisioning"
+            : backendUser.role === "dean"
+              ? "Institution-wide access across all departments and programmes"
+              : backendUser.role === "programme-head"
+                ? `Restricted to ${backendUser.programme ?? "assigned programme"}`
+                : backendUser.role === "teacher"
+                  ? `Teaching access for ${backendUser.department ?? "assigned department"}`
+                  : `Student access for ${backendUser.programme ?? "assigned programme"}`,
         permissions:
-          backendUser.role === "dean"
+          backendUser.role === "admin"
             ? [
-                "Manage students",
-                "Manage teachers",
-                "Monitor examinations",
-                "View reports",
+                "Quick OMR Sheet Scanner",
+                "Create and Manage Teacher & Student Accounts",
+                "Optical Mark Recognition Realtime Processing",
               ]
-            : backendUser.role === "programme-head"
+            : backendUser.role === "dean"
               ? [
-                  "View programme analytics",
-                  "Monitor students",
-                  "Review examinations",
+                  "Manage students",
+                  "Manage teachers",
+                  "Monitor examinations",
+                  "View reports",
                 ]
-              : backendUser.role === "teacher"
+              : backendUser.role === "programme-head"
                 ? [
-                    "Create examinations",
-                    "Upload answer keys",
-                    "Grade sheets",
-                    "Publish results",
+                    "View programme analytics",
+                    "Monitor students",
+                    "Review examinations",
                   ]
-                : ["View exams", "Review results", "See feedback"],
+                : backendUser.role === "teacher"
+                  ? [
+                      "Create examinations",
+                      "Upload answer keys",
+                      "Grade sheets",
+                      "Publish results",
+                    ]
+                  : ["View exams", "Review results", "See feedback"],
       };
 
       setSelectedAuthUserId(mappedUser.id);
       setCurrentUser(mappedUser);
-      setActiveTab("dashboard");
+      setActiveTab(mappedUser.role === "admin" ? "quick-scan" : "dashboard");
       setAuthMessage(
         `Welcome back, ${mappedUser.name}. Your ${mappedUser.role.replace("-", " ")} workspace is ready.`,
       );
@@ -659,7 +670,7 @@ export default function App() {
       ) {
         setSelectedAuthUserId(foundMock.id);
         setCurrentUser(foundMock);
-        setActiveTab("dashboard");
+        setActiveTab(foundMock.role === "admin" ? "quick-scan" : "dashboard");
         setAuthMessage(
           `Welcome back, ${foundMock.name}. Your ${foundMock.role.replace("-", " ")} workspace is ready.`,
         );
@@ -691,6 +702,17 @@ export default function App() {
     if (!currentUser) {
       return [
         { key: "dashboard" as AppTab, label: "Dashboard", icon: BarChart3 },
+      ];
+    }
+
+    if (currentUser.role === "admin") {
+      return [
+        { key: "quick-scan" as AppTab, label: "Quick Scanner", icon: Sparkles },
+        {
+          key: "user-management" as AppTab,
+          label: "User Accounts",
+          icon: UserPlus,
+        },
       ];
     }
 
@@ -809,7 +831,8 @@ export default function App() {
           setSelectedAuthUserId(userId);
           const found = mockUsers.find((u) => u.id === userId);
           if (found) {
-            let pass = "Dean@2025";
+            let pass = "Admin@2025";
+            if (found.role === "dean") pass = "Dean@2025";
             if (found.role === "programme-head") pass = "Ph@2025";
             if (found.role === "teacher") pass = "Teacher@2025";
             if (found.role === "student") pass = "Student@2025";
@@ -1720,6 +1743,35 @@ export default function App() {
                 ))}
               </div>
             </div>
+          </div>
+        )}
+
+        {/* USER MANAGEMENT TAB (ADMIN CREATION & DIRECTORY) */}
+        {activeTab === "user-management" && currentUser && (
+          <div>
+            <div
+              className="header-container"
+              style={{ marginBottom: "1.5rem" }}
+            >
+              <h2 style={{ fontSize: "1.4rem", fontWeight: 800, margin: 0 }}>
+                User & Account Management
+              </h2>
+              <p
+                style={{
+                  fontSize: "0.85rem",
+                  color: "var(--text-secondary)",
+                  margin: "0.2rem 0 0 0",
+                }}
+              >
+                Provision, manage, and authorize Teacher and Student institutional accounts.
+              </p>
+            </div>
+
+            <AdminUserManagement
+              currentUser={currentUser}
+              addToast={addToast}
+              formatDate={formatDate}
+            />
           </div>
         )}
 

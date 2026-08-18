@@ -39,6 +39,7 @@ interface RoleDashboardProps {
 }
 
 const roleTitles: Record<AuthUser["role"], string> = {
+  admin: "System Administrator Dashboard",
   dean: "Dean Dashboard",
   "programme-head": "Programme Head Dashboard",
   teacher: "Teacher Dashboard",
@@ -46,6 +47,7 @@ const roleTitles: Record<AuthUser["role"], string> = {
 };
 
 const roleDescriptions: Record<AuthUser["role"], string> = {
+  admin: "Comprehensive system administration, user management, exam monitoring, and institutional analytics.",
   dean: "Institution-wide oversight, performance trends, and executive reporting.",
   "programme-head":
     "Programme-specific analytics, student progress, and faculty insights.",
@@ -65,7 +67,7 @@ const dashboardCards = (
   },
   pendingCount: number = 0,
 ) => {
-  if (user.role === "dean") {
+  if (user.role === "admin" || user.role === "dean") {
     return [
       {
         title: "Total Students",
@@ -213,7 +215,8 @@ export default function RoleDashboard({
   const [actionLoadingId, setActionLoadingId] = useState<string | null>(null);
   const [actionNotice, setActionNotice] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
-  const canManageRegistrations = user.role === "programme-head" || user.role === "dean";
+  const canManageRegistrations =
+    user.role === "admin" || user.role === "programme-head" || user.role === "dean";
 
   const loadPendingList = async () => {
     if (!canManageRegistrations) return;

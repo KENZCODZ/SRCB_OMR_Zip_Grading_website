@@ -13,6 +13,16 @@ DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "aeroomr.db")
 
 SEED_USERS = [
     {
+        "id": "admin-001",
+        "name": "System Administrator",
+        "email": "admin@srcb.edu.ph",
+        "password": "Admin@2025",
+        "role": "admin",
+        "programme": "Institution-wide",
+        "department": "IT Systems & Administration",
+        "status": "active",
+    },
+    {
         "id": "dean-001",
         "name": "Dr. Maria Santos",
         "email": "dean@srcb.edu.ph",
@@ -326,6 +336,74 @@ def update_user_status(user_id: str, new_status: str) -> bool:
     conn.commit()
     conn.close()
     return updated
+
+
+def create_user_account(
+    name: str,
+    email: str,
+    password: str,
+    role: str,
+    programme: Optional[str] = None,
+    department: Optional[str] = None,
+    status: str = "active",
+) -> Dict[str, Any]:
+    user_id = str(uuid.uuid4())
+    now_iso = datetime.now(timezone.utc).isoformat()
+
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute(
+        """
+        INSERT INTO users (id, name, email, password, role, programme, department, status, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+        (
+            user_id,
+            name.strip(),
+            email.strip().lower(),
+            password,
+            role.strip().lower(),
+            programme.strip() if programme else "BSIT",
+            department.strip() if department else "Computing Studies",
+            status,
+            now_iso,
+            now_iso,
+        ),
+    )
+    conn.commit()
+    conn.close()
+
+    return {
+        "id": user_id,
+        "name": name.strip(),
+        "email": email.strip().lower(),
+        "role": role.strip().lower(),
+        "programme": programme or "BSIT",
+        "department": department or "Computing Studies",
+        "status": status,
+        "created_at": now_iso,
+    }
+
+
+def list_all_users() -> List[Dict[str, Any]]:
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute(
+        "SELECT id, name, email, role, programme, department, status, created_at FROM users ORDER BY created_at DESC"
+    )
+    rows = cursor.fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+
+def delete_user(user_id: str) -> bool:
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("DELETE FROM users WHERE id = ?", (user_id,))
+    deleted = cursor.rowcount > 0
+    conn.commit()
+    conn.close()
+    return deleted
 
 
 def authenticate_user(email: str, password: str) -> Dict[str, Any]:

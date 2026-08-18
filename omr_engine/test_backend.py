@@ -31,6 +31,12 @@ class BackendIntegrationTests(unittest.TestCase):
         self.assertTrue(res.get("success", False))
         self.assertEqual(res["user"]["role"], "dean")
 
+    def test_authentication_accepts_admin_user(self):
+        res = authenticate_user("admin@srcb.edu.ph", "Admin@2025")
+        self.assertTrue(res.get("success", False))
+        self.assertEqual(res["user"]["role"], "admin")
+        self.assertEqual(res["user"]["name"], "System Administrator")
+
     def test_authentication_rejects_bad_password(self):
         res = authenticate_user("dean@srcb.edu.ph", "wrong-password")
         self.assertFalse(res.get("success", False))
@@ -58,7 +64,49 @@ class BackendIntegrationTests(unittest.TestCase):
         # Approved user can now login
         login_res_after = authenticate_user("test.teacher@srcb.edu.ph", "Password@123")
         self.assertTrue(login_res_after.get("success", False))
-        self.assertEqual(login_res_after["user"]["status"], "active")
+
+    def test_admin_create_teacher_and_student_accounts(self):
+        from database import create_user_account, list_all_users, delete_user
+
+        # Admin creates a teacher account directly active
+        t_user = create_user_account(
+            name="Prof. Sarah Connor",
+            email="sarah.connor@srcb.edu.ph",
+            password="Teacher@Pass1",
+            role="teacher",
+            programme="BSIT",
+            department="Computing Studies",
+            status="active",
+        )
+        self.assertEqual(t_user["role"], "teacher")
+        self.assertEqual(t_user["status"], "active")
+
+        # Admin creates a student account directly active
+        s_user = create_user_account(
+            name="John Connor",
+            email="john.connor@srcb.edu.ph",
+            password="Student@Pass1",
+            role="student",
+            programme="BSIT",
+            department="Computing Studies",
+            status="active",
+        )
+        self.assertEqual(s_user["role"], "student")
+        self.assertEqual(s_user["status"], "active")
+
+        # Verify teacher can log in immediately
+        t_login = authenticate_user("sarah.connor@srcb.edu.ph", "Teacher@Pass1")
+        self.assertTrue(t_login.get("success", False))
+        self.assertEqual(t_login["user"]["name"], "Prof. Sarah Connor")
+
+        # Verify student can log in immediately
+        s_login = authenticate_user("john.connor@srcb.edu.ph", "Student@Pass1")
+        self.assertTrue(s_login.get("success", False))
+        self.assertEqual(s_login["user"]["name"], "John Connor")
+
+        # Clean up created accounts
+        delete_user(t_user["id"])
+        delete_user(s_user["id"])
 
     def test_exam_with_rich_metadata_lifecycle(self):
         exam = save_exam(

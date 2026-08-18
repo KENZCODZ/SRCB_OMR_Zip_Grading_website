@@ -47,10 +47,14 @@ export default function LoginPage({
 
   const getRoleIcon = (role: string) => {
     switch (role) {
+      case "admin":
+        return <ShieldCheck size={18} style={{ color: "#c084fc" }} />;
       case "dean":
         return <Award size={18} className="text-gold" />;
       case "programme-head":
         return <BookOpen size={18} style={{ color: "#38bdf8" }} />;
+      case "teacher":
+        return <ShieldCheck size={18} style={{ color: "#93c5fd" }} />;
       default:
         return <GraduationCap size={18} style={{ color: "#a7f3d0" }} />;
     }
@@ -58,12 +62,16 @@ export default function LoginPage({
 
   const getRoleTitle = (role: string) => {
     switch (role) {
+      case "admin":
+        return "System Admin";
       case "dean":
         return "Dean of Education";
       case "programme-head":
         return "Programme Head";
-      default:
+      case "teacher":
         return "Faculty Instructor";
+      default:
+        return "Student";
     }
   };
 
@@ -301,7 +309,7 @@ export default function LoginPage({
                       title={`Quick sign in as ${user.name}`}
                     >
                       {getRoleIcon(user.role)}
-                      <span className="role-pill-name">{user.name.split(" ")[1] || user.name}</span>
+                      <span className="role-pill-name">{user.role === "admin" ? "Admin" : user.name.split(" ")[1] || user.name}</span>
                       <span className="role-pill-title">{getRoleTitle(user.role)}</span>
                     </button>
                   );

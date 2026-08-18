@@ -19,6 +19,20 @@ export interface ActivityLog {
 
 export const mockUsers: AuthUser[] = [
   {
+    id: 'admin-001',
+    role: 'admin',
+    name: 'System Administrator',
+    email: 'admin@srcb.edu.ph',
+    department: 'IT Systems & Administration',
+    programme: 'Institution-wide',
+    scope: 'Quick OMR Scanner & Account Provisioning',
+    permissions: [
+      'Quick OMR Sheet Scanner',
+      'Create and Manage Teacher & Student Accounts',
+      'Optical Mark Recognition Realtime Processing',
+    ],
+  },
+  {
     id: 'dean-001',
     role: 'dean',
     name: 'Dr. Maria Santos',

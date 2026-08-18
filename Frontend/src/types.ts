@@ -60,7 +60,7 @@ export interface StudentRosterEntry {
   email?: string;
 }
 
-export type UserRole = 'dean' | 'programme-head' | 'teacher' | 'student';
+export type UserRole = 'admin' | 'dean' | 'programme-head' | 'teacher' | 'student';
 
 export interface AuthUser {
   id: string;

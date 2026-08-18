@@ -63,6 +63,41 @@ interface RoleGuide {
 
 const ROLE_GUIDES: RoleGuide[] = [
   {
+    role: "admin",
+    roleTitle: "Admin (Quick Scanner)",
+    badgeColor: "rgba(168, 85, 247, 0.15)",
+    icon: Sparkles,
+    description:
+      "High-speed optical mark recognition and live camera scanning station for instantaneous student answer sheet grading.",
+    targetAudience: "System Administrators, Scanning Station Operators, Proctors",
+    keyResponsibilities: [
+      "Process 50-item and 100-item OMR answer sheets via live camera or file upload",
+      "Instant alignment feedback and real-time bubble detection",
+      "Real-time answer extraction and grading visualization",
+    ],
+    sections: [
+      {
+        id: "admin-quick-scanner-guide",
+        title: "1. Operating the AeroOMR Quick Scanner",
+        icon: Sparkles,
+        summary: "Procedure for capturing, detecting bubbles, and grading answer sheets.",
+        steps: [
+          {
+            title: "Align Sheet with Guide Frame",
+            description:
+              "Position the physical answer sheet inside the live camera frame until the four corner fiducial markers lock on.",
+            tip: "Maintain flat alignment and balanced ambient lighting without heavy glare.",
+          },
+          {
+            title: "Instant Scoring & Overlay Feedback",
+            description:
+              "The OMR scanner automatically tabulates marked bubbles and renders visual grade overlays instantly.",
+          },
+        ],
+      },
+    ],
+  },
+  {
     role: "dean",
     roleTitle: "Dean / Executive Administration",
     badgeColor: "rgba(239, 68, 68, 0.15)",
@@ -632,17 +667,19 @@ export const UserGuideCard: React.FC<UserGuideCardProps> = ({
                   }}
                 >
                   <TabIcon size={14} />
-                  {guide.role === "dean"
-                    ? "Dean Guide"
-                    : guide.role === "programme-head"
-                      ? "Programme Head"
-                      : guide.role === "teacher"
-                        ? "Teacher Guide"
-                        : guide.role === "student"
-                          ? "Student Guide"
-                          : guide.role === "omr-guide"
-                            ? "OMR Scanning Rules"
-                            : "FAQ & Help"}
+                  {guide.role === "admin"
+                    ? "Admin Guide"
+                    : guide.role === "dean"
+                      ? "Dean Guide"
+                      : guide.role === "programme-head"
+                        ? "Programme Head"
+                        : guide.role === "teacher"
+                          ? "Teacher Guide"
+                          : guide.role === "student"
+                            ? "Student Guide"
+                            : guide.role === "omr-guide"
+                              ? "OMR Scanning Rules"
+                              : "FAQ & Help"}
                 </button>
               );
             })}
@@ -776,6 +813,18 @@ export const UserGuideCard: React.FC<UserGuideCardProps> = ({
                   <BookOpen size={13} /> Open Exams & Grading
                 </button>
               </>
+            )}
+            {currentRoleGuide.role === "admin" && (
+              <button
+                className="btn btn-outline"
+                style={{ fontSize: "0.78rem", padding: "0.3rem 0.6rem", borderRadius: "6px" }}
+                onClick={() => {
+                  if (onClose) onClose();
+                  onNavigateTab("quick-scan");
+                }}
+              >
+                <Sparkles size={13} /> Open Quick Scanner
+              </button>
             )}
             {(currentRoleGuide.role === "dean" || currentRoleGuide.role === "programme-head") && (
               <button

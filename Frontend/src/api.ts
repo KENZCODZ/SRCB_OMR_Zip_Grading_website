@@ -98,6 +98,47 @@ export async function rejectUser(userId: string): Promise<{ status: string; mess
   }
 }
 
+export async function fetchAllUsers(): Promise<PendingUser[]> {
+  try {
+    const response = await fetch(`${API_BASE}/api/users`);
+    return await handleResponse(response, 'Failed to fetch user accounts');
+  } catch (err) {
+    catchNetworkError(err, 'Failed to fetch user accounts');
+  }
+}
+
+export async function adminCreateUser(payload: {
+  name: string;
+  email: string;
+  password: string;
+  role: 'teacher' | 'student';
+  programme?: string;
+  department?: string;
+  student_id?: string;
+}): Promise<{ status: string; message: string; user: any }> {
+  try {
+    const response = await fetch(`${API_BASE}/api/admin/users`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    return await handleResponse(response, 'Failed to create user account');
+  } catch (err) {
+    catchNetworkError(err, 'Failed to create user account');
+  }
+}
+
+export async function deleteUser(userId: string): Promise<{ status: string; message: string }> {
+  try {
+    const response = await fetch(`${API_BASE}/api/users/${userId}`, {
+      method: 'DELETE',
+    });
+    return await handleResponse(response, 'Failed to delete user account');
+  } catch (err) {
+    catchNetworkError(err, 'Failed to delete user account');
+  }
+}
+
 export async function fetchDashboardSummary(): Promise<{ total_students: number; total_exams: number; average_score: number; total_submissions: number }> {
   try {
     const response = await fetch(`${API_BASE}/api/dashboard/summary`);

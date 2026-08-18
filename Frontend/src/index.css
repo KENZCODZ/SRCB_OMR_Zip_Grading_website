@@ -1275,8 +1275,8 @@ button.bubble-btn.active {
 
 .role-pills-container {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 0.6rem;
+  grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
+  gap: 0.5rem;
 }
 
 .role-pill-btn {
