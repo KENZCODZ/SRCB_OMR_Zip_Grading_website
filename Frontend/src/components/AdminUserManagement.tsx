@@ -22,10 +22,12 @@ interface AdminUserManagementProps {
   currentUser?: AuthUser;
   addToast: (type: "success" | "error" | "info", message: string) => void;
   formatDate?: (iso: string) => string;
+  viewMode?: "all" | "create" | "directory";
 }
 
 export default function AdminUserManagement({
   addToast,
+  viewMode = "all",
 }: AdminUserManagementProps) {
   const [users, setUsers] = useState<PendingUser[]>([]);
   const [loading, setLoading] = useState(false);
@@ -316,16 +318,22 @@ export default function AdminUserManagement({
         </div>
       </div>
 
-      {/* ── MAIN CONTENT TWO-COLUMN GRID ── */}
+      {/* ── MAIN CONTENT CONTAINER (VIEW MODE SENSITIVE) ── */}
       <div
         style={{
           display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(380px, 1fr))",
+          gridTemplateColumns:
+            viewMode === "all"
+              ? "repeat(auto-fit, minmax(380px, 1fr))"
+              : "1fr",
           gap: "1.5rem",
           alignItems: "start",
+          maxWidth: viewMode === "create" ? "820px" : "100%",
+          width: "100%",
         }}
       >
-        {/* LEFT COLUMN: ACCOUNT CREATOR FORM */}
+        {/* ACCOUNT CREATOR FORM */}
+        {(viewMode === "all" || viewMode === "create") && (
         <div className="card" style={{ padding: "1.5rem" }}>
           <div style={{ display: "flex", alignItems: "center", gap: "0.6rem", marginBottom: "1rem" }}>
             <div
@@ -751,8 +759,10 @@ export default function AdminUserManagement({
             </button>
           </form>
         </div>
+        )}
 
-        {/* RIGHT COLUMN: DIRECTORY & ROSTER VIEW */}
+        {/* DIRECTORY & ROSTER VIEW */}
+        {(viewMode === "all" || viewMode === "directory") && (
         <div className="card" style={{ padding: "1.5rem" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
             <div>
@@ -970,6 +980,7 @@ export default function AdminUserManagement({
             )}
           </div>
         </div>
+        )}
       </div>
     </div>
   );

@@ -5,7 +5,6 @@ import {
   Award,
   BookOpen,
   UserCheck,
-  UserPlus,
   Mail,
   Lock,
   Eye,
@@ -17,7 +16,6 @@ import {
   Building2,
 } from "lucide-react";
 import type { AuthUser } from "../types";
-import RegisterForm from "./RegisterForm";
 
 interface LoginPageProps {
   email: string;
@@ -42,7 +40,6 @@ export default function LoginPage({
   mockUsers,
   selectedAuthUserId,
 }: LoginPageProps) {
-  const [authMode, setAuthMode] = useState<"login" | "register">("login");
   const [showPassword, setShowPassword] = useState(false);
 
   const getRoleIcon = (role: string) => {
@@ -173,150 +170,111 @@ export default function LoginPage({
         <div className="login-glass-card">
           <div className="login-card-header">
             <div className="login-card-badge">
-              {authMode === "login" ? <ShieldCheck size={26} /> : <UserPlus size={26} />}
+              <ShieldCheck size={26} />
             </div>
-            <h3>{authMode === "login" ? "Portal Access" : "Create Account"}</h3>
-            <p>
-              {authMode === "login"
-                ? "Sign in with your official SRCB account"
-                : "Register for faculty or student institutional access"}
-            </p>
+            <h3>Portal Access</h3>
+            <p>Sign in with your official SRCB institutional account</p>
           </div>
 
-          {/* Auth Mode Switcher Tabs */}
-          <div
-            className="scan-mode-tabs"
-            style={{
-              display: "flex",
-              width: "100%",
-              marginBottom: "1.25rem",
-              background: "rgba(15, 23, 42, 0.7)",
-              padding: "0.25rem",
-            }}
-          >
-            <button
-              type="button"
-              className={`scan-mode-tab-btn ${authMode === "login" ? "active" : ""}`}
-              style={{ flex: 1, justifyContent: "center" }}
-              onClick={() => setAuthMode("login")}
-            >
-              <UserCheck size={16} /> Sign In
-            </button>
-            <button
-              type="button"
-              className={`scan-mode-tab-btn ${authMode === "register" ? "active" : ""}`}
-              style={{ flex: 1, justifyContent: "center" }}
-              onClick={() => setAuthMode("register")}
-            >
-              <UserPlus size={16} /> Register
-            </button>
-          </div>
-
-          {authMode === "register" ? (
-            <RegisterForm onSwitchToLogin={() => setAuthMode("login")} />
-          ) : (
-            <>
-              <form onSubmit={onSubmit} style={{ display: "grid", gap: "1.1rem" }}>
-                <div className="form-group">
-                  <label className="form-label" style={{ fontSize: "0.82rem", fontWeight: 600 }}>
-                    School Email
-                  </label>
-                  <div className="input-icon-group">
-                    <input
-                      type="email"
-                      className="form-input input-with-icon"
-                      placeholder="name@srcb.edu.ph"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      required
-                    />
-                    <Mail size={17} className="input-icon-left" />
-                  </div>
-                </div>
-
-                <div className="form-group">
-                  <label className="form-label" style={{ fontSize: "0.82rem", fontWeight: 600 }}>
-                    Password
-                  </label>
-                  <div className="input-icon-group">
-                    <input
-                      type={showPassword ? "text" : "password"}
-                      className="form-input input-with-icon"
-                      placeholder="Enter your password"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      required
-                      style={{ paddingRight: "2.8rem" }}
-                    />
-                    <Lock size={17} className="input-icon-left" />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword(!showPassword)}
-                      style={{
-                        position: "absolute",
-                        right: "0.9rem",
-                        background: "none",
-                        border: "none",
-                        color: "var(--text-muted)",
-                        cursor: "pointer",
-                        padding: 0,
-                        display: "flex",
-                        alignItems: "center",
-                      }}
-                      title={showPassword ? "Hide password" : "Show password"}
-                    >
-                      {showPassword ? <EyeOff size={17} /> : <Eye size={17} />}
-                    </button>
-                  </div>
-                </div>
-
-                {loginError && (
-                  <div
-                    style={{
-                      padding: "0.75rem 0.9rem",
-                      borderRadius: "var(--radius-md)",
-                      background: "rgba(244, 63, 94, 0.14)",
-                      border: "1px solid rgba(244, 63, 94, 0.3)",
-                      color: "#fda4af",
-                      fontSize: "0.83rem",
-                      lineHeight: 1.4,
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "0.5rem",
-                    }}
-                  >
-                    <span>{loginError}</span>
-                  </div>
-                )}
-
-                <button className="login-submit-btn" type="submit">
-                  <UserCheck size={18} /> Sign In to AeroOMR
-                </button>
-              </form>
-
-              {/* Quick Demo Access Pills */}
-              <div className="login-divider">Demo Quick Sign-In</div>
-
-              <div className="role-pills-container">
-                {mockUsers.map((user) => {
-                  const isActive = selectedAuthUserId === user.id;
-                  return (
-                    <button
-                      key={user.id}
-                      type="button"
-                      className={`role-pill-btn ${isActive ? "active" : ""}`}
-                      onClick={() => onSelectMockUser(user.id)}
-                      title={`Quick sign in as ${user.name}`}
-                    >
-                      {getRoleIcon(user.role)}
-                      <span className="role-pill-name">{user.role === "admin" ? "Admin" : user.name.split(" ")[1] || user.name}</span>
-                      <span className="role-pill-title">{getRoleTitle(user.role)}</span>
-                    </button>
-                  );
-                })}
+          <form onSubmit={onSubmit} style={{ display: "grid", gap: "1.1rem" }}>
+            <div className="form-group">
+              <label className="form-label" style={{ fontSize: "0.82rem", fontWeight: 600 }}>
+                School Email
+              </label>
+              <div className="input-icon-group">
+                <input
+                  type="email"
+                  className="form-input input-with-icon"
+                  placeholder="name@srcb.edu.ph"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                />
+                <Mail size={17} className="input-icon-left" />
               </div>
-            </>
-          )}
+            </div>
+
+            <div className="form-group">
+              <label className="form-label" style={{ fontSize: "0.82rem", fontWeight: 600 }}>
+                Password
+              </label>
+              <div className="input-icon-group">
+                <input
+                  type={showPassword ? "text" : "password"}
+                  className="form-input input-with-icon"
+                  placeholder="Enter your password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  style={{ paddingRight: "2.8rem" }}
+                />
+                <Lock size={17} className="input-icon-left" />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  style={{
+                    position: "absolute",
+                    right: "0.9rem",
+                    background: "none",
+                    border: "none",
+                    color: "var(--text-muted)",
+                    cursor: "pointer",
+                    padding: 0,
+                    display: "flex",
+                    alignItems: "center",
+                  }}
+                  title={showPassword ? "Hide password" : "Show password"}
+                >
+                  {showPassword ? <EyeOff size={17} /> : <Eye size={17} />}
+                </button>
+              </div>
+            </div>
+
+            {loginError && (
+              <div
+                style={{
+                  padding: "0.75rem 0.9rem",
+                  borderRadius: "var(--radius-md)",
+                  background: "rgba(244, 63, 94, 0.14)",
+                  border: "1px solid rgba(244, 63, 94, 0.3)",
+                  color: "#fda4af",
+                  fontSize: "0.83rem",
+                  lineHeight: 1.4,
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "0.5rem",
+                }}
+              >
+                <span>{loginError}</span>
+              </div>
+            )}
+
+            <button className="login-submit-btn" type="submit">
+              <UserCheck size={18} /> Sign In to AeroOMR
+            </button>
+          </form>
+
+          {/* Quick Demo Access Pills */}
+          <div className="login-divider">Demo Quick Sign-In</div>
+
+          <div className="role-pills-container">
+            {mockUsers.map((user) => {
+              const isActive = selectedAuthUserId === user.id;
+              return (
+                <button
+                  key={user.id}
+                  type="button"
+                  className={`role-pill-btn ${isActive ? "active" : ""}`}
+                  onClick={() => onSelectMockUser(user.id)}
+                  title={`Quick sign in as ${user.name}`}
+                >
+                  {getRoleIcon(user.role)}
+                  <span className="role-pill-name">{user.role === "admin" ? "Admin" : user.name.split(" ")[1] || user.name}</span>
+                  <span className="role-pill-title">{getRoleTitle(user.role)}</span>
+                </button>
+              );
+            })}
+          </div>
         </div>
       </section>
     </div>

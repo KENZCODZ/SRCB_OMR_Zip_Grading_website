@@ -262,15 +262,26 @@ h1, h2, h3, h4, h5, h6, .font-heading {
   border-radius: var(--radius-full);
 }
 
-/* Sidebar Styling */
+/* Sidebar Styling - Sticky fixed-height sidebar */
 .sidebar {
   width: 260px;
+  min-width: 260px;
+  max-width: 260px;
   background: var(--bg-sidebar);
   border-right: 1px solid var(--srcb-gold-glow);
   backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
   padding: 1.5rem 1rem;
   display: flex;
   flex-direction: column;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  max-height: 100vh;
+  overflow-y: auto;
+  overflow-x: hidden;
+  z-index: 50;
+  box-shadow: 4px 0 24px rgba(0, 0, 0, 0.35);
 }
 
 .sidebar-logo {
@@ -2378,6 +2389,62 @@ button.bubble-btn.active {
 
 .spin-slow {
   animation: spin 3s linear infinite;
+}
+
+/* Floating User Guide Question Mark Button (Bottom-Right) */
+.floating-help-btn {
+  position: fixed;
+  bottom: 1.75rem;
+  right: 1.75rem;
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--srcb-blue-primary), #1e40af);
+  border: 1.5px solid var(--srcb-gold-accent);
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.45), 0 0 16px rgba(245, 158, 11, 0.35);
+  z-index: 9999;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.floating-help-btn:hover {
+  transform: translateY(-3px) scale(1.08);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.55), 0 0 24px rgba(245, 158, 11, 0.55);
+  background: linear-gradient(135deg, #1d4ed8, #2563eb);
+  border-color: #fde047;
+  color: #ffffff;
+}
+
+.floating-help-btn:active {
+  transform: scale(0.94);
+}
+
+.floating-help-tooltip {
+  position: absolute;
+  right: calc(100% + 12px);
+  top: 50%;
+  transform: translateY(-50%);
+  background: rgba(15, 23, 42, 0.95);
+  border: 1px solid rgba(245, 158, 11, 0.35);
+  color: #ffffff;
+  padding: 0.35rem 0.75rem;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+
+.floating-help-btn:hover .floating-help-tooltip {
+  opacity: 1;
+  transform: translateY(-50%) translateX(-4px);
 }
 
 

@@ -24,6 +24,8 @@ import {
   Layers,
   Database,
   UserPlus,
+  HelpCircle,
+  Users,
 } from "lucide-react";
 import confetti from "canvas-confetti";
 import type {
@@ -90,7 +92,8 @@ type AppTab =
   | "history"
   | "item-analysis"
   | "user-guide"
-  | "user-management";
+  | "user-management"
+  | "user-directory";
 
 export default function App() {
   // Navigation State
@@ -710,8 +713,13 @@ export default function App() {
         { key: "quick-scan" as AppTab, label: "Quick Scanner", icon: Sparkles },
         {
           key: "user-management" as AppTab,
-          label: "User Accounts",
+          label: "Create Account",
           icon: UserPlus,
+        },
+        {
+          key: "user-directory" as AppTab,
+          label: "User Accounts Directory",
+          icon: Users,
         },
       ];
     }
@@ -734,11 +742,6 @@ export default function App() {
           label: "Reports & Analytics",
           icon: BarChart3,
         },
-        {
-          key: "user-guide" as AppTab,
-          label: "User Guide",
-          icon: BookOpen,
-        },
         { key: "settings" as AppTab, label: "Settings", icon: ShieldCheck },
       ];
     }
@@ -757,11 +760,6 @@ export default function App() {
           icon: BookOpen,
         },
         { key: "reports" as AppTab, label: "Reports", icon: BarChart3 },
-        {
-          key: "user-guide" as AppTab,
-          label: "User Guide",
-          icon: BookOpen,
-        },
       ];
     }
 
@@ -776,11 +774,6 @@ export default function App() {
           label: "OBE Analysis",
           icon: BarChart2,
         },
-        {
-          key: "user-guide" as AppTab,
-          label: "User Guide",
-          icon: BookOpen,
-        },
       ];
     }
 
@@ -788,7 +781,6 @@ export default function App() {
       { key: "dashboard" as AppTab, label: "Dashboard", icon: BarChart3 },
       { key: "examinations" as AppTab, label: "My Exams", icon: BookOpen },
       { key: "reports" as AppTab, label: "Results", icon: BarChart3 },
-      { key: "user-guide" as AppTab, label: "User Guide", icon: BookOpen },
     ];
   })();
 
@@ -992,15 +984,6 @@ export default function App() {
 
         {currentUser && (
           <div style={{ display: "grid", gap: "0.6rem", marginTop: "1rem" }}>
-            <button
-              className="btn btn-outline"
-              style={{ width: "100%", justifyContent: "center" }}
-              onClick={() => setIsUserGuideOpen(true)}
-            >
-              <BookOpen size={16} style={{ marginRight: "0.4rem" }} />
-              Open User Guide
-            </button>
-
             <button
               className="btn btn-danger"
               style={{ width: "100%", justifyContent: "center" }}
@@ -1746,7 +1729,7 @@ export default function App() {
           </div>
         )}
 
-        {/* USER MANAGEMENT TAB (ADMIN CREATION & DIRECTORY) */}
+        {/* CREATE ACCOUNT TAB (ADMIN) */}
         {activeTab === "user-management" && currentUser && (
           <div>
             <div
@@ -1754,7 +1737,7 @@ export default function App() {
               style={{ marginBottom: "1.5rem" }}
             >
               <h2 style={{ fontSize: "1.4rem", fontWeight: 800, margin: 0 }}>
-                User & Account Management
+                Create Institutional Account
               </h2>
               <p
                 style={{
@@ -1763,7 +1746,7 @@ export default function App() {
                   margin: "0.2rem 0 0 0",
                 }}
               >
-                Provision, manage, and authorize Teacher and Student institutional accounts.
+                Provision and authorize active Teacher and Student accounts.
               </p>
             </div>
 
@@ -1771,6 +1754,37 @@ export default function App() {
               currentUser={currentUser}
               addToast={addToast}
               formatDate={formatDate}
+              viewMode="create"
+            />
+          </div>
+        )}
+
+        {/* USER ACCOUNTS DIRECTORY TAB (ADMIN) */}
+        {activeTab === "user-directory" && currentUser && (
+          <div>
+            <div
+              className="header-container"
+              style={{ marginBottom: "1.5rem" }}
+            >
+              <h2 style={{ fontSize: "1.4rem", fontWeight: 800, margin: 0 }}>
+                User Accounts Directory
+              </h2>
+              <p
+                style={{
+                  fontSize: "0.85rem",
+                  color: "var(--text-secondary)",
+                  margin: "0.2rem 0 0 0",
+                }}
+              >
+                Search, inspect, and manage all registered institutional accounts across faculty and students.
+              </p>
+            </div>
+
+            <AdminUserManagement
+              currentUser={currentUser}
+              addToast={addToast}
+              formatDate={formatDate}
+              viewMode="directory"
             />
           </div>
         )}
@@ -3920,6 +3934,18 @@ export default function App() {
           </div>
         )}
       </main>
+
+      {/* Floating User Guide Question Mark Button (Bottom-Right) */}
+      <button
+        type="button"
+        onClick={() => setIsUserGuideOpen(true)}
+        className="floating-help-btn"
+        title="Open User Guide & Documentation"
+        aria-label="Open User Guide"
+      >
+        <HelpCircle size={24} />
+        <span className="floating-help-tooltip">Open User Guide</span>
+      </button>
     </div>
   );
 }
