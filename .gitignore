@@ -7,9 +7,16 @@ __pycache__/
 .pytest_cache/
 .mypy_cache/
 
+# ---------- Databases ----------
+*.db
+*.sqlite
+*.sqlite3
+
 # ---------- Environment ----------
 .env
 .env.*
+pyrefly.json
+
 
 # ---------- Node ----------
 node_modules/

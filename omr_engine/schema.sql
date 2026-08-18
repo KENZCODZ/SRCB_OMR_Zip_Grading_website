@@ -1,8 +1,6 @@
-
-
--- AeroOMR Reference Schema (MySQL / MariaDB)
--- NOTE: The live application uses SQLite via database.py
---       This file is a reference schema for documentation and MySQL deployments.
+-- ==============================================================================
+-- AeroOMR MySQL / MariaDB Database Schema
+-- ==============================================================================
 
 CREATE DATABASE IF NOT EXISTS aeroomr_db
     CHARACTER SET utf8mb4
@@ -12,35 +10,38 @@ USE aeroomr_db;
 
 SET NAMES utf8mb4;
 
--- Drop tables in reverse dependency order so the script can be re-run safely
+-- Drop tables in reverse dependency order for clean re-runs
 DROP TABLE IF EXISTS submission_answers;
 DROP TABLE IF EXISTS submissions;
 DROP TABLE IF EXISTS answer_keys;
 DROP TABLE IF EXISTS exams;
 DROP TABLE IF EXISTS users;
 
--- 0. users
+-- 1. users
 CREATE TABLE IF NOT EXISTS users (
-    id VARCHAR(50) NOT NULL,
-    name VARCHAR(150) NOT NULL,
-    email VARCHAR(150) NOT NULL,
+    id VARCHAR(64) NOT NULL,
+    name VARCHAR(255) NOT NULL,
+    email VARCHAR(255) NOT NULL UNIQUE,
     password VARCHAR(255) NOT NULL,
-    role ENUM('dean','programme-head','teacher','student') NOT NULL,
+    role VARCHAR(50) NOT NULL,
     programme VARCHAR(100) DEFAULT NULL,
-    department VARCHAR(100) DEFAULT NULL,
-    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    department VARCHAR(255) DEFAULT NULL,
+    status VARCHAR(20) NOT NULL DEFAULT 'active',
+    created_at VARCHAR(50) NOT NULL,
+    updated_at VARCHAR(50) NOT NULL,
     PRIMARY KEY (id),
-    UNIQUE KEY uq_users_email (email)
+    KEY idx_users_email (email),
+    KEY idx_users_role (role),
+    KEY idx_users_status (status)
 ) ENGINE=InnoDB
   DEFAULT CHARSET=utf8mb4
   COLLATE=utf8mb4_unicode_ci
-  COMMENT='Registered AeroOMR users with role-based access';
+  COMMENT='System users (dean, programme-head, teacher, student) with registration approval';
 
--- 1. exams  (comprehensive examination metadata)
+-- 2. exams (comprehensive examination metadata)
 CREATE TABLE IF NOT EXISTS exams (
-    id VARCHAR(50) NOT NULL,
-    name VARCHAR(200) NOT NULL                  COMMENT 'Full exam title',
+    id VARCHAR(64) NOT NULL,
+    name VARCHAR(255) NOT NULL                  COMMENT 'Full exam title',
 
     -- Academic metadata
     exam_type VARCHAR(50) DEFAULT NULL          COMMENT 'Preliminary | Midterm | Pre-Final | Final',
@@ -56,24 +57,23 @@ CREATE TABLE IF NOT EXISTS exams (
     num_items INT UNSIGNED NOT NULL DEFAULT 50  COMMENT 'Total number of test items (1-100)',
     passing_score INT UNSIGNED DEFAULT NULL     COMMENT 'Optional raw score threshold',
     instructions TEXT DEFAULT NULL              COMMENT 'Optional exam instructions shown to students',
-    exam_date DATE DEFAULT NULL                 COMMENT 'Scheduled date of the examination',
+    exam_date VARCHAR(50) DEFAULT NULL          COMMENT 'Scheduled date of the examination',
 
     -- Timestamps
-    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    created_at VARCHAR(50) NOT NULL,
 
     PRIMARY KEY (id),
-    CONSTRAINT chk_exams_num_items CHECK (num_items BETWEEN 1 AND 100),
-    CONSTRAINT chk_exams_type CHECK (exam_type IN ('Preliminary','Midterm','Pre-Final','Final') OR exam_type IS NULL)
+    CONSTRAINT chk_exams_num_items CHECK (num_items BETWEEN 1 AND 100)
 ) ENGINE=InnoDB
   DEFAULT CHARSET=utf8mb4
   COLLATE=utf8mb4_unicode_ci
   COMMENT='One row per examination created in AeroOMR';
 
--- 2. answer_keys
+-- 3. answer_keys
 CREATE TABLE IF NOT EXISTS answer_keys (
     answer_key_id INT UNSIGNED NOT NULL AUTO_INCREMENT,
-    exam_id VARCHAR(50) NOT NULL,
-    question_number TINYINT UNSIGNED NOT NULL,
+    exam_id VARCHAR(64) NOT NULL,
+    question_number SMALLINT UNSIGNED NOT NULL,
     correct_option CHAR(1) NOT NULL,
     PRIMARY KEY (answer_key_id),
     UNIQUE KEY uq_answer_keys_exam_question (exam_id, question_number),
@@ -90,15 +90,14 @@ CREATE TABLE IF NOT EXISTS answer_keys (
   COLLATE=utf8mb4_unicode_ci
   COMMENT='Correct answer for each question of an exam';
 
--- 3. submissions
+-- 4. submissions
 CREATE TABLE IF NOT EXISTS submissions (
-    id VARCHAR(50) NOT NULL,
-    exam_id VARCHAR(50) NOT NULL,
-    student_id VARCHAR(20) DEFAULT NULL,
+    id VARCHAR(64) NOT NULL,
+    exam_id VARCHAR(64) NOT NULL,
+    student_id VARCHAR(64) DEFAULT NULL,
     score SMALLINT UNSIGNED NOT NULL,
     total_questions SMALLINT UNSIGNED NOT NULL,
-    answers TEXT NOT NULL                       COMMENT 'JSON blob of per-question answer details',
-    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    graded_at VARCHAR(50) NOT NULL,
     PRIMARY KEY (id),
     KEY idx_submissions_exam (exam_id),
     CONSTRAINT fk_submissions_exam
@@ -112,10 +111,10 @@ CREATE TABLE IF NOT EXISTS submissions (
   COLLATE=utf8mb4_unicode_ci
   COMMENT='One row per graded student answer sheet';
 
--- 4. submission_answers (optional normalized view, runtime uses JSON blob)
+-- 5. submission_answers
 CREATE TABLE IF NOT EXISTS submission_answers (
     submission_answer_id INT UNSIGNED NOT NULL AUTO_INCREMENT,
-    submission_id VARCHAR(50) NOT NULL,
+    submission_id VARCHAR(64) NOT NULL,
     question_number SMALLINT UNSIGNED NOT NULL,
     selected_option VARCHAR(5) DEFAULT NULL,
     is_ambiguous TINYINT(1) NOT NULL DEFAULT 0,

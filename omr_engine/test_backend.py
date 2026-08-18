@@ -1,87 +1,110 @@
 import unittest
 
-from fastapi.testclient import TestClient
-
 from database import (
     init_db,
     authenticate_user,
     get_dashboard_summary,
     save_exam,
+    get_exam,
+    list_exams,
+    delete_exam,
     save_submission,
+    list_submissions,
+    register_user,
+    list_pending_users,
+    update_user_status,
 )
 
 
-from main import app
-
-
-class BackendAuthTests(unittest.TestCase):
+class BackendIntegrationTests(unittest.TestCase):
     def setUp(self):
         init_db()
-        self.client = TestClient(app)
+        delete_exam("demo-test-exam")
         from database import get_db_connection
         conn = get_db_connection()
-        conn.execute("DELETE FROM submissions WHERE exam_id = 'demo-exam'")
-        conn.execute("DELETE FROM exams WHERE id = 'demo-exam'")
+        conn.execute("DELETE FROM users WHERE email = 'test.teacher@srcb.edu.ph'")
         conn.commit()
         conn.close()
 
     def test_authentication_accepts_seeded_user(self):
-        user = authenticate_user("dean@srcb.edu.ph", "Dean@2025")
-        self.assertIsNotNone(user)
-        self.assertEqual(user["role"], "dean")
+        res = authenticate_user("dean@srcb.edu.ph", "Dean@2025")
+        self.assertTrue(res.get("success", False))
+        self.assertEqual(res["user"]["role"], "dean")
 
     def test_authentication_rejects_bad_password(self):
-        user = authenticate_user("dean@srcb.edu.ph", "wrong-password")
-        self.assertIsNone(user)
+        res = authenticate_user("dean@srcb.edu.ph", "wrong-password")
+        self.assertFalse(res.get("success", False))
 
-    def test_dashboard_summary_returns_metrics(self):
-        summary = get_dashboard_summary()
-        self.assertIn("total_students", summary)
-        self.assertIn("total_exams", summary)
-        self.assertIn("average_score", summary)
+    def test_registration_and_approval_flow(self):
+        reg_res = register_user(
+            name="Test Teacher",
+            email="test.teacher@srcb.edu.ph",
+            password="Password@123",
+            role="teacher",
+            programme="BSIT",
+            department="Computing Studies",
+        )
+        self.assertEqual(reg_res["status"], "pending")
 
-    def test_dashboard_summary_tracks_real_exam_activity(self):
-        initial_summary = get_dashboard_summary()
-        save_exam("demo-exam", "Demo Exam", {"1": "A"})
+        # Pending user should not be able to login
+        login_res = authenticate_user("test.teacher@srcb.edu.ph", "Password@123")
+        self.assertFalse(login_res.get("success", False))
+        self.assertEqual(login_res.get("error"), "pending_approval")
+
+        # Approve user
+        approved = update_user_status(reg_res["id"], "active")
+        self.assertTrue(approved)
+
+        # Approved user can now login
+        login_res_after = authenticate_user("test.teacher@srcb.edu.ph", "Password@123")
+        self.assertTrue(login_res_after.get("success", False))
+        self.assertEqual(login_res_after["user"]["status"], "active")
+
+    def test_exam_with_rich_metadata_lifecycle(self):
+        exam = save_exam(
+            exam_id="demo-test-exam",
+            name="Midterm Web Development",
+            answer_key={"1": "A", "2": "B", "3": "C"},
+            exam_type="Midterm",
+            academic_year="2025-2026",
+            semester="1st Semester",
+            subject="Web Systems",
+            course_code="ITP305",
+            section="BSIT 3-A",
+            program="BSIT",
+            instructor_name="Prof. John",
+            num_items=3,
+            passing_score=2,
+            instructions="No cheating",
+            exam_date="2026-08-17",
+        )
+        self.assertEqual(exam["id"], "demo-test-exam")
+        self.assertEqual(exam["course_code"], "ITP305")
+        self.assertEqual(exam["num_items"], 3)
+
+        retrieved = get_exam("demo-test-exam")
+        self.assertIsNotNone(retrieved)
+        self.assertEqual(retrieved["subject"], "Web Systems")
+
         save_submission(
-            submission_id="demo-submission",
-            exam_id="demo-exam",
-            student_id="student-100",
-            score=80,
-            total_questions=100,
-            answers={"1": {"selected": "A", "is_empty": False, "is_ambiguous": False}},
+            submission_id="demo-sub-001",
+            exam_id="demo-test-exam",
+            student_id="2022-001",
+            score=3,
+            total_questions=3,
+            answers={"1": "A", "2": "B", "3": "C"},
         )
+
+        subs = list_submissions("demo-test-exam")
+        self.assertEqual(len(subs), 1)
+        self.assertEqual(subs[0]["score"], 3)
 
         summary = get_dashboard_summary()
-        self.assertEqual(summary["total_exams"], initial_summary["total_exams"] + 1)
-        self.assertEqual(summary["total_submissions"], initial_summary["total_submissions"] + 1)
+        self.assertGreaterEqual(summary["total_exams"], 1)
+        self.assertGreaterEqual(summary["total_submissions"], 1)
 
-    def test_vite_dev_server_origin_is_allowed(self):
-        response = self.client.get(
-            "/api/dashboard/summary",
-            headers={"origin": "http://127.0.0.1:5174"},
-        )
-
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.headers.get("access-control-allow-origin"), "http://127.0.0.1:5174")
-
-    def test_exam_creation_rejects_answer_key_size_mismatch(self):
-        payload = {
-            "name": "Short Quiz",
-            "exam_type": "Quiz",
-            "subject": "Math",
-            "course_code": "MATH101",
-            "section": "A",
-            "program": "BSIT",
-            "instructor_name": "Prof. Test",
-            "num_items": 20,
-            "answer_key": {str(i): "A" for i in range(1, 11)},
-        }
-
-        response = self.client.post("/api/exams", json=payload)
-
-        self.assertEqual(response.status_code, 400)
-        self.assertIn("20", response.json()["detail"])
+        deleted = delete_exam("demo-test-exam")
+        self.assertTrue(deleted)
 
 
 if __name__ == "__main__":

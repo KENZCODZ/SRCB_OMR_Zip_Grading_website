@@ -1,0 +1,9 @@
+{
+  "venvPath": "omr_engine",
+  "venv": ".venv",
+  "extraPaths": [
+    "omr_engine",
+    "omr_engine/.venv/Lib/site-packages"
+  ],
+  "reportMissingImports": true
+}
