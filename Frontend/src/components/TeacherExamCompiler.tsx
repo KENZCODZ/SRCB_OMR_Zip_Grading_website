@@ -290,9 +290,8 @@ export const TeacherExamCompiler: React.FC<TeacherExamCompilerProps> = ({
       <div
         className="card"
         style={{
-          background:
-            "linear-gradient(135deg, rgba(15, 23, 42, 0.95) 0%, rgba(30, 41, 59, 0.9) 100%)",
-          border: "1px solid var(--srcb-gold-accent)",
+          background: "var(--bg-surface)",
+          border: "1px solid var(--border)",
           padding: "1.25rem 1.5rem",
           display: "flex",
           justifyContent: "space-between",
@@ -307,12 +306,12 @@ export const TeacherExamCompiler: React.FC<TeacherExamCompilerProps> = ({
               width: "48px",
               height: "48px",
               borderRadius: "12px",
-              background: "rgba(245, 158, 11, 0.18)",
-              border: "1px solid rgba(245, 158, 11, 0.4)",
+              background: "var(--warning-bg)",
+              border: "1px solid var(--warning-border)",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              color: "var(--srcb-gold-accent)",
+              color: "var(--warning-text)",
               flexShrink: 0,
             }}
           >
@@ -330,8 +329,8 @@ export const TeacherExamCompiler: React.FC<TeacherExamCompilerProps> = ({
               <span
                 className="badge"
                 style={{
-                  background: "rgba(245, 158, 11, 0.15)",
-                  color: "var(--srcb-gold-light)",
+                  background: "var(--warning-bg)",
+                  color: "var(--warning-text)",
                   fontWeight: 700,
                   fontSize: "0.75rem",
                 }}
@@ -351,7 +350,7 @@ export const TeacherExamCompiler: React.FC<TeacherExamCompilerProps> = ({
                 fontSize: "1.35rem",
                 fontWeight: 800,
                 margin: 0,
-                color: "var(--text-primary)",
+                color: "var(--text-heading)",
               }}
             >
               Session & Class Examination Compiler
@@ -376,7 +375,7 @@ export const TeacherExamCompiler: React.FC<TeacherExamCompilerProps> = ({
             display: "flex",
             alignItems: "center",
             gap: "1.25rem",
-            background: "rgba(8, 17, 32, 0.8)",
+            background: "var(--bg-surface-2)",
             padding: "0.6rem 1.1rem",
             borderRadius: "var(--radius-md)",
             border: "1px solid var(--border)",
@@ -397,7 +396,7 @@ export const TeacherExamCompiler: React.FC<TeacherExamCompilerProps> = ({
               style={{
                 fontSize: "1.2rem",
                 fontWeight: 800,
-                color: "var(--srcb-gold-accent)",
+                color: "var(--gold-primary)",
               }}
             >
               {overallCompilerStats.totalExamsCount}
@@ -421,7 +420,7 @@ export const TeacherExamCompiler: React.FC<TeacherExamCompilerProps> = ({
               style={{
                 fontSize: "1.2rem",
                 fontWeight: 800,
-                color: "var(--primary)",
+                color: "var(--info)",
               }}
             >
               {overallCompilerStats.totalSubmissionsCount}
@@ -458,7 +457,7 @@ export const TeacherExamCompiler: React.FC<TeacherExamCompilerProps> = ({
       <div
         className="card"
         style={{
-          background: "rgba(15, 23, 42, 0.7)",
+          background: "var(--bg-surface)",
           padding: "1rem 1.25rem",
           display: "flex",
           flexDirection: "column",
@@ -475,7 +474,7 @@ export const TeacherExamCompiler: React.FC<TeacherExamCompilerProps> = ({
           }}
         >
           <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-            <Filter size={16} color="var(--srcb-gold-accent)" />
+            <Filter size={16} color="var(--gold-accent)" />
             <span
               style={{
                 fontSize: "0.9rem",
@@ -679,20 +678,18 @@ export const TeacherExamCompiler: React.FC<TeacherExamCompilerProps> = ({
                   padding: 0,
                   overflow: "hidden",
                   border: isExpanded
-                    ? "1px solid var(--srcb-gold-accent)"
+                    ? "1px solid var(--gold-accent)"
                     : "1px solid var(--border)",
                   background: isExpanded
-                    ? "rgba(15, 23, 42, 0.95)"
-                    : "rgba(15, 23, 42, 0.65)",
+                    ? "var(--gold-pale)"
+                    : "var(--bg-surface)",
                   transition: "all 0.2s ease",
                 }}
               >
-                {/* Group Summary Header Bar */}
                 <div
                   style={{
                     padding: "1.25rem 1.5rem",
-                    background:
-                      "linear-gradient(90deg, rgba(15, 23, 42, 0.8) 0%, rgba(30, 41, 59, 0.6) 100%)",
+                    background: "var(--bg-surface-2)",
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "space-between",
@@ -715,12 +712,12 @@ export const TeacherExamCompiler: React.FC<TeacherExamCompilerProps> = ({
                         width: "44px",
                         height: "44px",
                         borderRadius: "10px",
-                        background: "rgba(245, 158, 11, 0.15)",
-                        border: "1px solid rgba(245, 158, 11, 0.3)",
+                        background: "var(--warning-bg)",
+                        border: "1px solid var(--warning-border)",
                         display: "flex",
                         alignItems: "center",
                         justifyContent: "center",
-                        color: "var(--srcb-gold-accent)",
+                        color: "var(--warning-text)",
                         flexShrink: 0,
                         marginTop: "2px",
                       }}
@@ -742,9 +739,9 @@ export const TeacherExamCompiler: React.FC<TeacherExamCompilerProps> = ({
                         <span
                           className="badge"
                           style={{
-                            background: "rgba(59, 130, 246, 0.18)",
-                            color: "#60a5fa",
-                            border: "1px solid rgba(59, 130, 246, 0.3)",
+                            background: "var(--info-bg)",
+                            color: "var(--info-text)",
+                            border: "1px solid var(--info-border)",
                             fontSize: "0.72rem",
                             fontWeight: 700,
                           }}
@@ -757,7 +754,7 @@ export const TeacherExamCompiler: React.FC<TeacherExamCompilerProps> = ({
                             style={{
                               fontSize: "0.78rem",
                               fontWeight: 800,
-                              color: "var(--primary)",
+                              color: "var(--info)",
                             }}
                           >
                             [{exam.course_code}]
@@ -768,9 +765,9 @@ export const TeacherExamCompiler: React.FC<TeacherExamCompilerProps> = ({
                           <span
                             className="badge"
                             style={{
-                              background: "rgba(16, 185, 129, 0.15)",
-                              color: "#34d399",
-                              border: "1px solid rgba(16, 185, 129, 0.3)",
+                              background: "var(--success-bg)",
+                              color: "var(--success-text)",
+                              border: "1px solid var(--success-border)",
                               fontSize: "0.72rem",
                               fontWeight: 700,
                             }}
@@ -846,9 +843,9 @@ export const TeacherExamCompiler: React.FC<TeacherExamCompilerProps> = ({
                         style={{
                           textAlign: "center",
                           padding: "0.3rem 0.6rem",
-                          background: "rgba(255,255,255,0.04)",
+                          background: "var(--bg-base)",
                           borderRadius: "6px",
-                          border: "1px solid rgba(255,255,255,0.06)",
+                          border: "1px solid var(--border)",
                         }}
                       >
                         <div
@@ -864,7 +861,7 @@ export const TeacherExamCompiler: React.FC<TeacherExamCompilerProps> = ({
                           style={{
                             fontSize: "0.95rem",
                             fontWeight: 800,
-                            color: "var(--text-primary)",
+                            color: "var(--text-heading)",
                           }}
                         >
                           {totalScanned}
@@ -875,9 +872,9 @@ export const TeacherExamCompiler: React.FC<TeacherExamCompilerProps> = ({
                         style={{
                           textAlign: "center",
                           padding: "0.3rem 0.6rem",
-                          background: "rgba(255,255,255,0.04)",
+                          background: "var(--bg-base)",
                           borderRadius: "6px",
-                          border: "1px solid rgba(255,255,255,0.06)",
+                          border: "1px solid var(--border)",
                         }}
                       >
                         <div
@@ -893,7 +890,7 @@ export const TeacherExamCompiler: React.FC<TeacherExamCompilerProps> = ({
                           style={{
                             fontSize: "0.95rem",
                             fontWeight: 800,
-                            color: "var(--srcb-gold-light)",
+                            color: "var(--gold-primary)",
                           }}
                         >
                           {meanScore}/{totalItems} ({avgPercentage}%)
@@ -904,9 +901,9 @@ export const TeacherExamCompiler: React.FC<TeacherExamCompilerProps> = ({
                         style={{
                           textAlign: "center",
                           padding: "0.3rem 0.6rem",
-                          background: "rgba(255,255,255,0.04)",
+                          background: "var(--bg-base)",
                           borderRadius: "6px",
-                          border: "1px solid rgba(255,255,255,0.06)",
+                          border: "1px solid var(--border)",
                         }}
                       >
                         <div
@@ -934,16 +931,16 @@ export const TeacherExamCompiler: React.FC<TeacherExamCompilerProps> = ({
                           style={{
                             textAlign: "center",
                             padding: "0.3rem 0.6rem",
-                            background: "rgba(244, 63, 94, 0.12)",
+                            background: "var(--error-bg)",
                             borderRadius: "6px",
-                            border: "1px solid rgba(244, 63, 94, 0.3)",
+                            border: "1px solid var(--error-border)",
                           }}
                           title="Flagged ambiguous bubble marks"
                         >
                           <div
                             style={{
                               fontSize: "0.68rem",
-                              color: "#f87171",
+                              color: "var(--error-text)",
                               textTransform: "uppercase",
                             }}
                           >
@@ -953,7 +950,7 @@ export const TeacherExamCompiler: React.FC<TeacherExamCompilerProps> = ({
                             style={{
                               fontSize: "0.95rem",
                               fontWeight: 800,
-                              color: "#f87171",
+                              color: "var(--error-text)",
                             }}
                           >
                             {flaggedCount}
@@ -1039,7 +1036,7 @@ export const TeacherExamCompiler: React.FC<TeacherExamCompilerProps> = ({
                     style={{
                       padding: "1.25rem 1.5rem",
                       borderTop: "1px solid var(--border)",
-                      background: "rgba(8, 17, 32, 0.7)",
+                      background: "var(--bg-surface-2)",
                     }}
                   >
                     <div
@@ -1056,7 +1053,7 @@ export const TeacherExamCompiler: React.FC<TeacherExamCompilerProps> = ({
                         style={{
                           fontSize: "0.95rem",
                           fontWeight: 700,
-                          color: "var(--srcb-gold-light)",
+                          color: "var(--gold-primary)",
                           margin: 0,
                           display: "flex",
                           alignItems: "center",
@@ -1135,7 +1132,7 @@ export const TeacherExamCompiler: React.FC<TeacherExamCompilerProps> = ({
                                   className="table-row-hover"
                                   style={{
                                     background: hasAmbiguous
-                                      ? "rgba(244, 63, 94, 0.05)"
+                                      ? "var(--error-bg)"
                                       : undefined,
                                   }}
                                 >

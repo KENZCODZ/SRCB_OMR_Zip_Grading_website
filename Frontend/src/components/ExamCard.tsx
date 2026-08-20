@@ -50,34 +50,34 @@ export const ExamCard: React.FC<ExamCardProps> = ({
       case "preliminary":
       case "prelim":
         return {
-          background: "rgba(59, 130, 246, 0.15)",
-          color: "#60a5fa",
-          border: "1px solid rgba(59, 130, 246, 0.3)",
+          background: "var(--info-bg)",
+          color: "var(--info-text)",
+          border: "1px solid var(--info-border)",
         };
       case "midterm":
         return {
-          background: "rgba(245, 158, 11, 0.15)",
-          color: "var(--srcb-gold-light)",
-          border: "1px solid rgba(245, 158, 11, 0.3)",
+          background: "var(--warning-bg)",
+          color: "var(--warning-text)",
+          border: "1px solid var(--warning-border)",
         };
       case "pre-final":
       case "prefinal":
         return {
-          background: "rgba(168, 85, 247, 0.15)",
-          color: "#c084fc",
-          border: "1px solid rgba(168, 85, 247, 0.3)",
+          background: "#f5f3ff",
+          color: "#6d28d9",
+          border: "1px solid #ddd6fe",
         };
       case "final":
         return {
-          background: "rgba(16, 185, 129, 0.15)",
-          color: "#34d399",
-          border: "1px solid rgba(16, 185, 129, 0.3)",
+          background: "var(--success-bg)",
+          color: "var(--success-text)",
+          border: "1px solid var(--success-border)",
         };
       default:
         return {
-          background: "rgba(148, 163, 184, 0.15)",
-          color: "#cbd5e1",
-          border: "1px solid rgba(148, 163, 184, 0.3)",
+          background: "var(--bg-surface-2)",
+          color: "var(--text-secondary)",
+          border: "1px solid var(--border-md)",
         };
     }
   };
@@ -90,12 +90,6 @@ export const ExamCard: React.FC<ExamCardProps> = ({
         cursor: "pointer",
         position: "relative",
         transition: "all 0.2s ease",
-        border: isSelected
-          ? "1px solid var(--srcb-gold-accent)"
-          : "1px solid var(--border)",
-        background: isSelected
-          ? "rgba(15, 23, 42, 0.95)"
-          : "rgba(15, 23, 42, 0.6)",
         padding: "1rem",
       }}
     >
@@ -105,26 +99,23 @@ export const ExamCard: React.FC<ExamCardProps> = ({
       >
         <div style={{ display: "flex", gap: "12px", flex: 1 }}>
           <div
-            className="icon-avatar"
             style={{
-              background: isSelected
-                ? "rgba(245, 158, 11, 0.2)"
-                : "rgba(255, 255, 255, 0.05)",
-              color: isSelected
-                ? "var(--srcb-gold-accent)"
-                : "var(--text-secondary)",
+              background: isSelected ? "var(--gold-pale)" : "var(--bg-surface-2)",
+              color: isSelected ? "var(--gold-deep)" : "var(--text-secondary)",
               minWidth: "40px",
               height: "40px",
               borderRadius: "10px",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
+              border: `1px solid ${isSelected ? "var(--gold-light)" : "var(--border)"}`,
+              flexShrink: 0,
             }}
           >
             <BookOpen size={20} />
           </div>
 
-          <div style={{ flex: 1 }}>
+          <div style={{ flex: 1, minWidth: 0 }}>
             <div
               style={{
                 display: "flex",
@@ -152,7 +143,7 @@ export const ExamCard: React.FC<ExamCardProps> = ({
                   style={{
                     fontSize: "0.75rem",
                     fontWeight: 700,
-                    color: "var(--primary)",
+                    color: "var(--navy-light)",
                   }}
                 >
                   [{course_code}]
@@ -171,9 +162,12 @@ export const ExamCard: React.FC<ExamCardProps> = ({
             <h4
               style={{
                 margin: "0 0 6px 0",
-                fontSize: "1.02rem",
+                fontSize: "1rem",
                 fontWeight: 700,
-                color: "var(--text-primary)",
+                color: "var(--text-heading)",
+                whiteSpace: "nowrap",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
               }}
             >
               {name}
@@ -204,7 +198,7 @@ export const ExamCard: React.FC<ExamCardProps> = ({
               <span
                 style={{ display: "flex", alignItems: "center", gap: "4px" }}
               >
-                <Layers size={13} color="var(--srcb-gold-light)" />
+                <Layers size={13} color="var(--gold-primary)" />
                 <strong>{questionCount}</strong> items
               </span>
 
@@ -246,11 +240,12 @@ export const ExamCard: React.FC<ExamCardProps> = ({
             marginLeft: "12px",
             position: "relative",
             zIndex: 2,
+            flexShrink: 0,
           }}
         >
           {onInspect && (
             <button
-              className="btn btn-secondary btn-icon-only"
+              className="btn btn-secondary btn-sm"
               title="View Exam Details"
               onClick={(e) => {
                 e.stopPropagation();
@@ -260,11 +255,9 @@ export const ExamCard: React.FC<ExamCardProps> = ({
                 width: "32px",
                 height: "32px",
                 padding: 0,
-                background: "rgba(8, 17, 32, 0.95)",
-                border: "1px solid rgba(245, 158, 11, 0.35)",
-                boxShadow: "0 4px 12px rgba(0, 0, 0, 0.25)",
-                opacity: 1,
-                color: "var(--text-primary)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
               }}
             >
               <Eye size={14} />
@@ -272,7 +265,7 @@ export const ExamCard: React.FC<ExamCardProps> = ({
           )}
           {onDelete && (
             <button
-              className="btn btn-secondary btn-icon-only"
+              className="btn btn-danger btn-sm"
               title="Delete Exam"
               onClick={(e) => {
                 e.stopPropagation();
@@ -282,16 +275,15 @@ export const ExamCard: React.FC<ExamCardProps> = ({
                 width: "32px",
                 height: "32px",
                 padding: 0,
-                background: "rgba(8, 17, 32, 0.95)",
-                border: "1px solid rgba(244, 63, 94, 0.35)",
-                boxShadow: "0 4px 12px rgba(0, 0, 0, 0.25)",
-                opacity: 1,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
               }}
             >
-              <Trash2 size={14} style={{ color: "var(--error)" }} />
+              <Trash2 size={14} />
             </button>
           )}
-          <ChevronRight size={18} className="text-muted" />
+          <ChevronRight size={18} style={{ color: "var(--text-muted)" }} />
         </div>
       </div>
     </div>

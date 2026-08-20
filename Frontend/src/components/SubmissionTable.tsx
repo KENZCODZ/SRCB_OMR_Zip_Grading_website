@@ -67,44 +67,69 @@ export const SubmissionTable: React.FC<SubmissionTableProps> = ({
             const transmuted = calculateTransmutedGrade(sub.score, sub.total_questions || 50);
 
             return (
-              <tr key={sub.id} className="table-row-hover">
-                <td style={{ fontWeight: 600 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    {matchedStudent ? (
-                      <UserCheck size={16} className="text-success" />
-                    ) : (
-                      <GraduationCap size={16} className="text-primary" />
-                    )}
+              <tr 
+                key={sub.id} 
+                className="table-row-hover"
+                style={{ transition: 'all 0.2s ease', cursor: 'pointer' }}
+                onClick={() => onSelectSubmission(sub)}
+              >
+                <td style={{ padding: '1.15rem 1rem' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
+                    <div style={{
+                      width: '32px',
+                      height: '32px',
+                      borderRadius: '50%',
+                      background: matchedStudent ? 'var(--success-bg)' : 'var(--info-bg)',
+                      color: matchedStudent ? 'var(--success-text)' : 'var(--info)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      flexShrink: 0
+                    }}>
+                      {matchedStudent ? <UserCheck size={16} /> : <GraduationCap size={16} />}
+                    </div>
                     <div>
-                      <div>{matchedStudent ? matchedStudent.name : sub.student_id}</div>
+                      <div style={{ fontWeight: 700, color: 'var(--text-heading)', fontSize: '0.9rem' }}>
+                        {matchedStudent ? matchedStudent.name : sub.student_id}
+                      </div>
                       {matchedStudent && (
-                        <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 400 }}>
-                          ID: {sub.student_id} {matchedStudent.course_section ? `• ${matchedStudent.course_section}` : ''}
+                        <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', marginTop: '0.15rem' }}>
+                          ID: <span style={{ fontFamily: 'monospace' }}>{sub.student_id}</span> 
+                          {matchedStudent.course_section ? <span style={{ margin: '0 0.35rem', color: 'var(--border)' }}>•</span> : ''}
+                          {matchedStudent.course_section}
                         </div>
                       )}
                     </div>
                   </div>
                 </td>
-                <td>{getExamName(sub.exam_id)}</td>
+                <td style={{ fontWeight: 600, color: 'var(--text-primary)', fontSize: '0.85rem' }}>
+                  {getExamName(sub.exam_id)}
+                </td>
                 <td>
                   <StatusBadge score={sub.score} totalQuestions={sub.total_questions || 50} />
                 </td>
                 <td>
-                  <span className={`badge ${transmuted.status === 'Passed' ? 'badge-success' : 'badge-danger'}`}>
-                    Grade {transmuted.grade} ({transmuted.remarks})
+                  <span 
+                    className={`badge ${transmuted.status === 'Passed' ? 'badge-success' : 'badge-danger'}`}
+                    style={{ padding: '0.35rem 0.75rem', borderRadius: '6px', fontSize: '0.78rem' }}
+                  >
+                    Grade {transmuted.grade} <span style={{ opacity: 0.85, fontWeight: 500 }}>({transmuted.remarks})</span>
                   </span>
                 </td>
                 <td>
-                  <span style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--text-muted)', fontSize: '0.82rem' }}>
-                    <Calendar size={14} />
+                  <span style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: 'var(--text-secondary)', fontSize: '0.82rem', fontWeight: 500 }}>
+                    <Calendar size={13} style={{ color: 'var(--gold-deep)' }} />
                     {formatDate(sub.created_at)}
                   </span>
                 </td>
                 <td style={{ textAlign: 'right' }}>
                   <button
-                    className="btn btn-secondary btn-sm"
-                    onClick={() => onSelectSubmission(sub)}
-                    style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                    className="btn btn-outline btn-sm"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onSelectSubmission(sub);
+                    }}
+                    style={{ borderRadius: '6px', padding: '0.4rem 0.8rem' }}
                   >
                     <Eye size={14} />
                     Inspect

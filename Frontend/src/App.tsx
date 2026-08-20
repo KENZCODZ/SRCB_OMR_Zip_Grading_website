@@ -734,6 +734,7 @@ export default function App() {
           label: "Reports & Analytics",
           icon: BarChart3,
         },
+        { key: "history" as AppTab, label: "Recent Graded Submissions", icon: History },
         {
           key: "user-guide" as AppTab,
           label: "User Guide",
@@ -1313,7 +1314,7 @@ export default function App() {
               </div>
 
               {/* Quick Action Panel */}
-              {currentUser?.role !== "student" && (
+              {currentUser?.role !== "student" && currentUser?.role !== "dean" && (
                 <div
                   className="card"
                   style={{
@@ -2840,13 +2841,14 @@ export default function App() {
             </div>
 
             {/* Flexible Multi-Method Export Center */}
+            {currentUser?.role !== "dean" && (
             <div
               className="card"
               style={{
                 marginBottom: "1.5rem",
-                background:
-                  "linear-gradient(180deg, rgba(15, 23, 42, 0.95) 0%, rgba(8, 17, 32, 0.95) 100%)",
-                border: "1px solid var(--srcb-gold-accent)",
+                background: "var(--bg-surface)",
+                border: "1px solid var(--border)",
+                boxShadow: "var(--shadow-sm)",
               }}
             >
               <div
@@ -2876,15 +2878,16 @@ export default function App() {
                         fontSize: "1.15rem",
                         fontWeight: 800,
                         margin: 0,
+                        color: "var(--text-heading)",
                       }}
                     >
-                      Teacher Database Export System
+                      AeroOMR Database Export System
                     </h3>
                     <span
                       className="badge"
                       style={{
-                        background: "rgba(245, 158, 11, 0.2)",
-                        color: "var(--srcb-gold-light)",
+                        background: "var(--warning-bg)",
+                        color: "var(--warning-text)",
                       }}
                     >
                       3 Export Methods
@@ -2914,7 +2917,7 @@ export default function App() {
                 {/* Method 1: Single File Export */}
                 <div
                   style={{
-                    background: "rgba(30, 41, 59, 0.7)",
+                    background: "var(--bg-surface-2)",
                     borderRadius: "var(--radius-md)",
                     padding: "1.25rem",
                     border: "1px solid var(--border)",
@@ -2935,8 +2938,8 @@ export default function App() {
                       <span
                         className="badge"
                         style={{
-                          background: "rgba(59, 130, 246, 0.15)",
-                          color: "#60a5fa",
+                          background: "var(--info-bg)",
+                          color: "var(--info)",
                           display: "inline-flex",
                           alignItems: "center",
                           gap: "4px",
@@ -3065,7 +3068,7 @@ export default function App() {
                 {/* Method 2: Exam-Based Batch Export */}
                 <div
                   style={{
-                    background: "rgba(30, 41, 59, 0.7)",
+                    background: "var(--bg-surface-2)",
                     borderRadius: "var(--radius-md)",
                     padding: "1.25rem",
                     border: "1px solid var(--border)",
@@ -3086,8 +3089,8 @@ export default function App() {
                       <span
                         className="badge"
                         style={{
-                          background: "rgba(16, 185, 129, 0.15)",
-                          color: "#34d399",
+                          background: "var(--success-bg)",
+                          color: "var(--success-text)",
                           display: "inline-flex",
                           alignItems: "center",
                           gap: "4px",
@@ -3231,10 +3234,10 @@ export default function App() {
                 {/* Method 3: Complete Database Export */}
                 <div
                   style={{
-                    background: "rgba(30, 41, 59, 0.7)",
+                    background: "var(--warning-bg)",
                     borderRadius: "var(--radius-md)",
                     padding: "1.25rem",
-                    border: "1px solid var(--srcb-gold-accent)",
+                    border: "1px solid var(--warning-border)",
                     display: "flex",
                     flexDirection: "column",
                     justifyContent: "space-between",
@@ -3252,8 +3255,8 @@ export default function App() {
                       <span
                         className="badge"
                         style={{
-                          background: "rgba(245, 158, 11, 0.2)",
-                          color: "var(--srcb-gold-light)",
+                          background: "var(--bg-surface)",
+                          color: "var(--warning-text)",
                           display: "inline-flex",
                           alignItems: "center",
                           gap: "4px",
@@ -3425,6 +3428,7 @@ export default function App() {
                 </div>
               </div>
             </div>
+            )}
 
             <div className="card">
               <div

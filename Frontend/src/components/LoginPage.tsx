@@ -48,15 +48,15 @@ export default function LoginPage({
   const getRoleIcon = (role: string) => {
     switch (role) {
       case "admin":
-        return <ShieldCheck size={18} style={{ color: "#c084fc" }} />;
+        return <ShieldCheck size={18} style={{ color: "var(--info)" }} />;
       case "dean":
         return <Award size={18} className="text-gold" />;
       case "programme-head":
-        return <BookOpen size={18} style={{ color: "#38bdf8" }} />;
+        return <BookOpen size={18} style={{ color: "var(--info)" }} />;
       case "teacher":
-        return <ShieldCheck size={18} style={{ color: "#93c5fd" }} />;
+        return <ShieldCheck size={18} style={{ color: "var(--info)" }} />;
       default:
-        return <GraduationCap size={18} style={{ color: "#a7f3d0" }} />;
+        return <GraduationCap size={18} style={{ color: "var(--success)" }} />;
     }
   };
 
@@ -124,9 +124,9 @@ export default function LoginPage({
               <div
                 className="login-feature-icon-box"
                 style={{
-                  background: "rgba(245, 158, 11, 0.15)",
-                  borderColor: "rgba(245, 158, 11, 0.3)",
-                  color: "var(--srcb-gold-accent)",
+                  background: "var(--warning-bg)",
+                  borderColor: "var(--warning-border)",
+                  color: "var(--warning-text)",
                 }}
               >
                 <BarChart3 size={18} />
@@ -141,9 +141,9 @@ export default function LoginPage({
               <div
                 className="login-feature-icon-box"
                 style={{
-                  background: "rgba(16, 185, 129, 0.15)",
-                  borderColor: "rgba(16, 185, 129, 0.3)",
-                  color: "#10b981",
+                  background: "var(--success-bg)",
+                  borderColor: "var(--success-border)",
+                  color: "var(--success-text)",
                 }}
               >
                 <ShieldCheck size={18} />
@@ -189,9 +189,6 @@ export default function LoginPage({
             style={{
               display: "flex",
               width: "100%",
-              marginBottom: "1.25rem",
-              background: "rgba(15, 23, 42, 0.7)",
-              padding: "0.25rem",
             }}
           >
             <button
@@ -275,9 +272,9 @@ export default function LoginPage({
                     style={{
                       padding: "0.75rem 0.9rem",
                       borderRadius: "var(--radius-md)",
-                      background: "rgba(244, 63, 94, 0.14)",
-                      border: "1px solid rgba(244, 63, 94, 0.3)",
-                      color: "#fda4af",
+                      background: "var(--error-bg)",
+                      border: "1px solid var(--error-border)",
+                      color: "var(--error-text)",
                       fontSize: "0.83rem",
                       lineHeight: 1.4,
                       display: "flex",

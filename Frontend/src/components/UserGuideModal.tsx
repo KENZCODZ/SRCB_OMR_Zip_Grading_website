@@ -65,7 +65,7 @@ const ROLE_GUIDES: RoleGuide[] = [
   {
     role: "admin",
     roleTitle: "Admin (Quick Scanner)",
-    badgeColor: "rgba(168, 85, 247, 0.15)",
+    badgeColor: "var(--info-bg)",
     icon: Sparkles,
     description:
       "High-speed optical mark recognition and live camera scanning station for instantaneous student answer sheet grading.",
@@ -100,7 +100,7 @@ const ROLE_GUIDES: RoleGuide[] = [
   {
     role: "dean",
     roleTitle: "Dean / Executive Administration",
-    badgeColor: "rgba(239, 68, 68, 0.15)",
+    badgeColor: "var(--error-bg)",
     icon: ShieldCheck,
     description:
       "Institutional oversight, high-level academic performance monitoring, faculty auditing, and cross-departmental pass-rate evaluations.",
@@ -155,7 +155,7 @@ const ROLE_GUIDES: RoleGuide[] = [
   {
     role: "programme-head",
     roleTitle: "Programme Head (Department Chair)",
-    badgeColor: "rgba(245, 158, 11, 0.15)",
+    badgeColor: "var(--warning-bg)",
     icon: GraduationCap,
     description:
       "Departmental exam monitoring, curriculum alignment, section pass-rate tracking, and Outcome-Based Education (OBE) item review.",
@@ -210,7 +210,7 @@ const ROLE_GUIDES: RoleGuide[] = [
   {
     role: "teacher",
     roleTitle: "Teacher / Faculty Member",
-    badgeColor: "rgba(59, 130, 246, 0.15)",
+    badgeColor: "var(--info-bg)",
     icon: BookOpen,
     description:
       "Full examination lifecycle: answer key creation, ZipGrade 50-question sheet scanning, automated grading, score transmute, and student feedback.",
@@ -282,9 +282,9 @@ const ROLE_GUIDES: RoleGuide[] = [
   },
   {
     role: "student",
-    roleTitle: "Student",
-    badgeColor: "rgba(16, 185, 129, 0.15)",
-    icon: Award,
+    roleTitle: "Student (View Only)",
+    badgeColor: "var(--success-bg)",
+    icon: Users,
     description:
       "Personal grade transparency, item-by-item bubble review, official CHED transmuted grade lookup, and performance tracking.",
     targetAudience: "Enrolled Students across all academic departments",
@@ -337,7 +337,7 @@ const ROLE_GUIDES: RoleGuide[] = [
   {
     role: "omr-guide",
     roleTitle: "ZipGrade 50-Question OMR Best Practices",
-    badgeColor: "rgba(168, 85, 247, 0.15)",
+    badgeColor: "var(--info-bg)",
     icon: Camera,
     description:
       "Technical guidelines for capturing high-accuracy OMR sheet images, lighting conditions, corner marker alignment, and bubble shading rules.",
@@ -389,8 +389,8 @@ const ROLE_GUIDES: RoleGuide[] = [
   },
   {
     role: "faq",
+    badgeColor: "var(--info-bg)",
     roleTitle: "Frequently Asked Questions (FAQ)",
-    badgeColor: "rgba(59, 130, 246, 0.15)",
     icon: HelpCircle,
     description:
       "Quick answers to common questions about AeroOMR grading and system workflows.",
@@ -520,10 +520,10 @@ export const UserGuideCard: React.FC<UserGuideCardProps> = ({
         overflow: "hidden",
         display: "flex",
         flexDirection: "column",
-        background: "linear-gradient(180deg, rgba(15, 23, 42, 0.95), rgba(8, 17, 32, 0.95))",
-        border: "1px solid var(--border-color)",
+        background: "var(--bg-surface)",
+        border: "1px solid var(--border)",
         borderRadius: "16px",
-        boxShadow: "0 20px 40px -15px rgba(0, 0, 0, 0.7)",
+        boxShadow: "var(--shadow-xl)",
         ...style,
       }}
     >
@@ -531,8 +531,8 @@ export const UserGuideCard: React.FC<UserGuideCardProps> = ({
       <div
         style={{
           padding: "1.25rem 1.5rem",
-          background: "linear-gradient(135deg, rgba(30, 41, 59, 0.7), rgba(15, 23, 42, 0.9))",
-          borderBottom: "1px solid var(--border-color)",
+          background: "var(--bg-surface-2)",
+          borderBottom: "1px solid var(--border)",
           display: "flex",
           flexDirection: "column",
           gap: "1rem",
@@ -546,12 +546,12 @@ export const UserGuideCard: React.FC<UserGuideCardProps> = ({
                 width: "40px",
                 height: "40px",
                 borderRadius: "10px",
-                background: "rgba(245, 158, 11, 0.15)",
-                border: "1px solid var(--srcb-gold-accent)",
+                background: "var(--warning-bg)",
+                border: "1px solid var(--warning-border)",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
-                color: "var(--srcb-gold-accent)",
+                color: "var(--warning-text)",
                 flexShrink: 0,
               }}
             >
@@ -563,7 +563,7 @@ export const UserGuideCard: React.FC<UserGuideCardProps> = ({
                   fontSize: "1.25rem",
                   fontWeight: 800,
                   margin: 0,
-                  color: "var(--text-primary)",
+                  color: "var(--text-heading)",
                   display: "flex",
                   alignItems: "center",
                   gap: "0.5rem",
@@ -617,7 +617,7 @@ export const UserGuideCard: React.FC<UserGuideCardProps> = ({
               className="form-input"
               style={{
                 paddingLeft: "36px",
-                background: "rgba(8, 17, 32, 0.7)",
+                background: "var(--bg-surface-2)",
                 fontSize: "0.88rem",
                 borderRadius: "8px",
                 width: "100%",
@@ -661,7 +661,7 @@ export const UserGuideCard: React.FC<UserGuideCardProps> = ({
                       : "1px solid rgba(255, 255, 255, 0.1)",
                     background: isActive
                       ? "var(--srcb-gold-accent)"
-                      : "rgba(15, 23, 42, 0.5)",
+                      : "var(--bg-surface-2)",
                     color: isActive ? "#000" : "var(--text-primary)",
                     fontWeight: isActive ? 700 : 500,
                   }}
@@ -701,8 +701,8 @@ export const UserGuideCard: React.FC<UserGuideCardProps> = ({
         {/* Role Overview Banner */}
         <div
           style={{
-            background: "rgba(30, 41, 59, 0.4)",
-            border: "1px solid rgba(255, 255, 255, 0.08)",
+            background: "var(--bg-surface-2)",
+            border: "1px solid var(--border)",
             borderLeft: "4px solid var(--srcb-gold-accent)",
             borderRadius: "10px",
             padding: "1.1rem",
@@ -744,10 +744,10 @@ export const UserGuideCard: React.FC<UserGuideCardProps> = ({
           {/* Key Capabilities */}
           <div
             style={{
-              background: "rgba(8, 17, 32, 0.6)",
+              background: "var(--bg-base)",
               padding: "0.75rem 1rem",
               borderRadius: "8px",
-              border: "1px solid rgba(255, 255, 255, 0.04)",
+              border: "1px solid var(--border-md)",
             }}
           >
             <div style={{ fontSize: "0.78rem", fontWeight: 700, color: "var(--text-primary)", marginBottom: "0.4rem" }}>
@@ -783,8 +783,8 @@ export const UserGuideCard: React.FC<UserGuideCardProps> = ({
               flexWrap: "wrap",
               padding: "0.6rem 0.9rem",
               borderRadius: "8px",
-              background: "rgba(15, 23, 42, 0.5)",
-              border: "1px solid rgba(255, 255, 255, 0.05)",
+              background: "var(--bg-surface-2)",
+              border: "1px solid var(--border)",
             }}
           >
             <span style={{ fontSize: "0.8rem", color: "var(--text-muted)", fontWeight: 600 }}>
@@ -867,7 +867,7 @@ export const UserGuideCard: React.FC<UserGuideCardProps> = ({
                 textAlign: "center",
                 padding: "2rem",
                 color: "var(--text-muted)",
-                background: "rgba(15, 23, 42, 0.4)",
+                background: "var(--bg-surface-2)",
                 borderRadius: "8px",
               }}
             >
@@ -882,8 +882,8 @@ export const UserGuideCard: React.FC<UserGuideCardProps> = ({
                 <div
                   key={section.id}
                   style={{
-                    background: "rgba(15, 23, 42, 0.6)",
-                    border: "1px solid rgba(255, 255, 255, 0.08)",
+                    background: "var(--bg-surface-2)",
+                    border: "1px solid var(--border)",
                     borderRadius: "10px",
                     overflow: "hidden",
                   }}
@@ -893,7 +893,7 @@ export const UserGuideCard: React.FC<UserGuideCardProps> = ({
                     onClick={() => toggleSection(section.id)}
                     style={{
                       padding: "0.85rem 1.1rem",
-                      background: "rgba(30, 41, 59, 0.5)",
+                      background: "var(--bg-base)",
                       cursor: "pointer",
                       display: "flex",
                       justifyContent: "space-between",
@@ -954,7 +954,7 @@ export const UserGuideCard: React.FC<UserGuideCardProps> = ({
                         display: "flex",
                         flexDirection: "column",
                         gap: "0.85rem",
-                        borderTop: "1px solid rgba(255, 255, 255, 0.05)",
+                        borderTop: "1px solid var(--border)",
                       }}
                     >
                       {section.steps.map((step, sIdx) => (
@@ -963,7 +963,7 @@ export const UserGuideCard: React.FC<UserGuideCardProps> = ({
                           style={{
                             padding: "0.8rem 1rem",
                             borderRadius: "8px",
-                            background: "rgba(8, 17, 32, 0.5)",
+                            background: "var(--bg-surface-2)",
                             borderLeft: "3px solid var(--accent)",
                           }}
                         >
@@ -1044,8 +1044,8 @@ export const UserGuideCard: React.FC<UserGuideCardProps> = ({
       <div
         style={{
           padding: "0.9rem 1.5rem",
-          background: "rgba(8, 17, 32, 0.95)",
-          borderTop: "1px solid var(--border-color)",
+          background: "var(--bg-surface)",
+          borderTop: "1px solid var(--border)",
           display: "flex",
           justifyContent: "space-between",
           alignItems: "center",
@@ -1100,7 +1100,7 @@ export const UserGuideModal: React.FC<UserGuideModalProps> = ({
         bottom: 0,
         width: "100vw",
         height: "100vh",
-        background: "rgba(4, 9, 18, 0.85)",
+        background: "var(--modal-overlay)",
         backdropFilter: "blur(10px)",
         WebkitBackdropFilter: "blur(10px)",
         display: "flex",
@@ -1120,8 +1120,8 @@ export const UserGuideModal: React.FC<UserGuideModalProps> = ({
           flexDirection: "column",
           borderRadius: "16px",
           overflow: "hidden",
-          border: "1px solid rgba(245, 158, 11, 0.25)",
-          boxShadow: "0 25px 60px -15px rgba(0, 0, 0, 0.95), 0 0 35px rgba(245, 158, 11, 0.15)",
+          border: "1px solid var(--border)",
+          boxShadow: "var(--shadow-xl)",
         }}
         onClick={(e) => e.stopPropagation()}
       >

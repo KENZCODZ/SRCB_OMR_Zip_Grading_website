@@ -298,8 +298,8 @@ export default function RoleDashboard({
                 display: "inline-flex",
                 alignItems: "center",
                 gap: "0.5rem",
-                fontSize: "0.85rem",
-                color: "var(--srcb-gold-light)",
+                fontSize: "0.8rem",
+                color: "var(--gold-primary)",
                 marginBottom: "0.35rem",
                 textTransform: "uppercase",
                 letterSpacing: "0.05em",
@@ -326,16 +326,16 @@ export default function RoleDashboard({
             style={{
               padding: "0.5rem 0.9rem",
               borderRadius: "var(--radius-md)",
-              background: "rgba(15, 23, 42, 0.7)",
-              border: "1px solid var(--border)",
+              background: "var(--gold-pale)",
+              border: "1px solid var(--gold-light)",
               fontSize: "0.85rem",
               display: "flex",
               alignItems: "center",
               gap: "0.5rem",
             }}
           >
-            <ShieldCheck size={16} className="text-gold" />
-            <span>
+            <ShieldCheck size={16} style={{ color: "var(--gold-deep)" }} />
+            <span style={{ color: "var(--gold-deep)" }}>
               Role: <strong>{user.role.replace("-", " ").toUpperCase()}</strong>
             </span>
           </div>
@@ -381,7 +381,9 @@ export default function RoleDashboard({
                   style={{
                     fontSize: "1.6rem",
                     fontWeight: 800,
-                    color: "var(--text-primary)",
+                    color: "var(--text-heading)",
+                    fontFamily: "'Plus Jakarta Sans', sans-serif",
+                    letterSpacing: "-0.02em",
                   }}
                 >
                   {card.value}
@@ -406,8 +408,9 @@ export default function RoleDashboard({
         <div
           className="card"
           style={{
-            border: "1px solid rgba(245, 158, 11, 0.3)",
-            background: "linear-gradient(180deg, rgba(15, 23, 42, 0.9) 0%, rgba(8, 17, 32, 0.95) 100%)",
+            border: "1px solid var(--warning-border)",
+            borderLeft: "4px solid var(--gold-accent)",
+            background: "var(--bg-surface)",
             padding: "1.25rem",
           }}
         >
@@ -476,9 +479,10 @@ export default function RoleDashboard({
               style={{
                 padding: "0.7rem 0.9rem",
                 borderRadius: "var(--radius-md)",
-                background: actionNotice.type === "success" ? "rgba(16, 185, 129, 0.15)" : "rgba(244, 63, 94, 0.15)",
-                border: `1px solid ${actionNotice.type === "success" ? "rgba(16, 185, 129, 0.35)" : "rgba(244, 63, 94, 0.35)"}`,
-                color: actionNotice.type === "success" ? "#6ee7b7" : "#fda4af",
+                background: actionNotice.type === "success" ? "var(--success-bg)" : "var(--error-bg)",
+                border: `1px solid ${actionNotice.type === "success" ? "var(--success-border)" : "var(--error-border)"}`,
+                borderLeft: `4px solid ${actionNotice.type === "success" ? "var(--success)" : "var(--error)"}`,
+                color: actionNotice.type === "success" ? "var(--success-text)" : "var(--error-text)",
                 fontSize: "0.83rem",
                 marginBottom: "1rem",
                 display: "flex",
@@ -496,28 +500,28 @@ export default function RoleDashboard({
               style={{
                 padding: "2rem 1rem",
                 textAlign: "center",
-                background: "rgba(15, 23, 42, 0.4)",
+                background: "var(--success-bg)",
                 borderRadius: "var(--radius-md)",
-                border: "1px dashed var(--border)",
+                border: "1px solid var(--success-border)",
               }}
             >
-              <CheckCircle2 size={32} style={{ color: "#10b981", marginBottom: "0.5rem" }} />
-              <h4 style={{ margin: 0, fontSize: "0.95rem" }}>All Caught Up!</h4>
+              <CheckCircle2 size={32} style={{ color: "var(--success)", marginBottom: "0.5rem" }} />
+              <h4 style={{ margin: 0, fontSize: "0.95rem", color: "var(--success-text)" }}>All Caught Up!</h4>
               <p style={{ margin: "0.35rem 0 0 0", fontSize: "0.8rem", color: "var(--text-muted)" }}>
                 There are no pending user registrations requiring approval at this time.
               </p>
             </div>
           ) : (
-            <div style={{ overflowX: "auto", borderRadius: "var(--radius-md)", border: "1px solid var(--border)" }}>
+            <div style={{ overflowX: "auto", borderRadius: "var(--radius-md)", border: "1px solid var(--border-md)" }}>
               <table style={{ width: "100%", fontSize: "0.84rem", borderCollapse: "collapse", textAlign: "left" }}>
                 <thead>
-                  <tr style={{ background: "rgba(15, 23, 42, 0.9)", borderBottom: "1px solid var(--border)" }}>
-                    <th style={{ padding: "0.75rem 1rem" }}>Applicant Name</th>
-                    <th style={{ padding: "0.75rem 1rem" }}>School Email</th>
-                    <th style={{ padding: "0.75rem 1rem" }}>Role Requested</th>
-                    <th style={{ padding: "0.75rem 1rem" }}>Programme / Dept</th>
-                    <th style={{ padding: "0.75rem 1rem" }}>Applied Date</th>
-                    <th style={{ padding: "0.75rem 1rem", textAlign: "right" }}>Actions</th>
+                  <tr style={{ background: "var(--bg-surface-2)", borderBottom: "2px solid var(--border-md)" }}>
+                    <th style={{ padding: "0.75rem 1rem", color: "var(--text-secondary)", fontWeight: 700, fontSize: "0.75rem", textTransform: "uppercase", letterSpacing: "0.04em" }}>Applicant Name</th>
+                    <th style={{ padding: "0.75rem 1rem", color: "var(--text-secondary)", fontWeight: 700, fontSize: "0.75rem", textTransform: "uppercase", letterSpacing: "0.04em" }}>School Email</th>
+                    <th style={{ padding: "0.75rem 1rem", color: "var(--text-secondary)", fontWeight: 700, fontSize: "0.75rem", textTransform: "uppercase", letterSpacing: "0.04em" }}>Role Requested</th>
+                    <th style={{ padding: "0.75rem 1rem", color: "var(--text-secondary)", fontWeight: 700, fontSize: "0.75rem", textTransform: "uppercase", letterSpacing: "0.04em" }}>Programme / Dept</th>
+                    <th style={{ padding: "0.75rem 1rem", color: "var(--text-secondary)", fontWeight: 700, fontSize: "0.75rem", textTransform: "uppercase", letterSpacing: "0.04em" }}>Applied Date</th>
+                    <th style={{ padding: "0.75rem 1rem", color: "var(--text-secondary)", fontWeight: 700, fontSize: "0.75rem", textTransform: "uppercase", letterSpacing: "0.04em", textAlign: "right" }}>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -527,9 +531,11 @@ export default function RoleDashboard({
                       <tr
                         key={pUser.id}
                         style={{
-                          borderBottom: "1px solid rgba(255, 255, 255, 0.04)",
+                          borderBottom: "1px solid var(--border)",
                           transition: "background 0.2s",
                         }}
+                        onMouseEnter={(e) => (e.currentTarget.style.background = "var(--bg-surface-2)")}
+                        onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
                       >
                         <td style={{ padding: "0.75rem 1rem", fontWeight: 600 }}>
                           <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
@@ -538,11 +544,12 @@ export default function RoleDashboard({
                                 width: "28px",
                                 height: "28px",
                                 borderRadius: "50%",
-                                background: pUser.role === "teacher" ? "rgba(37, 99, 235, 0.2)" : "rgba(245, 158, 11, 0.2)",
+                                background: pUser.role === "teacher" ? "var(--info-bg)" : "var(--warning-bg)",
+                                border: `1px solid ${pUser.role === "teacher" ? "var(--info-border)" : "var(--warning-border)"}`,
                                 display: "flex",
                                 alignItems: "center",
                                 justifyContent: "center",
-                                color: pUser.role === "teacher" ? "var(--primary)" : "var(--srcb-gold-accent)",
+                                color: pUser.role === "teacher" ? "var(--info)" : "var(--gold-primary)",
                               }}
                             >
                               {pUser.role === "teacher" ? <ShieldCheck size={15} /> : <GraduationCap size={15} />}
@@ -560,9 +567,9 @@ export default function RoleDashboard({
                           <span
                             className="badge"
                             style={{
-                              background: pUser.role === "teacher" ? "rgba(37, 99, 235, 0.2)" : "rgba(245, 158, 11, 0.2)",
-                              color: pUser.role === "teacher" ? "#93c5fd" : "var(--srcb-gold-light)",
-                              border: `1px solid ${pUser.role === "teacher" ? "rgba(37, 99, 235, 0.4)" : "rgba(245, 158, 11, 0.4)"}`,
+                              background: pUser.role === "teacher" ? "var(--info-bg)" : "var(--warning-bg)",
+                              color: pUser.role === "teacher" ? "var(--info-text)" : "var(--warning-text)",
+                              border: `1px solid ${pUser.role === "teacher" ? "var(--info-border)" : "var(--warning-border)"}`,
                               textTransform: "capitalize",
                               fontSize: "0.75rem",
                               fontWeight: 700,
@@ -634,7 +641,7 @@ export default function RoleDashboard({
         <div style={{ display: "grid", gap: "1rem" }}>
           <div
             className="card"
-            style={{ padding: "1rem", background: "rgba(8, 17, 32, 0.8)" }}
+            style={{ padding: "1rem" }}
           >
             <h3 style={{ marginBottom: "0.75rem" }}>Programme focus</h3>
             <div
@@ -644,39 +651,41 @@ export default function RoleDashboard({
                 color: "var(--text-secondary)",
               }}
             >
-              <div style={{ display: "flex", justifyContent: "space-between" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", padding: "0.4rem 0", borderBottom: "1px solid var(--border)" }}>
                 <span>Assigned programme</span>
-                <strong style={{ color: "var(--text-primary)" }}>{user.programme || "BSIT"}</strong>
+                <strong style={{ color: "var(--text-heading)" }}>{user.programme || "BSIT"}</strong>
               </div>
-              <div style={{ display: "flex", justifyContent: "space-between" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", padding: "0.4rem 0", borderBottom: "1px solid var(--border)" }}>
                 <span>Pending authorizations</span>
-                <strong style={{ color: pendingUsers.length > 0 ? "var(--srcb-gold-accent)" : "var(--text-primary)" }}>
+                <strong style={{ color: pendingUsers.length > 0 ? "var(--gold-primary)" : "var(--text-heading)" }}>
                   {pendingUsers.length}
                 </strong>
               </div>
-              <div style={{ display: "flex", justifyContent: "space-between" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", padding: "0.4rem 0" }}>
                 <span>Active examinations</span>
-                <strong style={{ color: "var(--text-primary)" }}>{summary?.total_exams ?? 0}</strong>
+                <strong style={{ color: "var(--text-heading)" }}>{summary?.total_exams ?? 0}</strong>
               </div>
             </div>
           </div>
 
           <div
             className="card"
-            style={{ padding: "1rem", background: "rgba(8, 17, 32, 0.8)" }}
+            style={{ padding: "1rem" }}
           >
             <h3 style={{ marginBottom: "0.75rem" }}>Programme Head Governance</h3>
             <div
               style={{
                 display: "grid",
-                gap: "0.5rem",
+                gap: "0.75rem",
                 color: "var(--text-secondary)",
               }}
             >
               <div
                 style={{
-                  borderLeft: "3px solid var(--srcb-gold-accent)",
-                  paddingLeft: "0.6rem",
+                  borderLeft: "3px solid var(--gold-accent)",
+                  paddingLeft: "0.75rem",
+                  fontSize: "0.875rem",
+                  lineHeight: 1.5,
                 }}
               >
                 Review newly registered faculty and students in your programme above to authorize their account access.
@@ -684,7 +693,9 @@ export default function RoleDashboard({
               <div
                 style={{
                   borderLeft: "3px solid var(--success)",
-                  paddingLeft: "0.6rem",
+                  paddingLeft: "0.75rem",
+                  fontSize: "0.875rem",
+                  lineHeight: 1.5,
                 }}
               >
                 Check exam completion, average scores, and intervention flags across your department.
@@ -713,7 +724,7 @@ export default function RoleDashboard({
         <div style={{ display: "grid", gap: "1rem" }}>
           <div
             className="card"
-            style={{ padding: "1rem", background: "rgba(8, 17, 32, 0.8)" }}
+            style={{ padding: "1rem" }}
           >
             <h3 style={{ marginBottom: "0.75rem" }}>My progress</h3>
             <div
@@ -723,49 +734,53 @@ export default function RoleDashboard({
                 color: "var(--text-secondary)",
               }}
             >
-              <div style={{ display: "flex", justifyContent: "space-between" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", padding: "0.4rem 0", borderBottom: "1px solid var(--border)" }}>
                 <span>Latest score</span>
-                <strong style={{ color: "var(--text-primary)" }}>
+                <strong style={{ color: "var(--text-heading)" }}>
                   {summary ? `${summary.average_score}%` : "—"}
                 </strong>
               </div>
-              <div style={{ display: "flex", justifyContent: "space-between" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", padding: "0.4rem 0", borderBottom: "1px solid var(--border)" }}>
                 <span>Exams viewed</span>
-                <strong style={{ color: "var(--text-primary)" }}>
+                <strong style={{ color: "var(--text-heading)" }}>
                   {summary?.total_submissions ?? 0}
                 </strong>
               </div>
-              <div style={{ display: "flex", justifyContent: "space-between" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", padding: "0.4rem 0" }}>
                 <span>Feedback available</span>
-                <strong style={{ color: "var(--text-primary)" }}>2</strong>
+                <strong style={{ color: "var(--text-heading)" }}>2</strong>
               </div>
             </div>
           </div>
 
           <div
             className="card"
-            style={{ padding: "1rem", background: "rgba(8, 17, 32, 0.8)" }}
+            style={{ padding: "1rem" }}
           >
             <h3 style={{ marginBottom: "0.75rem" }}>Next steps</h3>
             <div
               style={{
                 display: "grid",
-                gap: "0.5rem",
+                gap: "0.75rem",
                 color: "var(--text-secondary)",
               }}
             >
               <div
                 style={{
-                  borderLeft: "3px solid var(--accent)",
-                  paddingLeft: "0.6rem",
+                  borderLeft: "3px solid var(--navy-light)",
+                  paddingLeft: "0.75rem",
+                  fontSize: "0.875rem",
+                  lineHeight: 1.5,
                 }}
               >
                 Review your latest grade and feedback.
               </div>
               <div
                 style={{
-                  borderLeft: "3px solid var(--srcb-gold-accent)",
-                  paddingLeft: "0.6rem",
+                  borderLeft: "3px solid var(--gold-accent)",
+                  paddingLeft: "0.75rem",
+                  fontSize: "0.875rem",
+                  lineHeight: 1.5,
                 }}
               >
                 Ask your teacher for clarification on weak items.
@@ -777,7 +792,7 @@ export default function RoleDashboard({
 
       <div
         className="card"
-        style={{ padding: "1rem", background: "rgba(8, 17, 32, 0.8)" }}
+        style={{ padding: "1rem" }}
       >
         <h3 style={{ fontSize: "1rem", marginBottom: "0.75rem" }}>
           Access details
@@ -785,22 +800,24 @@ export default function RoleDashboard({
         <p
           style={{
             color: "var(--text-secondary)",
-            fontSize: "0.9rem",
+            fontSize: "0.875rem",
             marginBottom: "0.75rem",
+            lineHeight: 1.5,
           }}
         >
           {user.scope}
         </p>
         <ul
           style={{
-            paddingLeft: "1rem",
+            paddingLeft: "1.1rem",
             color: "var(--text-secondary)",
             display: "grid",
-            gap: "0.35rem",
+            gap: "0.4rem",
+            fontSize: "0.875rem",
           }}
         >
           {user.permissions.map((permission) => (
-            <li key={permission}>{permission}</li>
+            <li key={permission} style={{ lineHeight: 1.5 }}>{permission}</li>
           ))}
         </ul>
       </div>
