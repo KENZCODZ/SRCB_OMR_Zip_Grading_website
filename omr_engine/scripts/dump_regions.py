@@ -2,8 +2,10 @@ import cv2
 import numpy as np
 import os
 
+_SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+
 def main():
-    template_path = "ZipGrade50QuestionV2.png"
+    template_path = os.path.join(_SCRIPT_DIR, "..", "assets", "ZipGrade50QuestionV2.png")
     image = cv2.imread(template_path)
     corners = [[497.0, 615.0], [2045.0, 615.0], [497.0, 2728.0], [2045.0, 2728.0]]
     

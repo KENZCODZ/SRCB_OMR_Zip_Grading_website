@@ -24,7 +24,9 @@ import TeacherExamCompiler from "./TeacherExamCompiler";
 interface RoleDashboardProps {
   user: AuthUser;
   summary?: {
+    total_accounts: number;
     total_students: number;
+    total_teachers: number;
     total_exams: number;
     average_score: number;
     total_submissions: number;
@@ -60,7 +62,9 @@ const roleDescriptions: Record<AuthUser["role"], string> = {
 const dashboardCards = (
   user: AuthUser,
   summary?: {
+    total_accounts: number;
     total_students: number;
+    total_teachers: number;
     total_exams: number;
     average_score: number;
     total_submissions: number;
@@ -77,7 +81,7 @@ const dashboardCards = (
       },
       {
         title: "Total Teachers",
-        value: "96",
+        value: summary ? summary.total_teachers.toLocaleString() : "0",
         subtitle: "Faculty currently linked to departments",
         icon: ShieldCheck,
       },

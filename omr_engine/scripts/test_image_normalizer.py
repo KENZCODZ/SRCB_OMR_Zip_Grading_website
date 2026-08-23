@@ -2,6 +2,10 @@ import unittest
 import numpy as np
 import cv2
 import os
+import sys
+
+# Allow importing core modules from omr_engine root
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from image_normalizer import ImageNormalizer
 
@@ -9,7 +13,7 @@ from image_normalizer import ImageNormalizer
 class ImageNormalizerTests(unittest.TestCase):
     def setUp(self):
         self.normalizer = ImageNormalizer(max_dimension=800)
-        self.sample_path = os.path.join(os.path.dirname(__file__), "ZipGrade50QuestionV2.png")
+        self.sample_path = os.path.join(os.path.dirname(__file__), "..", "assets", "ZipGrade50QuestionV2.png")
 
     def test_resize_standard_large_image(self):
         large_img = np.zeros((2000, 3000, 3), dtype=np.uint8)

@@ -142,7 +142,7 @@ def snap_region(circles, x_min, x_max, y_min, y_max, n_cols, n_rows):
 
 
 def main():
-    template_path = os.path.join(os.path.dirname(__file__), "ZipGrade50QuestionV2.png")
+    template_path = os.path.join(os.path.dirname(__file__), "..", "assets", "ZipGrade50QuestionV2.png")
     if not os.path.exists(template_path):
         print(f"Error: Template not found at {template_path}")
         return
@@ -210,7 +210,7 @@ def main():
     output["questions"] = questions
 
     # --- Step 5: Save -----------------------------------------------------
-    out_path = os.path.join(os.path.dirname(__file__), "coordinates.json")
+    out_path = os.path.join(os.path.dirname(__file__), "..", "coordinates.json")
     with open(out_path, "w") as f:
         json.dump(output, f, indent=2)
 
@@ -239,8 +239,8 @@ def main():
         for b in col:
             if b is not None:
                 cv2.circle(debug, (b["cx"], b["cy"]), b["r"], (0, 0, 255), 1)
-    cv2.imwrite(os.path.join(os.path.dirname(__file__), "debug_calibrated.png"), debug)
-    print("   Debug image: debug_calibrated.png")
+    cv2.imwrite(os.path.join(os.path.dirname(__file__), "..", "debug_output", "debug_calibrated.png"), debug)
+    print("   Debug image: debug_output/debug_calibrated.png")
 
 
 if __name__ == "__main__":

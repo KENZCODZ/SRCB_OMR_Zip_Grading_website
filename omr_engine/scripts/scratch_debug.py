@@ -7,7 +7,7 @@ import os
 _SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 
 def main():
-    template_path = os.path.join(_SCRIPT_DIR, "ZipGrade50QuestionV2.png")
+    template_path = os.path.join(_SCRIPT_DIR, "..", "assets", "ZipGrade50QuestionV2.png")
     if not os.path.exists(template_path):
         print(f"Template not found: {template_path}")
         return

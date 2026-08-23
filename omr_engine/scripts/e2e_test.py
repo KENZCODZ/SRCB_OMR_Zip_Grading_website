@@ -15,8 +15,8 @@ import sys
 import json
 from fastapi.testclient import TestClient
 
-# Ensure root directory is on sys.path
-sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+# Ensure omr_engine root directory is on sys.path
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from main import app, init_db
 
@@ -24,7 +24,7 @@ from main import app, init_db
 init_db()
 
 client = TestClient(app)
-IMAGE_PATH = os.path.join(os.path.dirname(__file__), "ZipGrade50QuestionV2.png")
+IMAGE_PATH = os.path.join(os.path.dirname(__file__), "..", "assets", "ZipGrade50QuestionV2.png")
 
 passed = 0
 failed = 0
@@ -75,7 +75,8 @@ if not answer_key:
 
 r = client.post("/api/exams", json={
     "name": "E2E Test Exam",
-    "answer_key": answer_key
+    "answer_key": answer_key,
+    "num_items": len(answer_key),
 })
 test("Status code is 201", r.status_code == 201, f"got {r.status_code}")
 exam_data = r.json()

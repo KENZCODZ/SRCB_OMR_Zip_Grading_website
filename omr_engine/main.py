@@ -38,7 +38,19 @@ from omr import OMREngine, OMRCornerDetectionError
 # Lifespan events handler
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    init_db()
+    try:
+        init_db()
+    except Exception as e:
+        import os
+        db_host = os.getenv("DB_HOST", "localhost")
+        db_port = os.getenv("DB_PORT", "3306")
+        print("\n" + "=" * 60)
+        print("❌ DATABASE CONNECTION ERROR:")
+        print(f"   Could not connect to MySQL server at {db_host}:{db_port}")
+        print("   👉 Make sure Laragon / XAMPP / MySQL is running (click 'Start All' in Laragon)")
+        print(f"   Details: {e}")
+        print("=" * 60 + "\n")
+        raise e
     yield
 
 # Initialize FastAPI App

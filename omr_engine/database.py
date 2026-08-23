@@ -1,15 +1,21 @@
 import os
-import sqlite3
 import json
 import uuid
 from datetime import datetime, timezone
 from typing import Optional, Dict, Any, List
+
+import pymysql
+import pymysql.cursors
 from dotenv import load_dotenv
 
-# Load environment variables
-load_dotenv()
+# Load environment variables from .env
+load_dotenv(os.path.join(os.path.dirname(__file__), ".env"))
 
-DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "aeroomr.db")
+DB_HOST = os.getenv("DB_HOST", "localhost")
+DB_PORT = int(os.getenv("DB_PORT", "3306"))
+DB_USER = os.getenv("DB_USER", "root")
+DB_PASSWORD = os.getenv("DB_PASSWORD", "")
+DB_NAME = os.getenv("DB_NAME", "aeroomr")
 
 SEED_USERS = [
     {
@@ -95,105 +101,109 @@ SEED_USERS = [
 ]
 
 
-def get_db_connection() -> sqlite3.Connection:
-    """Returns a new SQLite connection configured with dict-like Row access."""
-    conn = sqlite3.connect(DB_PATH, timeout=20.0)
-    conn.row_factory = sqlite3.Row
-    conn.execute("PRAGMA foreign_keys = ON")
-    return conn
+def get_db_connection() -> pymysql.connections.Connection[pymysql.cursors.DictCursor]:
+    """Returns a new MySQL connection with dict-like row access."""
+    return pymysql.connect(
+        host=DB_HOST,
+        port=DB_PORT,
+        user=DB_USER,
+        password=DB_PASSWORD,
+        database=DB_NAME,
+        cursorclass=pymysql.cursors.DictCursor,
+        autocommit=False,
+    )
 
 
 def init_db():
-    """Initializes the SQLite schema and seeds default users."""
+    """Initializes the MySQL schema and seeds default users."""
+    # Ensure database exists
+    server_conn = pymysql.connect(
+        host=DB_HOST,
+        port=DB_PORT,
+        user=DB_USER,
+        password=DB_PASSWORD,
+        cursorclass=pymysql.cursors.DictCursor,
+        autocommit=True,
+    )
+    with server_conn.cursor() as s_cur:
+        s_cur.execute(f"CREATE DATABASE IF NOT EXISTS `{DB_NAME}` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci")
+    server_conn.close()
+
     conn = get_db_connection()
     cursor = conn.cursor()
 
     # 1. Users Table with Registration Status
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS users (
-            id TEXT PRIMARY KEY,
-            name TEXT NOT NULL,
-            email TEXT NOT NULL UNIQUE,
-            password TEXT NOT NULL,
-            role TEXT NOT NULL,
-            programme TEXT,
-            department TEXT,
-            status TEXT NOT NULL DEFAULT 'active',
-            created_at TEXT NOT NULL,
-            updated_at TEXT NOT NULL
+            id VARCHAR(36) PRIMARY KEY,
+            name VARCHAR(255) NOT NULL,
+            email VARCHAR(255) NOT NULL UNIQUE,
+            password VARCHAR(255) NOT NULL,
+            role VARCHAR(50) NOT NULL,
+            programme VARCHAR(100),
+            department VARCHAR(255),
+            status VARCHAR(20) NOT NULL DEFAULT 'active',
+            created_at VARCHAR(64) NOT NULL,
+            updated_at VARCHAR(64) NOT NULL
         )
     """)
+
+    # Check for legacy schema (exam_id instead of id) and upgrade cleanly
+    try:
+        cursor.execute("DESCRIBE exams")
+        cols = [r["Field"] for r in cursor.fetchall()]
+        if "exam_id" in cols and "id" not in cols:
+            cursor.execute("DROP TABLE IF EXISTS submission_answers")
+            cursor.execute("DROP TABLE IF EXISTS submissions")
+            cursor.execute("DROP TABLE IF EXISTS answer_keys")
+            cursor.execute("DROP TABLE IF EXISTS exams")
+    except Exception:
+        pass
 
     # 2. Exams Table with Comprehensive Metadata
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS exams (
-            id TEXT PRIMARY KEY,
-            name TEXT NOT NULL,
-            answer_key TEXT NOT NULL,
-            exam_type TEXT,
-            academic_year TEXT,
-            semester TEXT,
-            subject TEXT,
-            course_code TEXT,
-            section TEXT,
-            program TEXT,
-            instructor_name TEXT,
-            num_items INTEGER DEFAULT 50,
-            passing_score INTEGER,
+            id VARCHAR(36) PRIMARY KEY,
+            name VARCHAR(255) NOT NULL,
+            answer_key LONGTEXT NOT NULL,
+            exam_type VARCHAR(100),
+            academic_year VARCHAR(50),
+            semester VARCHAR(50),
+            subject VARCHAR(255),
+            course_code VARCHAR(100),
+            section VARCHAR(100),
+            program VARCHAR(100),
+            instructor_name VARCHAR(255),
+            num_items INT DEFAULT 50,
+            passing_score INT,
             instructions TEXT,
-            exam_date TEXT,
-            created_at TEXT NOT NULL
+            exam_date VARCHAR(64),
+            created_at VARCHAR(64) NOT NULL
         )
     """)
-
-    # Non-destructive migrations for existing SQLite databases
-    new_exam_cols = [
-        ("exam_type", "TEXT"),
-        ("academic_year", "TEXT"),
-        ("semester", "TEXT"),
-        ("subject", "TEXT"),
-        ("course_code", "TEXT"),
-        ("section", "TEXT"),
-        ("program", "TEXT"),
-        ("instructor_name", "TEXT"),
-        ("num_items", "INTEGER DEFAULT 50"),
-        ("passing_score", "INTEGER"),
-        ("instructions", "TEXT"),
-        ("exam_date", "TEXT"),
-    ]
-    for col_name, col_type in new_exam_cols:
-        try:
-            cursor.execute(f"ALTER TABLE exams ADD COLUMN {col_name} {col_type}")
-        except Exception:
-            pass
-
-    try:
-        cursor.execute("ALTER TABLE users ADD COLUMN status TEXT NOT NULL DEFAULT 'active'")
-    except Exception:
-        pass
 
     # 3. Submissions Table
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS submissions (
-            id TEXT PRIMARY KEY,
-            exam_id TEXT NOT NULL,
-            student_id TEXT,
-            score INTEGER NOT NULL,
-            total_questions INTEGER NOT NULL,
-            answers TEXT NOT NULL,
-            created_at TEXT NOT NULL,
+            id VARCHAR(36) PRIMARY KEY,
+            exam_id VARCHAR(36) NOT NULL,
+            student_id VARCHAR(36),
+            score INT NOT NULL,
+            total_questions INT NOT NULL,
+            answers LONGTEXT NOT NULL,
+            created_at VARCHAR(64) NOT NULL,
             FOREIGN KEY (exam_id) REFERENCES exams (id) ON DELETE CASCADE
         )
     """)
 
-    # 4. Seed initial default users
+    # 4. Seed initial default users (skip any that already exist)
     now_iso = datetime.now(timezone.utc).isoformat()
     for user in SEED_USERS:
         cursor.execute(
             """
-            INSERT INTO users (id, name, email, password, role, programme, department, status, created_at, updated_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            ON CONFLICT(id) DO NOTHING
+            INSERT IGNORE INTO users
+                (id, name, email, password, role, programme, department, status, created_at, updated_at)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             """,
             (
                 user["id"],
@@ -210,11 +220,12 @@ def init_db():
         )
 
     conn.commit()
+    cursor.close()
     conn.close()
 
 
-def _row_to_exam(row: sqlite3.Row) -> Dict[str, Any]:
-    """Helper to convert sqlite3.Row into serializable dict."""
+def _row_to_exam(row: Dict[str, Any]) -> Dict[str, Any]:
+    """Helper to parse the JSON-encoded answer_key back into a dict."""
     try:
         answer_key = json.loads(row["answer_key"])
     except Exception:
@@ -250,14 +261,14 @@ def get_user_by_email(email: str) -> Optional[Dict[str, Any]]:
     conn = get_db_connection()
     cursor = conn.cursor()
     cursor.execute(
-        "SELECT id, name, email, password, role, programme, department, status, created_at, updated_at FROM users WHERE lower(email) = ?",
+        "SELECT id, name, email, password, role, programme, department, status, created_at, updated_at "
+        "FROM users WHERE LOWER(email) = %s",
         (email.strip().lower(),),
     )
     row = cursor.fetchone()
+    cursor.close()
     conn.close()
-    if row:
-        return dict(row)
-    return None
+    return row
 
 
 def register_user(
@@ -277,7 +288,7 @@ def register_user(
     cursor.execute(
         """
         INSERT INTO users (id, name, email, password, role, programme, department, status, created_at, updated_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
         """,
         (
             user_id,
@@ -293,6 +304,7 @@ def register_user(
         ),
     )
     conn.commit()
+    cursor.close()
     conn.close()
 
     return {
@@ -312,16 +324,20 @@ def list_pending_users(programme: Optional[str] = None) -> List[Dict[str, Any]]:
     cursor = conn.cursor()
     if programme:
         cursor.execute(
-            "SELECT id, name, email, role, programme, department, status, created_at FROM users WHERE status = 'pending' AND (programme = ? OR programme IS NULL) ORDER BY created_at DESC",
+            "SELECT id, name, email, role, programme, department, status, created_at "
+            "FROM users WHERE status = 'pending' AND (programme = %s OR programme IS NULL) "
+            "ORDER BY created_at DESC",
             (programme,),
         )
     else:
         cursor.execute(
-            "SELECT id, name, email, role, programme, department, status, created_at FROM users WHERE status = 'pending' ORDER BY created_at DESC"
+            "SELECT id, name, email, role, programme, department, status, created_at "
+            "FROM users WHERE status = 'pending' ORDER BY created_at DESC"
         )
     rows = cursor.fetchall()
+    cursor.close()
     conn.close()
-    return [dict(r) for r in rows]
+    return list(rows)
 
 
 def update_user_status(user_id: str, new_status: str) -> bool:
@@ -329,11 +345,12 @@ def update_user_status(user_id: str, new_status: str) -> bool:
     conn = get_db_connection()
     cursor = conn.cursor()
     cursor.execute(
-        "UPDATE users SET status = ?, updated_at = ? WHERE id = ?",
+        "UPDATE users SET status = %s, updated_at = %s WHERE id = %s",
         (new_status, now_iso, user_id),
     )
     updated = cursor.rowcount > 0
     conn.commit()
+    cursor.close()
     conn.close()
     return updated
 
@@ -355,7 +372,7 @@ def create_user_account(
     cursor.execute(
         """
         INSERT INTO users (id, name, email, password, role, programme, department, status, created_at, updated_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
         """,
         (
             user_id,
@@ -371,6 +388,7 @@ def create_user_account(
         ),
     )
     conn.commit()
+    cursor.close()
     conn.close()
 
     return {
@@ -389,19 +407,22 @@ def list_all_users() -> List[Dict[str, Any]]:
     conn = get_db_connection()
     cursor = conn.cursor()
     cursor.execute(
-        "SELECT id, name, email, role, programme, department, status, created_at FROM users ORDER BY created_at DESC"
+        "SELECT id, name, email, role, programme, department, status, created_at "
+        "FROM users ORDER BY created_at DESC"
     )
     rows = cursor.fetchall()
+    cursor.close()
     conn.close()
-    return [dict(r) for r in rows]
+    return list(rows)
 
 
 def delete_user(user_id: str) -> bool:
     conn = get_db_connection()
     cursor = conn.cursor()
-    cursor.execute("DELETE FROM users WHERE id = ?", (user_id,))
+    cursor.execute("DELETE FROM users WHERE id = %s", (user_id,))
     deleted = cursor.rowcount > 0
     conn.commit()
+    cursor.close()
     conn.close()
     return deleted
 
@@ -475,22 +496,22 @@ def save_exam(
             section, program, instructor_name,
             num_items, passing_score, instructions, exam_date,
             created_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        ON CONFLICT(id) DO UPDATE SET
-            name = excluded.name,
-            answer_key = excluded.answer_key,
-            exam_type = excluded.exam_type,
-            academic_year = excluded.academic_year,
-            semester = excluded.semester,
-            subject = excluded.subject,
-            course_code = excluded.course_code,
-            section = excluded.section,
-            program = excluded.program,
-            instructor_name = excluded.instructor_name,
-            num_items = excluded.num_items,
-            passing_score = excluded.passing_score,
-            instructions = excluded.instructions,
-            exam_date = excluded.exam_date
+        ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+        ON DUPLICATE KEY UPDATE
+            name = VALUES(name),
+            answer_key = VALUES(answer_key),
+            exam_type = VALUES(exam_type),
+            academic_year = VALUES(academic_year),
+            semester = VALUES(semester),
+            subject = VALUES(subject),
+            course_code = VALUES(course_code),
+            section = VALUES(section),
+            program = VALUES(program),
+            instructor_name = VALUES(instructor_name),
+            num_items = VALUES(num_items),
+            passing_score = VALUES(passing_score),
+            instructions = VALUES(instructions),
+            exam_date = VALUES(exam_date)
         """,
         (
             exam_id,
@@ -512,6 +533,7 @@ def save_exam(
         ),
     )
     conn.commit()
+    cursor.close()
     conn.close()
 
     return {
@@ -558,21 +580,21 @@ def update_exam(
     cursor.execute(
         """
         UPDATE exams SET
-            name = COALESCE(?, name),
-            answer_key = ?,
-            exam_type = COALESCE(?, exam_type),
-            academic_year = COALESCE(?, academic_year),
-            semester = COALESCE(?, semester),
-            subject = COALESCE(?, subject),
-            course_code = COALESCE(?, course_code),
-            section = COALESCE(?, section),
-            program = COALESCE(?, program),
-            instructor_name = COALESCE(?, instructor_name),
-            num_items = COALESCE(?, num_items),
-            passing_score = COALESCE(?, passing_score),
-            instructions = COALESCE(?, instructions),
-            exam_date = COALESCE(?, exam_date)
-        WHERE id = ?
+            name = COALESCE(%s, name),
+            answer_key = %s,
+            exam_type = COALESCE(%s, exam_type),
+            academic_year = COALESCE(%s, academic_year),
+            semester = COALESCE(%s, semester),
+            subject = COALESCE(%s, subject),
+            course_code = COALESCE(%s, course_code),
+            section = COALESCE(%s, section),
+            program = COALESCE(%s, program),
+            instructor_name = COALESCE(%s, instructor_name),
+            num_items = COALESCE(%s, num_items),
+            passing_score = COALESCE(%s, passing_score),
+            instructions = COALESCE(%s, instructions),
+            exam_date = COALESCE(%s, exam_date)
+        WHERE id = %s
         """,
         (
             name,
@@ -594,6 +616,7 @@ def update_exam(
     )
     updated = cursor.rowcount > 0
     conn.commit()
+    cursor.close()
     conn.close()
     return updated
 
@@ -608,11 +631,12 @@ def get_exam(exam_id: str) -> Optional[Dict[str, Any]]:
                section, program, instructor_name,
                num_items, passing_score, instructions, exam_date,
                created_at
-        FROM exams WHERE id = ?
+        FROM exams WHERE id = %s
         """,
         (exam_id,),
     )
     row = cursor.fetchone()
+    cursor.close()
     conn.close()
     return _row_to_exam(row) if row else None
 
@@ -631,6 +655,7 @@ def list_exams() -> List[Dict[str, Any]]:
         """
     )
     rows = cursor.fetchall()
+    cursor.close()
     conn.close()
     return [_row_to_exam(r) for r in rows]
 
@@ -638,10 +663,11 @@ def list_exams() -> List[Dict[str, Any]]:
 def delete_exam(exam_id: str) -> bool:
     conn = get_db_connection()
     cursor = conn.cursor()
-    cursor.execute("DELETE FROM submissions WHERE exam_id = ?", (exam_id,))
-    cursor.execute("DELETE FROM exams WHERE id = ?", (exam_id,))
+    cursor.execute("DELETE FROM submissions WHERE exam_id = %s", (exam_id,))
+    cursor.execute("DELETE FROM exams WHERE id = %s", (exam_id,))
     deleted = cursor.rowcount > 0
     conn.commit()
+    cursor.close()
     conn.close()
     return deleted
 
@@ -666,11 +692,12 @@ def save_submission(
     cursor.execute(
         """
         INSERT INTO submissions (id, exam_id, student_id, score, total_questions, answers, created_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
+        VALUES (%s, %s, %s, %s, %s, %s, %s)
         """,
         (submission_id, exam_id, student_id, score, total_questions, answers_str, created_at),
     )
     conn.commit()
+    cursor.close()
     conn.close()
 
     return {
@@ -689,14 +716,17 @@ def list_submissions(exam_id: Optional[str] = None) -> List[Dict[str, Any]]:
     cursor = conn.cursor()
     if exam_id:
         cursor.execute(
-            "SELECT id, exam_id, student_id, score, total_questions, answers, created_at FROM submissions WHERE exam_id = ? ORDER BY created_at DESC",
+            "SELECT id, exam_id, student_id, score, total_questions, answers, created_at "
+            "FROM submissions WHERE exam_id = %s ORDER BY created_at DESC",
             (exam_id,),
         )
     else:
         cursor.execute(
-            "SELECT id, exam_id, student_id, score, total_questions, answers, created_at FROM submissions ORDER BY created_at DESC"
+            "SELECT id, exam_id, student_id, score, total_questions, answers, created_at "
+            "FROM submissions ORDER BY created_at DESC"
         )
     rows = cursor.fetchall()
+    cursor.close()
     conn.close()
 
     results = []
@@ -727,21 +757,34 @@ def get_dashboard_summary() -> Dict[str, Any]:
     conn = get_db_connection()
     cursor = conn.cursor()
 
-    cursor.execute("SELECT COUNT(*) FROM users WHERE role = 'student' AND status = 'active'")
-    total_students = cursor.fetchone()[0] or 0
+    cursor.execute("SELECT COUNT(*) AS c FROM users WHERE status = 'active'")
+    accounts_row = cursor.fetchone()
+    total_accounts = accounts_row["c"] if accounts_row and accounts_row.get("c") is not None else 0
 
-    cursor.execute("SELECT COUNT(*) FROM exams")
-    total_exams = cursor.fetchone()[0] or 0
+    cursor.execute("SELECT COUNT(*) AS c FROM users WHERE role = 'student' AND status = 'active'")
+    students_row = cursor.fetchone()
+    total_students = students_row["c"] if students_row and students_row.get("c") is not None else 0
 
-    cursor.execute("SELECT AVG(score), COUNT(*) FROM submissions")
+    cursor.execute("SELECT COUNT(*) AS c FROM users WHERE role = 'teacher' AND status = 'active'")
+    teachers_row = cursor.fetchone()
+    total_teachers = teachers_row["c"] if teachers_row and teachers_row.get("c") is not None else 0
+
+    cursor.execute("SELECT COUNT(*) AS c FROM exams")
+    exams_row = cursor.fetchone()
+    total_exams = exams_row["c"] if exams_row and exams_row.get("c") is not None else 0
+
+    cursor.execute("SELECT AVG(score) AS avg_score, COUNT(*) AS c FROM submissions")
     avg_row = cursor.fetchone()
-    avg_score = round(float(avg_row[0]), 2) if avg_row and avg_row[0] is not None else 0.0
-    total_submissions = avg_row[1] if avg_row and avg_row[1] is not None else 0
+    avg_score = round(float(avg_row["avg_score"]), 2) if avg_row and avg_row.get("avg_score") is not None else 0.0
+    total_submissions = avg_row["c"] if avg_row and avg_row.get("c") is not None else 0
 
+    cursor.close()
     conn.close()
 
     return {
+        "total_accounts": int(total_accounts),
         "total_students": int(total_students),
+        "total_teachers": int(total_teachers),
         "total_exams": int(total_exams),
         "average_score": avg_score,
         "total_submissions": int(total_submissions),

@@ -1,4 +1,9 @@
 import unittest
+import os
+import sys
+
+# Ensure omr_engine root directory is on sys.path
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from database import (
     init_db,
@@ -22,8 +27,10 @@ class BackendIntegrationTests(unittest.TestCase):
         delete_exam("demo-test-exam")
         from database import get_db_connection
         conn = get_db_connection()
-        conn.execute("DELETE FROM users WHERE email = 'test.teacher@srcb.edu.ph'")
+        cursor = conn.cursor()
+        cursor.execute("DELETE FROM users WHERE email = 'test.teacher@srcb.edu.ph'")
         conn.commit()
+        cursor.close()
         conn.close()
 
     def test_authentication_accepts_seeded_user(self):

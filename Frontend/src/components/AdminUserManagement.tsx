@@ -201,7 +201,6 @@ export default function AdminUserManagement({
   // Stats calculation
   const totalTeachers = users.filter((u) => u.role === "teacher").length;
   const totalStudents = users.filter((u) => u.role === "student").length;
-  const totalUsers = users.length;
 
   const filteredUsers = users.filter((u) => {
     if (roleFilter !== "all" && u.role !== roleFilter) return false;
@@ -219,105 +218,6 @@ export default function AdminUserManagement({
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
-      {/* ── TOP STATS BAR ── */}
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
-          gap: "1rem",
-        }}
-      >
-        <div className="card" style={{ padding: "1.25rem" }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-            <div>
-              <div style={{ fontSize: "0.8rem", color: "var(--text-muted)", fontWeight: 600, textTransform: "uppercase" }}>
-                Total Accounts
-              </div>
-              <div style={{ fontSize: "1.8rem", fontWeight: 800, color: "#ffffff", marginTop: "0.2rem" }}>
-                {totalUsers}
-              </div>
-            </div>
-            <div
-              style={{
-                width: "40px",
-                height: "40px",
-                borderRadius: "10px",
-                background: "rgba(59, 130, 246, 0.15)",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                color: "#60a5fa",
-              }}
-            >
-              <Users size={22} />
-            </div>
-          </div>
-          <div style={{ fontSize: "0.78rem", color: "var(--text-secondary)", marginTop: "0.4rem" }}>
-            Active system users directory
-          </div>
-        </div>
-
-        <div className="card" style={{ padding: "1.25rem" }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-            <div>
-              <div style={{ fontSize: "0.8rem", color: "var(--text-muted)", fontWeight: 600, textTransform: "uppercase" }}>
-                Teachers / Faculty
-              </div>
-              <div style={{ fontSize: "1.8rem", fontWeight: 800, color: "#93c5fd", marginTop: "0.2rem" }}>
-                {totalTeachers}
-              </div>
-            </div>
-            <div
-              style={{
-                width: "40px",
-                height: "40px",
-                borderRadius: "10px",
-                background: "rgba(37, 99, 235, 0.15)",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                color: "#93c5fd",
-              }}
-            >
-              <ShieldCheck size={22} />
-            </div>
-          </div>
-          <div style={{ fontSize: "0.78rem", color: "var(--text-secondary)", marginTop: "0.4rem" }}>
-            Authorized exam creators & graders
-          </div>
-        </div>
-
-        <div className="card" style={{ padding: "1.25rem" }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-            <div>
-              <div style={{ fontSize: "0.8rem", color: "var(--text-muted)", fontWeight: 600, textTransform: "uppercase" }}>
-                Students Enrolled
-              </div>
-              <div style={{ fontSize: "1.8rem", fontWeight: 800, color: "var(--srcb-gold-accent)", marginTop: "0.2rem" }}>
-                {totalStudents}
-              </div>
-            </div>
-            <div
-              style={{
-                width: "40px",
-                height: "40px",
-                borderRadius: "10px",
-                background: "rgba(245, 158, 11, 0.15)",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                color: "var(--srcb-gold-accent)",
-              }}
-            >
-              <GraduationCap size={22} />
-            </div>
-          </div>
-          <div style={{ fontSize: "0.78rem", color: "var(--text-secondary)", marginTop: "0.4rem" }}>
-            Enrolled student examinees
-          </div>
-        </div>
-      </div>
-
       {/* ── MAIN CONTENT CONTAINER (VIEW MODE SENSITIVE) ── */}
       <div
         style={{

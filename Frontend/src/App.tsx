@@ -117,7 +117,9 @@ export default function App() {
   const [loadingExams, setLoadingExams] = useState(false);
   const [loadingSubmissions, setLoadingSubmissions] = useState(false);
   const [dashboardSummary, setDashboardSummary] = useState({
+    total_accounts: 0,
     total_students: 0,
+    total_teachers: 0,
     total_exams: 0,
     average_score: 0,
     total_submissions: 0,
@@ -263,7 +265,9 @@ export default function App() {
       setDashboardSummary(data);
     } catch {
       setDashboardSummary({
+        total_accounts: 12,
         total_students: 4,
+        total_teachers: 4,
         total_exams: 0,
         average_score: 0,
         total_submissions: 0,
@@ -1155,14 +1159,34 @@ export default function App() {
 
             {/* Decomposed KPI Metric Cards Grid */}
             <div className="stats-grid" style={{ marginBottom: "2rem" }}>
-              <MetricTile
-                title="Live Students"
-                value={dashboardSummary.total_students.toString()}
-                subtitle="Registered in the system"
-                color="info"
-                trend="up"
-                icon={getMetricIcon("info")}
-              />
+              {currentUser?.role === "admin" && (
+                <>
+                  <MetricTile
+                    title="Total Accounts"
+                    value={dashboardSummary.total_accounts.toString()}
+                    subtitle="Active system users directory"
+                    color="info"
+                    trend="up"
+                    icon={getMetricIcon("info")}
+                  />
+                  <MetricTile
+                    title="Teachers / Faculty"
+                    value={dashboardSummary.total_teachers.toString()}
+                    subtitle="Authorized exam creators & graders"
+                    color="success"
+                    trend="up"
+                    icon={getMetricIcon("success")}
+                  />
+                  <MetricTile
+                    title="Students Enrolled"
+                    value={dashboardSummary.total_students.toString()}
+                    subtitle="Enrolled student examinees"
+                    color="warning"
+                    trend="up"
+                    icon={getMetricIcon("warning")}
+                  />
+                </>
+              )}
               <MetricTile
                 title="Live Exams"
                 value={dashboardSummary.total_exams.toString()}

@@ -139,7 +139,7 @@ export async function deleteUser(userId: string): Promise<{ status: string; mess
   }
 }
 
-export async function fetchDashboardSummary(): Promise<{ total_students: number; total_exams: number; average_score: number; total_submissions: number }> {
+export async function fetchDashboardSummary(): Promise<{ total_accounts: number; total_students: number; total_teachers: number; total_exams: number; average_score: number; total_submissions: number }> {
   try {
     const response = await fetch(`${API_BASE}/api/dashboard/summary`);
     return await handleResponse(response, 'Failed to fetch dashboard summary');

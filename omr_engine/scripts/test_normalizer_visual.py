@@ -8,13 +8,13 @@ import numpy as np
 import os
 import sys
 
-sys.path.insert(0, os.path.dirname(__file__))
+sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
 from image_normalizer import ImageNormalizer
 from omr import OMREngine, OMRCornerDetectionError
 
-IMAGE_PATH = os.path.join(os.path.dirname(__file__), "test_sample_kenneth.jpg")
-OUTPUT_DIR = os.path.join(os.path.dirname(__file__), "debug_normalizer_output")
+IMAGE_PATH = os.path.join(os.path.dirname(__file__), "..", "assets", "test_sample_kenneth.jpg")
+OUTPUT_DIR = os.path.join(os.path.dirname(__file__), "..", "debug_output", "normalizer")
 
 def main():
     os.makedirs(OUTPUT_DIR, exist_ok=True)
