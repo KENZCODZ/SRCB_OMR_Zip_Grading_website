@@ -286,7 +286,15 @@ export default function RoleDashboard({
 
   return (
     <div style={{ display: "grid", gap: "1.25rem" }}>
-      <div className="card" style={{ padding: "1.25rem" }}>
+      <div
+        className="card"
+        style={{
+          padding: "1.35rem 1.5rem",
+          background: "#f8fafc",
+          border: "1px solid #e2e8f0",
+          borderRadius: "16px",
+        }}
+      >
         <div
           style={{
             display: "flex",
@@ -302,24 +310,24 @@ export default function RoleDashboard({
                 display: "inline-flex",
                 alignItems: "center",
                 gap: "0.5rem",
-                fontSize: "0.85rem",
-                color: "var(--srcb-gold-light)",
+                fontSize: "0.82rem",
+                color: "#0062ff",
                 marginBottom: "0.35rem",
                 textTransform: "uppercase",
                 letterSpacing: "0.05em",
-                fontWeight: 700,
+                fontWeight: 800,
               }}
             >
               <UserCircle2 size={16} />
               {roleTitles[user.role]}
             </div>
-            <h2 style={{ margin: 0 }}>Welcome, {user.name}</h2>
+            <h2 style={{ margin: 0, fontSize: "1.35rem", fontWeight: 800, color: "#0f172a" }}>Welcome, {user.name}</h2>
             <p
               style={{
-                color: "var(--text-secondary)",
-                marginTop: "0.35rem",
+                color: "#64748b",
+                marginTop: "0.3rem",
                 marginBottom: 0,
-                fontSize: "0.9rem",
+                fontSize: "0.88rem",
               }}
             >
               {roleDescriptions[user.role]}
@@ -328,17 +336,19 @@ export default function RoleDashboard({
 
           <div
             style={{
-              padding: "0.5rem 0.9rem",
-              borderRadius: "var(--radius-md)",
-              background: "rgba(15, 23, 42, 0.7)",
-              border: "1px solid var(--border)",
-              fontSize: "0.85rem",
+              padding: "0.45rem 0.85rem",
+              borderRadius: "10px",
+              background: "#ffffff",
+              border: "1px solid #e2e8f0",
+              fontSize: "0.82rem",
               display: "flex",
               alignItems: "center",
               gap: "0.5rem",
+              color: "#0f172a",
+              boxShadow: "0 2px 6px rgba(0,0,0,0.03)",
             }}
           >
-            <ShieldCheck size={16} className="text-gold" />
+            <ShieldCheck size={16} color="#0062ff" />
             <span>
               Role: <strong>{user.role.replace("-", " ").toUpperCase()}</strong>
             </span>
