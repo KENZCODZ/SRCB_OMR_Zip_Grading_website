@@ -1,4 +1,3 @@
-import { useState, useEffect } from "react";
 import {
   Award,
   BarChart3,
@@ -8,17 +7,8 @@ import {
   Sparkles,
   TrendingUp,
   UserCircle2,
-  UserCheck,
-  UserX,
-  Clock,
-  AlertTriangle,
-  CheckCircle2,
-  RefreshCw,
-  UserPlus,
-  Mail,
 } from "lucide-react";
-import type { AuthUser, PendingUser, Exam, Submission, StudentRosterEntry } from "../types";
-import { fetchPendingUsers, approveUser, rejectUser } from "../api";
+import type { AuthUser, Exam, Submission, StudentRosterEntry } from "../types";
 import TeacherExamCompiler from "./TeacherExamCompiler";
 
 interface RoleDashboardProps {
@@ -69,7 +59,6 @@ const dashboardCards = (
     average_score: number;
     total_submissions: number;
   },
-  pendingCount: number = 0,
 ) => {
   if (user.role === "admin" || user.role === "dean") {
     return [
@@ -84,12 +73,6 @@ const dashboardCards = (
         value: summary ? summary.total_teachers.toLocaleString() : "0",
         subtitle: "Faculty currently linked to departments",
         icon: ShieldCheck,
-      },
-      {
-        title: "Pending Approvals",
-        value: pendingCount.toString(),
-        subtitle: "Registration requests awaiting confirmation",
-        icon: UserPlus,
       },
       {
         title: "Total Examinations",
@@ -124,12 +107,6 @@ const dashboardCards = (
         value: summary ? summary.total_students.toLocaleString() : "184",
         subtitle: `Tracked within ${user.programme || "BSIT"} only`,
         icon: GraduationCap,
-      },
-      {
-        title: "Pending Registrations",
-        value: pendingCount.toString(),
-        subtitle: "Awaiting your confirmation",
-        icon: UserPlus,
       },
       {
         title: "Recent Exams",
@@ -214,85 +191,18 @@ export default function RoleDashboard({
   addToast,
   formatDate = (iso) => new Date(iso).toLocaleDateString(),
 }: RoleDashboardProps) {
-  const [pendingUsers, setPendingUsers] = useState<PendingUser[]>([]);
-  const [loadingPending, setLoadingPending] = useState(false);
-  const [actionLoadingId, setActionLoadingId] = useState<string | null>(null);
-  const [actionNotice, setActionNotice] = useState<{ type: "success" | "error"; text: string } | null>(null);
-
-  const canManageRegistrations =
-    user.role === "admin" || user.role === "programme-head" || user.role === "dean";
-
-  const loadPendingList = async () => {
-    if (!canManageRegistrations) return;
-    setLoadingPending(true);
-    try {
-      const data = await fetchPendingUsers(user.role === "programme-head" ? user.programme : undefined);
-      setPendingUsers(data || []);
-    } catch {
-      // Fallback
-    } finally {
-      setLoadingPending(false);
-    }
-  };
-
-  useEffect(() => {
-    loadPendingList();
-  }, [user.id, user.role, user.programme]);
-
-  const handleApproveUser = async (pendingUser: PendingUser) => {
-    setActionLoadingId(pendingUser.id);
-    setActionNotice(null);
-    try {
-      await approveUser(pendingUser.id);
-      setPendingUsers((prev) => prev.filter((u) => u.id !== pendingUser.id));
-      setActionNotice({
-        type: "success",
-        text: `Successfully approved ${pendingUser.name} (${pendingUser.role}). Their account is now active.`,
-      });
-    } catch (err: any) {
-      setActionNotice({
-        type: "error",
-        text: err.message || "Failed to approve registration.",
-      });
-    } finally {
-      setActionLoadingId(null);
-    }
-  };
-
-  const handleRejectUser = async (pendingUser: PendingUser) => {
-    if (!window.confirm(`Are you sure you want to reject the registration request from ${pendingUser.name}?`)) {
-      return;
-    }
-    setActionLoadingId(pendingUser.id);
-    setActionNotice(null);
-    try {
-      await rejectUser(pendingUser.id);
-      setPendingUsers((prev) => prev.filter((u) => u.id !== pendingUser.id));
-      setActionNotice({
-        type: "success",
-        text: `Rejected registration for ${pendingUser.name}.`,
-      });
-    } catch (err: any) {
-      setActionNotice({
-        type: "error",
-        text: err.message || "Failed to reject registration.",
-      });
-    } finally {
-      setActionLoadingId(null);
-    }
-  };
-
-  const cards = dashboardCards(user, summary, pendingUsers.length);
+  const cards = dashboardCards(user, summary);
 
   return (
     <div style={{ display: "grid", gap: "1.25rem" }}>
       <div
         className="card"
         style={{
-          padding: "1.35rem 1.5rem",
-          background: "#f8fafc",
+          padding: "1.5rem 1.75rem",
+          background: "#ffffff",
           border: "1px solid #e2e8f0",
           borderRadius: "16px",
+          boxShadow: "0 2px 10px rgba(0, 98, 255, 0.04)",
         }}
       >
         <div
@@ -310,24 +220,28 @@ export default function RoleDashboard({
                 display: "inline-flex",
                 alignItems: "center",
                 gap: "0.5rem",
-                fontSize: "0.82rem",
+                fontSize: "0.78rem",
                 color: "#0062ff",
-                marginBottom: "0.35rem",
+                padding: "0.25rem 0.65rem",
+                borderRadius: "20px",
+                background: "#eff6ff",
+                border: "1px solid #bfdbfe",
+                marginBottom: "0.5rem",
                 textTransform: "uppercase",
                 letterSpacing: "0.05em",
-                fontWeight: 800,
+                fontWeight: 700,
               }}
             >
-              <UserCircle2 size={16} />
+              <UserCircle2 size={15} />
               {roleTitles[user.role]}
             </div>
-            <h2 style={{ margin: 0, fontSize: "1.35rem", fontWeight: 800, color: "#0f172a" }}>Welcome, {user.name}</h2>
+            <h2 style={{ margin: 0, fontSize: "1.5rem", fontWeight: 800, color: "#0f172a" }}>Welcome, {user.name}</h2>
             <p
               style={{
                 color: "#64748b",
-                marginTop: "0.3rem",
+                marginTop: "0.35rem",
                 marginBottom: 0,
-                fontSize: "0.88rem",
+                fontSize: "0.9rem",
               }}
             >
               {roleDescriptions[user.role]}
@@ -336,9 +250,9 @@ export default function RoleDashboard({
 
           <div
             style={{
-              padding: "0.45rem 0.85rem",
+              padding: "0.5rem 0.95rem",
               borderRadius: "10px",
-              background: "#ffffff",
+              background: "#f8fafc",
               border: "1px solid #e2e8f0",
               fontSize: "0.82rem",
               display: "flex",
@@ -350,7 +264,7 @@ export default function RoleDashboard({
           >
             <ShieldCheck size={16} color="#0062ff" />
             <span>
-              Role: <strong>{user.role.replace("-", " ").toUpperCase()}</strong>
+              Role: <strong style={{ color: "#0062ff" }}>{user.role.replace("-", " ").toUpperCase()}</strong>
             </span>
           </div>
         </div>
@@ -370,10 +284,14 @@ export default function RoleDashboard({
               key={card.title}
               className="card"
               style={{
-                padding: "1rem",
+                padding: "1.2rem",
+                background: "#ffffff",
+                border: "1px solid #e2e8f0",
+                borderRadius: "14px",
                 display: "flex",
                 flexDirection: "column",
                 justifyContent: "space-between",
+                boxShadow: "0 2px 6px rgba(0,0,0,0.02)",
               }}
             >
               <div
@@ -381,21 +299,34 @@ export default function RoleDashboard({
                   display: "flex",
                   justifyContent: "space-between",
                   alignItems: "center",
-                  color: "var(--text-secondary)",
+                  color: "#64748b",
                   marginBottom: "0.6rem",
                 }}
               >
                 <span style={{ fontSize: "0.85rem", fontWeight: 600 }}>
                   {card.title}
                 </span>
-                <Icon size={18} className="text-primary" />
+                <div
+                  style={{
+                    width: "32px",
+                    height: "32px",
+                    borderRadius: "8px",
+                    background: "#eff6ff",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    color: "#0062ff",
+                  }}
+                >
+                  <Icon size={17} />
+                </div>
               </div>
               <div>
                 <div
                   style={{
-                    fontSize: "1.6rem",
+                    fontSize: "1.65rem",
                     fontWeight: 800,
-                    color: "var(--text-primary)",
+                    color: "#0f172a",
                   }}
                 >
                   {card.value}
@@ -403,7 +334,7 @@ export default function RoleDashboard({
                 <div
                   style={{
                     fontSize: "0.75rem",
-                    color: "var(--text-muted)",
+                    color: "#64748b",
                     marginTop: "0.2rem",
                   }}
                 >
@@ -415,293 +346,71 @@ export default function RoleDashboard({
         })}
       </div>
 
-      {/* PENDING REGISTRATIONS APPROVAL PANEL (Programme Head & Dean) */}
-      {canManageRegistrations && (
-        <div
-          className="card"
-          style={{
-            border: "1px solid rgba(245, 158, 11, 0.3)",
-            background: "linear-gradient(180deg, rgba(15, 23, 42, 0.9) 0%, rgba(8, 17, 32, 0.95) 100%)",
-            padding: "1.25rem",
-          }}
-        >
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              marginBottom: "1rem",
-              flexWrap: "wrap",
-              gap: "0.5rem",
-            }}
-          >
-            <div style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
-              <div
-                style={{
-                  width: "36px",
-                  height: "36px",
-                  borderRadius: "var(--radius-md)",
-                  background: "rgba(245, 158, 11, 0.15)",
-                  color: "var(--srcb-gold-accent)",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                }}
-              >
-                <UserPlus size={20} />
-              </div>
-              <div>
-                <h3 style={{ margin: 0, fontSize: "1.05rem", display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                  Pending User Registrations
-                  {pendingUsers.length > 0 && (
-                    <span
-                      style={{
-                        background: "var(--srcb-gold-accent)",
-                        color: "#000000",
-                        fontSize: "0.75rem",
-                        fontWeight: 800,
-                        padding: "0.15rem 0.5rem",
-                        borderRadius: "10px",
-                      }}
-                    >
-                      {pendingUsers.length} Action Needed
-                    </span>
-                  )}
-                </h3>
-                <p style={{ margin: "0.2rem 0 0 0", fontSize: "0.78rem", color: "var(--text-muted)" }}>
-                  Review and authorize newly registered faculty instructors and students before granting system access.
-                </p>
-              </div>
-            </div>
-
-            <button
-              type="button"
-              className="btn btn-secondary"
-              style={{ fontSize: "0.8rem", padding: "0.4rem 0.8rem", display: "flex", alignItems: "center", gap: "0.4rem" }}
-              onClick={loadPendingList}
-              disabled={loadingPending}
-            >
-              <RefreshCw size={14} className={loadingPending ? "spin" : ""} /> Refresh List
-            </button>
-          </div>
-
-          {actionNotice && (
-            <div
-              style={{
-                padding: "0.7rem 0.9rem",
-                borderRadius: "var(--radius-md)",
-                background: actionNotice.type === "success" ? "rgba(16, 185, 129, 0.15)" : "rgba(244, 63, 94, 0.15)",
-                border: `1px solid ${actionNotice.type === "success" ? "rgba(16, 185, 129, 0.35)" : "rgba(244, 63, 94, 0.35)"}`,
-                color: actionNotice.type === "success" ? "#6ee7b7" : "#fda4af",
-                fontSize: "0.83rem",
-                marginBottom: "1rem",
-                display: "flex",
-                alignItems: "center",
-                gap: "0.5rem",
-              }}
-            >
-              {actionNotice.type === "success" ? <CheckCircle2 size={16} /> : <AlertTriangle size={16} />}
-              <span>{actionNotice.text}</span>
-            </div>
-          )}
-
-          {pendingUsers.length === 0 ? (
-            <div
-              style={{
-                padding: "2rem 1rem",
-                textAlign: "center",
-                background: "rgba(15, 23, 42, 0.4)",
-                borderRadius: "var(--radius-md)",
-                border: "1px dashed var(--border)",
-              }}
-            >
-              <CheckCircle2 size={32} style={{ color: "#10b981", marginBottom: "0.5rem" }} />
-              <h4 style={{ margin: 0, fontSize: "0.95rem" }}>All Caught Up!</h4>
-              <p style={{ margin: "0.35rem 0 0 0", fontSize: "0.8rem", color: "var(--text-muted)" }}>
-                There are no pending user registrations requiring approval at this time.
-              </p>
-            </div>
-          ) : (
-            <div style={{ overflowX: "auto", borderRadius: "var(--radius-md)", border: "1px solid var(--border)" }}>
-              <table style={{ width: "100%", fontSize: "0.84rem", borderCollapse: "collapse", textAlign: "left" }}>
-                <thead>
-                  <tr style={{ background: "rgba(15, 23, 42, 0.9)", borderBottom: "1px solid var(--border)" }}>
-                    <th style={{ padding: "0.75rem 1rem" }}>Applicant Name</th>
-                    <th style={{ padding: "0.75rem 1rem" }}>School Email</th>
-                    <th style={{ padding: "0.75rem 1rem" }}>Role Requested</th>
-                    <th style={{ padding: "0.75rem 1rem" }}>Programme / Dept</th>
-                    <th style={{ padding: "0.75rem 1rem" }}>Applied Date</th>
-                    <th style={{ padding: "0.75rem 1rem", textAlign: "right" }}>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {pendingUsers.map((pUser) => {
-                    const isProcessing = actionLoadingId === pUser.id;
-                    return (
-                      <tr
-                        key={pUser.id}
-                        style={{
-                          borderBottom: "1px solid rgba(255, 255, 255, 0.04)",
-                          transition: "background 0.2s",
-                        }}
-                      >
-                        <td style={{ padding: "0.75rem 1rem", fontWeight: 600 }}>
-                          <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                            <div
-                              style={{
-                                width: "28px",
-                                height: "28px",
-                                borderRadius: "50%",
-                                background: pUser.role === "teacher" ? "rgba(37, 99, 235, 0.2)" : "rgba(245, 158, 11, 0.2)",
-                                display: "flex",
-                                alignItems: "center",
-                                justifyContent: "center",
-                                color: pUser.role === "teacher" ? "var(--primary)" : "var(--srcb-gold-accent)",
-                              }}
-                            >
-                              {pUser.role === "teacher" ? <ShieldCheck size={15} /> : <GraduationCap size={15} />}
-                            </div>
-                            <span>{pUser.name}</span>
-                          </div>
-                        </td>
-                        <td style={{ padding: "0.75rem 1rem", color: "var(--text-secondary)" }}>
-                          <div style={{ display: "flex", alignItems: "center", gap: "0.4rem" }}>
-                            <Mail size={13} className="text-muted" />
-                            <span>{pUser.email}</span>
-                          </div>
-                        </td>
-                        <td style={{ padding: "0.75rem 1rem" }}>
-                          <span
-                            className="badge"
-                            style={{
-                              background: pUser.role === "teacher" ? "rgba(37, 99, 235, 0.2)" : "rgba(245, 158, 11, 0.2)",
-                              color: pUser.role === "teacher" ? "#93c5fd" : "var(--srcb-gold-light)",
-                              border: `1px solid ${pUser.role === "teacher" ? "rgba(37, 99, 235, 0.4)" : "rgba(245, 158, 11, 0.4)"}`,
-                              textTransform: "capitalize",
-                              fontSize: "0.75rem",
-                              fontWeight: 700,
-                              padding: "0.2rem 0.5rem",
-                            }}
-                          >
-                            {pUser.role}
-                          </span>
-                        </td>
-                        <td style={{ padding: "0.75rem 1rem", color: "var(--text-secondary)" }}>
-                          <div style={{ fontWeight: 600, color: "var(--text-primary)" }}>{pUser.programme || "BSIT"}</div>
-                          <div style={{ fontSize: "0.72rem", color: "var(--text-muted)" }}>{pUser.department || "Computing Studies"}</div>
-                        </td>
-                        <td style={{ padding: "0.75rem 1rem", color: "var(--text-muted)", fontSize: "0.78rem" }}>
-                          <div style={{ display: "flex", alignItems: "center", gap: "0.3rem" }}>
-                            <Clock size={12} />
-                            <span>{new Date(pUser.created_at).toLocaleDateString()}</span>
-                          </div>
-                        </td>
-                        <td style={{ padding: "0.75rem 1rem", textAlign: "right" }}>
-                          <div style={{ display: "inline-flex", gap: "0.4rem" }}>
-                            <button
-                              type="button"
-                              className="btn btn-success"
-                              style={{
-                                padding: "0.35rem 0.75rem",
-                                fontSize: "0.78rem",
-                                display: "inline-flex",
-                                alignItems: "center",
-                                gap: "0.3rem",
-                              }}
-                              disabled={isProcessing}
-                              onClick={() => handleApproveUser(pUser)}
-                              title="Approve registration and activate account"
-                            >
-                              <UserCheck size={14} />
-                              {isProcessing ? "Processing..." : "Approve"}
-                            </button>
-
-                            <button
-                              type="button"
-                              className="btn btn-danger"
-                              style={{
-                                padding: "0.35rem 0.65rem",
-                                fontSize: "0.78rem",
-                                display: "inline-flex",
-                                alignItems: "center",
-                                gap: "0.3rem",
-                              }}
-                              disabled={isProcessing}
-                              onClick={() => handleRejectUser(pUser)}
-                              title="Reject registration request"
-                            >
-                              <UserX size={14} /> Reject
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
-      )}
-
       {user.role === "programme-head" && (
         <div style={{ display: "grid", gap: "1rem" }}>
           <div
             className="card"
-            style={{ padding: "1rem", background: "rgba(8, 17, 32, 0.8)" }}
+            style={{
+              padding: "1.25rem",
+              background: "#ffffff",
+              border: "1px solid #e2e8f0",
+              borderRadius: "14px",
+              boxShadow: "0 2px 6px rgba(0,0,0,0.02)",
+            }}
           >
-            <h3 style={{ marginBottom: "0.75rem" }}>Programme focus</h3>
+            <h3 style={{ marginBottom: "0.75rem", fontSize: "1.05rem", color: "#0f172a" }}>Programme Focus</h3>
             <div
               style={{
                 display: "grid",
                 gap: "0.6rem",
-                color: "var(--text-secondary)",
+                color: "#475569",
               }}
             >
               <div style={{ display: "flex", justifyContent: "space-between" }}>
-                <span>Assigned programme</span>
-                <strong style={{ color: "var(--text-primary)" }}>{user.programme || "BSIT"}</strong>
+                <span>Assigned programme:</span>
+                <strong style={{ color: "#0f172a" }}>{user.programme || "BSIT"}</strong>
               </div>
               <div style={{ display: "flex", justifyContent: "space-between" }}>
-                <span>Pending authorizations</span>
-                <strong style={{ color: pendingUsers.length > 0 ? "var(--srcb-gold-accent)" : "var(--text-primary)" }}>
-                  {pendingUsers.length}
-                </strong>
-              </div>
-              <div style={{ display: "flex", justifyContent: "space-between" }}>
-                <span>Active examinations</span>
-                <strong style={{ color: "var(--text-primary)" }}>{summary?.total_exams ?? 0}</strong>
+                <span>Active examinations:</span>
+                <strong style={{ color: "#0062ff" }}>{summary?.total_exams ?? 0}</strong>
               </div>
             </div>
           </div>
 
           <div
             className="card"
-            style={{ padding: "1rem", background: "rgba(8, 17, 32, 0.8)" }}
+            style={{
+              padding: "1.25rem",
+              background: "#ffffff",
+              border: "1px solid #e2e8f0",
+              borderRadius: "14px",
+              boxShadow: "0 2px 6px rgba(0,0,0,0.02)",
+            }}
           >
-            <h3 style={{ marginBottom: "0.75rem" }}>Programme Head Governance</h3>
+            <h3 style={{ marginBottom: "0.75rem", fontSize: "1.05rem", color: "#0f172a" }}>Programme Head Governance</h3>
             <div
               style={{
                 display: "grid",
-                gap: "0.5rem",
-                color: "var(--text-secondary)",
+                gap: "0.6rem",
+                color: "#475569",
+                fontSize: "0.88rem",
               }}
             >
               <div
                 style={{
-                  borderLeft: "3px solid var(--srcb-gold-accent)",
-                  paddingLeft: "0.6rem",
-                }}
-              >
-                Review newly registered faculty and students in your programme above to authorize their account access.
-              </div>
-              <div
-                style={{
-                  borderLeft: "3px solid var(--success)",
-                  paddingLeft: "0.6rem",
+                  borderLeft: "3px solid #10b981",
+                  paddingLeft: "0.75rem",
                 }}
               >
                 Check exam completion, average scores, and intervention flags across your department.
+              </div>
+              <div
+                style={{
+                  borderLeft: "3px solid #0062ff",
+                  paddingLeft: "0.75rem",
+                }}
+              >
+                Oversee academic performance metrics and examinee trends across programme cohorts.
               </div>
             </div>
           </div>

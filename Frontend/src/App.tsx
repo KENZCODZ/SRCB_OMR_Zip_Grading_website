@@ -71,6 +71,10 @@ import { CameraScanner } from "./components/CameraScanner";
 import ExamCreationModal from "./components/ExamCreationModal";
 import ExamDetailsModal from "./components/ExamDetailsModal";
 import AdminUserManagement from "./components/AdminUserManagement";
+import DeanAcademicManagement from "./components/dean/DeanAcademicManagement";
+import DeanExaminations from "./components/dean/DeanExaminations";
+import DeanReportsAnalytics from "./components/dean/DeanReportsAnalytics";
+import DeanSettings from "./components/dean/DeanSettings";
 
 type AppTab =
   | "dashboard"
@@ -635,7 +639,13 @@ export default function App() {
 
       setSelectedAuthUserId(mappedUser.id);
       setCurrentUser(mappedUser);
-      setActiveTab(mappedUser.role === "admin" ? "quick-scan" : "dashboard");
+      setActiveTab(
+        mappedUser.role === "admin"
+          ? "quick-scan"
+          : mappedUser.role === "dean"
+            ? "academic-management"
+            : "dashboard",
+      );
       setAuthMessage(
         `Welcome back, ${mappedUser.name}. Your ${mappedUser.role.replace("-", " ")} workspace is ready.`,
       );
@@ -652,7 +662,13 @@ export default function App() {
       ) {
         setSelectedAuthUserId(foundMock.id);
         setCurrentUser(foundMock);
-        setActiveTab(foundMock.role === "admin" ? "quick-scan" : "dashboard");
+        setActiveTab(
+          foundMock.role === "admin"
+            ? "quick-scan"
+            : foundMock.role === "dean"
+              ? "academic-management"
+              : "dashboard",
+        );
         setAuthMessage(
           `Welcome back, ${foundMock.name}. Your ${foundMock.role.replace("-", " ")} workspace is ready.`,
         );
@@ -705,11 +721,10 @@ export default function App() {
 
     if (currentUser.role === "dean") {
       return [
-        { key: "dashboard" as AppTab, label: "Dashboard", icon: BarChart3 },
         {
           key: "academic-management" as AppTab,
           label: "Academic Management",
-          icon: GraduationCap,
+          icon: BarChart3,
         },
         {
           key: "examinations" as AppTab,
@@ -767,7 +782,7 @@ export default function App() {
     if (navigationItems.some((item) => item.key === tab)) {
       setActiveTab(tab);
     } else {
-      setActiveTab("dashboard");
+      setActiveTab(navigationItems[0]?.key || "dashboard");
     }
   };
 
@@ -802,7 +817,9 @@ export default function App() {
       case "history":
         return "Grading History";
       case "academic-management":
-        return "Programme Overview";
+        return currentUser?.role === "dean"
+          ? "Academic Management"
+          : "Programme Overview";
       case "reports":
         return "Institutional Reports";
       case "item-analysis":
@@ -1124,366 +1141,46 @@ export default function App() {
             />
           )}
 
-        {activeTab === "academic-management" && (
-          <div>
-            <div
-              className="header-container"
-              style={{ marginBottom: "1.5rem" }}
-            >
-              <h2 style={{ fontSize: "1.4rem", fontWeight: 800, margin: 0 }}>
-                Academic Management
-              </h2>
-              <p
-                style={{
-                  fontSize: "0.85rem",
-                  color: "var(--text-secondary)",
-                  margin: "0.2rem 0 0 0",
-                }}
-              >
-                Students, teachers, departments, and programmes are managed from
-                this module.
-              </p>
-            </div>
-
-            <div className="stats-grid" style={{ marginBottom: "1.5rem" }}>
-              {[
-                {
-                  title: "Students",
-                  subtitle: "Institution-wide enrolment records",
-                  value: "2,184",
-                },
-                {
-                  title: "Teachers",
-                  subtitle: "Faculty activity and assignments",
-                  value: "96",
-                },
-                {
-                  title: "Departments",
-                  subtitle: "Academic units under review",
-                  value: "8",
-                },
-                {
-                  title: "Programmes",
-                  subtitle: "Curricula under monitoring",
-                  value: "12",
-                },
-              ].map((item) => (
-                <div key={item.title} className="metric-card">
-                  <div className="metric-header">
-                    <span className="metric-title">{item.title}</span>
-                  </div>
-                  <div className="metric-value">{item.value}</div>
-                  <div className="metric-subtitle">{item.subtitle}</div>
-                </div>
-              ))}
-            </div>
-
-            <div className="card" style={{ marginBottom: "1rem" }}>
-              <h3 style={{ marginBottom: "0.75rem" }}>
-                Current Academic Records
-              </h3>
-              <div style={{ display: "grid", gap: "0.7rem" }}>
-                {[
-                  {
-                    name: "BSIT - First Year",
-                    status: "Active",
-                    owner: "Programme Head",
-                  },
-                  {
-                    name: "BSBA - Second Year",
-                    status: "Monitoring",
-                    owner: "Department Chair",
-                  },
-                  {
-                    name: "BSEd - Third Year",
-                    status: "Review",
-                    owner: "Dean Office",
-                  },
-                ].map((entry) => (
-                  <div
-                    key={entry.name}
-                    style={{
-                      border: "1px solid var(--border)",
-                      borderRadius: "var(--radius-md)",
-                      padding: "0.8rem",
-                      display: "flex",
-                      justifyContent: "space-between",
-                      alignItems: "center",
-                      flexWrap: "wrap",
-                      gap: "0.5rem",
-                    }}
-                  >
-                    <div>
-                      <div style={{ fontWeight: 700 }}>{entry.name}</div>
-                      <div
-                        style={{
-                          color: "var(--text-secondary)",
-                          fontSize: "0.82rem",
-                        }}
-                      >
-                        {entry.owner}
-                      </div>
-                    </div>
-                    <span className="badge badge-success">{entry.status}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
+        {activeTab === "academic-management" && currentUser && (
+          <DeanAcademicManagement
+            currentUser={currentUser}
+            summary={dashboardSummary}
+            exams={exams}
+            submissions={submissions}
+            roster={roster}
+            onInspectExam={(exam) => setInspectExam(exam)}
+            addToast={addToast}
+          />
         )}
 
-        {activeTab === "examinations" && (
-          <div>
-            <div
-              className="header-container"
-              style={{ marginBottom: "1.5rem" }}
-            >
-              <h2 style={{ fontSize: "1.4rem", fontWeight: 800, margin: 0 }}>
-                Examinations
-              </h2>
-              <p
-                style={{
-                  fontSize: "0.85rem",
-                  color: "var(--text-secondary)",
-                  margin: "0.2rem 0 0 0",
-                }}
-              >
-                Overview of exams, scoring, item analysis, and published
-                results.
-              </p>
-            </div>
-
-            <div className="stats-grid" style={{ marginBottom: "1.5rem" }}>
-              {[
-                {
-                  title: "Active Exams",
-                  subtitle: "Published this term",
-                  value: "128",
-                },
-                {
-                  title: "Results Posted",
-                  subtitle: "Ready for student review",
-                  value: "74",
-                },
-                {
-                  title: "Pending Review",
-                  subtitle: "Awaiting publishing",
-                  value: "12",
-                },
-              ].map((item) => (
-                <div key={item.title} className="metric-card">
-                  <div className="metric-header">
-                    <span className="metric-title">{item.title}</span>
-                  </div>
-                  <div className="metric-value">{item.value}</div>
-                  <div className="metric-subtitle">{item.subtitle}</div>
-                </div>
-              ))}
-            </div>
-
-            <div className="card">
-              <h3 style={{ marginBottom: "0.75rem" }}>Examination Queue</h3>
-              <div style={{ display: "grid", gap: "0.7rem" }}>
-                {[
-                  {
-                    name: "Midterm Examination",
-                    status: "Published",
-                    date: "Jul 24",
-                  },
-                  { name: "Final Quiz", status: "Review", date: "Aug 02" },
-                  {
-                    name: "Practical Assessment",
-                    status: "Pending",
-                    date: "Aug 09",
-                  },
-                ].map((entry) => (
-                  <div
-                    key={entry.name}
-                    style={{
-                      border: "1px solid var(--border)",
-                      borderRadius: "var(--radius-md)",
-                      padding: "0.8rem",
-                      display: "flex",
-                      justifyContent: "space-between",
-                      alignItems: "center",
-                      flexWrap: "wrap",
-                      gap: "0.5rem",
-                    }}
-                  >
-                    <div>
-                      <div style={{ fontWeight: 700 }}>{entry.name}</div>
-                      <div
-                        style={{
-                          color: "var(--text-secondary)",
-                          fontSize: "0.82rem",
-                        }}
-                      >
-                        {entry.date}
-                      </div>
-                    </div>
-                    <span className="badge badge-success">{entry.status}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
+        {activeTab === "examinations" && currentUser && (
+          <DeanExaminations
+            currentUser={currentUser}
+            exams={exams}
+            submissions={submissions}
+            roster={roster}
+            onInspectExam={(exam) => setInspectExam(exam)}
+            addToast={addToast}
+            formatDate={formatDate}
+          />
         )}
 
-        {activeTab === "reports" && (
-          <div>
-            <div
-              className="header-container"
-              style={{ marginBottom: "1.5rem" }}
-            >
-              <h2 style={{ fontSize: "1.4rem", fontWeight: 800, margin: 0 }}>
-                Reports & Analytics
-              </h2>
-              <p
-                style={{
-                  fontSize: "0.85rem",
-                  color: "var(--text-secondary)",
-                  margin: "0.2rem 0 0 0",
-                }}
-              >
-                Performance trends, department comparisons, and programme
-                analytics.
-              </p>
-            </div>
-
-            <div className="stats-grid" style={{ marginBottom: "1.5rem" }}>
-              {[
-                {
-                  title: "Institution Performance",
-                  subtitle: "Average score and pass rate",
-                  value: "84.6%",
-                },
-                {
-                  title: "Department Comparison",
-                  subtitle: "Cross-unit benchmarking",
-                  value: "8 Units",
-                },
-                {
-                  title: "Programme Comparison",
-                  subtitle: "Curricular outcomes",
-                  value: "12 Programmes",
-                },
-              ].map((item) => (
-                <div key={item.title} className="metric-card">
-                  <div className="metric-header">
-                    <span className="metric-title">{item.title}</span>
-                  </div>
-                  <div className="metric-value">{item.value}</div>
-                  <div className="metric-subtitle">{item.subtitle}</div>
-                </div>
-              ))}
-            </div>
-
-            <div className="card">
-              <h3 style={{ marginBottom: "0.75rem" }}>
-                Recent Institutional Reports
-              </h3>
-              <div style={{ display: "grid", gap: "0.7rem" }}>
-                {[
-                  {
-                    title: "Dean Review Summary",
-                    detail: "Institution-wide performance overview",
-                  },
-                  {
-                    title: "Programme Outcome Report",
-                    detail: "Curriculum quality and pass rate trends",
-                  },
-                  {
-                    title: "Department Benchmark Report",
-                    detail: "Cross-department performance comparison",
-                  },
-                ].map((entry) => (
-                  <div
-                    key={entry.title}
-                    style={{
-                      border: "1px solid var(--border)",
-                      borderRadius: "var(--radius-md)",
-                      padding: "0.8rem",
-                    }}
-                  >
-                    <div style={{ fontWeight: 700 }}>{entry.title}</div>
-                    <div
-                      style={{
-                        color: "var(--text-secondary)",
-                        fontSize: "0.82rem",
-                        marginTop: "0.2rem",
-                      }}
-                    >
-                      {entry.detail}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
+        {activeTab === "reports" && currentUser && (
+          <DeanReportsAnalytics
+            currentUser={currentUser}
+            exams={exams}
+            submissions={submissions}
+            roster={roster}
+            summary={dashboardSummary}
+            addToast={addToast}
+          />
         )}
 
-        {activeTab === "settings" && (
-          <div>
-            <div
-              className="header-container"
-              style={{ marginBottom: "1.5rem" }}
-            >
-              <h2 style={{ fontSize: "1.4rem", fontWeight: 800, margin: 0 }}>
-                Settings
-              </h2>
-              <p
-                style={{
-                  fontSize: "0.85rem",
-                  color: "var(--text-secondary)",
-                  margin: "0.2rem 0 0 0",
-                }}
-              >
-                Institution preferences, access controls, and policy
-                configuration.
-              </p>
-            </div>
-
-            <div className="card">
-              <h3 style={{ marginBottom: "0.75rem" }}>Platform Controls</h3>
-              <div style={{ display: "grid", gap: "0.7rem" }}>
-                {[
-                  {
-                    title: "Role Access",
-                    detail:
-                      "Dean, Programme Head, Teacher, and Student permissions",
-                  },
-                  {
-                    title: "Grading Policy",
-                    detail: "HEI transmutation and mark conversion rules",
-                  },
-                  {
-                    title: "Notification Preferences",
-                    detail: "Alerts for reminders and result publication",
-                  },
-                ].map((entry) => (
-                  <div
-                    key={entry.title}
-                    style={{
-                      border: "1px solid var(--border)",
-                      borderRadius: "var(--radius-md)",
-                      padding: "0.8rem",
-                    }}
-                  >
-                    <div style={{ fontWeight: 700 }}>{entry.title}</div>
-                    <div
-                      style={{
-                        color: "var(--text-secondary)",
-                        fontSize: "0.82rem",
-                        marginTop: "0.2rem",
-                      }}
-                    >
-                      {entry.detail}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
+        {activeTab === "settings" && currentUser && (
+          <DeanSettings
+            currentUser={currentUser}
+            addToast={addToast}
+          />
         )}
 
         {/* CREATE ACCOUNT TAB (ADMIN) */}
