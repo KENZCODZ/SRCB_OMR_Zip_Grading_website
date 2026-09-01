@@ -983,31 +983,6 @@ export default function App() {
               );
             })}
           </ul>
-
-          <div className="sidebar-bottom-links">
-            <a
-              href="#"
-              onClick={(e) => {
-                e.preventDefault();
-                setIsUserGuideOpen(true);
-              }}
-            >
-              Guide
-            </a>
-            <span>•</span>
-            <a
-              href="#"
-              style={{ display: "inline-flex", alignItems: "center", gap: "3px" }}
-              onClick={(e) => {
-                e.preventDefault();
-                handleSignOut();
-              }}
-            >
-              <LogOut size={12} /> Sign Out
-            </a>
-            <span>•</span>
-            <span>SRCB</span>
-          </div>
         </aside>
 
         {/* Main Content Area */}
