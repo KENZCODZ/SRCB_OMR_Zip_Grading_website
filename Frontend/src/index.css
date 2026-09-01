@@ -278,6 +278,8 @@ h1, h2, h3, h4, h5, h6, .font-heading {
   top: 0;
   height: 100vh;
   max-height: 100vh;
+  align-self: flex-start;
+  flex-shrink: 0;
   overflow-y: auto;
   overflow-x: hidden;
   z-index: 50;
@@ -2760,7 +2762,7 @@ button.bubble-btn.active {
   padding: 0;
   margin: 0;
   box-sizing: border-box;
-  overflow-x: hidden;
+  overflow-x: clip;
 }
 
 /* Full-width, flush layout eliminating empty gaps on left (-X) and right (+X) */
@@ -2771,8 +2773,9 @@ button.bubble-btn.active {
   border-radius: 0;
   box-shadow: none;
   display: flex;
-  overflow: hidden;
+  align-items: flex-start;
   position: relative;
+  overflow: visible;
 }
 
 /* Vivid Royal Blue Curved Sidebar - Flush to left edge */
@@ -2786,7 +2789,12 @@ button.bubble-btn.active {
   display: flex;
   flex-direction: column;
   color: #ffffff;
-  position: relative;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  max-height: 100vh;
+  align-self: flex-start;
+  flex-shrink: 0;
   z-index: 20;
   box-sizing: border-box;
   overflow-y: auto;
@@ -3503,6 +3511,10 @@ button.bubble-btn.active {
     max-width: 100%;
     border-radius: 0;
     padding: 1.25rem 1.25rem 1rem;
+    position: relative;
+    top: auto;
+    height: auto;
+    max-height: none;
   }
   .sidebar-curved-item.active::before,
   .sidebar-curved-item.active::after {
