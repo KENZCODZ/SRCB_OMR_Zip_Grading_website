@@ -164,6 +164,7 @@ export default function App() {
 
   // Profile Menu State & Click-Outside Handling
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
+  const [isSignOutModalOpen, setIsSignOutModalOpen] = useState(false);
   const profileMenuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -1061,34 +1062,13 @@ export default function App() {
                       </div>
                     </div>
 
-                    <div className="profile-dropdown-details">
-                      {currentUser?.department && (
-                        <div className="profile-dropdown-detail-row">
-                          <span className="detail-label">Department:</span>
-                          <span className="detail-val">{currentUser.department}</span>
-                        </div>
-                      )}
-                      {currentUser?.programme && (
-                        <div className="profile-dropdown-detail-row">
-                          <span className="detail-label">Programme:</span>
-                          <span className="detail-val">{currentUser.programme}</span>
-                        </div>
-                      )}
-                      {currentUser?.scope && (
-                        <div className="profile-dropdown-detail-row">
-                          <span className="detail-label">Scope:</span>
-                          <span className="detail-val">{currentUser.scope}</span>
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="profile-dropdown-actions">
+                    <div className="profile-dropdown-actions" style={{ padding: "0.5rem" }}>
                       <button
                         type="button"
                         className="profile-dropdown-btn logout"
                         onClick={() => {
                           setIsProfileMenuOpen(false);
-                          handleSignOut();
+                          setIsSignOutModalOpen(true);
                         }}
                       >
                         <LogOut size={16} />
@@ -3364,6 +3344,150 @@ export default function App() {
           </div>
         )}
       </main>
+
+      {/* Sign Out Confirmation Modal */}
+      {isSignOutModalOpen && (
+        <div
+          className="modal-overlay"
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(15, 23, 42, 0.6)",
+            backdropFilter: "blur(6px)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 999999,
+            padding: "1rem",
+          }}
+          onClick={() => setIsSignOutModalOpen(false)}
+        >
+          <div
+            className="card"
+            style={{
+              background: "#ffffff",
+              borderRadius: "16px",
+              padding: "1.75rem",
+              maxWidth: "420px",
+              width: "100%",
+              boxShadow: "0 20px 40px rgba(0, 0, 0, 0.15)",
+              border: "1px solid #e2e8f0",
+              animation: "modalScaleIn 0.2s ease-out",
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "0.85rem",
+                marginBottom: "1rem",
+              }}
+            >
+              <div
+                style={{
+                  width: "44px",
+                  height: "44px",
+                  borderRadius: "12px",
+                  background: "#fee2e2",
+                  color: "#ef4444",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  flexShrink: 0,
+                }}
+              >
+                <LogOut size={22} />
+              </div>
+              <div>
+                <h3
+                  style={{
+                    margin: 0,
+                    fontSize: "1.2rem",
+                    fontWeight: 800,
+                    color: "#0f172a",
+                  }}
+                >
+                  Confirm Sign Out
+                </h3>
+                <p
+                  style={{
+                    margin: "0.2rem 0 0 0",
+                    fontSize: "0.85rem",
+                    color: "#64748b",
+                  }}
+                >
+                  End active institutional session
+                </p>
+              </div>
+            </div>
+
+            <p
+              style={{
+                fontSize: "0.92rem",
+                color: "#475569",
+                lineHeight: 1.5,
+                margin: "0 0 1.5rem 0",
+              }}
+            >
+              Are you sure you want to sign out of{" "}
+              <strong style={{ color: "#0f172a" }}>
+                {currentUser?.name || "your account"}
+              </strong>
+              ? You will need to sign in again to access your institutional workspace.
+            </p>
+
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "flex-end",
+                gap: "0.75rem",
+              }}
+            >
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={() => setIsSignOutModalOpen(false)}
+                style={{
+                  padding: "0.6rem 1.1rem",
+                  fontSize: "0.88rem",
+                  fontWeight: 600,
+                  borderRadius: "8px",
+                  background: "#f1f5f9",
+                  color: "#334155",
+                  border: "1px solid #cbd5e1",
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="btn"
+                onClick={() => {
+                  setIsSignOutModalOpen(false);
+                  handleSignOut();
+                }}
+                style={{
+                  padding: "0.6rem 1.25rem",
+                  fontSize: "0.88rem",
+                  fontWeight: 700,
+                  borderRadius: "8px",
+                  background: "#ef4444",
+                  color: "#ffffff",
+                  border: "none",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "0.4rem",
+                  boxShadow: "0 4px 12px rgba(239, 68, 68, 0.25)",
+                }}
+              >
+                <LogOut size={16} />
+                <span>Yes, Sign Out</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Floating User Guide Question Mark Button (Bottom-Right) */}
       <button
