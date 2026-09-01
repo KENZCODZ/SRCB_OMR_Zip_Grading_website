@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   ShieldCheck,
   GraduationCap,
@@ -9,11 +9,11 @@ import {
   Lock,
   Eye,
   EyeOff,
-  Sparkles,
-  Zap,
-  BarChart3,
+  Terminal,
+  ChevronRight,
+  X,
   CheckCircle2,
-  Building2,
+  Cpu,
 } from "lucide-react";
 import type { AuthUser } from "../types";
 
@@ -41,242 +41,234 @@ export default function LoginPage({
   selectedAuthUserId,
 }: LoginPageProps) {
   const [showPassword, setShowPassword] = useState(false);
+  const [isDevToolOpen, setIsDevToolOpen] = useState(false);
+  const [instantLogin, setInstantLogin] = useState(true);
+
+  // Keyboard shortcut (Alt + D) to toggle devtools
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.altKey && (e.key === "d" || e.key === "D")) {
+        setIsDevToolOpen((prev) => !prev);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
+
+  const getRoleBadge = (role: string) => {
+    switch (role) {
+      case "admin":
+        return { label: "System Admin", color: "#8b5cf6", bg: "rgba(139, 92, 246, 0.1)" };
+      case "dean":
+        return { label: "Dean of Education", color: "#d97706", bg: "rgba(217, 119, 6, 0.1)" };
+      case "programme-head":
+        return { label: "Programme Head", color: "#0284c7", bg: "rgba(2, 132, 199, 0.1)" };
+      case "teacher":
+        return { label: "Faculty Teacher", color: "#059669", bg: "rgba(5, 150, 105, 0.1)" };
+      default:
+        return { label: "Student Examinee", color: "#4f46e5", bg: "rgba(79, 70, 229, 0.1)" };
+    }
+  };
 
   const getRoleIcon = (role: string) => {
     switch (role) {
       case "admin":
-        return <ShieldCheck size={18} style={{ color: "#c084fc" }} />;
+        return <ShieldCheck size={16} color="#8b5cf6" />;
       case "dean":
-        return <Award size={18} className="text-gold" />;
+        return <Award size={16} color="#d97706" />;
       case "programme-head":
-        return <BookOpen size={18} style={{ color: "#38bdf8" }} />;
+        return <BookOpen size={16} color="#0284c7" />;
       case "teacher":
-        return <ShieldCheck size={18} style={{ color: "#93c5fd" }} />;
+        return <UserCheck size={16} color="#059669" />;
       default:
-        return <GraduationCap size={18} style={{ color: "#a7f3d0" }} />;
+        return <GraduationCap size={16} color="#4f46e5" />;
     }
   };
 
-  const getRoleTitle = (role: string) => {
-    switch (role) {
-      case "admin":
-        return "System Admin";
-      case "dean":
-        return "Dean of Education";
-      case "programme-head":
-        return "Programme Head";
-      case "teacher":
-        return "Faculty Instructor";
-      default:
-        return "Student";
+  const handleDevRoleClick = (user: AuthUser) => {
+    if (instantLogin) {
+      onSelectMockUser(user.id);
+    } else {
+      let pass = "Admin@2025";
+      if (user.role === "dean") pass = "Dean@2025";
+      if (user.role === "programme-head") pass = "Ph@2025";
+      if (user.role === "teacher") pass = "Teacher@2025";
+      if (user.role === "student") pass = "Student@2025";
+
+      setEmail(user.email);
+      setPassword(pass);
     }
   };
 
   return (
-    <div className="login-page-wrapper">
-      {/* Background Glow Spheres */}
-      <div className="login-hero-glow-1" />
-      <div className="login-hero-glow-2" />
+    <div className="login-minimal-wrapper">
+      {/* Background Ambient Aesthetics */}
+      <div className="login-ambient-mesh" />
 
-      {/* Left Column: SRCB Hero Panel */}
-      <section className="login-hero-section">
+      {/* Main Center Card */}
+      <div className="login-minimal-card">
         {/* Brand Header */}
-        <div className="login-brand-header">
-          <div className="login-brand-logo-frame">
-            <img src="/srcb-logo.png" alt="SRCB Logo" />
+        <div className="login-minimal-brand">
+          <div className="login-brand-logo-ring">
+            <img src="/srcb-logo.png" alt="SRCB Logo" className="login-logo-img" />
           </div>
-          <div className="login-brand-info">
-            <h2>St. Rita's College of Balingasag</h2>
-            <p>Higher Education Department • IT Program</p>
-          </div>
-        </div>
-
-        {/* Main Hero Content */}
-        <div className="login-hero-content">
-          <div className="login-hero-tag">
-            <Sparkles size={15} /> Automated Zip-Grading & Item Analytics
-          </div>
-
-          <h1 className="login-hero-title">
-            Empowering Excellence in <span>Academic Assessment</span>
-          </h1>
-
-          <p className="login-hero-description">
-            AeroOMR provides lightning-fast optical mark recognition, CHED-compliant grading sheets, and role-based academic intelligence for SRCB educators.
+          <h1 className="login-app-title">AeroOMR</h1>
+          <p className="login-app-subtitle">
+            St. Rita's College of Balingasag • Academic Assessment Portal
           </p>
-
-          {/* Key Feature Cards */}
-          <div className="login-feature-list">
-            <div className="login-feature-item">
-              <div className="login-feature-icon-box">
-                <Zap size={18} />
-              </div>
-              <div className="login-feature-text">
-                <h4>Instant Bubble Recognition</h4>
-                <p>Grade 50-question answer keys with computer vision & sub-pixel alignment.</p>
-              </div>
-            </div>
-
-            <div className="login-feature-item">
-              <div
-                className="login-feature-icon-box"
-                style={{
-                  background: "rgba(245, 158, 11, 0.15)",
-                  borderColor: "rgba(245, 158, 11, 0.3)",
-                  color: "var(--srcb-gold-accent)",
-                }}
-              >
-                <BarChart3 size={18} />
-              </div>
-              <div className="login-feature-text">
-                <h4>CHED Grade Sheets & Item Analysis</h4>
-                <p>Automated export to Excel grade sheets with difficulty & discrimination indices.</p>
-              </div>
-            </div>
-
-            <div className="login-feature-item">
-              <div
-                className="login-feature-icon-box"
-                style={{
-                  background: "rgba(16, 185, 129, 0.15)",
-                  borderColor: "rgba(16, 185, 129, 0.3)",
-                  color: "#10b981",
-                }}
-              >
-                <ShieldCheck size={18} />
-              </div>
-              <div className="login-feature-text">
-                <h4>Institutional Role Authorization</h4>
-                <p>Tailored workflows and analytics for Deans, Programme Heads, and Faculty.</p>
-              </div>
-            </div>
-          </div>
         </div>
 
-        {/* Hero Footer */}
-        <div className="login-hero-footer">
-          <div>
-            <CheckCircle2 size={14} className="text-gold" /> Official Institutional Portal
-          </div>
-          <div>•</div>
-          <div>
-            <Building2 size={14} /> St. Rita's College of Balingasag
-          </div>
-        </div>
-      </section>
-
-      {/* Right Column: Authentication Card Panel */}
-      <section className="login-form-section">
-        <div className="login-glass-card">
-          <div className="login-card-header">
-            <div className="login-card-badge">
-              <ShieldCheck size={26} />
+        {/* Minimalist Login Form */}
+        <form onSubmit={onSubmit} className="login-minimal-form">
+          <div className="form-group">
+            <label className="login-field-label">Institutional Email</label>
+            <div className="login-input-wrapper">
+              <Mail size={16} className="login-input-icon" />
+              <input
+                type="email"
+                className="login-minimal-input"
+                placeholder="username@srcb.edu.ph"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                autoComplete="email"
+              />
             </div>
-            <h3>Portal Access</h3>
-            <p>Sign in with your official SRCB institutional account</p>
           </div>
 
-          <form onSubmit={onSubmit} style={{ display: "grid", gap: "1.1rem" }}>
-            <div className="form-group">
-              <label className="form-label" style={{ fontSize: "0.82rem", fontWeight: 600 }}>
-                School Email
-              </label>
-              <div className="input-icon-group">
-                <input
-                  type="email"
-                  className="form-input input-with-icon"
-                  placeholder="name@srcb.edu.ph"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                />
-                <Mail size={17} className="input-icon-left" />
-              </div>
+          <div className="form-group">
+            <div className="login-password-header">
+              <label className="login-field-label">Password</label>
+              <span className="login-forgot-link">Forgot?</span>
             </div>
-
-            <div className="form-group">
-              <label className="form-label" style={{ fontSize: "0.82rem", fontWeight: 600 }}>
-                Password
-              </label>
-              <div className="input-icon-group">
-                <input
-                  type={showPassword ? "text" : "password"}
-                  className="form-input input-with-icon"
-                  placeholder="Enter your password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                  style={{ paddingRight: "2.8rem" }}
-                />
-                <Lock size={17} className="input-icon-left" />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  style={{
-                    position: "absolute",
-                    right: "0.9rem",
-                    background: "none",
-                    border: "none",
-                    color: "var(--text-muted)",
-                    cursor: "pointer",
-                    padding: 0,
-                    display: "flex",
-                    alignItems: "center",
-                  }}
-                  title={showPassword ? "Hide password" : "Show password"}
-                >
-                  {showPassword ? <EyeOff size={17} /> : <Eye size={17} />}
-                </button>
-              </div>
-            </div>
-
-            {loginError && (
-              <div
-                style={{
-                  padding: "0.75rem 0.9rem",
-                  borderRadius: "var(--radius-md)",
-                  background: "rgba(244, 63, 94, 0.14)",
-                  border: "1px solid rgba(244, 63, 94, 0.3)",
-                  color: "#fda4af",
-                  fontSize: "0.83rem",
-                  lineHeight: 1.4,
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "0.5rem",
-                }}
+            <div className="login-input-wrapper">
+              <Lock size={16} className="login-input-icon" />
+              <input
+                type={showPassword ? "text" : "password"}
+                className="login-minimal-input with-toggle"
+                placeholder="••••••••••••"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                autoComplete="current-password"
+              />
+              <button
+                type="button"
+                className="password-toggle-btn"
+                onClick={() => setShowPassword(!showPassword)}
+                title={showPassword ? "Hide password" : "Show password"}
+                aria-label="Toggle password visibility"
               >
-                <span>{loginError}</span>
-              </div>
-            )}
+                {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+              </button>
+            </div>
+          </div>
 
-            <button className="login-submit-btn" type="submit">
-              <UserCheck size={18} /> Sign In to AeroOMR
-            </button>
-          </form>
+          {loginError && (
+            <div className="login-error-pill">
+              <span>{loginError}</span>
+            </div>
+          )}
 
-          {/* Quick Demo Access Pills */}
-          <div className="login-divider">Demo Quick Sign-In</div>
+          <button type="submit" className="login-primary-submit-btn">
+            Sign In
+            <ChevronRight size={16} />
+          </button>
+        </form>
 
-          <div className="role-pills-container">
-            {mockUsers.map((user) => {
-              const isActive = selectedAuthUserId === user.id;
-              return (
-                <button
-                  key={user.id}
-                  type="button"
-                  className={`role-pill-btn ${isActive ? "active" : ""}`}
-                  onClick={() => onSelectMockUser(user.id)}
-                  title={`Quick sign in as ${user.name}`}
-                >
-                  {getRoleIcon(user.role)}
-                  <span className="role-pill-name">{user.role === "admin" ? "Admin" : user.name.split(" ")[1] || user.name}</span>
-                  <span className="role-pill-title">{getRoleTitle(user.role)}</span>
-                </button>
-              );
-            })}
+        {/* Minimal Institutional Footer */}
+        <div className="login-minimal-footer">
+          <div className="login-security-tag">
+            <ShieldCheck size={13} color="#0062ff" />
+            <span>256-Bit Encrypted Academic Session</span>
           </div>
         </div>
-      </section>
+      </div>
+
+      {/* Floating Developer Sandbox Widget / DevTool */}
+      <div className="devtool-floating-container">
+        {!isDevToolOpen ? (
+          <button
+            type="button"
+            className="devtool-launcher-btn"
+            onClick={() => setIsDevToolOpen(true)}
+            title="Open Developer Testing Sandbox (Alt + D)"
+          >
+            <Terminal size={14} />
+            <span>DevTools</span>
+            <span className="devtool-status-dot" />
+          </button>
+        ) : (
+          <div className="devtool-drawer-card">
+            <div className="devtool-header">
+              <div className="devtool-header-left">
+                <Cpu size={15} color="#0062ff" />
+                <span className="devtool-title">DevTools & Role Switcher</span>
+              </div>
+              <button
+                type="button"
+                className="devtool-close-btn"
+                onClick={() => setIsDevToolOpen(false)}
+                title="Close DevTools"
+              >
+                <X size={14} />
+              </button>
+            </div>
+
+            <div className="devtool-body">
+              <div className="devtool-api-status">
+                <span className="devtool-api-label">Backend API:</span>
+                <span className="devtool-api-badge">
+                  <CheckCircle2 size={12} color="#10b981" /> Online (Port 8000)
+                </span>
+              </div>
+
+              <div className="devtool-toggle-row">
+                <label className="devtool-toggle-label">
+                  <input
+                    type="checkbox"
+                    checked={instantLogin}
+                    onChange={(e) => setInstantLogin(e.target.checked)}
+                  />
+                  <span>Instant 1-Click Login</span>
+                </label>
+                <span className="devtool-hint">Alt+D to toggle</span>
+              </div>
+
+              <div className="devtool-roles-list">
+                <div className="devtool-section-title">Select Test Persona:</div>
+                {mockUsers.map((user) => {
+                  const badge = getRoleBadge(user.role);
+                  const isSelected = selectedAuthUserId === user.id;
+
+                  return (
+                    <button
+                      key={user.id}
+                      type="button"
+                      className={`devtool-role-card ${isSelected ? "selected" : ""}`}
+                      onClick={() => handleDevRoleClick(user)}
+                    >
+                      <div className="devtool-role-avatar">
+                        {getRoleIcon(user.role)}
+                      </div>
+                      <div className="devtool-role-info">
+                        <div className="devtool-role-name">{user.name}</div>
+                        <div className="devtool-role-email">{user.email}</div>
+                      </div>
+                      <span
+                        className="devtool-role-tag"
+                        style={{ color: badge.color, backgroundColor: badge.bg }}
+                      >
+                        {badge.label}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

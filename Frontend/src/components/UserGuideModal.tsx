@@ -114,20 +114,20 @@ const ROLE_GUIDES: RoleGuide[] = [
     sections: [
       {
         id: "dean-dashboard-overview",
-        title: "1. Navigating the Executive Dashboard",
+        title: "1. Navigating Academic Management & Oversight",
         icon: BarChart3,
         summary: "Understand institutional metrics, passing rates, and active programmes at a glance.",
         steps: [
           {
-            title: "Access Institutional Snapshot",
+            title: "Access Institutional Overview",
             description:
-              "Log in with your Dean credentials. The dashboard displays overall student counts, active faculty, overall exam volume, and institutional pass rate percentages.",
+              "Log in with your Dean credentials. Academic Management displays overall student counts, active faculty, departments, programmes, and institutional performance metrics.",
             tip: "Use the Metric Tiles to quickly spot departments operating below target performance thresholds.",
           },
           {
             title: "Review Priority Modules",
             description:
-              "Navigate to Academic Management to see detailed breakdowns per department (Information Technology, Business Administration, Education, etc.).",
+              "View detailed breakdowns per department (Information Technology, Business Administration, Education, etc.) directly in Academic Management.",
           },
         ],
       },

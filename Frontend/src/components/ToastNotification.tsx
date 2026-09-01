@@ -1,9 +1,9 @@
 import React from 'react';
-import { CheckCircle2, XCircle, Info } from 'lucide-react';
+import { CheckCircle2, XCircle, Info, AlertTriangle } from 'lucide-react';
 
 export interface ToastItem {
   id: string;
-  type: 'success' | 'error' | 'info';
+  type: 'success' | 'error' | 'info' | 'warning';
   message: string;
 }
 
@@ -27,6 +27,7 @@ export const ToastNotification: React.FC<ToastNotificationProps> = ({ toasts, on
           {toast.type === 'success' && <CheckCircle2 className="text-success" size={18} />}
           {toast.type === 'error' && <XCircle className="text-danger" size={18} />}
           {toast.type === 'info' && <Info className="text-info" size={18} />}
+          {toast.type === 'warning' && <AlertTriangle className="text-warning" size={18} />}
           <span>{toast.message}</span>
         </div>
       ))}
