@@ -162,16 +162,16 @@ export default function RegisterForm({ onSwitchToLogin, onRegisteredSuccess }: R
           <div
             style={{
               padding: "0.75rem 1rem",
-              background: "rgba(15, 23, 42, 0.6)",
+              background: "#eff6ff",
               borderRadius: "var(--radius-md)",
-              border: "1px solid rgba(255,255,255,0.06)",
+              border: "1px solid #bfdbfe",
               width: "100%",
               fontSize: "0.78rem",
-              color: "var(--text-muted)",
+              color: "#475569",
               textAlign: "left",
             }}
           >
-            <div style={{ display: "flex", alignItems: "center", gap: "6px", color: "var(--srcb-gold-light)", fontWeight: 600, marginBottom: "4px" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "6px", color: "#0062ff", fontWeight: 600, marginBottom: "4px" }}>
               <Sparkles size={13} /> Next Steps:
             </div>
             <span>1. The Programme Head (BSIT) will review your credentials.</span><br />
@@ -227,7 +227,7 @@ export default function RegisterForm({ onSwitchToLogin, onRegisteredSuccess }: R
                 }}
                 onClick={() => setRole("student")}
               >
-                <GraduationCap size={16} style={{ color: role === "student" ? "#ffffff" : "var(--srcb-gold-accent)" }} />
+                <GraduationCap size={16} style={{ color: role === "student" ? "#ffffff" : "#0062ff" }} />
                 <span style={{ fontWeight: 600, fontSize: "0.85rem" }}>Student</span>
               </button>
             </div>
@@ -346,11 +346,11 @@ export default function RegisterForm({ onSwitchToLogin, onRegisteredSuccess }: R
                     alignItems: "center",
                     justifyContent: "center",
                     padding: "0 0.85rem",
-                    background: "rgba(245, 158, 11, 0.18)",
-                    border: "1px solid rgba(245, 158, 11, 0.35)",
+                    background: "#eff6ff",
+                    border: "1px solid #bfdbfe",
                     borderRight: "none",
                     borderRadius: "var(--radius-md) 0 0 var(--radius-md)",
-                    color: "var(--srcb-gold-accent)",
+                    color: "#0062ff",
                     fontWeight: 800,
                     fontSize: "0.95rem",
                     userSelect: "none",
@@ -376,7 +376,7 @@ export default function RegisterForm({ onSwitchToLogin, onRegisteredSuccess }: R
               </div>
               {idSuffix.trim() && (
                 <div style={{ fontSize: "0.72rem", color: "var(--text-muted)", marginTop: "0.2rem" }}>
-                  Assigned ID: <strong style={{ color: "var(--srcb-gold-accent)" }}>{getFormattedId()}</strong>
+                  Assigned ID: <strong style={{ color: "#0062ff" }}>{getFormattedId()}</strong>
                 </div>
               )}
             </div>
@@ -539,11 +539,11 @@ export default function RegisterForm({ onSwitchToLogin, onRegisteredSuccess }: R
           <div
             style={{
               padding: "0.6rem 0.85rem",
-              background: "rgba(245, 158, 11, 0.1)",
-              border: "1px solid rgba(245, 158, 11, 0.25)",
+              background: "#eff6ff",
+              border: "1px solid #bfdbfe",
               borderRadius: "var(--radius-sm)",
               fontSize: "0.76rem",
-              color: "var(--srcb-gold-light)",
+              color: "#0062ff",
               display: "flex",
               alignItems: "center",
               gap: "0.4rem",

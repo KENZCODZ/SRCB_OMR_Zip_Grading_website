@@ -52,7 +52,8 @@ export const RosterImportModal: React.FC<RosterImportModalProps> = ({
         left: 0,
         width: '100%',
         height: '100%',
-        background: 'rgba(0, 0, 0, 0.8)',
+        background: 'rgba(15, 23, 42, 0.6)',
+        backdropFilter: 'blur(6px)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
@@ -60,13 +61,37 @@ export const RosterImportModal: React.FC<RosterImportModalProps> = ({
         padding: '1.5rem'
       }}
     >
-      <div className="card" style={{ width: '100%', maxWidth: '700px', maxHeight: '90vh', overflowY: 'auto' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', borderBottom: '1px solid var(--border)', paddingBottom: '0.75rem' }}>
-          <h3 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <FileSpreadsheet className="text-primary" size={20} />
+      <div
+        className="card"
+        style={{
+          width: '100%',
+          maxWidth: '700px',
+          maxHeight: '90vh',
+          overflowY: 'auto',
+          background: '#ffffff',
+          border: '1px solid #e2e8f0',
+          borderRadius: '16px',
+          boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.15)',
+          padding: '1.5rem',
+        }}
+      >
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem', borderBottom: '1px solid #f1f5f9', paddingBottom: '0.75rem' }}>
+          <h3 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#0f172a', fontWeight: 800, fontSize: '1.15rem' }}>
+            <FileSpreadsheet color="#0062ff" size={22} />
             Import Class Roster (.xlsx / .csv)
           </h3>
-          <button className="btn btn-secondary btn-icon-only" onClick={onClose}>
+          <button
+            className="btn"
+            style={{
+              background: '#f8fafc',
+              border: '1px solid #cbd5e1',
+              borderRadius: '8px',
+              padding: '0.4rem',
+              color: '#64748b',
+              cursor: 'pointer',
+            }}
+            onClick={onClose}
+          >
             <X size={18} />
           </button>
         </div>
@@ -86,7 +111,15 @@ export const RosterImportModal: React.FC<RosterImportModalProps> = ({
 
         <div
           className="dropzone"
-          style={{ padding: '2rem 1rem', marginBottom: '1.5rem' }}
+          style={{
+            padding: '2.5rem 1.5rem',
+            marginBottom: '1.5rem',
+            background: '#f8fafc',
+            border: '2px dashed #bfdbfe',
+            borderRadius: '12px',
+            textAlign: 'center',
+            cursor: 'pointer',
+          }}
           onClick={() => fileInputRef.current?.click()}
           onDragOver={(e) => e.preventDefault()}
           onDrop={(e) => {
@@ -96,22 +129,35 @@ export const RosterImportModal: React.FC<RosterImportModalProps> = ({
             }
           }}
         >
-          <UploadCloud size={40} className="dropzone-icon" />
-          <h4 style={{ margin: '0.5rem 0 0.25rem 0' }}>Click or drag a Class Roster file here</h4>
-          <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', margin: 0 }}>
+          <UploadCloud size={44} color="#0062ff" style={{ marginBottom: '0.5rem' }} />
+          <h4 style={{ margin: '0.5rem 0 0.25rem 0', color: '#0f172a', fontWeight: 800 }}>Click or drag a Class Roster file here</h4>
+          <p style={{ fontSize: '0.82rem', color: '#64748b', margin: 0 }}>
             Supports Excel (.xlsx, .xls) or CSV files with headers: <strong>Student ID, Student Name, Course & Section</strong>
           </p>
         </div>
 
         {loading && (
-          <div className="spinner-container" style={{ padding: '1rem' }}>
+          <div className="spinner-container" style={{ padding: '1rem', textAlign: 'center' }}>
             <div className="spinner"></div>
-            <p style={{ fontSize: '0.85rem', color: 'var(--primary)', marginTop: '0.5rem' }}>Parsing roster spreadsheet data...</p>
+            <p style={{ fontSize: '0.85rem', color: '#0062ff', fontWeight: 700, marginTop: '0.5rem' }}>Parsing roster spreadsheet data...</p>
           </div>
         )}
 
         {errorMsg && (
-          <div className="toast toast-error" style={{ marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <div
+            style={{
+              marginBottom: '1rem',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.5rem',
+              background: '#fef2f2',
+              border: '1px solid #fecaca',
+              color: '#dc2626',
+              padding: '0.75rem 1rem',
+              borderRadius: '8px',
+              fontSize: '0.85rem',
+            }}
+          >
             <AlertCircle size={18} />
             <span>{errorMsg}</span>
           </div>
@@ -120,45 +166,79 @@ export const RosterImportModal: React.FC<RosterImportModalProps> = ({
         {previewRoster.length > 0 && (
           <div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
-              <h4 style={{ margin: 0, fontSize: '0.95rem', color: 'var(--text-secondary)' }}>
+              <h4 style={{ margin: 0, fontSize: '0.95rem', color: '#0f172a', fontWeight: 700 }}>
                 Roster Preview ({previewRoster.length} students loaded)
               </h4>
-              <span className="badge badge-success flex-align-center">
-                <CheckCircle2 size={13} style={{ marginRight: 4 }} /> Ready to Match
+              <span
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  background: '#ecfdf5',
+                  color: '#059669',
+                  border: '1px solid #a7f3d0',
+                  padding: '0.2rem 0.6rem',
+                  borderRadius: '6px',
+                  fontSize: '0.78rem',
+                  fontWeight: 700,
+                }}
+              >
+                <CheckCircle2 size={13} /> Ready to Match
               </span>
             </div>
 
-            <div style={{ maxHeight: '250px', overflowY: 'auto', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', marginBottom: '1.5rem' }}>
+            <div style={{ maxHeight: '250px', overflowY: 'auto', border: '1px solid #e2e8f0', borderRadius: '10px', marginBottom: '1.5rem', background: '#ffffff' }}>
               <table className="custom-table" style={{ width: '100%', fontSize: '0.82rem' }}>
                 <thead>
-                  <tr>
-                    <th>Student ID</th>
-                    <th>Full Name</th>
-                    <th>Course & Section</th>
+                  <tr style={{ background: '#f8fafc', color: '#475569' }}>
+                    <th style={{ padding: '0.6rem 0.8rem', textAlign: 'left', borderBottom: '1px solid #e2e8f0' }}>Student ID</th>
+                    <th style={{ padding: '0.6rem 0.8rem', textAlign: 'left', borderBottom: '1px solid #e2e8f0' }}>Full Name</th>
+                    <th style={{ padding: '0.6rem 0.8rem', textAlign: 'left', borderBottom: '1px solid #e2e8f0' }}>Course & Section</th>
                   </tr>
                 </thead>
                 <tbody>
                   {previewRoster.slice(0, 10).map((r, idx) => (
-                    <tr key={idx}>
-                      <td style={{ fontWeight: 700 }}>{r.student_id}</td>
-                      <td>{r.name}</td>
-                      <td>{r.course_section || 'N/A'}</td>
+                    <tr key={idx} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                      <td style={{ fontWeight: 700, color: '#0062ff', padding: '0.6rem 0.8rem' }}>{r.student_id}</td>
+                      <td style={{ color: '#0f172a', padding: '0.6rem 0.8rem' }}>{r.name}</td>
+                      <td style={{ color: '#64748b', padding: '0.6rem 0.8rem' }}>{r.course_section || 'N/A'}</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
               {previewRoster.length > 10 && (
-                <div style={{ padding: '0.5rem', textAlign: 'center', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                <div style={{ padding: '0.5rem', textAlign: 'center', fontSize: '0.75rem', color: '#64748b', background: '#f8fafc' }}>
                   ...and {previewRoster.length - 10} more students
                 </div>
               )}
             </div>
 
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
-              <button className="btn btn-secondary" onClick={onClose}>
+              <button
+                className="btn btn-secondary"
+                style={{
+                  background: '#ffffff',
+                  border: '1px solid #cbd5e1',
+                  color: '#475569',
+                  fontWeight: 600,
+                  borderRadius: '8px',
+                }}
+                onClick={onClose}
+              >
                 Cancel
               </button>
-              <button className="btn btn-primary" onClick={handleConfirmImport}>
+              <button
+                className="btn btn-primary"
+                style={{
+                  background: '#0062ff',
+                  color: '#ffffff',
+                  fontWeight: 700,
+                  borderRadius: '8px',
+                  border: 'none',
+                  boxShadow: '0 2px 6px rgba(0,98,255,0.25)',
+                }}
+                onClick={handleConfirmImport}
+              >
                 Import & Apply Roster
               </button>
             </div>

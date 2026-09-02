@@ -250,8 +250,8 @@ export const ExamCreationModal: React.FC<ExamCreationModalProps> = ({
         left: 0,
         width: "100vw",
         height: "100vh",
-        background: "rgba(3, 7, 18, 0.85)",
-        backdropFilter: "blur(8px)",
+        background: "rgba(15, 23, 42, 0.6)",
+        backdropFilter: "blur(6px)",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
@@ -266,9 +266,10 @@ export const ExamCreationModal: React.FC<ExamCreationModalProps> = ({
           maxWidth: "960px",
           maxHeight: "92vh",
           overflowY: "auto",
-          background: "var(--bg-card)",
-          border: "1px solid var(--srcb-gold-accent)",
-          boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.5)",
+          background: "#ffffff",
+          border: "1px solid #e2e8f0",
+          borderRadius: "18px",
+          boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.15)",
           display: "flex",
           flexDirection: "column",
           padding: 0,
@@ -278,11 +279,11 @@ export const ExamCreationModal: React.FC<ExamCreationModalProps> = ({
         <div
           style={{
             padding: "1.25rem 1.5rem",
-            borderBottom: "1px solid var(--border)",
+            borderBottom: "1px solid #f1f5f9",
             display: "flex",
             justifyContent: "space-between",
             alignItems: "center",
-            background: "rgba(15, 23, 42, 0.8)",
+            background: "#ffffff",
           }}
         >
           <div
@@ -290,26 +291,27 @@ export const ExamCreationModal: React.FC<ExamCreationModalProps> = ({
           >
             <div
               style={{
-                width: "40px",
-                height: "40px",
+                width: "42px",
+                height: "42px",
                 borderRadius: "10px",
-                background: "rgba(245, 158, 11, 0.15)",
+                background: "#eff6ff",
+                border: "1px solid #bfdbfe",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
-                color: "var(--srcb-gold-accent)",
+                color: "#0062ff",
               }}
             >
               <BookOpen size={22} />
             </div>
             <div>
-              <h2 style={{ fontSize: "1.25rem", fontWeight: 800, margin: 0 }}>
+              <h2 style={{ fontSize: "1.25rem", fontWeight: 800, margin: 0, color: "#0f172a" }}>
                 Comprehensive Examination Setup
               </h2>
               <p
                 style={{
-                  fontSize: "0.8rem",
-                  color: "var(--text-secondary)",
+                  fontSize: "0.82rem",
+                  color: "#64748b",
                   margin: "0.2rem 0 0 0",
                 }}
               >
@@ -321,7 +323,15 @@ export const ExamCreationModal: React.FC<ExamCreationModalProps> = ({
 
           <button
             type="button"
-            className="btn btn-secondary btn-icon-only"
+            className="btn"
+            style={{
+              background: "#f8fafc",
+              border: "1px solid #cbd5e1",
+              borderRadius: "8px",
+              padding: "0.45rem",
+              color: "#64748b",
+              cursor: "pointer",
+            }}
             onClick={onClose}
             title="Close"
           >
@@ -335,24 +345,24 @@ export const ExamCreationModal: React.FC<ExamCreationModalProps> = ({
             {/* SECTION 1: Examination Identity & Academic Context */}
             <div
               style={{
-                background: "rgba(15, 23, 42, 0.6)",
+                background: "#f8fafc",
                 padding: "1.25rem",
-                borderRadius: "var(--radius-md)",
-                border: "1px solid var(--border)",
+                borderRadius: "12px",
+                border: "1px solid #e2e8f0",
               }}
             >
               <h3
                 style={{
                   fontSize: "1rem",
-                  fontWeight: 700,
+                  fontWeight: 800,
                   marginBottom: "1rem",
-                  color: "var(--srcb-gold-light)",
+                  color: "#0f172a",
                   display: "flex",
                   alignItems: "center",
                   gap: "0.5rem",
                 }}
               >
-                <FileText size={18} /> 1. Examination Identity & Metadata
+                <FileText size={18} color="#0062ff" /> 1. Examination Identity & Metadata
               </h3>
 
               <div
@@ -364,13 +374,14 @@ export const ExamCreationModal: React.FC<ExamCreationModalProps> = ({
               >
                 {/* Exam Title */}
                 <div style={{ gridColumn: "span 2" }}>
-                  <label className="form-label" style={{ fontWeight: 600 }}>
-                    Exam Title <span style={{ color: "var(--error)" }}>*</span>
+                  <label className="form-label" style={{ fontWeight: 700, color: "#0f172a" }}>
+                    Exam Title <span style={{ color: "#ef4444" }}>*</span>
                   </label>
                   <input
                     type="text"
                     className="form-input"
                     placeholder="e.g. Web Systems & Technologies Midterm Examination"
+                    style={{ background: "#ffffff", border: "1px solid #cbd5e1", color: "#0f172a" }}
                     value={examTitle}
                     onChange={(e) => setExamTitle(e.target.value)}
                   />
@@ -378,7 +389,7 @@ export const ExamCreationModal: React.FC<ExamCreationModalProps> = ({
                     <span
                       style={{
                         fontSize: "0.75rem",
-                        color: "var(--error)",
+                        color: "#ef4444",
                         marginTop: "4px",
                         display: "block",
                       }}
@@ -390,11 +401,12 @@ export const ExamCreationModal: React.FC<ExamCreationModalProps> = ({
 
                 {/* Exam Type */}
                 <div>
-                  <label className="form-label" style={{ fontWeight: 600 }}>
-                    Exam Type <span style={{ color: "var(--error)" }}>*</span>
+                  <label className="form-label" style={{ fontWeight: 700, color: "#0f172a" }}>
+                    Exam Type <span style={{ color: "#ef4444" }}>*</span>
                   </label>
                   <select
                     className="form-input"
+                    style={{ background: "#ffffff", border: "1px solid #cbd5e1", color: "#0f172a" }}
                     value={examType}
                     onChange={(e) => setExamType(e.target.value)}
                   >
@@ -407,15 +419,16 @@ export const ExamCreationModal: React.FC<ExamCreationModalProps> = ({
 
                 {/* Number of Items */}
                 <div>
-                  <label className="form-label" style={{ fontWeight: 600 }}>
+                  <label className="form-label" style={{ fontWeight: 700, color: "#0f172a" }}>
                     Number of Items (1-100){" "}
-                    <span style={{ color: "var(--error)" }}>*</span>
+                    <span style={{ color: "#ef4444" }}>*</span>
                   </label>
                   <input
                     type="number"
                     min="1"
                     max="100"
                     className="form-input"
+                    style={{ background: "#ffffff", border: "1px solid #cbd5e1", color: "#0f172a" }}
                     value={numItems}
                     onChange={(e) => {
                       const val = Math.max(
@@ -441,7 +454,7 @@ export const ExamCreationModal: React.FC<ExamCreationModalProps> = ({
                     <span
                       style={{
                         fontSize: "0.75rem",
-                        color: "var(--error)",
+                        color: "#ef4444",
                         marginTop: "4px",
                         display: "block",
                       }}
@@ -453,14 +466,15 @@ export const ExamCreationModal: React.FC<ExamCreationModalProps> = ({
 
                 {/* Course/Subject */}
                 <div>
-                  <label className="form-label" style={{ fontWeight: 600 }}>
+                  <label className="form-label" style={{ fontWeight: 700, color: "#0f172a" }}>
                     Course / Subject Title{" "}
-                    <span style={{ color: "var(--error)" }}>*</span>
+                    <span style={{ color: "#ef4444" }}>*</span>
                   </label>
                   <input
                     type="text"
                     className="form-input"
                     placeholder="e.g. Web Systems and Technologies 1"
+                    style={{ background: "#ffffff", border: "1px solid #cbd5e1", color: "#0f172a" }}
                     value={subject}
                     onChange={(e) => setSubject(e.target.value)}
                   />
@@ -468,7 +482,7 @@ export const ExamCreationModal: React.FC<ExamCreationModalProps> = ({
                     <span
                       style={{
                         fontSize: "0.75rem",
-                        color: "var(--error)",
+                        color: "#ef4444",
                         marginTop: "4px",
                         display: "block",
                       }}
@@ -480,13 +494,14 @@ export const ExamCreationModal: React.FC<ExamCreationModalProps> = ({
 
                 {/* Course Code */}
                 <div>
-                  <label className="form-label" style={{ fontWeight: 600 }}>
-                    Course Code <span style={{ color: "var(--error)" }}>*</span>
+                  <label className="form-label" style={{ fontWeight: 700, color: "#0f172a" }}>
+                    Course Code <span style={{ color: "#ef4444" }}>*</span>
                   </label>
                   <input
                     type="text"
                     className="form-input"
                     placeholder="e.g. ITP 305"
+                    style={{ background: "#ffffff", border: "1px solid #cbd5e1", color: "#0f172a" }}
                     value={courseCode}
                     onChange={(e) => setCourseCode(e.target.value)}
                   />
@@ -494,7 +509,7 @@ export const ExamCreationModal: React.FC<ExamCreationModalProps> = ({
                     <span
                       style={{
                         fontSize: "0.75rem",
-                        color: "var(--error)",
+                        color: "#ef4444",
                         marginTop: "4px",
                         display: "block",
                       }}
@@ -506,13 +521,14 @@ export const ExamCreationModal: React.FC<ExamCreationModalProps> = ({
 
                 {/* Section */}
                 <div>
-                  <label className="form-label" style={{ fontWeight: 600 }}>
-                    Section <span style={{ color: "var(--error)" }}>*</span>
+                  <label className="form-label" style={{ fontWeight: 700, color: "#0f172a" }}>
+                    Section <span style={{ color: "#ef4444" }}>*</span>
                   </label>
                   <input
                     type="text"
                     className="form-input"
                     placeholder="e.g. BSIT 3-A"
+                    style={{ background: "#ffffff", border: "1px solid #cbd5e1", color: "#0f172a" }}
                     value={section}
                     onChange={(e) => setSection(e.target.value)}
                   />
@@ -520,7 +536,7 @@ export const ExamCreationModal: React.FC<ExamCreationModalProps> = ({
                     <span
                       style={{
                         fontSize: "0.75rem",
-                        color: "var(--error)",
+                        color: "#ef4444",
                         marginTop: "4px",
                         display: "block",
                       }}
@@ -532,14 +548,15 @@ export const ExamCreationModal: React.FC<ExamCreationModalProps> = ({
 
                 {/* Academic Year */}
                 <div>
-                  <label className="form-label" style={{ fontWeight: 600 }}>
+                  <label className="form-label" style={{ fontWeight: 700, color: "#0f172a" }}>
                     Academic Year{" "}
-                    <span style={{ color: "var(--error)" }}>*</span>
+                    <span style={{ color: "#ef4444" }}>*</span>
                   </label>
                   <input
                     type="text"
                     className="form-input"
                     placeholder="e.g. 2025-2026"
+                    style={{ background: "#ffffff", border: "1px solid #cbd5e1", color: "#0f172a" }}
                     value={academicYear}
                     onChange={(e) => setAcademicYear(e.target.value)}
                   />
@@ -547,7 +564,7 @@ export const ExamCreationModal: React.FC<ExamCreationModalProps> = ({
                     <span
                       style={{
                         fontSize: "0.75rem",
-                        color: "var(--error)",
+                        color: "#ef4444",
                         marginTop: "4px",
                         display: "block",
                       }}
@@ -559,11 +576,12 @@ export const ExamCreationModal: React.FC<ExamCreationModalProps> = ({
 
                 {/* Semester */}
                 <div>
-                  <label className="form-label" style={{ fontWeight: 600 }}>
-                    Semester <span style={{ color: "var(--error)" }}>*</span>
+                  <label className="form-label" style={{ fontWeight: 700, color: "#0f172a" }}>
+                    Semester <span style={{ color: "#ef4444" }}>*</span>
                   </label>
                   <select
                     className="form-input"
+                    style={{ background: "#ffffff", border: "1px solid #cbd5e1", color: "#0f172a" }}
                     value={semester}
                     onChange={(e) => setSemester(e.target.value)}
                   >
@@ -575,14 +593,15 @@ export const ExamCreationModal: React.FC<ExamCreationModalProps> = ({
 
                 {/* Program/Department */}
                 <div>
-                  <label className="form-label" style={{ fontWeight: 600 }}>
+                  <label className="form-label" style={{ fontWeight: 700, color: "#0f172a" }}>
                     Program / Department{" "}
-                    <span style={{ color: "var(--error)" }}>*</span>
+                    <span style={{ color: "#ef4444" }}>*</span>
                   </label>
                   <input
                     type="text"
                     className="form-input"
                     placeholder="e.g. BSIT / College of Computing"
+                    style={{ background: "#ffffff", border: "1px solid #cbd5e1", color: "#0f172a" }}
                     value={program}
                     onChange={(e) => setProgram(e.target.value)}
                   />
@@ -590,7 +609,7 @@ export const ExamCreationModal: React.FC<ExamCreationModalProps> = ({
                     <span
                       style={{
                         fontSize: "0.75rem",
-                        color: "var(--error)",
+                        color: "#ef4444",
                         marginTop: "4px",
                         display: "block",
                       }}
@@ -602,14 +621,15 @@ export const ExamCreationModal: React.FC<ExamCreationModalProps> = ({
 
                 {/* Instructor Name */}
                 <div style={{ gridColumn: "span 2" }}>
-                  <label className="form-label" style={{ fontWeight: 600 }}>
+                  <label className="form-label" style={{ fontWeight: 700, color: "#0f172a" }}>
                     Instructor Name{" "}
-                    <span style={{ color: "var(--error)" }}>*</span>
+                    <span style={{ color: "#ef4444" }}>*</span>
                   </label>
                   <input
                     type="text"
                     className="form-input"
                     placeholder="e.g. Prof. Jenny Garcia"
+                    style={{ background: "#ffffff", border: "1px solid #cbd5e1", color: "#0f172a" }}
                     value={instructorName}
                     onChange={(e) => setInstructorName(e.target.value)}
                   />
@@ -617,7 +637,7 @@ export const ExamCreationModal: React.FC<ExamCreationModalProps> = ({
                     <span
                       style={{
                         fontSize: "0.75rem",
-                        color: "var(--error)",
+                        color: "#ef4444",
                         marginTop: "4px",
                         display: "block",
                       }}
@@ -632,24 +652,24 @@ export const ExamCreationModal: React.FC<ExamCreationModalProps> = ({
             {/* SECTION 2: Schedule & Optional Settings */}
             <div
               style={{
-                background: "rgba(15, 23, 42, 0.6)",
+                background: "#f8fafc",
                 padding: "1.25rem",
-                borderRadius: "var(--radius-md)",
-                border: "1px solid var(--border)",
+                borderRadius: "12px",
+                border: "1px solid #e2e8f0",
               }}
             >
               <h3
                 style={{
                   fontSize: "1rem",
-                  fontWeight: 700,
+                  fontWeight: 800,
                   marginBottom: "1rem",
-                  color: "var(--srcb-gold-light)",
+                  color: "#0f172a",
                   display: "flex",
                   alignItems: "center",
                   gap: "0.5rem",
                 }}
               >
-                <Calendar size={18} /> 2. Exam Schedule & Administration
+                <Calendar size={18} color="#0062ff" /> 2. Exam Schedule & Administration
                 Settings (Optional)
               </h3>
 
@@ -662,10 +682,13 @@ export const ExamCreationModal: React.FC<ExamCreationModalProps> = ({
               >
                 {/* Examination Date */}
                 <div>
-                  <label className="form-label">Scheduled Exam Date</label>
+                  <label className="form-label" style={{ fontWeight: 700, color: "#0f172a" }}>
+                    Scheduled Exam Date
+                  </label>
                   <input
                     type="date"
                     className="form-input"
+                    style={{ background: "#ffffff", border: "1px solid #cbd5e1", color: "#0f172a" }}
                     value={examDate}
                     onChange={(e) => setExamDate(e.target.value)}
                   />
@@ -673,7 +696,7 @@ export const ExamCreationModal: React.FC<ExamCreationModalProps> = ({
 
                 {/* Passing Score */}
                 <div>
-                  <label className="form-label">
+                  <label className="form-label" style={{ fontWeight: 700, color: "#0f172a" }}>
                     Passing Raw Score Benchmark
                   </label>
                   <input
@@ -681,6 +704,7 @@ export const ExamCreationModal: React.FC<ExamCreationModalProps> = ({
                     min="0"
                     max={numItems}
                     className="form-input"
+                    style={{ background: "#ffffff", border: "1px solid #cbd5e1", color: "#0f172a" }}
                     placeholder={`e.g. ${Math.ceil(numItems * 0.5)}`}
                     value={passingScore}
                     onChange={(e) => setPassingScore(e.target.value)}
@@ -689,16 +713,16 @@ export const ExamCreationModal: React.FC<ExamCreationModalProps> = ({
 
                 {/* Instructions */}
                 <div style={{ gridColumn: "span 2" }}>
-                  <label className="form-label">
+                  <label className="form-label" style={{ fontWeight: 700, color: "#0f172a" }}>
                     Exam Instructions for Students
                   </label>
                   <textarea
                     className="form-input"
                     rows={2}
                     placeholder="e.g. Use dark pencil or black pen. Shade the bubble completely. Erase neatly."
+                    style={{ background: "#ffffff", border: "1px solid #cbd5e1", color: "#0f172a", resize: "vertical" }}
                     value={instructions}
                     onChange={(e) => setInstructions(e.target.value)}
-                    style={{ resize: "vertical" }}
                   />
                 </div>
               </div>
@@ -707,12 +731,12 @@ export const ExamCreationModal: React.FC<ExamCreationModalProps> = ({
             {/* SECTION 3: Answer Key Editor */}
             <div
               style={{
-                background: "rgba(15, 23, 42, 0.6)",
+                background: "#f8fafc",
                 padding: "1.25rem",
-                borderRadius: "var(--radius-md)",
+                borderRadius: "12px",
                 border: errors.answerKey
-                  ? "1px solid var(--error)"
-                  : "1px solid var(--border)",
+                  ? "1px solid #ef4444"
+                  : "1px solid #e2e8f0",
               }}
             >
               <div
@@ -729,21 +753,21 @@ export const ExamCreationModal: React.FC<ExamCreationModalProps> = ({
                   <h3
                     style={{
                       fontSize: "1rem",
-                      fontWeight: 700,
+                      fontWeight: 800,
                       margin: 0,
-                      color: "var(--srcb-gold-light)",
+                      color: "#0f172a",
                       display: "flex",
                       alignItems: "center",
                       gap: "0.5rem",
                     }}
                   >
-                    <CheckSquare size={18} /> 3. Answer Key Editor ({numItems}{" "}
+                    <CheckSquare size={18} color="#0062ff" /> 3. Answer Key Editor ({numItems}{" "}
                     Items)
                   </h3>
                   <p
                     style={{
-                      fontSize: "0.8rem",
-                      color: "var(--text-secondary)",
+                      fontSize: "0.82rem",
+                      color: "#64748b",
                       margin: "0.25rem 0 0 0",
                     }}
                   >
@@ -761,8 +785,15 @@ export const ExamCreationModal: React.FC<ExamCreationModalProps> = ({
                   }}
                 >
                   <span
-                    className={`badge ${isKeyComplete ? "badge-success" : "badge-warning"}`}
-                    style={{ padding: "0.35rem 0.75rem", fontSize: "0.8rem" }}
+                    style={{
+                      padding: "0.35rem 0.75rem",
+                      fontSize: "0.8rem",
+                      fontWeight: 700,
+                      borderRadius: "8px",
+                      background: isKeyComplete ? "#ecfdf5" : "#fffbeb",
+                      color: isKeyComplete ? "#059669" : "#b45309",
+                      border: isKeyComplete ? "1px solid #a7f3d0" : "1px solid #fde68a",
+                    }}
                   >
                     {configuredCount} / {numItems} Configured
                   </span>
@@ -785,7 +816,15 @@ export const ExamCreationModal: React.FC<ExamCreationModalProps> = ({
                     className="btn btn-secondary"
                     onClick={() => keyScanInputRef.current?.click()}
                     disabled={keyUploadLoading}
-                    style={{ padding: "0.35rem 0.75rem", fontSize: "0.8rem" }}
+                    style={{
+                      padding: "0.35rem 0.75rem",
+                      fontSize: "0.8rem",
+                      background: "#ffffff",
+                      border: "1px solid #cbd5e1",
+                      color: "#0f172a",
+                      borderRadius: "8px",
+                      fontWeight: 600,
+                    }}
                   >
                     <UploadCloud size={14} style={{ marginRight: "4px" }} />
                     {keyUploadLoading ? "Scanning..." : "Scan Key Image"}
@@ -795,7 +834,15 @@ export const ExamCreationModal: React.FC<ExamCreationModalProps> = ({
                     type="button"
                     className="btn btn-secondary"
                     onClick={handleAutoFillDemoKey}
-                    style={{ padding: "0.35rem 0.75rem", fontSize: "0.8rem" }}
+                    style={{
+                      padding: "0.35rem 0.75rem",
+                      fontSize: "0.8rem",
+                      background: "#ffffff",
+                      border: "1px solid #cbd5e1",
+                      color: "#0f172a",
+                      borderRadius: "8px",
+                      fontWeight: 600,
+                    }}
                   >
                     <Sparkles size={14} style={{ marginRight: "4px" }} />{" "}
                     Auto-Fill Demo
@@ -805,7 +852,15 @@ export const ExamCreationModal: React.FC<ExamCreationModalProps> = ({
                     type="button"
                     className="btn btn-secondary"
                     onClick={handleClearKey}
-                    style={{ padding: "0.35rem 0.75rem", fontSize: "0.8rem" }}
+                    style={{
+                      padding: "0.35rem 0.75rem",
+                      fontSize: "0.8rem",
+                      background: "#ffffff",
+                      border: "1px solid #cbd5e1",
+                      color: "#0f172a",
+                      borderRadius: "8px",
+                      fontWeight: 600,
+                    }}
                   >
                     <RotateCcw size={14} style={{ marginRight: "4px" }} /> Clear
                   </button>
@@ -815,11 +870,11 @@ export const ExamCreationModal: React.FC<ExamCreationModalProps> = ({
               {errors.answerKey && (
                 <div
                   style={{
-                    background: "rgba(239, 68, 68, 0.1)",
-                    border: "1px solid rgba(239, 68, 68, 0.3)",
-                    color: "#f87171",
+                    background: "#fef2f2",
+                    border: "1px solid #fecaca",
+                    color: "#dc2626",
                     padding: "0.6rem 0.8rem",
-                    borderRadius: "var(--radius-sm)",
+                    borderRadius: "8px",
                     fontSize: "0.82rem",
                     marginBottom: "1rem",
                     display: "flex",
@@ -836,12 +891,12 @@ export const ExamCreationModal: React.FC<ExamCreationModalProps> = ({
               <div
                 className="bubble-sheet-card"
                 style={{
-                  border: "1px solid var(--border)",
-                  borderRadius: "var(--radius-md)",
+                  border: "1px solid #e2e8f0",
+                  borderRadius: "12px",
                   padding: "1rem",
                   maxHeight: "360px",
                   overflowY: "auto",
-                  background: "rgba(8, 17, 32, 0.8)",
+                  background: "#ffffff",
                 }}
               >
                 <div
@@ -871,32 +926,41 @@ export const ExamCreationModal: React.FC<ExamCreationModalProps> = ({
                         >
                           <span
                             className="bubble-num"
-                            style={{ minWidth: "30px" }}
+                            style={{ minWidth: "30px", color: "#0f172a", fontWeight: 700 }}
                           >
                             {qNum}.
                           </span>
                           <div className="bubble-options">
-                            {["A", "B", "C", "D", "E"].map((opt) => (
-                              <button
-                                key={opt}
-                                type="button"
-                                className={`bubble-btn ${answerKey[qStr] === opt ? "active" : ""}`}
-                                style={{
-                                  width: "28px",
-                                  height: "28px",
-                                  fontSize: "0.8rem",
-                                  fontWeight: 700,
-                                }}
-                                onClick={() =>
-                                  setAnswerKey((prev) => ({
-                                    ...prev,
-                                    [qStr]: prev[qStr] === opt ? "" : opt,
-                                  }))
-                                }
-                              >
-                                {opt}
-                              </button>
-                            ))}
+                            {["A", "B", "C", "D", "E"].map((opt) => {
+                              const isActive = answerKey[qStr] === opt;
+                              return (
+                                <button
+                                  key={opt}
+                                  type="button"
+                                  style={{
+                                    width: "28px",
+                                    height: "28px",
+                                    fontSize: "0.8rem",
+                                    fontWeight: 700,
+                                    borderRadius: "50%",
+                                    border: isActive ? "1px solid #0062ff" : "1px solid #cbd5e1",
+                                    background: isActive ? "#0062ff" : "#ffffff",
+                                    color: isActive ? "#ffffff" : "#64748b",
+                                    cursor: "pointer",
+                                    transition: "all 0.15s ease",
+                                    boxShadow: isActive ? "0 2px 5px rgba(0, 98, 255, 0.3)" : "none",
+                                  }}
+                                  onClick={() =>
+                                    setAnswerKey((prev) => ({
+                                      ...prev,
+                                      [qStr]: prev[qStr] === opt ? "" : opt,
+                                    }))
+                                  }
+                                >
+                                  {opt}
+                                </button>
+                              );
+                            })}
                           </div>
                         </div>
                       );
@@ -919,32 +983,41 @@ export const ExamCreationModal: React.FC<ExamCreationModalProps> = ({
                           >
                             <span
                               className="bubble-num"
-                              style={{ minWidth: "30px" }}
+                              style={{ minWidth: "30px", color: "#0f172a", fontWeight: 700 }}
                             >
                               {qNum}.
                             </span>
                             <div className="bubble-options">
-                              {["A", "B", "C", "D", "E"].map((opt) => (
-                                <button
-                                  key={opt}
-                                  type="button"
-                                  className={`bubble-btn ${answerKey[qStr] === opt ? "active" : ""}`}
-                                  style={{
-                                    width: "28px",
-                                    height: "28px",
-                                    fontSize: "0.8rem",
-                                    fontWeight: 700,
-                                  }}
-                                  onClick={() =>
-                                    setAnswerKey((prev) => ({
-                                      ...prev,
-                                      [qStr]: prev[qStr] === opt ? "" : opt,
-                                    }))
-                                  }
-                                >
-                                  {opt}
-                                </button>
-                              ))}
+                              {["A", "B", "C", "D", "E"].map((opt) => {
+                                const isActive = answerKey[qStr] === opt;
+                                return (
+                                  <button
+                                    key={opt}
+                                    type="button"
+                                    style={{
+                                      width: "28px",
+                                      height: "28px",
+                                      fontSize: "0.8rem",
+                                      fontWeight: 700,
+                                      borderRadius: "50%",
+                                      border: isActive ? "1px solid #0062ff" : "1px solid #cbd5e1",
+                                      background: isActive ? "#0062ff" : "#ffffff",
+                                      color: isActive ? "#ffffff" : "#64748b",
+                                      cursor: "pointer",
+                                      transition: "all 0.15s ease",
+                                      boxShadow: isActive ? "0 2px 5px rgba(0, 98, 255, 0.3)" : "none",
+                                    }}
+                                    onClick={() =>
+                                      setAnswerKey((prev) => ({
+                                        ...prev,
+                                        [qStr]: prev[qStr] === opt ? "" : opt,
+                                      }))
+                                    }
+                                  >
+                                    {opt}
+                                  </button>
+                                );
+                              })}
                             </div>
                           </div>
                         );
@@ -964,7 +1037,7 @@ export const ExamCreationModal: React.FC<ExamCreationModalProps> = ({
               gap: "1rem",
               marginTop: "1.5rem",
               paddingTop: "1rem",
-              borderTop: "1px solid var(--border)",
+              borderTop: "1px solid #f1f5f9",
             }}
           >
             <button
@@ -972,6 +1045,13 @@ export const ExamCreationModal: React.FC<ExamCreationModalProps> = ({
               className="btn btn-secondary"
               onClick={onClose}
               disabled={isSubmitting}
+              style={{
+                background: "#ffffff",
+                border: "1px solid #cbd5e1",
+                color: "#475569",
+                fontWeight: 600,
+                borderRadius: "8px",
+              }}
             >
               Cancel
             </button>
@@ -986,6 +1066,12 @@ export const ExamCreationModal: React.FC<ExamCreationModalProps> = ({
                 display: "flex",
                 alignItems: "center",
                 gap: "0.5rem",
+                background: "#0062ff",
+                color: "#ffffff",
+                borderRadius: "8px",
+                border: "none",
+                cursor: "pointer",
+                boxShadow: "0 2px 8px rgba(0, 98, 255, 0.25)",
               }}
             >
               <CheckCircle2 size={18} />

@@ -520,10 +520,10 @@ export const UserGuideCard: React.FC<UserGuideCardProps> = ({
         overflow: "hidden",
         display: "flex",
         flexDirection: "column",
-        background: "linear-gradient(180deg, rgba(15, 23, 42, 0.95), rgba(8, 17, 32, 0.95))",
-        border: "1px solid var(--border-color)",
+        background: "#ffffff",
+        border: "1px solid #e2e8f0",
         borderRadius: "16px",
-        boxShadow: "0 20px 40px -15px rgba(0, 0, 0, 0.7)",
+        boxShadow: "0 20px 40px -15px rgba(0, 0, 0, 0.15)",
         ...style,
       }}
     >
@@ -531,8 +531,8 @@ export const UserGuideCard: React.FC<UserGuideCardProps> = ({
       <div
         style={{
           padding: "1.25rem 1.5rem",
-          background: "linear-gradient(135deg, rgba(30, 41, 59, 0.7), rgba(15, 23, 42, 0.9))",
-          borderBottom: "1px solid var(--border-color)",
+          background: "#ffffff",
+          borderBottom: "1px solid #f1f5f9",
           display: "flex",
           flexDirection: "column",
           gap: "1rem",
@@ -543,15 +543,15 @@ export const UserGuideCard: React.FC<UserGuideCardProps> = ({
           <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
             <div
               style={{
-                width: "40px",
-                height: "40px",
+                width: "42px",
+                height: "42px",
                 borderRadius: "10px",
-                background: "rgba(245, 158, 11, 0.15)",
-                border: "1px solid var(--srcb-gold-accent)",
+                background: "#eff6ff",
+                border: "1px solid #bfdbfe",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
-                color: "var(--srcb-gold-accent)",
+                color: "#0062ff",
                 flexShrink: 0,
               }}
             >
@@ -563,7 +563,7 @@ export const UserGuideCard: React.FC<UserGuideCardProps> = ({
                   fontSize: "1.25rem",
                   fontWeight: 800,
                   margin: 0,
-                  color: "var(--text-primary)",
+                  color: "#0f172a",
                   display: "flex",
                   alignItems: "center",
                   gap: "0.5rem",
@@ -574,7 +574,7 @@ export const UserGuideCard: React.FC<UserGuideCardProps> = ({
               <p
                 style={{
                   fontSize: "0.82rem",
-                  color: "var(--text-secondary)",
+                  color: "#64748b",
                   margin: "0.15rem 0 0 0",
                 }}
               >
@@ -590,7 +590,10 @@ export const UserGuideCard: React.FC<UserGuideCardProps> = ({
               style={{
                 padding: "0.4rem 0.6rem",
                 borderRadius: "8px",
-                color: "var(--text-muted)",
+                border: "1px solid #cbd5e1",
+                background: "#f8fafc",
+                color: "#64748b",
+                cursor: "pointer",
               }}
               title="Close User Guide (Esc)"
             >
@@ -609,7 +612,7 @@ export const UserGuideCard: React.FC<UserGuideCardProps> = ({
                 left: "12px",
                 top: "50%",
                 transform: "translateY(-50%)",
-                color: "var(--text-muted)",
+                color: "#94a3b8",
               }}
             />
             <input
@@ -617,7 +620,9 @@ export const UserGuideCard: React.FC<UserGuideCardProps> = ({
               className="form-input"
               style={{
                 paddingLeft: "36px",
-                background: "rgba(8, 17, 32, 0.7)",
+                background: "#f8fafc",
+                border: "1px solid #cbd5e1",
+                color: "#0f172a",
                 fontSize: "0.88rem",
                 borderRadius: "8px",
                 width: "100%",
@@ -647,9 +652,8 @@ export const UserGuideCard: React.FC<UserGuideCardProps> = ({
                 <button
                   key={guide.role}
                   onClick={() => setActiveRoleTab(guide.role)}
-                  className={`btn ${isActive ? "btn-primary" : "btn-outline"}`}
                   style={{
-                    padding: "0.4rem 0.75rem",
+                    padding: "0.45rem 0.85rem",
                     fontSize: "0.82rem",
                     whiteSpace: "nowrap",
                     display: "flex",
@@ -657,13 +661,16 @@ export const UserGuideCard: React.FC<UserGuideCardProps> = ({
                     gap: "0.4rem",
                     borderRadius: "20px",
                     border: isActive
-                      ? "1px solid var(--srcb-gold-accent)"
-                      : "1px solid rgba(255, 255, 255, 0.1)",
+                      ? "1px solid #0062ff"
+                      : "1px solid #cbd5e1",
                     background: isActive
-                      ? "var(--srcb-gold-accent)"
-                      : "rgba(15, 23, 42, 0.5)",
-                    color: isActive ? "#000" : "var(--text-primary)",
+                      ? "#0062ff"
+                      : "#ffffff",
+                    color: isActive ? "#ffffff" : "#475569",
                     fontWeight: isActive ? 700 : 500,
+                    cursor: "pointer",
+                    transition: "all 0.2s ease",
+                    boxShadow: isActive ? "0 2px 6px rgba(0, 98, 255, 0.2)" : "none",
                   }}
                 >
                   <TabIcon size={14} />
@@ -696,14 +703,15 @@ export const UserGuideCard: React.FC<UserGuideCardProps> = ({
           display: "flex",
           flexDirection: "column",
           gap: "1.25rem",
+          background: "#ffffff",
         }}
       >
         {/* Role Overview Banner */}
         <div
           style={{
-            background: "rgba(30, 41, 59, 0.4)",
-            border: "1px solid rgba(255, 255, 255, 0.08)",
-            borderLeft: "4px solid var(--srcb-gold-accent)",
+            background: "#f8fafc",
+            border: "1px solid #e2e8f0",
+            borderLeft: "4px solid #0062ff",
             borderRadius: "10px",
             padding: "1.1rem",
           }}
@@ -719,35 +727,37 @@ export const UserGuideCard: React.FC<UserGuideCardProps> = ({
             }}
           >
             <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-              <IconComp size={20} style={{ color: "var(--srcb-gold-accent)" }} />
-              <h3 style={{ fontSize: "1.1rem", margin: 0, fontWeight: 700 }}>
+              <IconComp size={20} style={{ color: "#0062ff" }} />
+              <h3 style={{ fontSize: "1.1rem", margin: 0, fontWeight: 800, color: "#0f172a" }}>
                 {currentRoleGuide.roleTitle}
               </h3>
             </div>
             <span
-              className="badge"
               style={{
-                background: currentRoleGuide.badgeColor,
-                color: "var(--srcb-gold-light)",
+                background: "#eff6ff",
+                color: "#0062ff",
+                border: "1px solid #bfdbfe",
                 fontSize: "0.75rem",
+                fontWeight: 700,
                 padding: "0.2rem 0.6rem",
+                borderRadius: "6px",
               }}
             >
               Audience: {currentRoleGuide.targetAudience}
             </span>
           </div>
 
-          <p style={{ color: "var(--text-secondary)", fontSize: "0.88rem", margin: "0 0 0.75rem 0", lineHeight: "1.5" }}>
+          <p style={{ color: "#64748b", fontSize: "0.88rem", margin: "0 0 0.75rem 0", lineHeight: "1.5" }}>
             {currentRoleGuide.description}
           </p>
 
           {/* Key Capabilities */}
           <div
             style={{
-              background: "rgba(8, 17, 32, 0.6)",
+              background: "#f8fafc",
               padding: "0.75rem 1rem",
               borderRadius: "8px",
-              border: "1px solid rgba(255, 255, 255, 0.04)",
+              border: "1px solid #e2e8f0",
             }}
           >
             <div style={{ fontSize: "0.78rem", fontWeight: 700, color: "var(--text-primary)", marginBottom: "0.4rem" }}>
@@ -963,8 +973,8 @@ export const UserGuideCard: React.FC<UserGuideCardProps> = ({
                           style={{
                             padding: "0.8rem 1rem",
                             borderRadius: "8px",
-                            background: "rgba(8, 17, 32, 0.5)",
-                            borderLeft: "3px solid var(--accent)",
+                            background: "#f8fafc",
+                            borderLeft: "3px solid #0062ff",
                           }}
                         >
                           <div
@@ -1014,13 +1024,13 @@ export const UserGuideCard: React.FC<UserGuideCardProps> = ({
                                 marginTop: "0.45rem",
                                 padding: "0.45rem 0.65rem",
                                 borderRadius: "6px",
-                                background: "rgba(245, 158, 11, 0.1)",
-                                border: "1px solid rgba(245, 158, 11, 0.2)",
+                                background: "#eff6ff",
+                                border: "1px solid #bfdbfe",
                                 display: "flex",
                                 alignItems: "flex-start",
                                 gap: "0.4rem",
                                 fontSize: "0.8rem",
-                                color: "var(--srcb-gold-light)",
+                                color: "#0062ff",
                               }}
                             >
                               <Lightbulb size={13} style={{ flexShrink: 0, marginTop: "2px" }} />
@@ -1044,8 +1054,8 @@ export const UserGuideCard: React.FC<UserGuideCardProps> = ({
       <div
         style={{
           padding: "0.9rem 1.5rem",
-          background: "rgba(8, 17, 32, 0.95)",
-          borderTop: "1px solid var(--border-color)",
+          background: "#f8fafc",
+          borderTop: "1px solid #e2e8f0",
           display: "flex",
           justifyContent: "space-between",
           alignItems: "center",

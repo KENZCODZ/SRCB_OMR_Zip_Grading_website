@@ -71,6 +71,7 @@ import { CameraScanner } from "./components/CameraScanner";
 import ExamCreationModal from "./components/ExamCreationModal";
 import ExamDetailsModal from "./components/ExamDetailsModal";
 import AdminUserManagement from "./components/AdminUserManagement";
+import TeacherExamCompiler from "./components/TeacherExamCompiler";
 import DeanAcademicManagement from "./components/dean/DeanAcademicManagement";
 import DeanExaminations from "./components/dean/DeanExaminations";
 import DeanReportsAnalytics from "./components/dean/DeanReportsAnalytics";
@@ -146,6 +147,11 @@ export default function App() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedSubmission, setSelectedSubmission] =
     useState<Submission | null>(null);
+
+  // Teacher Exams View Mode State
+  const [teacherExamsSubTab, setTeacherExamsSubTab] = useState<
+    "grading" | "quick-scan" | "compiler"
+  >("grading");
 
   // Flexible Export System State
   const [exportBatchExamId, setExportBatchExamId] = useState<string>("");
@@ -695,7 +701,9 @@ export default function App() {
     );
   };
 
-  const activeExam = exams.find((e) => e.id === selectedExamId);
+  const activeExam =
+    exams.find((e) => e.id === selectedExamId) ||
+    (exams.length > 0 ? exams[0] : null);
 
   const navigationItems = (() => {
     if (!currentUser) {
@@ -761,7 +769,6 @@ export default function App() {
     if (currentUser.role === "teacher") {
       return [
         { key: "dashboard" as AppTab, label: "Dashboard", icon: BarChart3 },
-        { key: "quick-scan" as AppTab, label: "Quick Scanner", icon: Sparkles },
         { key: "exams" as AppTab, label: "Exams & Grading", icon: BookOpen },
         { key: "history" as AppTab, label: "Grading History", icon: History },
         {
@@ -1477,238 +1484,862 @@ export default function App() {
               }}
             >
               <div>
-                <h2 style={{ fontSize: "1.4rem", fontWeight: 800, margin: 0 }}>
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "0.5rem",
+                    marginBottom: "0.25rem",
+                  }}
+                >
+                  <span
+                    style={{
+                      background: "#eff6ff",
+                      color: "#0062ff",
+                      border: "1px solid #bfdbfe",
+                      padding: "0.2rem 0.6rem",
+                      borderRadius: "6px",
+                      fontSize: "0.72rem",
+                      fontWeight: 800,
+                      textTransform: "uppercase",
+                      letterSpacing: "0.04em",
+                    }}
+                  >
+                    Teacher Academic Workspace
+                  </span>
+                </div>
+                <h2
+                  style={{
+                    fontSize: "1.4rem",
+                    fontWeight: 800,
+                    margin: 0,
+                    color: "#0f172a",
+                  }}
+                >
                   Exams & Grading Management
                 </h2>
                 <p
                   style={{
                     fontSize: "0.85rem",
-                    color: "var(--text-secondary)",
+                    color: "#64748b",
                     margin: "0.2rem 0 0 0",
                   }}
                 >
-                  Manage complete examination details, answer keys, and grade
-                  student sheets.
+                  Manage examination answer keys, score student OMR sheets with camera or upload, and compile session records.
                 </p>
               </div>
+
               <div
-                style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap" }}
+                style={{
+                  display: "flex",
+                  gap: "0.75rem",
+                  flexWrap: "wrap",
+                  alignItems: "center",
+                }}
               >
+                {/* Mode Switcher */}
+                <div
+                  style={{
+                    display: "flex",
+                    background: "#f1f5f9",
+                    padding: "3px",
+                    borderRadius: "10px",
+                    border: "1px solid #e2e8f0",
+                    gap: "2px",
+                  }}
+                >
+                  <button
+                    type="button"
+                    onClick={() => setTeacherExamsSubTab("grading")}
+                    style={{
+                      padding: "0.45rem 0.85rem",
+                      fontSize: "0.8rem",
+                      fontWeight: 700,
+                      borderRadius: "8px",
+                      border: "none",
+                      cursor: "pointer",
+                      transition: "all 0.2s ease",
+                      background:
+                        teacherExamsSubTab === "grading"
+                          ? "#ffffff"
+                          : "transparent",
+                      color:
+                        teacherExamsSubTab === "grading"
+                          ? "#0062ff"
+                          : "#64748b",
+                      boxShadow:
+                        teacherExamsSubTab === "grading"
+                          ? "0 1px 3px rgba(0,0,0,0.08)"
+                          : "none",
+                    }}
+                  >
+                    Exam Grading
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setTeacherExamsSubTab("quick-scan")}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "4px",
+                      padding: "0.45rem 0.85rem",
+                      fontSize: "0.8rem",
+                      fontWeight: 700,
+                      borderRadius: "8px",
+                      border: "none",
+                      cursor: "pointer",
+                      transition: "all 0.2s ease",
+                      background:
+                        teacherExamsSubTab === "quick-scan"
+                          ? "#ffffff"
+                          : "transparent",
+                      color:
+                        teacherExamsSubTab === "quick-scan"
+                          ? "#0062ff"
+                          : "#64748b",
+                      boxShadow:
+                        teacherExamsSubTab === "quick-scan"
+                          ? "0 1px 3px rgba(0,0,0,0.08)"
+                          : "none",
+                    }}
+                  >
+                    <Sparkles size={14} /> Quick Scanner
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setTeacherExamsSubTab("compiler")}
+                    style={{
+                      padding: "0.45rem 0.85rem",
+                      fontSize: "0.8rem",
+                      fontWeight: 700,
+                      borderRadius: "8px",
+                      border: "none",
+                      cursor: "pointer",
+                      transition: "all 0.2s ease",
+                      background:
+                        teacherExamsSubTab === "compiler"
+                          ? "#ffffff"
+                          : "transparent",
+                      color:
+                        teacherExamsSubTab === "compiler"
+                          ? "#0062ff"
+                          : "#64748b",
+                      boxShadow:
+                        teacherExamsSubTab === "compiler"
+                          ? "0 1px 3px rgba(0,0,0,0.08)"
+                          : "none",
+                    }}
+                  >
+                    Session & Class Compiler
+                  </button>
+                </div>
+
                 <button
                   className="btn btn-secondary"
                   onClick={handleExportGradeSheet}
+                  style={{
+                    background: "#ffffff",
+                    border: "1px solid #cbd5e1",
+                    color: "#0f172a",
+                    fontWeight: 600,
+                    borderRadius: "8px",
+                    fontSize: "0.82rem",
+                  }}
                 >
-                  <Download size={16} /> Export CHED Grade Sheet (.xlsx)
+                  <Download size={15} /> Export CHED Grade Sheet (.xlsx)
                 </button>
                 <button
                   className="btn btn-primary"
                   onClick={() => setIsExamModalOpen(true)}
-                  style={{ fontWeight: 700 }}
+                  style={{
+                    fontWeight: 700,
+                    borderRadius: "8px",
+                    fontSize: "0.82rem",
+                  }}
                 >
-                  <Plus size={18} /> Create Examination
+                  <Plus size={16} /> Create Examination
                 </button>
               </div>
             </div>
 
-            {/* Exam List and Grading Section */}
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "1fr 2fr",
-                gap: "2rem",
-              }}
-            >
-              {/* Searchable & Filterable Exams Feed */}
-              <div
-                className="card"
-                style={{ display: "flex", flexDirection: "column" }}
-              >
-                <div style={{ marginBottom: "1rem" }}>
+            {teacherExamsSubTab === "compiler" ? (
+              <TeacherExamCompiler
+                exams={exams}
+                submissions={submissions}
+                roster={roster}
+                currentUser={currentUser}
+                onSelectSubmission={viewSubmissionDetails}
+                onInspectExam={(exam) => setInspectExam(exam)}
+                addToast={addToast}
+                formatDate={formatDate}
+              />
+            ) : teacherExamsSubTab === "quick-scan" ? (
+              /* Integrated Quick Sheet Scanner in Blue and White */
+              <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
+                {/* Header Sub-Card */}
+                <div
+                  className="card"
+                  style={{
+                    background: "#ffffff",
+                    border: "1px solid #e2e8f0",
+                    borderRadius: "16px",
+                    padding: "1.25rem 1.5rem",
+                    boxShadow: "0 2px 8px rgba(0, 0, 0, 0.02)",
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    flexWrap: "wrap",
+                    gap: "1rem",
+                  }}
+                >
+                  <div style={{ display: "flex", alignItems: "center", gap: "0.85rem" }}>
+                    <div
+                      style={{
+                        width: "42px",
+                        height: "42px",
+                        borderRadius: "10px",
+                        background: "#eff6ff",
+                        color: "#0062ff",
+                        border: "1px solid #bfdbfe",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        flexShrink: 0,
+                      }}
+                    >
+                      <Sparkles size={20} />
+                    </div>
+                    <div>
+                      <h3 style={{ fontSize: "1.1rem", fontWeight: 800, margin: 0, color: "#0f172a" }}>
+                        Instant Raw Sheet Scanner
+                      </h3>
+                      <p style={{ fontSize: "0.82rem", color: "#64748b", margin: "0.15rem 0 0 0" }}>
+                        Directly read any standard 50-item ZipGrade answer sheet to extract raw student marks & ID without linking to an exam.
+                      </p>
+                    </div>
+                  </div>
+
                   <div
                     style={{
                       display: "flex",
-                      justifyContent: "space-between",
-                      alignItems: "center",
-                      marginBottom: "0.75rem",
+                      background: "#f1f5f9",
+                      padding: "4px",
+                      borderRadius: "10px",
+                      border: "1px solid #e2e8f0",
+                      gap: "4px",
                     }}
                   >
-                    <h3 style={{ fontSize: "1.1rem", margin: 0 }}>
-                      Examinations Directory
-                    </h3>
-                    <span
-                      className="badge badge-info"
-                      style={{ fontSize: "0.75rem" }}
-                    >
-                      {exams.length} Total
-                    </span>
-                  </div>
-
-                  {/* Search Bar */}
-                  <div style={{ position: "relative", marginBottom: "0.6rem" }}>
-                    <Search
-                      size={15}
+                    <button
+                      type="button"
+                      onClick={() => setQuickScanMode("upload")}
                       style={{
-                        position: "absolute",
-                        left: "0.6rem",
-                        top: "50%",
-                        transform: "translateY(-50%)",
-                        color: "var(--text-muted)",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "6px",
+                        padding: "0.45rem 0.95rem",
+                        fontSize: "0.82rem",
+                        fontWeight: 700,
+                        borderRadius: "8px",
+                        border: "none",
+                        cursor: "pointer",
+                        transition: "all 0.2s ease",
+                        background:
+                          quickScanMode === "upload"
+                            ? "#0062ff"
+                            : "transparent",
+                        color:
+                          quickScanMode === "upload"
+                            ? "#ffffff"
+                            : "#64748b",
+                        boxShadow:
+                          quickScanMode === "upload"
+                            ? "0 2px 6px rgba(0, 98, 255, 0.2)"
+                            : "none",
                       }}
-                    />
-                    <input
-                      type="text"
-                      className="form-input"
-                      placeholder="Search title, subject, code, section..."
-                      style={{ paddingLeft: "2rem", fontSize: "0.8rem" }}
-                      value={examListSearch}
-                      onChange={(e) => setExamListSearch(e.target.value)}
-                    />
-                  </div>
-
-                  {/* Filter Selectors */}
-                  <div
-                    style={{
-                      display: "grid",
-                      gridTemplateColumns: "1fr 1fr",
-                      gap: "0.5rem",
-                    }}
-                  >
-                    <div>
-                      <label
-                        style={{
-                          fontSize: "0.7rem",
-                          color: "var(--text-muted)",
-                          display: "block",
-                          marginBottom: "2px",
-                        }}
-                      >
-                        Exam Type:
-                      </label>
-                      <select
-                        className="form-input"
-                        style={{
-                          fontSize: "0.78rem",
-                          padding: "0.3rem 0.5rem",
-                        }}
-                        value={examTypeFilter}
-                        onChange={(e) => setExamTypeFilter(e.target.value)}
-                      >
-                        <option value="All">All Types</option>
-                        <option value="Preliminary">Preliminary</option>
-                        <option value="Midterm">Midterm</option>
-                        <option value="Pre-Final">Pre-Final</option>
-                        <option value="Final">Final</option>
-                      </select>
-                    </div>
-
-                    <div>
-                      <label
-                        style={{
-                          fontSize: "0.7rem",
-                          color: "var(--text-muted)",
-                          display: "block",
-                          marginBottom: "2px",
-                        }}
-                      >
-                        Semester:
-                      </label>
-                      <select
-                        className="form-input"
-                        style={{
-                          fontSize: "0.78rem",
-                          padding: "0.3rem 0.5rem",
-                        }}
-                        value={examSemesterFilter}
-                        onChange={(e) => setExamSemesterFilter(e.target.value)}
-                      >
-                        <option value="All">All Semesters</option>
-                        <option value="1st Semester">1st Semester</option>
-                        <option value="2nd Semester">2nd Semester</option>
-                        <option value="Summer">Summer</option>
-                      </select>
-                    </div>
+                    >
+                      <UploadCloud size={15} /> Upload File
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setQuickScanMode("camera")}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "6px",
+                        padding: "0.45rem 0.95rem",
+                        fontSize: "0.82rem",
+                        fontWeight: 700,
+                        borderRadius: "8px",
+                        border: "none",
+                        cursor: "pointer",
+                        transition: "all 0.2s ease",
+                        background:
+                          quickScanMode === "camera"
+                            ? "#0062ff"
+                            : "transparent",
+                        color:
+                          quickScanMode === "camera"
+                            ? "#ffffff"
+                            : "#64748b",
+                        boxShadow:
+                          quickScanMode === "camera"
+                            ? "0 2px 6px rgba(0, 98, 255, 0.2)"
+                            : "none",
+                      }}
+                    >
+                      <Camera size={15} /> Live Camera
+                    </button>
                   </div>
                 </div>
 
-                {loadingExams ? (
-                  <div className="spinner-container">
-                    <div className="spinner"></div>
-                  </div>
+                {quickScanMode === "camera" ? (
+                  <CameraScanner
+                    onCapture={handleQuickScanUpload}
+                    onSwitchToUpload={() => setQuickScanMode("upload")}
+                    title="Quick Bubble Camera Scanner"
+                    subtitle="Point camera at the ZipGrade answer sheet. Align corners and hold steady to auto-capture."
+                  />
                 ) : (
-                  (() => {
-                    const filtered = exams.filter((ex) => {
-                      const q = examListSearch.toLowerCase().trim();
-                      const matchesSearch =
-                        !q ||
-                        ex.name.toLowerCase().includes(q) ||
-                        (ex.subject && ex.subject.toLowerCase().includes(q)) ||
-                        (ex.course_code &&
-                          ex.course_code.toLowerCase().includes(q)) ||
-                        (ex.section && ex.section.toLowerCase().includes(q)) ||
-                        (ex.instructor_name &&
-                          ex.instructor_name.toLowerCase().includes(q));
+                  <div
+                    className="card"
+                    style={{
+                      background: "#ffffff",
+                      border: "1px solid #e2e8f0",
+                      borderRadius: "16px",
+                      padding: "1.5rem",
+                      boxShadow: "0 2px 8px rgba(0, 0, 0, 0.02)",
+                    }}
+                  >
+                    <input
+                      type="file"
+                      ref={quickScanInputRef}
+                      style={{ display: "none" }}
+                      accept="image/*"
+                      onChange={(e) => {
+                        if (e.target.files && e.target.files[0]) {
+                          handleQuickScanUpload(e.target.files[0]);
+                        }
+                        e.target.value = "";
+                      }}
+                    />
+                    <div
+                      className="dropzone"
+                      onClick={() => quickScanInputRef.current?.click()}
+                      onDragOver={(e) => e.preventDefault()}
+                      onDrop={(e) => {
+                        e.preventDefault();
+                        if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+                          handleQuickScanUpload(e.dataTransfer.files[0]);
+                        }
+                      }}
+                      style={{
+                        padding: "3rem 1.5rem",
+                        background: "#f8fafc",
+                        border: "2px dashed #cbd5e1",
+                        borderRadius: "12px",
+                        textAlign: "center",
+                        cursor: "pointer",
+                      }}
+                    >
+                      <UploadCloud
+                        size={48}
+                        style={{ color: "#0062ff", marginBottom: "0.5rem" }}
+                      />
+                      <h3 style={{ fontSize: "1.05rem", fontWeight: 800, color: "#0f172a", margin: "0 0 0.25rem 0" }}>
+                        Drag & drop a ZipGrade sheet image here
+                      </h3>
+                      <p
+                        style={{
+                          color: "#64748b",
+                          fontSize: "0.85rem",
+                          margin: 0,
+                        }}
+                      >
+                        or click to browse from local computer files (Supports JPG, PNG up to 10MB)
+                      </p>
+                    </div>
+                  </div>
+                )}
 
-                      const matchesType =
-                        examTypeFilter === "All" ||
-                        (ex.exam_type || "").toLowerCase() ===
-                          examTypeFilter.toLowerCase();
+                {quickScanLoading && (
+                  <div
+                    className="card spinner-container"
+                    style={{
+                      background: "#ffffff",
+                      border: "1px solid #e2e8f0",
+                      borderRadius: "16px",
+                      padding: "2rem",
+                      textAlign: "center",
+                    }}
+                  >
+                    <div className="spinner"></div>
+                    <p style={{ fontWeight: 700, color: "#0062ff", marginTop: "1rem" }}>
+                      OMR engine calibrating markers and extracting marks...
+                    </p>
+                  </div>
+                )}
 
-                      const matchesSem =
-                        examSemesterFilter === "All" ||
-                        (ex.semester || "1st Semester").toLowerCase() ===
-                          examSemesterFilter.toLowerCase();
-
-                      return matchesSearch && matchesType && matchesSem;
-                    });
-
-                    if (filtered.length === 0) {
-                      return (
-                        <div
-                          style={{
-                            color: "var(--text-muted)",
-                            fontSize: "0.85rem",
-                            padding: "1.5rem 0",
-                            textAlign: "center",
-                          }}
-                        >
-                          No matching examinations found. Try adjusting your
-                          filters or click "Create Examination".
-                        </div>
-                      );
-                    }
-
-                    return (
+                {quickScanResult && (
+                  <div className="grade-layout">
+                    {/* Visual Image Overlay */}
+                    <div
+                      className="card"
+                      style={{
+                        background: "#ffffff",
+                        border: "1px solid #e2e8f0",
+                        borderRadius: "16px",
+                        padding: "1.25rem",
+                      }}
+                    >
+                      <h3
+                        style={{
+                          fontSize: "1rem",
+                          fontWeight: 800,
+                          marginBottom: "1rem",
+                          color: "#0f172a",
+                        }}
+                      >
+                        Annotated Scan Image
+                      </h3>
+                      <div
+                        className="image-preview-container"
+                        style={{
+                          borderRadius: "10px",
+                          overflow: "hidden",
+                          border: "1px solid #e2e8f0",
+                        }}
+                      >
+                        <img
+                          src={`data:image/png;base64,${quickScanResult.overlay_image}`}
+                          alt="OMR Scan Overlay"
+                          style={{ width: "100%", height: "auto" }}
+                        />
+                      </div>
                       <div
                         style={{
                           display: "flex",
-                          flexDirection: "column",
-                          gap: "0.75rem",
-                          maxHeight: "520px",
-                          overflowY: "auto",
+                          gap: "1rem",
+                          marginTop: "1rem",
+                          fontSize: "0.75rem",
+                          justifyContent: "center",
                         }}
                       >
-                        {filtered.map((exam) => (
-                          <ExamCard
-                            key={exam.id}
-                            exam={exam}
-                            isSelected={selectedExamId === exam.id}
-                            onSelect={(id) => {
-                              setSelectedExamId(id);
-                              setLatestGradeResult(null);
+                        <div
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "0.35rem",
+                            color: "#059669",
+                            fontWeight: 700,
+                          }}
+                        >
+                          <span
+                            style={{
+                              width: "10px",
+                              height: "10px",
+                              backgroundColor: "#10b981",
+                              borderRadius: "50%",
                             }}
-                            onInspect={(e) => setInspectExam(e)}
-                            onDelete={handleDeleteExam}
-                            formatDate={formatDate}
-                          />
-                        ))}
+                          ></span>{" "}
+                          Green: Detected Mark
+                        </div>
+                        <div
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "0.35rem",
+                            color: "#d97706",
+                            fontWeight: 700,
+                          }}
+                        >
+                          <span
+                            style={{
+                              width: "10px",
+                              height: "10px",
+                              backgroundColor: "#f59e0b",
+                              borderRadius: "50%",
+                            }}
+                          ></span>{" "}
+                          Yellow: Ambiguity (Multi-filled)
+                        </div>
                       </div>
-                    );
-                  })()
+                    </div>
+
+                    {/* Parsed Sheet Data */}
+                    <div
+                      className="card"
+                      style={{
+                        background: "#ffffff",
+                        border: "1px solid #e2e8f0",
+                        borderRadius: "16px",
+                        padding: "1.25rem",
+                      }}
+                    >
+                      <div
+                        style={{
+                          display: "flex",
+                          justifyContent: "space-between",
+                          alignItems: "center",
+                          marginBottom: "1rem",
+                        }}
+                      >
+                        <h3 style={{ fontSize: "1rem", fontWeight: 800, margin: 0, color: "#0f172a" }}>
+                          Parsed Sheet Data
+                        </h3>
+                        <StatusBadge
+                          customText={`StudentID: ${quickScanResult.student_id || "Empty"}`}
+                          variant="info"
+                        />
+                      </div>
+
+                      <div
+                        className="results-scrollable bubble-sheet-card"
+                        style={{
+                          background: "#f8fafc",
+                          border: "1px solid #e2e8f0",
+                          borderRadius: "10px",
+                          padding: "1rem",
+                        }}
+                      >
+                        <div
+                          style={{
+                            display: "grid",
+                            gridTemplateColumns: "1fr 1fr",
+                            gap: "1rem",
+                          }}
+                        >
+                          <div>
+                            {Array.from({ length: 25 }, (_, i) => i + 1).map(
+                              (qNum) => {
+                                const qStr = qNum.toString();
+                                const detectedVal = quickScanResult.answers[qStr];
+                                return (
+                                  <div
+                                    key={qStr}
+                                    className="bubble-row"
+                                    style={{ padding: "0.35rem 0.5rem" }}
+                                  >
+                                    <span className="bubble-num" style={{ color: "#0f172a", fontWeight: 700 }}>
+                                      {qNum}.
+                                    </span>
+                                    <div className="bubble-options">
+                                      {["A", "B", "C", "D", "E"].map((opt) => (
+                                        <span
+                                          key={opt}
+                                          className={`bubble-btn ${
+                                            detectedVal === null
+                                              ? "empty"
+                                              : detectedVal === opt
+                                                ? "active"
+                                                : ""
+                                          }`}
+                                          style={{ pointerEvents: "none" }}
+                                        >
+                                          {opt}
+                                        </span>
+                                      ))}
+                                    </div>
+                                  </div>
+                                );
+                              },
+                            )}
+                          </div>
+                          <div>
+                            {Array.from({ length: 25 }, (_, i) => i + 26).map(
+                              (qNum) => {
+                                const qStr = qNum.toString();
+                                const detectedVal = quickScanResult.answers[qStr];
+                                return (
+                                  <div
+                                    key={qStr}
+                                    className="bubble-row"
+                                    style={{ padding: "0.35rem 0.5rem" }}
+                                  >
+                                    <span className="bubble-num" style={{ color: "#0f172a", fontWeight: 700 }}>
+                                      {qNum}.
+                                    </span>
+                                    <div className="bubble-options">
+                                      {["A", "B", "C", "D", "E"].map((opt) => (
+                                        <span
+                                          key={opt}
+                                          className={`bubble-btn ${
+                                            detectedVal === null
+                                              ? "empty"
+                                              : detectedVal === opt
+                                                ? "active"
+                                                : ""
+                                          }`}
+                                          style={{ pointerEvents: "none" }}
+                                        >
+                                          {opt}
+                                        </span>
+                                      ))}
+                                    </div>
+                                  </div>
+                                );
+                              },
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                 )}
               </div>
+            ) : (
+              /* Exam List and Grading Section */
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "1fr 2fr",
+                  gap: "1.5rem",
+                  alignItems: "start",
+                }}
+              >
+                {/* Searchable & Filterable Exams Feed */}
+                <div
+                  className="card"
+                  style={{
+                    background: "#ffffff",
+                    border: "1px solid #e2e8f0",
+                    borderRadius: "16px",
+                    padding: "1.25rem",
+                    boxShadow: "0 2px 8px rgba(0, 0, 0, 0.02)",
+                    display: "flex",
+                    flexDirection: "column",
+                  }}
+                >
+                  <div style={{ marginBottom: "1rem" }}>
+                    <div
+                      style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                        marginBottom: "0.75rem",
+                      }}
+                    >
+                      <h3
+                        style={{
+                          fontSize: "1.05rem",
+                          fontWeight: 800,
+                          margin: 0,
+                          color: "#0f172a",
+                        }}
+                      >
+                        Examinations Directory
+                      </h3>
+                      <span
+                        className="badge"
+                        style={{
+                          background: "#eff6ff",
+                          color: "#0062ff",
+                          border: "1px solid #bfdbfe",
+                          fontSize: "0.75rem",
+                          fontWeight: 700,
+                        }}
+                      >
+                        {exams.length} Total
+                      </span>
+                    </div>
+
+                    {/* Search Bar */}
+                    <div style={{ position: "relative", marginBottom: "0.6rem" }}>
+                      <Search
+                        size={15}
+                        style={{
+                          position: "absolute",
+                          left: "0.75rem",
+                          top: "50%",
+                          transform: "translateY(-50%)",
+                          color: "#94a3b8",
+                        }}
+                      />
+                      <input
+                        type="text"
+                        className="form-input"
+                        placeholder="Search title, subject, code, section..."
+                        style={{
+                          paddingLeft: "2.2rem",
+                          fontSize: "0.82rem",
+                          height: "36px",
+                          background: "#f8fafc",
+                          border: "1px solid #cbd5e1",
+                          borderRadius: "8px",
+                          color: "#0f172a",
+                        }}
+                        value={examListSearch}
+                        onChange={(e) => setExamListSearch(e.target.value)}
+                      />
+                    </div>
+
+                    {/* Filter Selectors */}
+                    <div
+                      style={{
+                        display: "grid",
+                        gridTemplateColumns: "1fr 1fr",
+                        gap: "0.5rem",
+                      }}
+                    >
+                      <div>
+                        <label
+                          style={{
+                            fontSize: "0.7rem",
+                            color: "#64748b",
+                            fontWeight: 600,
+                            display: "block",
+                            marginBottom: "2px",
+                          }}
+                        >
+                          Exam Type:
+                        </label>
+                        <select
+                          className="form-input"
+                          style={{
+                            fontSize: "0.78rem",
+                            height: "34px",
+                            padding: "0.2rem 0.5rem",
+                            background: "#f8fafc",
+                            border: "1px solid #cbd5e1",
+                            borderRadius: "8px",
+                            color: "#0f172a",
+                          }}
+                          value={examTypeFilter}
+                          onChange={(e) => setExamTypeFilter(e.target.value)}
+                        >
+                          <option value="All">All Types</option>
+                          <option value="Preliminary">Preliminary</option>
+                          <option value="Midterm">Midterm</option>
+                          <option value="Pre-Final">Pre-Final</option>
+                          <option value="Final">Final</option>
+                        </select>
+                      </div>
+
+                      <div>
+                        <label
+                          style={{
+                            fontSize: "0.7rem",
+                            color: "#64748b",
+                            fontWeight: 600,
+                            display: "block",
+                            marginBottom: "2px",
+                          }}
+                        >
+                          Semester:
+                        </label>
+                        <select
+                          className="form-input"
+                          style={{
+                            fontSize: "0.78rem",
+                            height: "34px",
+                            padding: "0.2rem 0.5rem",
+                            background: "#f8fafc",
+                            border: "1px solid #cbd5e1",
+                            borderRadius: "8px",
+                            color: "#0f172a",
+                          }}
+                          value={examSemesterFilter}
+                          onChange={(e) => setExamSemesterFilter(e.target.value)}
+                        >
+                          <option value="All">All Semesters</option>
+                          <option value="1st Semester">1st Semester</option>
+                          <option value="2nd Semester">2nd Semester</option>
+                          <option value="Summer">Summer</option>
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+
+                  {loadingExams ? (
+                    <div className="spinner-container">
+                      <div className="spinner"></div>
+                    </div>
+                  ) : (
+                    (() => {
+                      const filtered = exams.filter((ex) => {
+                        const q = examListSearch.toLowerCase().trim();
+                        const matchesSearch =
+                          !q ||
+                          ex.name.toLowerCase().includes(q) ||
+                          (ex.subject &&
+                            ex.subject.toLowerCase().includes(q)) ||
+                          (ex.course_code &&
+                            ex.course_code.toLowerCase().includes(q)) ||
+                          (ex.section &&
+                            ex.section.toLowerCase().includes(q)) ||
+                          (ex.instructor_name &&
+                            ex.instructor_name.toLowerCase().includes(q));
+
+                        const matchesType =
+                          examTypeFilter === "All" ||
+                          (ex.exam_type || "").toLowerCase() ===
+                            examTypeFilter.toLowerCase();
+
+                        const matchesSem =
+                          examSemesterFilter === "All" ||
+                          (ex.semester || "1st Semester").toLowerCase() ===
+                            examSemesterFilter.toLowerCase();
+
+                        return matchesSearch && matchesType && matchesSem;
+                      });
+
+                      if (filtered.length === 0) {
+                        return (
+                          <div
+                            style={{
+                              color: "#64748b",
+                              fontSize: "0.85rem",
+                              padding: "1.5rem 0",
+                              textAlign: "center",
+                            }}
+                          >
+                            No matching examinations found. Try adjusting your
+                            filters or click "Create Examination".
+                          </div>
+                        );
+                      }
+
+                      return (
+                        <div
+                          style={{
+                            display: "flex",
+                            flexDirection: "column",
+                            gap: "0.75rem",
+                            maxHeight: "560px",
+                            overflowY: "auto",
+                            paddingRight: "4px",
+                          }}
+                        >
+                          {filtered.map((exam) => (
+                            <ExamCard
+                              key={exam.id}
+                              exam={exam}
+                              isSelected={selectedExamId === exam.id}
+                              onSelect={(id) => {
+                                setSelectedExamId(id);
+                                setLatestGradeResult(null);
+                              }}
+                              onInspect={(e) => setInspectExam(e)}
+                              onDelete={handleDeleteExam}
+                              formatDate={formatDate}
+                            />
+                          ))}
+                        </div>
+                      );
+                    })()
+                  )}
+                </div>
 
               {/* Active Exam Grading Controls */}
-              <div className="card">
+              <div
+                className="card"
+                style={{
+                  background: "#ffffff",
+                  border: "1px solid #e2e8f0",
+                  borderRadius: "16px",
+                  padding: "1.5rem",
+                  boxShadow: "0 2px 8px rgba(0, 0, 0, 0.02)",
+                }}
+              >
                 {activeExam ? (
                   <div>
                     <div
@@ -1718,33 +2349,42 @@ export default function App() {
                         alignItems: "flex-start",
                         gap: "1rem",
                         marginBottom: "1.5rem",
+                        borderBottom: "1px solid #f1f5f9",
+                        paddingBottom: "1rem",
                       }}
                     >
                       <div>
-                        <h2 style={{ margin: 0 }}>{activeExam.name}</h2>
+                        <h2 style={{ margin: 0, fontSize: "1.3rem", fontWeight: 800, color: "#0f172a" }}>
+                          {activeExam.name}
+                        </h2>
                         <p
                           style={{
-                            fontSize: "0.8rem",
-                            color: "var(--text-muted)",
+                            fontSize: "0.82rem",
+                            color: "#64748b",
                             marginTop: "0.25rem",
                             marginBottom: 0,
                           }}
                         >
-                          Created at {formatDate(activeExam.created_at)}
+                          Created at {formatDate(activeExam.created_at)} • {activeExam.course_code ? `[${activeExam.course_code}]` : ""} {activeExam.section || ""}
                         </p>
                       </div>
                       <button
-                        className="btn btn-danger"
+                        className="btn"
                         style={{
-                          padding: "0.5rem 1rem",
+                          padding: "0.5rem 0.9rem",
                           display: "flex",
                           alignItems: "center",
-                          gap: "0.5rem",
-                          fontSize: "0.85rem",
+                          gap: "0.4rem",
+                          fontSize: "0.82rem",
+                          fontWeight: 700,
+                          background: "#fef2f2",
+                          border: "1px solid #fecaca",
+                          color: "#ef4444",
+                          borderRadius: "8px",
                         }}
                         onClick={() => handleDeleteExam(activeExam.id)}
                       >
-                        <Trash2 size={16} /> Delete Exam
+                        <Trash2 size={15} /> Delete Exam
                       </button>
                     </div>
 
@@ -1759,23 +2399,78 @@ export default function App() {
                           gap: "0.75rem",
                         }}
                       >
-                        <h4 style={{ margin: 0, fontSize: "0.95rem" }}>
+                        <h4 style={{ margin: 0, fontSize: "0.98rem", fontWeight: 800, color: "#0f172a" }}>
                           Grade Student OMR Sheets
                         </h4>
-                        <div className="scan-mode-tabs" style={{ margin: 0 }}>
+                        <div
+                          style={{
+                            display: "flex",
+                            background: "#f1f5f9",
+                            padding: "4px",
+                            borderRadius: "10px",
+                            border: "1px solid #e2e8f0",
+                            gap: "4px",
+                          }}
+                        >
                           <button
                             type="button"
-                            className={`scan-mode-tab-btn ${studentScanMode === "upload" ? "active" : ""}`}
                             onClick={() => setStudentScanMode("upload")}
+                            style={{
+                              display: "flex",
+                              alignItems: "center",
+                              gap: "6px",
+                              padding: "0.45rem 0.95rem",
+                              fontSize: "0.82rem",
+                              fontWeight: 700,
+                              borderRadius: "8px",
+                              border: "none",
+                              cursor: "pointer",
+                              transition: "all 0.2s ease",
+                              background:
+                                studentScanMode === "upload"
+                                  ? "#0062ff"
+                                  : "transparent",
+                              color:
+                                studentScanMode === "upload"
+                                  ? "#ffffff"
+                                  : "#64748b",
+                              boxShadow:
+                                studentScanMode === "upload"
+                                  ? "0 2px 6px rgba(0, 98, 255, 0.2)"
+                                  : "none",
+                            }}
                           >
-                            <UploadCloud size={15} /> Upload Files
+                            <UploadCloud size={15} /> Upload OMR Files
                           </button>
                           <button
                             type="button"
-                            className={`scan-mode-tab-btn ${studentScanMode === "camera" ? "active" : ""}`}
                             onClick={() => setStudentScanMode("camera")}
+                            style={{
+                              display: "flex",
+                              alignItems: "center",
+                              gap: "6px",
+                              padding: "0.45rem 0.95rem",
+                              fontSize: "0.82rem",
+                              fontWeight: 700,
+                              borderRadius: "8px",
+                              border: "none",
+                              cursor: "pointer",
+                              transition: "all 0.2s ease",
+                              background:
+                                studentScanMode === "camera"
+                                  ? "#0062ff"
+                                  : "transparent",
+                              color:
+                                studentScanMode === "camera"
+                                  ? "#ffffff"
+                                  : "#64748b",
+                              boxShadow:
+                                studentScanMode === "camera"
+                                  ? "0 2px 6px rgba(0, 98, 255, 0.2)"
+                                  : "none",
+                            }}
                           >
-                            <Camera size={15} /> Scan with Camera
+                            <Camera size={15} /> Live Camera Scanner
                           </button>
                         </div>
                       </div>
@@ -1800,6 +2495,8 @@ export default function App() {
                                   justifyContent: "space-between",
                                   fontSize: "0.75rem",
                                   marginBottom: "0.25rem",
+                                  color: "#475569",
+                                  fontWeight: 600,
                                 }}
                               >
                                 <span>Grading captured student sheet...</span>
@@ -1812,7 +2509,7 @@ export default function App() {
                                 style={{
                                   width: "100%",
                                   height: "6px",
-                                  background: "var(--bg-base)",
+                                  background: "#f1f5f9",
                                   borderRadius: "3px",
                                   overflow: "hidden",
                                 }}
@@ -1820,7 +2517,7 @@ export default function App() {
                                 <div
                                   style={{
                                     height: "100%",
-                                    background: "var(--primary)",
+                                    background: "#0062ff",
                                     width: `${(gradingProgress.current / gradingProgress.total) * 100}%`,
                                     transition: "width 0.2s",
                                   }}
@@ -1832,18 +2529,18 @@ export default function App() {
                           <details
                             style={{
                               marginTop: "1rem",
-                              background: "rgba(15, 23, 42, 0.5)",
-                              border: "1px solid var(--border)",
-                              borderRadius: "var(--radius-md)",
+                              background: "#f8fafc",
+                              border: "1px solid #e2e8f0",
+                              borderRadius: "10px",
                               padding: "0.75rem 1rem",
                             }}
                           >
                             <summary
                               style={{
                                 fontSize: "0.85rem",
-                                fontWeight: 600,
+                                fontWeight: 700,
                                 cursor: "pointer",
-                                color: "var(--text-secondary)",
+                                color: "#0f172a",
                               }}
                             >
                               View Configured Answer Key ({Object.keys(activeExam.answer_key || {}).length} Questions)
@@ -1853,7 +2550,7 @@ export default function App() {
                                 maxHeight: "160px",
                                 overflowY: "auto",
                                 marginTop: "0.75rem",
-                                borderTop: "1px solid var(--border)",
+                                borderTop: "1px solid #e2e8f0",
                                 paddingTop: "0.5rem",
                               }}
                             >
@@ -1871,14 +2568,13 @@ export default function App() {
                                       <tr
                                         key={q}
                                         style={{
-                                          borderBottom:
-                                            "1px solid rgba(255,255,255,0.02)",
+                                          borderBottom: "1px solid #f1f5f9",
                                         }}
                                       >
                                         <td
                                           style={{
-                                            padding: "0.25rem",
-                                            color: "var(--text-muted)",
+                                            padding: "0.3rem",
+                                            color: "#64748b",
                                             fontWeight: 600,
                                           }}
                                         >
@@ -1886,9 +2582,9 @@ export default function App() {
                                         </td>
                                         <td
                                           style={{
-                                            padding: "0.25rem",
+                                            padding: "0.3rem",
                                             fontWeight: 800,
-                                            color: "var(--primary)",
+                                            color: "#0062ff",
                                           }}
                                         >
                                           {ans}
@@ -1911,7 +2607,7 @@ export default function App() {
                         >
                           <div
                             style={{
-                              borderRight: "1px solid var(--border)",
+                              borderRight: "1px solid #e2e8f0",
                               paddingRight: "1.5rem",
                             }}
                           >
@@ -1932,7 +2628,14 @@ export default function App() {
 
                             <div
                               className="dropzone"
-                              style={{ padding: "2rem 1rem" }}
+                              style={{
+                                padding: "2rem 1rem",
+                                background: "#f8fafc",
+                                border: "2px dashed #cbd5e1",
+                                borderRadius: "12px",
+                                textAlign: "center",
+                                cursor: "pointer",
+                              }}
                               onClick={() => studentScanInputRef.current?.click()}
                               onDragOver={(e) => e.preventDefault()}
                               onDrop={(e) => {
@@ -1945,20 +2648,19 @@ export default function App() {
                             >
                               <FileUp
                                 size={36}
-                                className="text-secondary"
-                                style={{ marginBottom: "0.5rem" }}
+                                style={{ color: "#0062ff", marginBottom: "0.5rem" }}
                               />
-                              <h4 style={{ fontSize: "0.85rem" }}>
+                              <h4 style={{ fontSize: "0.9rem", fontWeight: 700, color: "#0f172a", margin: "0 0 0.2rem 0" }}>
                                 Upload Student OMR Sheets
                               </h4>
                               <p
                                 style={{
-                                  fontSize: "0.7rem",
-                                  color: "var(--text-muted)",
-                                  marginTop: "0.25rem",
+                                  fontSize: "0.75rem",
+                                  color: "#64748b",
+                                  margin: 0,
                                 }}
                               >
-                                (Select one or multiple images at once)
+                                Select one or multiple images at once (PNG, JPG)
                               </p>
                             </div>
 
@@ -1970,6 +2672,8 @@ export default function App() {
                                     justifyContent: "space-between",
                                     fontSize: "0.75rem",
                                     marginBottom: "0.25rem",
+                                    color: "#475569",
+                                    fontWeight: 600,
                                   }}
                                 >
                                   <span>Grading student sheets...</span>
@@ -1982,7 +2686,7 @@ export default function App() {
                                   style={{
                                     width: "100%",
                                     height: "6px",
-                                    background: "var(--bg-base)",
+                                    background: "#f1f5f9",
                                     borderRadius: "3px",
                                     overflow: "hidden",
                                   }}
@@ -1990,7 +2694,7 @@ export default function App() {
                                   <div
                                     style={{
                                       height: "100%",
-                                      background: "var(--primary)",
+                                      background: "#0062ff",
                                       width: `${(gradingProgress.current / gradingProgress.total) * 100}%`,
                                       transition: "width 0.2s",
                                     }}
@@ -2002,7 +2706,7 @@ export default function App() {
 
                           <div>
                             <h4
-                              style={{ marginBottom: "1rem", fontSize: "0.95rem" }}
+                              style={{ marginBottom: "0.75rem", fontSize: "0.92rem", fontWeight: 700, color: "#0f172a" }}
                             >
                               Configured Answer Key
                             </h4>
@@ -2010,8 +2714,9 @@ export default function App() {
                               style={{
                                 maxHeight: "180px",
                                 overflowY: "auto",
-                                border: "1px solid var(--border)",
-                                borderRadius: "var(--radius-sm)",
+                                border: "1px solid #e2e8f0",
+                                borderRadius: "8px",
+                                background: "#f8fafc",
                                 padding: "0.5rem",
                               }}
                             >
@@ -2029,14 +2734,13 @@ export default function App() {
                                       <tr
                                         key={q}
                                         style={{
-                                          borderBottom:
-                                            "1px solid rgba(255,255,255,0.02)",
+                                          borderBottom: "1px solid #e2e8f0",
                                         }}
                                       >
                                         <td
                                           style={{
-                                            padding: "0.25rem",
-                                            color: "var(--text-muted)",
+                                            padding: "0.3rem 0.5rem",
+                                            color: "#64748b",
                                             fontWeight: 600,
                                           }}
                                         >
@@ -2044,9 +2748,9 @@ export default function App() {
                                         </td>
                                         <td
                                           style={{
-                                            padding: "0.25rem",
+                                            padding: "0.3rem 0.5rem",
                                             fontWeight: 800,
-                                            color: "var(--primary)",
+                                            color: "#0062ff",
                                           }}
                                         >
                                           {ans}
@@ -2064,7 +2768,13 @@ export default function App() {
                     {latestGradeResult && (
                       <div
                         className="card"
-                        style={{ border: "1px solid var(--border)" }}
+                        style={{
+                          border: "1px solid #e2e8f0",
+                          borderRadius: "14px",
+                          background: "#ffffff",
+                          padding: "1.25rem",
+                          boxShadow: "0 2px 8px rgba(0, 0, 0, 0.02)",
+                        }}
                       >
                         <div
                           style={{
@@ -2077,13 +2787,13 @@ export default function App() {
                           }}
                         >
                           <div>
-                            <h4 style={{ marginBottom: "0.3rem" }}>
+                            <h4 style={{ margin: "0 0 0.3rem 0", fontSize: "1.05rem", fontWeight: 800, color: "#0f172a" }}>
                               Latest Grade Result
                             </h4>
                             <div
                               style={{
-                                fontSize: "0.82rem",
-                                color: "var(--text-muted)",
+                                fontSize: "0.85rem",
+                                color: "#64748b",
                                 display: "flex",
                                 alignItems: "center",
                                 gap: "0.4rem",
@@ -2092,9 +2802,8 @@ export default function App() {
                               <span>Student ID:</span>
                               <strong
                                 style={{
-                                  color: "var(--srcb-gold-light)",
-                                  fontWeight: 700,
-                                  letterSpacing: "0.03em",
+                                  color: "#0062ff",
+                                  fontWeight: 800,
                                 }}
                               >
                                 {latestGradeResult.student_id || "—"}
@@ -2110,23 +2819,37 @@ export default function App() {
                         <div className="grade-layout">
                           <div
                             className="image-preview-container"
-                            style={{ maxHeight: "400px" }}
+                            style={{
+                              maxHeight: "400px",
+                              borderRadius: "10px",
+                              overflow: "hidden",
+                              border: "1px solid #e2e8f0",
+                            }}
                           >
                             <img
                               src={`data:image/png;base64,${latestGradeResult.overlay_image}`}
                               alt="Graded OMR Sheet"
+                              style={{ width: "100%", height: "auto" }}
                             />
                           </div>
 
                           <div
                             className="bubble-sheet-card"
-                            style={{ maxHeight: "400px" }}
+                            style={{
+                              maxHeight: "400px",
+                              background: "#f8fafc",
+                              border: "1px solid #e2e8f0",
+                              borderRadius: "10px",
+                              padding: "1rem",
+                              overflowY: "auto",
+                            }}
                           >
                             <h4
                               style={{
-                                fontSize: "0.85rem",
-                                color: "var(--text-secondary)",
-                                marginBottom: "0.5rem",
+                                fontSize: "0.88rem",
+                                fontWeight: 700,
+                                color: "#0f172a",
+                                margin: "0 0 0.5rem 0",
                               }}
                             >
                               Answers Check
@@ -2152,12 +2875,11 @@ export default function App() {
                                     className="bubble-row"
                                     style={{ padding: "0.25rem 0.5rem" }}
                                   >
-                                    <span className="bubble-num">{qStr}.</span>
+                                    <span className="bubble-num" style={{ color: "#0f172a", fontWeight: 700 }}>{qStr}.</span>
                                     <div className="bubble-options">
                                       {["A", "B", "C", "D", "E"].map((opt) => {
                                         let btnClass = "";
                                         if (isAmbiguous) {
-                                          // Amber on the student's filled bubble
                                           if (selected === opt)
                                             btnClass = "ambiguous";
                                         } else if (isEmpty) {
@@ -2181,14 +2903,14 @@ export default function App() {
                                         style={{
                                           fontSize: "0.75rem",
                                           color: isAmbiguous
-                                            ? "var(--srcb-gold-light)"
+                                            ? "#b45309"
                                             : isEmpty
-                                              ? "var(--text-muted)"
+                                              ? "#94a3b8"
                                               : selected === correctAns
-                                                ? "var(--success)"
-                                                : "var(--error)",
+                                                ? "#059669"
+                                                : "#dc2626",
                                           marginLeft: "0.5rem",
-                                          fontWeight: 600,
+                                          fontWeight: 700,
                                         }}
                                       >
                                         {isEmpty
@@ -2212,16 +2934,30 @@ export default function App() {
                   <div
                     style={{
                       textAlign: "center",
-                      padding: "3rem",
-                      color: "var(--text-muted)",
+                      padding: "3rem 1.5rem",
+                      color: "#64748b",
                     }}
                   >
-                    No exam selected. Select an exam from the left or create
-                    one.
+                    <BookOpen size={40} style={{ color: "#94a3b8", marginBottom: "0.75rem" }} />
+                    <h3 style={{ fontSize: "1.1rem", fontWeight: 800, color: "#0f172a", marginBottom: "0.4rem" }}>
+                      No Examination Configured
+                    </h3>
+                    <p style={{ fontSize: "0.85rem", color: "#64748b", maxWidth: "420px", margin: "0 auto 1.25rem auto" }}>
+                      Create an examination with an answer key to start grading student answer sheets with Live Camera Scanner or File Upload.
+                    </p>
+                    <button
+                      type="button"
+                      className="btn btn-primary"
+                      onClick={() => setIsExamModalOpen(true)}
+                      style={{ fontWeight: 700 }}
+                    >
+                      <Plus size={16} /> Create Examination
+                    </button>
                   </div>
                 )}
               </div>
             </div>
+            )}
           </div>
         )}
 
@@ -2267,9 +3003,9 @@ export default function App() {
               className="card"
               style={{
                 marginBottom: "1.5rem",
-                background:
-                  "linear-gradient(180deg, rgba(15, 23, 42, 0.95) 0%, rgba(8, 17, 32, 0.95) 100%)",
-                border: "1px solid var(--srcb-gold-accent)",
+                background: "#ffffff",
+                border: "1px solid #e2e8f0",
+                boxShadow: "0 2px 8px rgba(0, 0, 0, 0.02)",
               }}
             >
               <div
@@ -2277,7 +3013,7 @@ export default function App() {
                   display: "flex",
                   justifyContent: "space-between",
                   alignItems: "center",
-                  marginBottom: "1rem",
+                  marginBottom: "1.25rem",
                   flexWrap: "wrap",
                   gap: "0.75rem",
                 }}
@@ -2287,27 +3023,42 @@ export default function App() {
                     style={{
                       display: "flex",
                       alignItems: "center",
-                      gap: "0.5rem",
+                      gap: "0.6rem",
                     }}
                   >
-                    <FileSpreadsheet
-                      size={20}
-                      color="var(--srcb-gold-accent)"
-                    />
-                    <h3
+                    <div
                       style={{
-                        fontSize: "1.15rem",
-                        fontWeight: 800,
-                        margin: 0,
+                        width: "36px",
+                        height: "36px",
+                        borderRadius: "10px",
+                        background: "#eff6ff",
+                        color: "#0062ff",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
                       }}
                     >
-                      Teacher Database Export System
-                    </h3>
+                      <FileSpreadsheet size={20} />
+                    </div>
+                    <div>
+                      <h3
+                        style={{
+                          fontSize: "1.15rem",
+                          fontWeight: 800,
+                          margin: 0,
+                          color: "#0f172a",
+                        }}
+                      >
+                        Teacher Database Export System
+                      </h3>
+                    </div>
                     <span
                       className="badge"
                       style={{
-                        background: "rgba(245, 158, 11, 0.2)",
-                        color: "var(--srcb-gold-light)",
+                        background: "#eff6ff",
+                        color: "#0062ff",
+                        border: "1px solid #bfdbfe",
+                        fontWeight: 700,
                       }}
                     >
                       3 Export Methods
@@ -2316,13 +3067,11 @@ export default function App() {
                   <p
                     style={{
                       fontSize: "0.82rem",
-                      color: "var(--text-secondary)",
-                      margin: "0.25rem 0 0 0",
+                      color: "#64748b",
+                      margin: "0.35rem 0 0 0",
                     }}
                   >
-                    Select an export option below to download formatted Excel
-                    (.xlsx) reports with organized columns and examination
-                    details.
+                    Download formatted institutional Excel (.xlsx) workbooks with student transcripts, item responses, and statistical summaries.
                   </p>
                 </div>
               </div>
@@ -2337,10 +3086,10 @@ export default function App() {
                 {/* Method 1: Single File Export */}
                 <div
                   style={{
-                    background: "rgba(30, 41, 59, 0.7)",
-                    borderRadius: "var(--radius-md)",
+                    background: "#f8fafc",
+                    borderRadius: "12px",
                     padding: "1.25rem",
-                    border: "1px solid var(--border)",
+                    border: "1px solid #e2e8f0",
                     display: "flex",
                     flexDirection: "column",
                     justifyContent: "space-between",
@@ -2358,11 +3107,13 @@ export default function App() {
                       <span
                         className="badge"
                         style={{
-                          background: "rgba(59, 130, 246, 0.15)",
-                          color: "#60a5fa",
+                          background: "#eff6ff",
+                          color: "#0062ff",
+                          border: "1px solid #bfdbfe",
                           display: "inline-flex",
                           alignItems: "center",
                           gap: "4px",
+                          fontWeight: 700,
                         }}
                       >
                         <FileText size={12} /> Method 1
@@ -2370,7 +3121,8 @@ export default function App() {
                       <span
                         style={{
                           fontSize: "0.75rem",
-                          color: "var(--text-muted)",
+                          color: "#64748b",
+                          fontWeight: 600,
                         }}
                       >
                         Individual File
@@ -2381,6 +3133,7 @@ export default function App() {
                         fontSize: "0.98rem",
                         fontWeight: 700,
                         marginBottom: "0.35rem",
+                        color: "#0f172a",
                       }}
                     >
                       Single File Export
@@ -2388,20 +3141,20 @@ export default function App() {
                     <p
                       style={{
                         fontSize: "0.8rem",
-                        color: "var(--text-secondary)",
+                        color: "#64748b",
                         marginBottom: "1rem",
                         lineHeight: 1.4,
                       }}
                     >
-                      Export an individual scanned submission directly with
-                      score, CHED transmuted grade, and bubble breakdown.
+                      Export an individual scanned submission directly with score, CHED transmuted grade, and bubble breakdown.
                     </p>
 
                     <div style={{ marginBottom: "1rem" }}>
                       <label
                         style={{
                           fontSize: "0.75rem",
-                          color: "var(--text-muted)",
+                          color: "#475569",
+                          fontWeight: 600,
                           display: "block",
                           marginBottom: "4px",
                         }}
@@ -2410,7 +3163,14 @@ export default function App() {
                       </label>
                       <select
                         className="form-input"
-                        style={{ fontSize: "0.8rem", padding: "0.4rem 0.6rem" }}
+                        style={{
+                          fontSize: "0.8rem",
+                          padding: "0.45rem 0.6rem",
+                          background: "#ffffff",
+                          border: "1px solid #cbd5e1",
+                          borderRadius: "8px",
+                          color: "#0f172a",
+                        }}
                         value={
                           exportSingleSubmissionId ||
                           (submissions.length > 0 ? submissions[0].id : "")
@@ -2456,6 +3216,12 @@ export default function App() {
                         width: "100%",
                         justifyContent: "center",
                         fontSize: "0.82rem",
+                        fontWeight: 700,
+                        background: "#ffffff",
+                        border: "1px solid #cbd5e1",
+                        color: "#0f172a",
+                        borderRadius: "8px",
+                        padding: "0.55rem",
                       }}
                       onClick={() => {
                         const targetId =
@@ -2475,12 +3241,12 @@ export default function App() {
                     <div
                       style={{
                         fontSize: "0.72rem",
-                        color: "var(--text-muted)",
+                        color: "#64748b",
                         marginTop: "6px",
                         textAlign: "center",
                       }}
                     >
-                      💡 Available on any submission inspect page
+                      Available on any submission inspect page
                     </div>
                   </div>
                 </div>
@@ -2488,10 +3254,10 @@ export default function App() {
                 {/* Method 2: Exam-Based Batch Export */}
                 <div
                   style={{
-                    background: "rgba(30, 41, 59, 0.7)",
-                    borderRadius: "var(--radius-md)",
+                    background: "#f8fafc",
+                    borderRadius: "12px",
                     padding: "1.25rem",
-                    border: "1px solid var(--border)",
+                    border: "1px solid #e2e8f0",
                     display: "flex",
                     flexDirection: "column",
                     justifyContent: "space-between",
@@ -2509,11 +3275,13 @@ export default function App() {
                       <span
                         className="badge"
                         style={{
-                          background: "rgba(16, 185, 129, 0.15)",
-                          color: "#34d399",
+                          background: "#ecfdf5",
+                          color: "#059669",
+                          border: "1px solid #a7f3d0",
                           display: "inline-flex",
                           alignItems: "center",
                           gap: "4px",
+                          fontWeight: 700,
                         }}
                       >
                         <Layers size={12} /> Method 2
@@ -2521,7 +3289,8 @@ export default function App() {
                       <span
                         style={{
                           fontSize: "0.75rem",
-                          color: "var(--text-muted)",
+                          color: "#64748b",
+                          fontWeight: 600,
                         }}
                       >
                         Exam Title & Type
@@ -2532,6 +3301,7 @@ export default function App() {
                         fontSize: "0.98rem",
                         fontWeight: 700,
                         marginBottom: "0.35rem",
+                        color: "#0f172a",
                       }}
                     >
                       Exam-Based Batch Export
@@ -2539,13 +3309,12 @@ export default function App() {
                     <p
                       style={{
                         fontSize: "0.8rem",
-                        color: "var(--text-secondary)",
+                        color: "#64748b",
                         marginBottom: "1rem",
                         lineHeight: 1.4,
                       }}
                     >
-                      Compiles all student submissions belonging to the same
-                      examination (Title & Type) into a single report.
+                      Compiles all student submissions belonging to the same examination (Title & Type) into a single report.
                     </p>
 
                     <div
@@ -2559,7 +3328,8 @@ export default function App() {
                         <label
                           style={{
                             fontSize: "0.75rem",
-                            color: "var(--text-muted)",
+                            color: "#475569",
+                            fontWeight: 600,
                             display: "block",
                             marginBottom: "4px",
                           }}
@@ -2570,7 +3340,11 @@ export default function App() {
                           className="form-input"
                           style={{
                             fontSize: "0.8rem",
-                            padding: "0.4rem 0.6rem",
+                            padding: "0.45rem 0.6rem",
+                            background: "#ffffff",
+                            border: "1px solid #cbd5e1",
+                            borderRadius: "8px",
+                            color: "#0f172a",
                           }}
                           value={
                             exportBatchExamId ||
@@ -2595,7 +3369,8 @@ export default function App() {
                         <label
                           style={{
                             fontSize: "0.75rem",
-                            color: "var(--text-muted)",
+                            color: "#475569",
+                            fontWeight: 600,
                             display: "block",
                             marginBottom: "4px",
                           }}
@@ -2606,7 +3381,11 @@ export default function App() {
                           className="form-input"
                           style={{
                             fontSize: "0.8rem",
-                            padding: "0.4rem 0.6rem",
+                            padding: "0.45rem 0.6rem",
+                            background: "#ffffff",
+                            border: "1px solid #cbd5e1",
+                            borderRadius: "8px",
+                            color: "#0f172a",
                           }}
                           value={exportExamType}
                           onChange={(e) => setExportExamType(e.target.value)}
@@ -2637,6 +3416,9 @@ export default function App() {
                         width: "100%",
                         justifyContent: "center",
                         fontSize: "0.82rem",
+                        fontWeight: 700,
+                        borderRadius: "8px",
+                        padding: "0.55rem",
                       }}
                       onClick={handleExportExamBatch}
                     >
@@ -2645,12 +3427,12 @@ export default function App() {
                     <div
                       style={{
                         fontSize: "0.72rem",
-                        color: "var(--text-muted)",
+                        color: "#64748b",
                         marginTop: "6px",
                         textAlign: "center",
                       }}
                     >
-                      📊 Multi-sheet: Batch Roster, Answer Matrix & OBE Analysis
+                      Multi-sheet: Batch Roster, Answer Matrix & OBE Analysis
                     </div>
                   </div>
                 </div>
@@ -2658,10 +3440,10 @@ export default function App() {
                 {/* Method 3: Complete Database Export */}
                 <div
                   style={{
-                    background: "rgba(30, 41, 59, 0.7)",
-                    borderRadius: "var(--radius-md)",
+                    background: "#f8fafc",
+                    borderRadius: "12px",
                     padding: "1.25rem",
-                    border: "1px solid var(--srcb-gold-accent)",
+                    border: "1px solid #e2e8f0",
                     display: "flex",
                     flexDirection: "column",
                     justifyContent: "space-between",
@@ -2679,11 +3461,13 @@ export default function App() {
                       <span
                         className="badge"
                         style={{
-                          background: "rgba(245, 158, 11, 0.2)",
-                          color: "var(--srcb-gold-light)",
+                          background: "#eff6ff",
+                          color: "#0062ff",
+                          border: "1px solid #bfdbfe",
                           display: "inline-flex",
                           alignItems: "center",
                           gap: "4px",
+                          fontWeight: 700,
                         }}
                       >
                         <Database size={12} /> Method 3
@@ -2691,7 +3475,8 @@ export default function App() {
                       <span
                         style={{
                           fontSize: "0.75rem",
-                          color: "var(--text-muted)",
+                          color: "#64748b",
+                          fontWeight: 600,
                         }}
                       >
                         All Examinations
@@ -2702,6 +3487,7 @@ export default function App() {
                         fontSize: "0.98rem",
                         fontWeight: 700,
                         marginBottom: "0.35rem",
+                        color: "#0f172a",
                       }}
                     >
                       Complete Database Export
@@ -2709,14 +3495,12 @@ export default function App() {
                     <p
                       style={{
                         fontSize: "0.8rem",
-                        color: "var(--text-secondary)",
+                        color: "#64748b",
                         marginBottom: "0.75rem",
                         lineHeight: 1.4,
                       }}
                     >
-                      Exports filtered or grouped master database reports with
-                      full institutional headers and complete examination
-                      details.
+                      Exports filtered or grouped master database reports with full institutional headers and complete examination details.
                     </p>
 
                     <div
@@ -2724,17 +3508,18 @@ export default function App() {
                         display: "grid",
                         gap: "0.5rem",
                         marginBottom: "1rem",
-                        background: "rgba(8, 17, 32, 0.8)",
+                        background: "#ffffff",
                         padding: "0.75rem",
-                        borderRadius: "var(--radius-sm)",
-                        border: "1px solid var(--border)",
+                        borderRadius: "8px",
+                        border: "1px solid #e2e8f0",
                       }}
                     >
                       <div>
                         <label
                           style={{
                             fontSize: "0.72rem",
-                            color: "var(--text-muted)",
+                            color: "#475569",
+                            fontWeight: 600,
                             display: "block",
                             marginBottom: "2px",
                           }}
@@ -2745,7 +3530,11 @@ export default function App() {
                           className="form-input"
                           style={{
                             fontSize: "0.78rem",
-                            padding: "0.3rem 0.5rem",
+                            padding: "0.35rem 0.5rem",
+                            background: "#f8fafc",
+                            border: "1px solid #cbd5e1",
+                            borderRadius: "6px",
+                            color: "#0f172a",
                           }}
                           value={exportDbExamTypeFilter}
                           onChange={(e) =>
@@ -2764,7 +3553,8 @@ export default function App() {
                         <label
                           style={{
                             fontSize: "0.72rem",
-                            color: "var(--text-muted)",
+                            color: "#475569",
+                            fontWeight: 600,
                             display: "block",
                             marginBottom: "2px",
                           }}
@@ -2775,7 +3565,11 @@ export default function App() {
                           className="form-input"
                           style={{
                             fontSize: "0.78rem",
-                            padding: "0.3rem 0.5rem",
+                            padding: "0.35rem 0.5rem",
+                            background: "#f8fafc",
+                            border: "1px solid #cbd5e1",
+                            borderRadius: "6px",
+                            color: "#0f172a",
                           }}
                           value={exportDbSemesterFilter}
                           onChange={(e) =>
@@ -2793,7 +3587,8 @@ export default function App() {
                         <label
                           style={{
                             fontSize: "0.72rem",
-                            color: "var(--text-muted)",
+                            color: "#475569",
+                            fontWeight: 600,
                             display: "block",
                             marginBottom: "2px",
                           }}
@@ -2804,7 +3599,11 @@ export default function App() {
                           className="form-input"
                           style={{
                             fontSize: "0.78rem",
-                            padding: "0.3rem 0.5rem",
+                            padding: "0.35rem 0.5rem",
+                            background: "#f8fafc",
+                            border: "1px solid #cbd5e1",
+                            borderRadius: "6px",
+                            color: "#0f172a",
                           }}
                           value={exportDbGroupBy}
                           onChange={(e) =>
@@ -2824,14 +3623,14 @@ export default function App() {
 
                   <div>
                     <button
-                      className="btn"
+                      className="btn btn-primary"
                       style={{
                         width: "100%",
                         justifyContent: "center",
                         fontSize: "0.82rem",
-                        background: "var(--srcb-gold-accent)",
-                        color: "#000",
                         fontWeight: 700,
+                        borderRadius: "8px",
+                        padding: "0.55rem",
                       }}
                       onClick={handleExportCompleteDatabase}
                     >
@@ -2840,13 +3639,12 @@ export default function App() {
                     <div
                       style={{
                         fontSize: "0.72rem",
-                        color: "var(--text-muted)",
+                        color: "#64748b",
                         marginTop: "6px",
                         textAlign: "center",
                       }}
                     >
-                      🗄️ Filtered Workbook: Full Metadata, Metrics & Grouped
-                      Sheets
+                      Filtered Workbook: Full Metadata, Metrics & Grouped Sheets
                     </div>
                   </div>
                 </div>
@@ -2862,17 +3660,18 @@ export default function App() {
                     size={16}
                     style={{
                       position: "absolute",
-                      left: "0.75rem",
+                      left: "0.85rem",
                       top: "50%",
                       transform: "translateY(-50%)",
-                      color: "var(--text-muted)",
+                      color: "#94a3b8",
+                      pointerEvents: "none",
                     }}
                   />
                   <input
                     type="text"
                     className="form-input"
                     placeholder="Search by Student ID, Student Name, or Exam..."
-                    style={{ paddingLeft: "2.25rem" }}
+                    style={{ paddingLeft: "2.4rem", height: "40px", fontSize: "0.85rem" }}
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                   />
@@ -2900,29 +3699,60 @@ export default function App() {
 
         {/* OBE ITEM ANALYSIS TAB */}
         {activeTab === "item-analysis" && (
-          <div>
+          <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
             <div
               className="header-container"
               style={{
-                marginBottom: "1.5rem",
                 display: "flex",
                 justifyContent: "space-between",
                 alignItems: "center",
+                flexWrap: "wrap",
+                gap: "1rem",
               }}
             >
               <div>
-                <h2 style={{ fontSize: "1.4rem", fontWeight: 800, margin: 0 }}>
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "0.5rem",
+                    marginBottom: "0.25rem",
+                  }}
+                >
+                  <span
+                    style={{
+                      background: "#eff6ff",
+                      color: "#0062ff",
+                      border: "1px solid #bfdbfe",
+                      padding: "0.2rem 0.6rem",
+                      borderRadius: "6px",
+                      fontSize: "0.72rem",
+                      fontWeight: 800,
+                      textTransform: "uppercase",
+                      letterSpacing: "0.04em",
+                    }}
+                  >
+                    Outcome-Based Education Psychometrics
+                  </span>
+                </div>
+                <h2
+                  style={{
+                    fontSize: "1.4rem",
+                    fontWeight: 800,
+                    margin: 0,
+                    color: "#0f172a",
+                  }}
+                >
                   Outcome-Based Education (OBE) Item Analysis
                 </h2>
                 <p
                   style={{
                     fontSize: "0.85rem",
-                    color: "var(--text-secondary)",
+                    color: "#64748b",
                     margin: "0.2rem 0 0 0",
                   }}
                 >
-                  Evaluate test validity, question difficulty index (P), and
-                  discrimination power (D).
+                  Evaluate test validity, question difficulty index (P), and discrimination power (D) in accordance with CHED & PACUCOA accreditation standards.
                 </p>
               </div>
 
@@ -2930,52 +3760,200 @@ export default function App() {
                 <button
                   className="btn btn-primary"
                   onClick={handleExportItemAnalysis}
+                  style={{
+                    fontWeight: 700,
+                    borderRadius: "8px",
+                    fontSize: "0.82rem",
+                  }}
                 >
-                  <Download size={16} /> Export Item Analysis (.xlsx)
+                  <Download size={15} /> Export Item Analysis (.xlsx)
                 </button>
               </div>
             </div>
 
-            <div className="card" style={{ marginBottom: "1.5rem" }}>
+            {/* Exam Selector Card */}
+            <div
+              className="card"
+              style={{
+                background: "#ffffff",
+                border: "1px solid #e2e8f0",
+                borderRadius: "16px",
+                padding: "1.25rem 1.5rem",
+                boxShadow: "0 2px 8px rgba(0, 0, 0, 0.02)",
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                flexWrap: "wrap",
+                gap: "1rem",
+              }}
+            >
               <div
-                style={{ display: "flex", gap: "1rem", alignItems: "center" }}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "1rem",
+                  flex: "1 1 320px",
+                }}
               >
-                <label style={{ fontWeight: 600, fontSize: "0.9rem" }}>
-                  Select Exam to Analyze:
-                </label>
-                <select
-                  className="form-input"
-                  style={{ width: "auto", minWidth: "250px" }}
-                  value={selectedExamId}
-                  onChange={(e) => setSelectedExamId(e.target.value)}
+                <div
+                  style={{
+                    width: "42px",
+                    height: "42px",
+                    borderRadius: "10px",
+                    background: "#eff6ff",
+                    color: "#0062ff",
+                    border: "1px solid #bfdbfe",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    flexShrink: 0,
+                  }}
                 >
-                  {exams.map((exam) => (
-                    <option key={exam.id} value={exam.id}>
-                      {exam.name}
-                    </option>
-                  ))}
-                </select>
+                  <BookOpen size={20} />
+                </div>
+                <div style={{ flex: 1 }}>
+                  <label
+                    style={{
+                      fontWeight: 700,
+                      fontSize: "0.82rem",
+                      color: "#475569",
+                      display: "block",
+                      marginBottom: "4px",
+                    }}
+                  >
+                    Select Examination to Evaluate:
+                  </label>
+                  <select
+                    className="form-input"
+                    style={{
+                      width: "100%",
+                      maxWidth: "420px",
+                      height: "38px",
+                      fontSize: "0.85rem",
+                      background: "#f8fafc",
+                      border: "1px solid #cbd5e1",
+                      borderRadius: "8px",
+                      color: "#0f172a",
+                      fontWeight: 600,
+                    }}
+                    value={selectedExamId}
+                    onChange={(e) => setSelectedExamId(e.target.value)}
+                  >
+                    {exams.map((exam) => (
+                      <option key={exam.id} value={exam.id}>
+                        {exam.name} {exam.course_code ? `[${exam.course_code}]` : ""} {exam.section ? `• Sec ${exam.section}` : ""}
+                      </option>
+                    ))}
+                  </select>
+                </div>
               </div>
+
+              {activeExam && (
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "0.6rem",
+                    flexWrap: "wrap",
+                  }}
+                >
+                  {activeExam.course_code && (
+                    <span
+                      style={{
+                        background: "#eff6ff",
+                        color: "#0062ff",
+                        border: "1px solid #bfdbfe",
+                        padding: "0.3rem 0.6rem",
+                        borderRadius: "6px",
+                        fontSize: "0.75rem",
+                        fontWeight: 800,
+                      }}
+                    >
+                      {activeExam.course_code}
+                    </span>
+                  )}
+                  {activeExam.section && (
+                    <span
+                      style={{
+                        background: "#ecfdf5",
+                        color: "#059669",
+                        border: "1px solid #a7f3d0",
+                        padding: "0.3rem 0.6rem",
+                        borderRadius: "6px",
+                        fontSize: "0.75rem",
+                        fontWeight: 700,
+                      }}
+                    >
+                      Sec: {activeExam.section}
+                    </span>
+                  )}
+                  <span
+                    style={{
+                      background: "#f8fafc",
+                      color: "#475569",
+                      border: "1px solid #e2e8f0",
+                      padding: "0.3rem 0.6rem",
+                      borderRadius: "6px",
+                      fontSize: "0.75rem",
+                      fontWeight: 600,
+                    }}
+                  >
+                    {Object.keys(activeExam.answer_key || {}).length} Items
+                  </span>
+                  <span
+                    style={{
+                      background: "#f8fafc",
+                      color: "#0062ff",
+                      border: "1px solid #bfdbfe",
+                      padding: "0.3rem 0.6rem",
+                      borderRadius: "6px",
+                      fontSize: "0.75rem",
+                      fontWeight: 700,
+                    }}
+                  >
+                    {submissions.filter((s) => s.exam_id === activeExam.id).length} Scanned
+                  </span>
+                </div>
+              )}
             </div>
 
-            <div className="card">
+            {/* Item Analysis Results Card */}
+            <div
+              className="card"
+              style={{
+                background: "#ffffff",
+                border: "1px solid #e2e8f0",
+                borderRadius: "16px",
+                padding: "1.5rem",
+                boxShadow: "0 2px 8px rgba(0, 0, 0, 0.02)",
+              }}
+            >
               {activeExam ? (
                 <>
                   {submissions.filter((s) => s.exam_id === activeExam.id)
                     .length === 0 && (
                     <div
-                      className="alert-banner warning"
-                      style={{ marginBottom: "1.25rem" }}
+                      style={{
+                        marginBottom: "1.25rem",
+                        padding: "0.85rem 1.1rem",
+                        background: "#fffbeb",
+                        border: "1px solid #fde68a",
+                        borderRadius: "10px",
+                        color: "#92400e",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "0.6rem",
+                        fontSize: "0.82rem",
+                      }}
                     >
                       <AlertTriangle
-                        size={16}
-                        style={{ flexShrink: 0, marginTop: "2px" }}
+                        size={18}
+                        style={{ flexShrink: 0, color: "#d97706" }}
                       />
                       <span>
                         <strong>No real submissions found</strong> for this exam
-                        — the table below uses <strong>sample demo data</strong>{" "}
-                        for illustration purposes. Grade actual student OMR
-                        sheets first to generate a real Item Analysis report.
+                        — the table below displays <strong>sample demo psychometrics</strong>{" "}
+                        for illustration purposes. Grade student OMR sheets under <strong>Exams & Grading</strong> to generate live data.
                       </span>
                     </div>
                   )}
@@ -2991,8 +3969,8 @@ export default function App() {
                 <div
                   style={{
                     textAlign: "center",
-                    padding: "2rem",
-                    color: "var(--text-muted)",
+                    padding: "3rem",
+                    color: "#64748b",
                   }}
                 >
                   Please select an exam above to view Item Analysis metrics.

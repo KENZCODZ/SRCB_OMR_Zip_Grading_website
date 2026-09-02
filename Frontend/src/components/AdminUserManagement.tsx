@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+﻿import React, { useState, useEffect } from "react";
 import {
   UserPlus,
   ShieldCheck,
@@ -218,7 +218,7 @@ export default function AdminUserManagement({
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
-      {/* ── MAIN CONTENT CONTAINER (VIEW MODE SENSITIVE) ── */}
+      {/* â”€â”€ MAIN CONTENT CONTAINER (VIEW MODE SENSITIVE) â”€â”€ */}
       <div
         style={{
           display: "grid",
@@ -234,27 +234,37 @@ export default function AdminUserManagement({
       >
         {/* ACCOUNT CREATOR FORM */}
         {(viewMode === "all" || viewMode === "create") && (
-        <div className="card" style={{ padding: "1.5rem" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: "0.6rem", marginBottom: "1rem" }}>
+        <div
+          className="card"
+          style={{
+            padding: "1.5rem",
+            background: "#ffffff",
+            border: "1px solid #e2e8f0",
+            borderRadius: "14px",
+            boxShadow: "0 2px 6px rgba(0, 0, 0, 0.02)",
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: "0.6rem", marginBottom: "1.25rem" }}>
             <div
               style={{
-                width: "36px",
-                height: "36px",
-                borderRadius: "8px",
-                background: "linear-gradient(135deg, #a855f7, #6366f1)",
+                width: "38px",
+                height: "38px",
+                borderRadius: "10px",
+                background: "#eff6ff",
+                border: "1px solid #bfdbfe",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
-                color: "#ffffff",
+                color: "#0062ff",
               }}
             >
               <UserPlus size={20} />
             </div>
             <div>
-              <h3 style={{ margin: 0, fontSize: "1.15rem", fontWeight: 700 }}>
+              <h3 style={{ margin: 0, fontSize: "1.15rem", fontWeight: 800, color: "#0f172a" }}>
                 Create Institutional Account
               </h3>
-              <p style={{ margin: 0, fontSize: "0.8rem", color: "var(--text-secondary)" }}>
+              <p style={{ margin: 0, fontSize: "0.8rem", color: "#64748b" }}>
                 Directly provision active faculty and student login credentials
               </p>
             </div>
@@ -267,10 +277,10 @@ export default function AdminUserManagement({
               gridTemplateColumns: "1fr 1fr",
               gap: "0.5rem",
               marginBottom: "1.25rem",
-              background: "rgba(15, 23, 42, 0.6)",
+              background: "#f8fafc",
               padding: "4px",
               borderRadius: "10px",
-              border: "1px solid rgba(255, 255, 255, 0.08)",
+              border: "1px solid #e2e8f0",
             }}
           >
             <button
@@ -288,9 +298,9 @@ export default function AdminUserManagement({
                 fontSize: "0.85rem",
                 cursor: "pointer",
                 transition: "all 0.2s ease",
-                background: targetRole === "teacher" ? "var(--primary)" : "transparent",
-                color: targetRole === "teacher" ? "#ffffff" : "var(--text-secondary)",
-                boxShadow: targetRole === "teacher" ? "0 2px 8px rgba(37, 99, 235, 0.4)" : "none",
+                background: targetRole === "teacher" ? "#0062ff" : "transparent",
+                color: targetRole === "teacher" ? "#ffffff" : "#64748b",
+                boxShadow: targetRole === "teacher" ? "0 2px 6px rgba(0, 98, 255, 0.25)" : "none",
               }}
             >
               <ShieldCheck size={16} /> Teacher / Faculty
@@ -311,9 +321,9 @@ export default function AdminUserManagement({
                 fontSize: "0.85rem",
                 cursor: "pointer",
                 transition: "all 0.2s ease",
-                background: targetRole === "student" ? "var(--srcb-gold-accent)" : "transparent",
-                color: targetRole === "student" ? "#000000" : "var(--text-secondary)",
-                boxShadow: targetRole === "student" ? "0 2px 8px rgba(245, 158, 11, 0.4)" : "none",
+                background: targetRole === "student" ? "#0062ff" : "transparent",
+                color: targetRole === "student" ? "#ffffff" : "#64748b",
+                boxShadow: targetRole === "student" ? "0 2px 6px rgba(0, 98, 255, 0.25)" : "none",
               }}
             >
               <GraduationCap size={16} /> Student
@@ -321,182 +331,107 @@ export default function AdminUserManagement({
           </div>
 
           <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
-            {/* NAME PARTS SECTION */}
+            {/* Split Name Fields */}
             <div>
-              <label style={{ display: "block", fontSize: "0.82rem", fontWeight: 600, marginBottom: "0.45rem", color: "var(--text-secondary)" }}>
-                Name Information <span style={{ color: "var(--danger)" }}>*</span>
+              <label style={{ display: "block", fontSize: "0.82rem", fontWeight: 700, marginBottom: "0.35rem", color: "#475569" }}>
+                Full Legal Name <span style={{ color: "#ef4444" }}>*</span>
               </label>
 
-              {/* Row 1: Honorific (if Teacher), First Name, Middle Name/Initial */}
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: targetRole === "teacher" ? "100px 1fr 1fr" : "1fr 1fr",
-                  gap: "0.5rem",
-                  marginBottom: "0.5rem",
-                }}
-              >
+              <div style={{ display: "grid", gridTemplateColumns: targetRole === "teacher" ? "80px 1fr 1fr 1fr 70px" : "1fr 1fr 1fr 70px", gap: "0.4rem" }}>
                 {targetRole === "teacher" && (
-                  <div>
-                    <label style={{ display: "block", fontSize: "0.72rem", color: "var(--text-muted)", marginBottom: "0.2rem" }}>
-                      Title
-                    </label>
-                    <select
-                      className="input"
-                      style={{ width: "100%", padding: "0.55rem 0.5rem", fontSize: "0.82rem" }}
-                      value={honorific}
-                      onChange={(e) => setHonorific(e.target.value)}
-                    >
-                      <option value="Prof.">Prof.</option>
-                      <option value="Dr.">Dr.</option>
-                      <option value="Engr.">Engr.</option>
-                      <option value="Mr.">Mr.</option>
-                      <option value="Ms.">Ms.</option>
-                      <option value="None">None</option>
-                    </select>
-                  </div>
-                )}
-
-                <div>
-                  <label style={{ display: "block", fontSize: "0.72rem", color: "var(--text-muted)", marginBottom: "0.2rem" }}>
-                    First Name <span style={{ color: "var(--danger)" }}>*</span>
-                  </label>
-                  <input
-                    type="text"
-                    className="input"
-                    style={{ width: "100%", fontSize: "0.85rem" }}
-                    placeholder="e.g. Juan"
-                    value={firstName}
-                    onChange={(e) => setFirstName(e.target.value)}
-                    required
-                  />
-                </div>
-
-                <div>
-                  <label style={{ display: "block", fontSize: "0.72rem", color: "var(--text-muted)", marginBottom: "0.2rem" }}>
-                    Middle Initial / Name
-                  </label>
-                  <input
-                    type="text"
-                    className="input"
-                    style={{ width: "100%", fontSize: "0.85rem" }}
-                    placeholder="e.g. M."
-                    value={middleName}
-                    onChange={(e) => setMiddleName(e.target.value)}
-                  />
-                </div>
-              </div>
-
-              {/* Row 2: Last Name and Suffix */}
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "1fr 110px",
-                  gap: "0.5rem",
-                }}
-              >
-                <div>
-                  <label style={{ display: "block", fontSize: "0.72rem", color: "var(--text-muted)", marginBottom: "0.2rem" }}>
-                    Last Name <span style={{ color: "var(--danger)" }}>*</span>
-                  </label>
-                  <input
-                    type="text"
-                    className="input"
-                    style={{ width: "100%", fontSize: "0.85rem" }}
-                    placeholder="e.g. Dela Cruz"
-                    value={lastName}
-                    onChange={(e) => setLastName(e.target.value)}
-                    required
-                  />
-                </div>
-
-                <div>
-                  <label style={{ display: "block", fontSize: "0.72rem", color: "var(--text-muted)", marginBottom: "0.2rem" }}>
-                    Suffix
-                  </label>
                   <select
                     className="input"
-                    style={{ width: "100%", padding: "0.55rem 0.5rem", fontSize: "0.82rem" }}
-                    value={suffix}
-                    onChange={(e) => setSuffix(e.target.value)}
+                    value={honorific}
+                    onChange={(e) => setHonorific(e.target.value)}
+                    style={{ fontSize: "0.8rem", padding: "0.4rem 0.2rem" }}
                   >
-                    <option value="">None</option>
-                    <option value="Jr.">Jr.</option>
-                    <option value="Sr.">Sr.</option>
-                    <option value="II">II</option>
-                    <option value="III">III</option>
-                    <option value="IV">IV</option>
+                    <option value="Prof.">Prof.</option>
+                    <option value="Dr.">Dr.</option>
+                    <option value="Engr.">Engr.</option>
+                    <option value="Mr.">Mr.</option>
+                    <option value="Ms.">Ms.</option>
+                    <option value="Mrs.">Mrs.</option>
+                    <option value="None">None</option>
                   </select>
-                </div>
+                )}
+
+                <input
+                  type="text"
+                  className="input"
+                  placeholder="First Name *"
+                  value={firstName}
+                  onChange={(e) => setFirstName(e.target.value)}
+                  required
+                />
+
+                <input
+                  type="text"
+                  className="input"
+                  placeholder="Middle (Opt)"
+                  value={middleName}
+                  onChange={(e) => setMiddleName(e.target.value)}
+                />
+
+                <input
+                  type="text"
+                  className="input"
+                  placeholder="Last Name *"
+                  value={lastName}
+                  onChange={(e) => setLastName(e.target.value)}
+                  required
+                />
+
+                <select
+                  className="input"
+                  value={suffix}
+                  onChange={(e) => setSuffix(e.target.value)}
+                  style={{ fontSize: "0.8rem", padding: "0.4rem 0.2rem" }}
+                >
+                  <option value="">Suffix</option>
+                  <option value="Jr.">Jr.</option>
+                  <option value="Sr.">Sr.</option>
+                  <option value="II">II</option>
+                  <option value="III">III</option>
+                  <option value="IV">IV</option>
+                  <option value="None">None</option>
+                </select>
               </div>
 
-              {/* Live Formatted Name Preview */}
               {(firstName.trim() || lastName.trim()) && (
-                <div
-                  style={{
-                    marginTop: "0.45rem",
-                    padding: "0.35rem 0.65rem",
-                    borderRadius: "6px",
-                    background: "rgba(37, 99, 235, 0.1)",
-                    border: "1px solid rgba(37, 99, 235, 0.25)",
-                    fontSize: "0.76rem",
-                    color: "#93c5fd",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "0.35rem",
-                  }}
-                >
-                  <span style={{ color: "var(--text-muted)" }}>Full Name:</span>
-                  <strong>{getFullName()}</strong>
+                <div style={{ fontSize: "0.75rem", color: "#64748b", marginTop: "0.3rem" }}>
+                  Display Name: <strong style={{ color: "#0062ff" }}>{getFullName()}</strong>
                 </div>
               )}
             </div>
 
-            {/* ID NUMBER WITH LOCKED 'C' PREFIX */}
+            {/* Student ID or Employee ID */}
             <div>
-              <label style={{ display: "block", fontSize: "0.82rem", fontWeight: 600, marginBottom: "0.35rem", color: "var(--text-secondary)" }}>
-                {targetRole === "student" ? "Student ID Number" : "Faculty / Employee ID"}{" "}
-                {targetRole === "student" && <span style={{ color: "var(--danger)" }}>*</span>}
+              <label style={{ display: "block", fontSize: "0.82rem", fontWeight: 700, marginBottom: "0.35rem", color: "#475569" }}>
+                {targetRole === "student" ? "Institutional Student ID Number" : "Employee ID Number"} {targetRole === "student" && <span style={{ color: "#ef4444" }}>*</span>}
               </label>
 
-              <div style={{ display: "flex", alignItems: "stretch" }}>
-                {/* Locked C Badge Prefix */}
-                <div
+              <div style={{ display: "flex", alignItems: "center", gap: "0.4rem" }}>
+                <span
                   style={{
-                    display: "inline-flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    padding: "0 0.9rem",
-                    background: targetRole === "student" ? "rgba(245, 158, 11, 0.18)" : "rgba(37, 99, 235, 0.18)",
-                    border: `1px solid ${targetRole === "student" ? "rgba(245, 158, 11, 0.4)" : "rgba(37, 99, 235, 0.4)"}`,
-                    borderRight: "none",
-                    borderRadius: "var(--radius-md) 0 0 var(--radius-md)",
-                    color: targetRole === "student" ? "var(--srcb-gold-accent)" : "#93c5fd",
+                    background: "#eff6ff",
+                    border: "1px solid #bfdbfe",
+                    color: "#0062ff",
                     fontWeight: 800,
-                    fontSize: "0.95rem",
-                    letterSpacing: "0.05em",
-                    userSelect: "none",
+                    padding: "0.55rem 0.8rem",
+                    borderRadius: "8px",
+                    fontSize: "0.85rem",
                   }}
-                  title="Institutional ID prefix (C)"
                 >
                   C
-                </div>
-
-                <div style={{ position: "relative", flex: 1 }}>
+                </span>
+                <div style={{ flex: 1 }}>
                   <input
                     type="text"
                     className="input"
-                    style={{
-                      width: "100%",
-                      borderRadius: "0 var(--radius-md) var(--radius-md) 0",
-                      fontSize: "0.85rem",
-                    }}
-                    placeholder={targetRole === "student" ? "2024-00142" : "2024-001"}
+                    placeholder={targetRole === "student" ? "e.g. 2024-00123" : "e.g. 10045 (optional)"}
                     value={idSuffix}
                     onChange={(e) => {
-                      const val = e.target.value;
-                      // If user pastes/types starting with C, keep clean rest
-                      const cleaned = val.replace(/^C[-_]?/i, "");
+                      const cleaned = e.target.value.replace(/^C[-_]?/i, "");
                       setIdSuffix(cleaned);
                     }}
                     required={targetRole === "student"}
@@ -505,16 +440,16 @@ export default function AdminUserManagement({
               </div>
 
               {idSuffix.trim() && (
-                <div style={{ fontSize: "0.72rem", color: "var(--text-muted)", marginTop: "0.25rem" }}>
-                  Assigned Institutional ID: <strong style={{ color: "var(--srcb-gold-accent)" }}>{getFormattedId()}</strong>
+                <div style={{ fontSize: "0.72rem", color: "#64748b", marginTop: "0.25rem" }}>
+                  Assigned Institutional ID: <strong style={{ color: "#0062ff" }}>{getFormattedId()}</strong>
                 </div>
               )}
             </div>
 
             {/* Email Address */}
             <div>
-              <label style={{ display: "block", fontSize: "0.82rem", fontWeight: 600, marginBottom: "0.35rem", color: "var(--text-secondary)" }}>
-                School Email <span style={{ color: "var(--danger)" }}>*</span>
+              <label style={{ display: "block", fontSize: "0.82rem", fontWeight: 700, marginBottom: "0.35rem", color: "#475569" }}>
+                School Email <span style={{ color: "#ef4444" }}>*</span>
               </label>
               <div style={{ position: "relative" }}>
                 <input
@@ -526,15 +461,15 @@ export default function AdminUserManagement({
                   onChange={(e) => setEmail(e.target.value)}
                   required
                 />
-                <Mail size={16} style={{ position: "absolute", left: "0.75rem", top: "50%", transform: "translateY(-50%)", color: "var(--text-muted)" }} />
+                <Mail size={16} style={{ position: "absolute", left: "0.75rem", top: "50%", transform: "translateY(-50%)", color: "#94a3b8" }} />
               </div>
             </div>
 
             {/* Password with Generate Option */}
             <div>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.35rem" }}>
-                <label style={{ fontSize: "0.82rem", fontWeight: 600, color: "var(--text-secondary)" }}>
-                  Password <span style={{ color: "var(--danger)" }}>*</span>
+                <label style={{ fontSize: "0.82rem", fontWeight: 700, color: "#475569" }}>
+                  Password <span style={{ color: "#ef4444" }}>*</span>
                 </label>
                 <button
                   type="button"
@@ -542,9 +477,9 @@ export default function AdminUserManagement({
                   style={{
                     background: "none",
                     border: "none",
-                    color: "var(--srcb-gold-accent)",
+                    color: "#0062ff",
                     fontSize: "0.75rem",
-                    fontWeight: 600,
+                    fontWeight: 700,
                     cursor: "pointer",
                     display: "flex",
                     alignItems: "center",
@@ -564,7 +499,7 @@ export default function AdminUserManagement({
                   onChange={(e) => setPassword(e.target.value)}
                   required
                 />
-                <Lock size={16} style={{ position: "absolute", left: "0.75rem", top: "50%", transform: "translateY(-50%)", color: "var(--text-muted)" }} />
+                <Lock size={16} style={{ position: "absolute", left: "0.75rem", top: "50%", transform: "translateY(-50%)", color: "#94a3b8" }} />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
@@ -575,7 +510,7 @@ export default function AdminUserManagement({
                     transform: "translateY(-50%)",
                     background: "none",
                     border: "none",
-                    color: "var(--text-muted)",
+                    color: "#94a3b8",
                     cursor: "pointer",
                   }}
                 >
@@ -584,11 +519,11 @@ export default function AdminUserManagement({
               </div>
             </div>
 
-            {/* Academic Department & Programme */}
+            {/* Department and Programme Dropdowns */}
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem" }}>
               <div>
-                <label style={{ display: "block", fontSize: "0.82rem", fontWeight: 600, marginBottom: "0.35rem", color: "var(--text-secondary)" }}>
-                  Department
+                <label style={{ display: "block", fontSize: "0.82rem", fontWeight: 700, marginBottom: "0.35rem", color: "#475569" }}>
+                  Collegiate Department
                 </label>
                 <select
                   className="input"
@@ -605,7 +540,7 @@ export default function AdminUserManagement({
               </div>
 
               <div>
-                <label style={{ display: "block", fontSize: "0.82rem", fontWeight: 600, marginBottom: "0.35rem", color: "var(--text-secondary)" }}>
+                <label style={{ display: "block", fontSize: "0.82rem", fontWeight: 700, marginBottom: "0.35rem", color: "#475569" }}>
                   Programme
                 </label>
                 <select
@@ -635,16 +570,11 @@ export default function AdminUserManagement({
                 padding: "0.75rem",
                 fontWeight: 700,
                 fontSize: "0.95rem",
-                background:
-                  targetRole === "teacher"
-                    ? "linear-gradient(135deg, #2563eb, #1d4ed8)"
-                    : "linear-gradient(135deg, #d97706, #b45309)",
-                borderColor: targetRole === "teacher" ? "#3b82f6" : "#f59e0b",
+                background: "#0062ff",
                 color: "#ffffff",
-                boxShadow:
-                  targetRole === "teacher"
-                    ? "0 4px 14px rgba(37, 99, 235, 0.4)"
-                    : "0 4px 14px rgba(217, 119, 6, 0.4)",
+                borderRadius: "10px",
+                border: "none",
+                boxShadow: "0 4px 12px rgba(0, 98, 255, 0.25)",
               }}
             >
               {submitting ? (
@@ -663,18 +593,27 @@ export default function AdminUserManagement({
 
         {/* DIRECTORY & ROSTER VIEW */}
         {(viewMode === "all" || viewMode === "directory") && (
-        <div className="card" style={{ padding: "1.5rem" }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
+        <div
+          className="card"
+          style={{
+            padding: "1.5rem",
+            background: "#ffffff",
+            border: "1px solid #e2e8f0",
+            borderRadius: "14px",
+            boxShadow: "0 2px 6px rgba(0, 0, 0, 0.02)",
+          }}
+        >
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.25rem" }}>
             <div>
-              <h3 style={{ margin: 0, fontSize: "1.15rem", fontWeight: 700 }}>
+              <h3 style={{ margin: 0, fontSize: "1.15rem", fontWeight: 800, color: "#0f172a" }}>
                 User Accounts Directory
               </h3>
-              <p style={{ margin: 0, fontSize: "0.8rem", color: "var(--text-secondary)" }}>
+              <p style={{ margin: 0, fontSize: "0.8rem", color: "#64748b" }}>
                 Active institutional users list ({filteredUsers.length} accounts found)
               </p>
             </div>
             <button
-              className="btn btn-outline"
+              className="btn btn-secondary"
               onClick={loadUsers}
               disabled={loading}
               title="Refresh users list"
@@ -685,41 +624,41 @@ export default function AdminUserManagement({
           </div>
 
           {/* Search and Filters */}
-          <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem", marginBottom: "1rem" }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem", marginBottom: "1.25rem" }}>
             <div style={{ position: "relative" }}>
               <input
                 type="text"
                 className="input"
-                style={{ width: "100%", paddingLeft: "2.2rem", fontSize: "0.85rem" }}
+                style={{ width: "100%", paddingLeft: "2.2rem", fontSize: "0.85rem", height: "38px" }}
                 placeholder="Search by name, email, department, or student ID..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
-              <Search size={16} style={{ position: "absolute", left: "0.75rem", top: "50%", transform: "translateY(-50%)", color: "var(--text-muted)" }} />
+              <Search size={16} style={{ position: "absolute", left: "0.75rem", top: "50%", transform: "translateY(-50%)", color: "#94a3b8" }} />
             </div>
 
             {/* Filter Pills */}
             <div style={{ display: "flex", gap: "0.4rem", flexWrap: "wrap" }}>
               <button
                 type="button"
-                className={`btn btn-sm ${roleFilter === "all" ? "btn-primary" : "btn-outline"}`}
-                style={{ fontSize: "0.75rem", padding: "0.25rem 0.6rem" }}
+                className={`btn btn-sm ${roleFilter === "all" ? "btn-primary" : "btn-secondary"}`}
+                style={{ fontSize: "0.78rem", padding: "0.3rem 0.7rem", borderRadius: "20px" }}
                 onClick={() => setRoleFilter("all")}
               >
                 All ({users.length})
               </button>
               <button
                 type="button"
-                className={`btn btn-sm ${roleFilter === "teacher" ? "btn-primary" : "btn-outline"}`}
-                style={{ fontSize: "0.75rem", padding: "0.25rem 0.6rem" }}
+                className={`btn btn-sm ${roleFilter === "teacher" ? "btn-primary" : "btn-secondary"}`}
+                style={{ fontSize: "0.78rem", padding: "0.3rem 0.7rem", borderRadius: "20px" }}
                 onClick={() => setRoleFilter("teacher")}
               >
                 Teachers ({totalTeachers})
               </button>
               <button
                 type="button"
-                className={`btn btn-sm ${roleFilter === "student" ? "btn-primary" : "btn-outline"}`}
-                style={{ fontSize: "0.75rem", padding: "0.25rem 0.6rem" }}
+                className={`btn btn-sm ${roleFilter === "student" ? "btn-primary" : "btn-secondary"}`}
+                style={{ fontSize: "0.78rem", padding: "0.3rem 0.7rem", borderRadius: "20px" }}
                 onClick={() => setRoleFilter("student")}
               >
                 Students ({totalStudents})
@@ -732,30 +671,30 @@ export default function AdminUserManagement({
             style={{
               maxHeight: "440px",
               overflowY: "auto",
-              border: "1px solid rgba(255, 255, 255, 0.08)",
-              borderRadius: "8px",
-              background: "rgba(8, 17, 32, 0.6)",
+              border: "1px solid #e2e8f0",
+              borderRadius: "10px",
+              background: "#ffffff",
             }}
           >
             {loading ? (
-              <div style={{ padding: "2rem", textAlign: "center", color: "var(--text-muted)" }}>
-                <RefreshCw size={24} className="spin" style={{ margin: "0 auto 0.5rem" }} />
+              <div style={{ padding: "2rem", textAlign: "center", color: "#64748b" }}>
+                <RefreshCw size={24} className="spin" style={{ margin: "0 auto 0.5rem", color: "#0062ff" }} />
                 <p>Loading accounts directory...</p>
               </div>
             ) : filteredUsers.length === 0 ? (
-              <div style={{ padding: "2rem", textAlign: "center", color: "var(--text-muted)" }}>
-                <Users size={32} style={{ margin: "0 auto 0.5rem", opacity: 0.4 }} />
+              <div style={{ padding: "2rem", textAlign: "center", color: "#64748b" }}>
+                <Users size={32} style={{ margin: "0 auto 0.5rem", color: "#94a3b8" }} />
                 <p>No user accounts matched your search.</p>
               </div>
             ) : (
               <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.82rem" }}>
                 <thead>
-                  <tr style={{ borderBottom: "1px solid rgba(255, 255, 255, 0.1)", background: "rgba(15, 23, 42, 0.8)", textAlign: "left" }}>
-                    <th style={{ padding: "0.6rem 0.75rem" }}>User</th>
-                    <th style={{ padding: "0.6rem 0.75rem" }}>Role</th>
-                    <th style={{ padding: "0.6rem 0.75rem" }}>Programme</th>
-                    <th style={{ padding: "0.6rem 0.75rem" }}>Status</th>
-                    <th style={{ padding: "0.6rem 0.75rem", textAlign: "right" }}>Action</th>
+                  <tr style={{ borderBottom: "1px solid #e2e8f0", background: "#f8fafc", textAlign: "left" }}>
+                    <th style={{ padding: "0.6rem 0.75rem", color: "#475569" }}>User</th>
+                    <th style={{ padding: "0.6rem 0.75rem", color: "#475569" }}>Role</th>
+                    <th style={{ padding: "0.6rem 0.75rem", color: "#475569" }}>Programme</th>
+                    <th style={{ padding: "0.6rem 0.75rem", color: "#475569" }}>Status</th>
+                    <th style={{ padding: "0.6rem 0.75rem", textAlign: "right", color: "#475569" }}>Action</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -768,15 +707,15 @@ export default function AdminUserManagement({
                       <tr
                         key={u.id}
                         style={{
-                          borderBottom: "1px solid rgba(255, 255, 255, 0.04)",
+                          borderBottom: "1px solid #f1f5f9",
                           transition: "background 0.15s ease",
                         }}
                       >
                         <td style={{ padding: "0.65rem 0.75rem" }}>
-                          <div style={{ fontWeight: 600, color: "#ffffff" }}>{u.name}</div>
-                          <div style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>{u.email}</div>
+                          <div style={{ fontWeight: 700, color: "#0f172a" }}>{u.name}</div>
+                          <div style={{ fontSize: "0.75rem", color: "#64748b" }}>{u.email}</div>
                           {u.student_id && (
-                            <div style={{ fontSize: "0.7rem", color: "var(--srcb-gold-accent)" }}>
+                            <div style={{ fontSize: "0.72rem", color: "#0062ff", fontWeight: 700 }}>
                               ID: {u.student_id}
                             </div>
                           )}
@@ -789,31 +728,31 @@ export default function AdminUserManagement({
                               alignItems: "center",
                               gap: "0.3rem",
                               padding: "0.2rem 0.5rem",
-                              borderRadius: "4px",
+                              borderRadius: "6px",
                               fontSize: "0.72rem",
                               fontWeight: 700,
                               background: isTeacher
-                                ? "rgba(37, 99, 235, 0.2)"
+                                ? "#eff6ff"
                                 : isStudent
-                                ? "rgba(245, 158, 11, 0.2)"
+                                ? "#eff6ff"
                                 : isAdmin
-                                ? "rgba(168, 85, 247, 0.2)"
-                                : "rgba(239, 68, 68, 0.2)",
+                                ? "#f5f3ff"
+                                : "#fef2f2",
                               color: isTeacher
-                                ? "#93c5fd"
+                                ? "#0062ff"
                                 : isStudent
-                                ? "var(--srcb-gold-light)"
+                                ? "#0062ff"
                                 : isAdmin
-                                ? "#d8b4fe"
-                                : "#fca5a5",
+                                ? "#7c3aed"
+                                : "#dc2626",
                               border: `1px solid ${
                                 isTeacher
-                                  ? "rgba(37, 99, 235, 0.4)"
+                                  ? "#bfdbfe"
                                   : isStudent
-                                  ? "rgba(245, 158, 11, 0.4)"
+                                  ? "#bfdbfe"
                                   : isAdmin
-                                  ? "rgba(168, 85, 247, 0.4)"
-                                  : "rgba(239, 68, 68, 0.4)"
+                                  ? "#ddd6fe"
+                                  : "#fecaca"
                               }`,
                             }}
                           >
@@ -828,9 +767,9 @@ export default function AdminUserManagement({
                           </span>
                         </td>
 
-                        <td style={{ padding: "0.65rem 0.75rem", color: "var(--text-secondary)" }}>
-                          <div>{u.programme || "BSIT"}</div>
-                          <div style={{ fontSize: "0.7rem", color: "var(--text-muted)" }}>
+                        <td style={{ padding: "0.65rem 0.75rem", color: "#0f172a" }}>
+                          <div style={{ fontWeight: 600 }}>{u.programme || "BSIT"}</div>
+                          <div style={{ fontSize: "0.72rem", color: "#64748b" }}>
                             {u.department || "Computing"}
                           </div>
                         </td>
@@ -839,12 +778,12 @@ export default function AdminUserManagement({
                           <span
                             style={{
                               padding: "0.15rem 0.45rem",
-                              borderRadius: "4px",
-                              fontSize: "0.7rem",
-                              fontWeight: 600,
-                              background: u.status === "active" ? "rgba(34, 197, 94, 0.15)" : "rgba(245, 158, 11, 0.15)",
-                              color: u.status === "active" ? "#4ade80" : "#fcd34d",
-                              border: `1px solid ${u.status === "active" ? "rgba(34, 197, 94, 0.3)" : "rgba(245, 158, 11, 0.3)"}`,
+                              borderRadius: "6px",
+                              fontSize: "0.72rem",
+                              fontWeight: 700,
+                              background: u.status === "active" ? "#ecfdf5" : "#fffbeb",
+                              color: u.status === "active" ? "#059669" : "#b45309",
+                              border: `1px solid ${u.status === "active" ? "#a7f3d0" : "#fde68a"}`,
                             }}
                           >
                             {u.status || "active"}
@@ -859,9 +798,9 @@ export default function AdminUserManagement({
                               disabled={deletingId === u.id}
                               title="Delete account"
                               style={{
-                                background: "rgba(239, 68, 68, 0.1)",
-                                border: "1px solid rgba(239, 68, 68, 0.3)",
-                                color: "#f87171",
+                                background: "#fef2f2",
+                                border: "1px solid #fecaca",
+                                color: "#ef4444",
                                 padding: "0.3rem 0.5rem",
                                 borderRadius: "6px",
                                 cursor: "pointer",

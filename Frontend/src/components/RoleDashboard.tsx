@@ -436,7 +436,7 @@ export default function RoleDashboard({
         <div style={{ display: "grid", gap: "1rem" }}>
           <div
             className="card"
-            style={{ padding: "1rem", background: "rgba(8, 17, 32, 0.8)" }}
+            style={{ padding: "1rem", background: "#ffffff", border: "1px solid #e2e8f0" }}
           >
             <h3 style={{ marginBottom: "0.75rem" }}>My progress</h3>
             <div
@@ -467,7 +467,7 @@ export default function RoleDashboard({
 
           <div
             className="card"
-            style={{ padding: "1rem", background: "rgba(8, 17, 32, 0.8)" }}
+            style={{ padding: "1rem", background: "#ffffff", border: "1px solid #e2e8f0" }}
           >
             <h3 style={{ marginBottom: "0.75rem" }}>Next steps</h3>
             <div
@@ -487,7 +487,7 @@ export default function RoleDashboard({
               </div>
               <div
                 style={{
-                  borderLeft: "3px solid var(--srcb-gold-accent)",
+                  borderLeft: "3px solid #0062ff",
                   paddingLeft: "0.6rem",
                 }}
               >
@@ -500,7 +500,7 @@ export default function RoleDashboard({
 
       <div
         className="card"
-        style={{ padding: "1rem", background: "rgba(8, 17, 32, 0.8)" }}
+        style={{ padding: "1rem", background: "#ffffff", border: "1px solid #e2e8f0" }}
       >
         <h3 style={{ fontSize: "1rem", marginBottom: "0.75rem" }}>
           Access details

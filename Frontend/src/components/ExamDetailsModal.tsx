@@ -42,60 +42,6 @@ const ExamDetailsModal: React.FC<ExamDetailsModalProps> = ({
     Boolean,
   ).length;
 
-  const getExamTypeBadgeStyle = (type: string) => {
-    switch (type.toLowerCase()) {
-      case "preliminary":
-      case "prelim":
-        return {
-          background: "rgba(59, 130, 246, 0.2)",
-          color: "#60a5fa",
-          border: "1px solid rgba(59, 130, 246, 0.4)",
-        };
-      case "midterm":
-        return {
-          background: "rgba(245, 158, 11, 0.2)",
-          color: "var(--srcb-gold-light)",
-          border: "1px solid rgba(245, 158, 11, 0.4)",
-        };
-      case "pre-final":
-      case "prefinal":
-        return {
-          background: "rgba(168, 85, 247, 0.2)",
-          color: "#c084fc",
-          border: "1px solid rgba(168, 85, 247, 0.4)",
-        };
-      case "final":
-        return {
-          background: "rgba(16, 185, 129, 0.2)",
-          color: "#34d399",
-          border: "1px solid rgba(16, 185, 129, 0.4)",
-        };
-      default:
-        return {
-          background: "rgba(148, 163, 184, 0.2)",
-          color: "#cbd5e1",
-          border: "1px solid rgba(148, 163, 184, 0.4)",
-        };
-    }
-  };
-
-  const answerChoiceColor = (ans: string) => {
-    switch (ans) {
-      case "A":
-        return "#60a5fa";
-      case "B":
-        return "#34d399";
-      case "C":
-        return "#f59e0b";
-      case "D":
-        return "#f87171";
-      case "E":
-        return "#a78bfa";
-      default:
-        return "#94a3b8";
-    }
-  };
-
   const handleDelete = () => {
     if (onDelete) {
       onDelete(exam.id);
@@ -123,8 +69,8 @@ const ExamDetailsModal: React.FC<ExamDetailsModalProps> = ({
         left: 0,
         width: "100vw",
         height: "100vh",
-        background: "rgba(3, 7, 18, 0.88)",
-        backdropFilter: "blur(10px)",
+        background: "rgba(15, 23, 42, 0.6)",
+        backdropFilter: "blur(6px)",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
@@ -142,9 +88,10 @@ const ExamDetailsModal: React.FC<ExamDetailsModalProps> = ({
           maxWidth: "860px",
           maxHeight: "90vh",
           overflowY: "auto",
-          background: "var(--bg-card)",
-          border: "1px solid var(--srcb-gold-accent)",
-          boxShadow: "0 30px 60px -15px rgba(0, 0, 0, 0.6)",
+          background: "#ffffff",
+          border: "1px solid #e2e8f0",
+          borderRadius: "18px",
+          boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.15)",
           display: "flex",
           flexDirection: "column",
           padding: 0,
@@ -154,12 +101,11 @@ const ExamDetailsModal: React.FC<ExamDetailsModalProps> = ({
         <div
           style={{
             padding: "1.25rem 1.5rem",
-            borderBottom: "1px solid var(--border)",
+            borderBottom: "1px solid #f1f5f9",
             display: "flex",
             justifyContent: "space-between",
             alignItems: "center",
-            background:
-              "linear-gradient(135deg, rgba(15, 23, 42, 0.95) 0%, rgba(8, 17, 40, 0.95) 100%)",
+            background: "#ffffff",
             flexWrap: "wrap",
             gap: "0.75rem",
           }}
@@ -177,12 +123,12 @@ const ExamDetailsModal: React.FC<ExamDetailsModalProps> = ({
                 width: "44px",
                 height: "44px",
                 borderRadius: "12px",
-                background: "rgba(245, 158, 11, 0.15)",
-                border: "1px solid rgba(245, 158, 11, 0.3)",
+                background: "#eff6ff",
+                border: "1px solid #bfdbfe",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
-                color: "var(--srcb-gold-accent)",
+                color: "#0062ff",
                 flexShrink: 0,
               }}
             >
@@ -200,11 +146,13 @@ const ExamDetailsModal: React.FC<ExamDetailsModalProps> = ({
               >
                 <span
                   style={{
-                    ...getExamTypeBadgeStyle(safeExamType),
+                    background: "#eff6ff",
+                    color: "#0062ff",
+                    border: "1px solid #bfdbfe",
                     fontSize: "0.7rem",
                     padding: "0.15rem 0.5rem",
                     borderRadius: "4px",
-                    fontWeight: 700,
+                    fontWeight: 800,
                   }}
                 >
                   {safeExamType}
@@ -214,7 +162,7 @@ const ExamDetailsModal: React.FC<ExamDetailsModalProps> = ({
                     style={{
                       fontSize: "0.75rem",
                       fontWeight: 700,
-                      color: "var(--primary)",
+                      color: "#0062ff",
                     }}
                   >
                     [{exam.course_code}]
@@ -222,7 +170,7 @@ const ExamDetailsModal: React.FC<ExamDetailsModalProps> = ({
                 )}
                 {exam.section && (
                   <span
-                    style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}
+                    style={{ fontSize: "0.75rem", color: "#64748b" }}
                   >
                     • {exam.section}
                   </span>
@@ -233,7 +181,7 @@ const ExamDetailsModal: React.FC<ExamDetailsModalProps> = ({
                   fontSize: "1.15rem",
                   fontWeight: 800,
                   margin: 0,
-                  color: "var(--text-primary)",
+                  color: "#0f172a",
                 }}
               >
                 {exam.name}
@@ -251,6 +199,11 @@ const ExamDetailsModal: React.FC<ExamDetailsModalProps> = ({
                   display: "flex",
                   alignItems: "center",
                   gap: "0.4rem",
+                  background: "#ffffff",
+                  border: "1px solid #cbd5e1",
+                  color: "#0f172a",
+                  borderRadius: "8px",
+                  fontWeight: 600,
                 }}
                 onClick={() => onEdit(exam)}
               >
@@ -266,6 +219,11 @@ const ExamDetailsModal: React.FC<ExamDetailsModalProps> = ({
                   display: "flex",
                   alignItems: "center",
                   gap: "0.4rem",
+                  background: "#fef2f2",
+                  border: "1px solid #fecaca",
+                  color: "#ef4444",
+                  borderRadius: "8px",
+                  fontWeight: 700,
                 }}
                 onClick={handleDelete}
               >
@@ -277,6 +235,13 @@ const ExamDetailsModal: React.FC<ExamDetailsModalProps> = ({
               className="btn btn-secondary btn-icon-only"
               onClick={onClose}
               title="Close"
+              style={{
+                background: "#f8fafc",
+                border: "1px solid #cbd5e1",
+                color: "#64748b",
+                borderRadius: "8px",
+                padding: "0.4rem",
+              }}
             >
               <X size={20} />
             </button>
@@ -288,24 +253,24 @@ const ExamDetailsModal: React.FC<ExamDetailsModalProps> = ({
           {/* Section 1: Academic & Exam Info */}
           <div
             style={{
-              background: "rgba(15, 23, 42, 0.6)",
-              border: "1px solid var(--border)",
-              borderRadius: "var(--radius-md)",
+              background: "#f8fafc",
+              border: "1px solid #e2e8f0",
+              borderRadius: "12px",
               padding: "1.25rem",
             }}
           >
             <h3
               style={{
-                fontSize: "0.9rem",
-                fontWeight: 700,
-                color: "var(--srcb-gold-light)",
+                fontSize: "0.95rem",
+                fontWeight: 800,
+                color: "#0f172a",
                 marginBottom: "1rem",
                 display: "flex",
                 alignItems: "center",
                 gap: "0.5rem",
               }}
             >
-              <FileText size={16} /> Examination Identity & Academic Context
+              <FileText size={16} color="#0062ff" /> Examination Identity & Academic Context
             </h3>
             <div
               style={{
@@ -367,8 +332,8 @@ const ExamDetailsModal: React.FC<ExamDetailsModalProps> = ({
                 <div
                   key={label}
                   style={{
-                    background: "rgba(255,255,255,0.03)",
-                    border: "1px solid rgba(255,255,255,0.06)",
+                    background: "#ffffff",
+                    border: "1px solid #e2e8f0",
                     borderRadius: "8px",
                     padding: "0.65rem 0.85rem",
                   }}
@@ -381,14 +346,14 @@ const ExamDetailsModal: React.FC<ExamDetailsModalProps> = ({
                       marginBottom: "4px",
                     }}
                   >
-                    <Icon size={12} color="var(--srcb-gold-accent)" />
+                    <Icon size={12} color="#0062ff" />
                     <span
                       style={{
                         fontSize: "0.68rem",
-                        color: "var(--text-muted)",
+                        color: "#64748b",
                         textTransform: "uppercase" as const,
                         letterSpacing: "0.05em",
-                        fontWeight: 600,
+                        fontWeight: 700,
                       }}
                     >
                       {label}
@@ -397,11 +362,11 @@ const ExamDetailsModal: React.FC<ExamDetailsModalProps> = ({
                   <div
                     style={{
                       fontSize: "0.88rem",
-                      fontWeight: 600,
+                      fontWeight: 700,
                       color:
                         value && value !== "—"
-                          ? "var(--text-primary)"
-                          : "var(--text-muted)",
+                          ? "#0f172a"
+                          : "#94a3b8",
                     }}
                   >
                     {value || "—"}
@@ -414,8 +379,8 @@ const ExamDetailsModal: React.FC<ExamDetailsModalProps> = ({
               <div
                 style={{
                   marginTop: "1rem",
-                  background: "rgba(255,255,255,0.03)",
-                  border: "1px solid rgba(255,255,255,0.06)",
+                  background: "#ffffff",
+                  border: "1px solid #e2e8f0",
                   borderRadius: "8px",
                   padding: "0.75rem 1rem",
                 }}
@@ -428,14 +393,14 @@ const ExamDetailsModal: React.FC<ExamDetailsModalProps> = ({
                     marginBottom: "6px",
                   }}
                 >
-                  <FileText size={12} color="var(--srcb-gold-accent)" />
+                  <FileText size={12} color="#0062ff" />
                   <span
                     style={{
                       fontSize: "0.68rem",
-                      color: "var(--text-muted)",
+                      color: "#64748b",
                       textTransform: "uppercase" as const,
                       letterSpacing: "0.05em",
-                      fontWeight: 600,
+                      fontWeight: 700,
                     }}
                   >
                     Exam Instructions
@@ -444,7 +409,7 @@ const ExamDetailsModal: React.FC<ExamDetailsModalProps> = ({
                 <p
                   style={{
                     fontSize: "0.85rem",
-                    color: "var(--text-secondary)",
+                    color: "#475569",
                     margin: 0,
                     lineHeight: 1.6,
                   }}
@@ -458,9 +423,9 @@ const ExamDetailsModal: React.FC<ExamDetailsModalProps> = ({
           {/* Section 2: Answer Key */}
           <div
             style={{
-              background: "rgba(15, 23, 42, 0.6)",
-              border: "1px solid var(--border)",
-              borderRadius: "var(--radius-md)",
+              background: "#f8fafc",
+              border: "1px solid #e2e8f0",
+              borderRadius: "12px",
               padding: "1.25rem",
             }}
           >
@@ -476,16 +441,16 @@ const ExamDetailsModal: React.FC<ExamDetailsModalProps> = ({
             >
               <h3
                 style={{
-                  fontSize: "0.9rem",
-                  fontWeight: 700,
-                  color: "var(--srcb-gold-light)",
+                  fontSize: "0.95rem",
+                  fontWeight: 800,
+                  color: "#0f172a",
                   margin: 0,
                   display: "flex",
                   alignItems: "center",
                   gap: "0.5rem",
                 }}
               >
-                <CheckCircle2 size={16} /> Configured Answer Key
+                <CheckCircle2 size={16} color="#0062ff" /> Configured Answer Key
               </h3>
               <div>
                 {configuredAnswers === questionCount && questionCount > 0 ? (
@@ -495,8 +460,12 @@ const ExamDetailsModal: React.FC<ExamDetailsModalProps> = ({
                       alignItems: "center",
                       gap: "4px",
                       fontSize: "0.78rem",
-                      color: "#34d399",
-                      fontWeight: 600,
+                      color: "#059669",
+                      fontWeight: 700,
+                      background: "#ecfdf5",
+                      border: "1px solid #a7f3d0",
+                      padding: "0.2rem 0.6rem",
+                      borderRadius: "6px",
                     }}
                   >
                     <CheckCircle2 size={14} /> Complete ({configuredAnswers}/
@@ -509,8 +478,12 @@ const ExamDetailsModal: React.FC<ExamDetailsModalProps> = ({
                       alignItems: "center",
                       gap: "4px",
                       fontSize: "0.78rem",
-                      color: "#f87171",
-                      fontWeight: 600,
+                      color: "#dc2626",
+                      fontWeight: 700,
+                      background: "#fef2f2",
+                      border: "1px solid #fecaca",
+                      padding: "0.2rem 0.6rem",
+                      borderRadius: "6px",
                     }}
                   >
                     <AlertCircle size={14} /> {configuredAnswers}/
@@ -524,7 +497,7 @@ const ExamDetailsModal: React.FC<ExamDetailsModalProps> = ({
               <div
                 style={{
                   textAlign: "center",
-                  color: "var(--text-muted)",
+                  color: "#64748b",
                   fontSize: "0.85rem",
                   padding: "1.5rem",
                 }}
@@ -551,14 +524,15 @@ const ExamDetailsModal: React.FC<ExamDetailsModalProps> = ({
                           padding: "0.3rem 0.5rem",
                           borderRadius: "6px",
                           marginBottom: "3px",
-                          background: "rgba(255,255,255,0.025)",
+                          background: "#ffffff",
+                          border: "1px solid #e2e8f0",
                         }}
                       >
                         <span
                           style={{
-                            fontSize: "0.72rem",
-                            color: "var(--text-muted)",
-                            fontWeight: 600,
+                            fontSize: "0.75rem",
+                            color: "#0f172a",
+                            fontWeight: 700,
                             minWidth: "22px",
                             textAlign: "right",
                           }}
@@ -570,9 +544,9 @@ const ExamDetailsModal: React.FC<ExamDetailsModalProps> = ({
                             width: "24px",
                             height: "24px",
                             borderRadius: "50%",
-                            background: `${answerChoiceColor(ans)}22`,
-                            border: `1.5px solid ${answerChoiceColor(ans)}`,
-                            color: answerChoiceColor(ans),
+                            background: "#eff6ff",
+                            border: "1.5px solid #0062ff",
+                            color: "#0062ff",
                             fontSize: "0.75rem",
                             fontWeight: 800,
                             display: "flex",
@@ -599,24 +573,35 @@ const ExamDetailsModal: React.FC<ExamDetailsModalProps> = ({
               alignItems: "center",
               flexWrap: "wrap",
               gap: "0.5rem",
+              paddingTop: "1rem",
+              borderTop: "1px solid #f1f5f9",
             }}
           >
             <span
               style={{
                 fontSize: "0.75rem",
-                color: "var(--text-muted)",
+                color: "#64748b",
                 display: "flex",
                 alignItems: "center",
                 gap: "4px",
+                fontWeight: 600,
               }}
             >
-              <Calendar size={12} />
+              <Calendar size={12} color="#0062ff" />
               Created: {formatDate(exam.created_at)}
             </span>
             <button
               className="btn btn-secondary"
               onClick={onClose}
-              style={{ padding: "0.5rem 1.25rem", fontSize: "0.85rem" }}
+              style={{
+                padding: "0.5rem 1.25rem",
+                fontSize: "0.85rem",
+                background: "#ffffff",
+                border: "1px solid #cbd5e1",
+                color: "#0f172a",
+                fontWeight: 600,
+                borderRadius: "8px",
+              }}
             >
               Close
             </button>

@@ -50,34 +50,34 @@ export const ExamCard: React.FC<ExamCardProps> = ({
       case "preliminary":
       case "prelim":
         return {
-          background: "rgba(59, 130, 246, 0.15)",
-          color: "#60a5fa",
-          border: "1px solid rgba(59, 130, 246, 0.3)",
+          background: "#eff6ff",
+          color: "#2563eb",
+          border: "1px solid #bfdbfe",
         };
       case "midterm":
         return {
-          background: "rgba(245, 158, 11, 0.15)",
-          color: "var(--srcb-gold-light)",
-          border: "1px solid rgba(245, 158, 11, 0.3)",
+          background: "#fef3c7",
+          color: "#b45309",
+          border: "1px solid #fde68a",
         };
       case "pre-final":
       case "prefinal":
         return {
-          background: "rgba(168, 85, 247, 0.15)",
-          color: "#c084fc",
-          border: "1px solid rgba(168, 85, 247, 0.3)",
+          background: "#f3e8ff",
+          color: "#7e22ce",
+          border: "1px solid #e9d5ff",
         };
       case "final":
         return {
-          background: "rgba(16, 185, 129, 0.15)",
-          color: "#34d399",
-          border: "1px solid rgba(16, 185, 129, 0.3)",
+          background: "#ecfdf5",
+          color: "#047857",
+          border: "1px solid #a7f3d0",
         };
       default:
         return {
-          background: "rgba(148, 163, 184, 0.15)",
-          color: "#cbd5e1",
-          border: "1px solid rgba(148, 163, 184, 0.3)",
+          background: "#f1f5f9",
+          color: "#475569",
+          border: "1px solid #cbd5e1",
         };
     }
   };
@@ -90,12 +90,12 @@ export const ExamCard: React.FC<ExamCardProps> = ({
         cursor: "pointer",
         position: "relative",
         transition: "all 0.2s ease",
-        border: isSelected
-          ? "1px solid var(--srcb-gold-accent)"
-          : "1px solid var(--border)",
-        background: isSelected
-          ? "rgba(15, 23, 42, 0.95)"
-          : "rgba(15, 23, 42, 0.6)",
+        border: isSelected ? "2px solid #0062ff" : "1px solid #e2e8f0",
+        background: isSelected ? "#f8fbff" : "#ffffff",
+        boxShadow: isSelected
+          ? "0 4px 14px rgba(0, 98, 255, 0.12)"
+          : "0 2px 6px rgba(0, 0, 0, 0.02)",
+        borderRadius: "14px",
         padding: "1rem",
       }}
     >
@@ -107,12 +107,9 @@ export const ExamCard: React.FC<ExamCardProps> = ({
           <div
             className="icon-avatar"
             style={{
-              background: isSelected
-                ? "rgba(245, 158, 11, 0.2)"
-                : "rgba(255, 255, 255, 0.05)",
-              color: isSelected
-                ? "var(--srcb-gold-accent)"
-                : "var(--text-secondary)",
+              background: isSelected ? "#eff6ff" : "#f8fafc",
+              color: isSelected ? "#0062ff" : "#64748b",
+              border: isSelected ? "1px solid #bfdbfe" : "1px solid #e2e8f0",
               minWidth: "40px",
               height: "40px",
               borderRadius: "10px",
@@ -152,7 +149,7 @@ export const ExamCard: React.FC<ExamCardProps> = ({
                   style={{
                     fontSize: "0.75rem",
                     fontWeight: 700,
-                    color: "var(--primary)",
+                    color: "#0062ff",
                   }}
                 >
                   [{course_code}]
@@ -161,7 +158,7 @@ export const ExamCard: React.FC<ExamCardProps> = ({
 
               {section && (
                 <span
-                  style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}
+                  style={{ fontSize: "0.75rem", color: "#64748b" }}
                 >
                   • {section}
                 </span>
@@ -170,10 +167,10 @@ export const ExamCard: React.FC<ExamCardProps> = ({
 
             <h4
               style={{
-                margin: "0 0 6px 0",
+                margin: "0 0 4px 0",
                 fontSize: "1.02rem",
                 fontWeight: 700,
-                color: "var(--text-primary)",
+                color: "#0f172a",
               }}
             >
               {name}
@@ -183,7 +180,7 @@ export const ExamCard: React.FC<ExamCardProps> = ({
               <div
                 style={{
                   fontSize: "0.82rem",
-                  color: "var(--text-secondary)",
+                  color: "#475569",
                   marginBottom: "6px",
                 }}
               >
@@ -198,14 +195,14 @@ export const ExamCard: React.FC<ExamCardProps> = ({
                 gap: "14px",
                 flexWrap: "wrap",
                 fontSize: "0.78rem",
-                color: "var(--text-muted)",
+                color: "#64748b",
               }}
             >
               <span
                 style={{ display: "flex", alignItems: "center", gap: "4px" }}
               >
-                <Layers size={13} color="var(--srcb-gold-light)" />
-                <strong>{questionCount}</strong> items
+                <Layers size={13} color="#0062ff" />
+                <strong style={{ color: "#0f172a" }}>{questionCount}</strong> items
               </span>
 
               {instructor_name && (
@@ -260,11 +257,11 @@ export const ExamCard: React.FC<ExamCardProps> = ({
                 width: "32px",
                 height: "32px",
                 padding: 0,
-                background: "rgba(8, 17, 32, 0.95)",
-                border: "1px solid rgba(245, 158, 11, 0.35)",
-                boxShadow: "0 4px 12px rgba(0, 0, 0, 0.25)",
-                opacity: 1,
-                color: "var(--text-primary)",
+                background: "#f8fafc",
+                border: "1px solid #e2e8f0",
+                boxShadow: "0 2px 4px rgba(0, 0, 0, 0.04)",
+                color: "#0f172a",
+                borderRadius: "8px",
               }}
             >
               <Eye size={14} />
@@ -282,16 +279,16 @@ export const ExamCard: React.FC<ExamCardProps> = ({
                 width: "32px",
                 height: "32px",
                 padding: 0,
-                background: "rgba(8, 17, 32, 0.95)",
-                border: "1px solid rgba(244, 63, 94, 0.35)",
-                boxShadow: "0 4px 12px rgba(0, 0, 0, 0.25)",
-                opacity: 1,
+                background: "#fef2f2",
+                border: "1px solid #fecaca",
+                boxShadow: "0 2px 4px rgba(0, 0, 0, 0.04)",
+                borderRadius: "8px",
               }}
             >
-              <Trash2 size={14} style={{ color: "var(--error)" }} />
+              <Trash2 size={14} style={{ color: "#ef4444" }} />
             </button>
           )}
-          <ChevronRight size={18} className="text-muted" />
+          <ChevronRight size={18} style={{ color: "#94a3b8" }} />
         </div>
       </div>
     </div>
