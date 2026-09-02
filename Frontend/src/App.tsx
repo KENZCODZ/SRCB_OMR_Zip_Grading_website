@@ -14,7 +14,7 @@ import {
   FileSpreadsheet,
   Download,
   BarChart2,
-  ShieldCheck,
+  Award,
   LogOut,
   Camera,
   FileText,
@@ -25,6 +25,8 @@ import {
   Users,
   Bell,
   ChevronDown,
+  ChevronRight,
+  Sliders,
 } from "lucide-react";
 import confetti from "canvas-confetti";
 import type {
@@ -76,6 +78,7 @@ import DeanAcademicManagement from "./components/dean/DeanAcademicManagement";
 import DeanExaminations from "./components/dean/DeanExaminations";
 import DeanReportsAnalytics from "./components/dean/DeanReportsAnalytics";
 import DeanSettings from "./components/dean/DeanSettings";
+import { StudentPortalView } from "./components/StudentPortalView";
 
 type AppTab =
   | "dashboard"
@@ -576,7 +579,13 @@ export default function App() {
     if (!selectedUser) return;
 
     setCurrentUser(selectedUser);
-    setActiveTab(selectedUser.role === "admin" ? "quick-scan" : "dashboard");
+    setActiveTab(
+      selectedUser.role === "admin"
+        ? "quick-scan"
+        : selectedUser.role === "programme-head"
+          ? "academic-management"
+          : "dashboard",
+    );
     setAuthMessage(
       `Welcome back, ${selectedUser.name}. Your ${selectedUser.role.replace("-", " ")} workspace is ready.`,
     );
@@ -623,25 +632,36 @@ export default function App() {
               ]
             : backendUser.role === "dean"
               ? [
-                  "Manage students",
-                  "Manage teachers",
-                  "Monitor examinations",
-                  "View reports",
+                  "Monitor examination results across all Higher Education programs",
+                  "View student examination scores and academic performance",
+                  "Monitor examinations handled by teachers",
+                  "View overall examination progress and records",
+                  "Manage and oversee user access within the system",
                 ]
               : backendUser.role === "programme-head"
                 ? [
-                    "View programme analytics",
-                    "Monitor students",
-                    "Review examinations",
+                    "Monitor examination results within their assigned academic program only",
+                    "View student scores and examination records for their program",
+                    "Monitor examinations handled by teachers under their program",
+                    "Access examination records and reports within their assigned program",
                   ]
                 : backendUser.role === "teacher"
                   ? [
-                      "Create examinations",
-                      "Upload answer keys",
-                      "Grade sheets",
-                      "Publish results",
+                      "Manage courses and subjects",
+                      "Create and manage examinations",
+                      "Create and maintain answer keys",
+                      "Upload and automatically process student test papers",
+                      "Automatically check and grade student test papers",
+                      "Record student submissions and examination scores",
+                      "Release and publish grading results for students to view",
+                      "Review processed test papers and grading results",
+                      "Manage examination records",
                     ]
-                  : ["View exams", "Review results", "See feedback"],
+                  : [
+                      "View their own examination scores",
+                      "View which exam questions were answered correctly or incorrectly",
+                      "Access only their personal examination records",
+                    ],
       };
 
       setSelectedAuthUserId(mappedUser.id);
@@ -649,7 +669,7 @@ export default function App() {
       setActiveTab(
         mappedUser.role === "admin"
           ? "quick-scan"
-          : mappedUser.role === "dean"
+          : mappedUser.role === "programme-head"
             ? "academic-management"
             : "dashboard",
       );
@@ -672,7 +692,7 @@ export default function App() {
         setActiveTab(
           foundMock.role === "admin"
             ? "quick-scan"
-            : foundMock.role === "dean"
+            : foundMock.role === "programme-head"
               ? "academic-management"
               : "dashboard",
         );
@@ -730,28 +750,33 @@ export default function App() {
 
     if (currentUser.role === "dean") {
       return [
-        {
-          key: "academic-management" as AppTab,
-          label: "Academic Management",
-          icon: BarChart3,
-        },
+        { key: "dashboard" as AppTab, label: "Overview & Progress", icon: BarChart3 },
         {
           key: "examinations" as AppTab,
-          label: "Examinations",
+          label: "Teacher Examinations",
           icon: BookOpen,
         },
         {
           key: "reports" as AppTab,
-          label: "Reports & Analytics",
-          icon: BarChart3,
+          label: "Program Results & OBE",
+          icon: Award,
         },
-        { key: "settings" as AppTab, label: "Settings", icon: ShieldCheck },
+        {
+          key: "academic-management" as AppTab,
+          label: "Higher Ed Programs",
+          icon: GraduationCap,
+        },
+        {
+          key: "user-directory" as AppTab,
+          label: "User Access",
+          icon: Users,
+        },
+        { key: "settings" as AppTab, label: "Settings", icon: Sliders },
       ];
     }
 
     if (currentUser.role === "programme-head") {
       return [
-        { key: "dashboard" as AppTab, label: "Dashboard", icon: BarChart3 },
         {
           key: "academic-management" as AppTab,
           label: "Programme Overview",
@@ -763,6 +788,11 @@ export default function App() {
           icon: BookOpen,
         },
         { key: "reports" as AppTab, label: "Reports", icon: BarChart3 },
+        {
+          key: "user-directory" as AppTab,
+          label: "Student Access",
+          icon: Users,
+        },
       ];
     }
 
@@ -779,10 +809,16 @@ export default function App() {
       ];
     }
 
+    if (currentUser.role === "student") {
+      return [
+        { key: "dashboard" as AppTab, label: "My Progress", icon: BarChart3 },
+        { key: "examinations" as AppTab, label: "My Exam Records", icon: BookOpen },
+      ];
+    }
+
     return [
       { key: "dashboard" as AppTab, label: "Dashboard", icon: BarChart3 },
-      { key: "examinations" as AppTab, label: "My Exams", icon: BookOpen },
-      { key: "reports" as AppTab, label: "Results", icon: BarChart3 },
+      { key: "examinations" as AppTab, label: "Examinations", icon: BookOpen },
     ];
   })();
 
@@ -835,31 +871,15 @@ export default function App() {
       case "user-management":
         return "User Account Management";
       case "user-directory":
-        return "Faculty & Student Directory";
+        return currentUser?.role === "programme-head"
+          ? `${currentUser.programme || "BSIT"} Student Access`
+          : currentUser?.role === "dean"
+            ? "User Access"
+            : "User Directory";
       case "settings":
         return "System Settings";
       default:
         return "Dashboard";
-    }
-  };
-
-  const getActiveTabSubtitle = (tab: AppTab) => {
-    switch (tab) {
-      case "dashboard":
-        return `${submissions.length} submissions found • ${exams.length} active exams`;
-      case "examinations":
-      case "exams":
-        return `${exams.length} active examination records found`;
-      case "history":
-        return `${submissions.length} graded test sheets recorded`;
-      case "quick-scan":
-        return "Instant zip-grade bubble sheet processing";
-      case "item-analysis":
-        return "Automated difficulty & discrimination indices";
-      case "user-management":
-        return "Manage roles, status, and permissions";
-      default:
-        return "St. Rita's College of Balingasag • Higher Education";
     }
   };
 
@@ -998,21 +1018,47 @@ export default function App() {
           {/* Top Header matching reference */}
           <div className="reference-top-header">
             <div className="reference-header-left">
-              <h1>{getActiveTabTitle(activeTab)}</h1>
-              <p>{getActiveTabSubtitle(activeTab)}</p>
+              <nav
+                className="header-breadcrumbs"
+                aria-label="Breadcrumb"
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "0.5rem",
+                  fontSize: "0.92rem",
+                  fontWeight: 600,
+                  color: "#64748b",
+                  background: "#ffffff",
+                  padding: "0.45rem 0.95rem",
+                  borderRadius: "10px",
+                  border: "1px solid #e2e8f0",
+                  boxShadow: "0 1px 3px rgba(0, 0, 0, 0.02)",
+                }}
+              >
+                <span style={{ color: "#64748b", fontWeight: 600 }}>SRCB OMR</span>
+                <ChevronRight size={14} style={{ color: "#94a3b8", flexShrink: 0 }} />
+                <span
+                  style={{
+                    color: "#0062ff",
+                    fontWeight: 700,
+                    textTransform: "capitalize",
+                    background: "#eff6ff",
+                    padding: "0.15rem 0.55rem",
+                    borderRadius: "6px",
+                    border: "1px solid #bfdbfe",
+                    fontSize: "0.82rem",
+                  }}
+                >
+                  {currentUser.role.replace("-", " ")}
+                </span>
+                <ChevronRight size={14} style={{ color: "#94a3b8", flexShrink: 0 }} />
+                <span style={{ color: "#0f172a", fontWeight: 800 }}>
+                  {getActiveTabTitle(activeTab)}
+                </span>
+              </nav>
             </div>
 
             <div className="reference-header-right">
-              <div className="header-search-box">
-                <Search size={15} className="header-search-icon" />
-                <input
-                  type="text"
-                  className="header-search-input"
-                  placeholder="Search exams or students..."
-                  value={examListSearch}
-                  onChange={(e) => setExamListSearch(e.target.value)}
-                />
-              </div>
 
               <button
                 type="button"
@@ -1103,40 +1149,82 @@ export default function App() {
             />
           )}
 
-        {activeTab === "academic-management" && currentUser && (
-          <DeanAcademicManagement
-            currentUser={currentUser}
-            summary={dashboardSummary}
-            exams={exams}
-            submissions={submissions}
-            roster={roster}
-            onInspectExam={(exam) => setInspectExam(exam)}
-            addToast={addToast}
-          />
-        )}
+        {/* PROGRAMME-SCOPED OR INSTITUTION-WIDE WORKSPACE */}
+        {(() => {
+          const isPh = currentUser?.role === "programme-head";
+          const phProgram = (currentUser?.programme || "BSIT").toLowerCase();
+          const currentExams = isPh
+            ? exams.filter((e) => !e.program || e.program.toLowerCase() === phProgram)
+            : exams;
+          const currentExamIds = new Set(currentExams.map((e) => e.id));
+          const currentSubmissions = isPh
+            ? submissions.filter((s) => currentExamIds.has(s.exam_id))
+            : submissions;
+          const currentStudentIds = new Set(currentSubmissions.map((s) => s.student_id));
+          const currentRoster = isPh
+            ? roster.filter((r) =>
+                currentStudentIds.has(r.student_id) ||
+                (r.course_section && r.course_section.toLowerCase().includes(phProgram))
+              )
+            : roster;
 
-        {activeTab === "examinations" && currentUser && (
-          <DeanExaminations
-            currentUser={currentUser}
-            exams={exams}
-            submissions={submissions}
-            roster={roster}
-            onInspectExam={(exam) => setInspectExam(exam)}
-            addToast={addToast}
-            formatDate={formatDate}
-          />
-        )}
+          return (
+            <>
+              {activeTab === "academic-management" && currentUser && (
+                <DeanAcademicManagement
+                  currentUser={currentUser}
+                  summary={dashboardSummary}
+                  exams={currentExams}
+                  submissions={currentSubmissions}
+                  roster={currentRoster}
+                  onInspectExam={(exam) => setInspectExam(exam)}
+                  addToast={addToast}
+                />
+              )}
 
-        {activeTab === "reports" && currentUser && (
-          <DeanReportsAnalytics
-            currentUser={currentUser}
-            exams={exams}
-            submissions={submissions}
-            roster={roster}
-            summary={dashboardSummary}
-            addToast={addToast}
-          />
-        )}
+              {activeTab === "examinations" && currentUser && (
+                currentUser.role === "student" ? (
+                  <StudentPortalView
+                    currentUser={currentUser}
+                    exams={exams}
+                    submissions={submissions}
+                    formatDate={formatDate}
+                  />
+                ) : (
+                  <DeanExaminations
+                    currentUser={currentUser}
+                    exams={currentExams}
+                    submissions={currentSubmissions}
+                    roster={currentRoster}
+                    onInspectExam={(exam) => setInspectExam(exam)}
+                    addToast={addToast}
+                    formatDate={formatDate}
+                  />
+                )
+              )}
+
+              {activeTab === "reports" && currentUser && (
+                currentUser.role === "student" ? (
+                  <StudentPortalView
+                    currentUser={currentUser}
+                    exams={exams}
+                    submissions={submissions}
+                    formatDate={formatDate}
+                  />
+                ) : (
+                  <DeanReportsAnalytics
+                    currentUser={currentUser}
+                    exams={currentExams}
+                    submissions={currentSubmissions}
+                    roster={currentRoster}
+                    summary={dashboardSummary}
+                    addToast={addToast}
+                  />
+                )
+              )}
+            </>
+          );
+        })()}
 
         {activeTab === "settings" && currentUser && (
           <DeanSettings
@@ -1149,21 +1237,27 @@ export default function App() {
         {activeTab === "user-management" && currentUser && (
           <div>
             <div
-              className="header-container"
-              style={{ marginBottom: "1.5rem" }}
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                flexWrap: "wrap",
+                gap: "1rem",
+                padding: "1.25rem 1.5rem",
+                background: "#ffffff",
+                border: "1px solid #e2e8f0",
+                borderRadius: "12px",
+                marginBottom: "1.25rem",
+              }}
             >
-              <h2 style={{ fontSize: "1.4rem", fontWeight: 800, margin: 0 }}>
-                Create Institutional Account
-              </h2>
-              <p
-                style={{
-                  fontSize: "0.85rem",
-                  color: "var(--text-secondary)",
-                  margin: "0.2rem 0 0 0",
-                }}
-              >
-                Provision and authorize active Teacher and Student accounts.
-              </p>
+              <div>
+                <h2 style={{ fontSize: "1.4rem", fontWeight: 800, margin: 0, color: "#0f172a" }}>
+                  Create Account
+                </h2>
+                <p style={{ fontSize: "0.82rem", color: "#64748b", margin: "0.2rem 0 0 0" }}>
+                  Register new teacher and student accounts
+                </p>
+              </div>
             </div>
 
             <AdminUserManagement
@@ -1179,21 +1273,35 @@ export default function App() {
         {activeTab === "user-directory" && currentUser && (
           <div>
             <div
-              className="header-container"
-              style={{ marginBottom: "1.5rem" }}
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                flexWrap: "wrap",
+                gap: "1rem",
+                padding: "1.25rem 1.5rem",
+                background: "#ffffff",
+                border: "1px solid #e2e8f0",
+                borderRadius: "12px",
+                marginBottom: "1.25rem",
+              }}
             >
-              <h2 style={{ fontSize: "1.4rem", fontWeight: 800, margin: 0 }}>
-                User Accounts Directory
-              </h2>
-              <p
-                style={{
-                  fontSize: "0.85rem",
-                  color: "var(--text-secondary)",
-                  margin: "0.2rem 0 0 0",
-                }}
-              >
-                Search, inspect, and manage all registered institutional accounts across faculty and students.
-              </p>
+              <div>
+                <h2 style={{ fontSize: "1.4rem", fontWeight: 800, margin: 0, color: "#0f172a" }}>
+                  {currentUser.role === "programme-head"
+                    ? `${currentUser.programme || "BSIT"} Student Access`
+                    : currentUser.role === "dean"
+                      ? "User Access"
+                      : "User Directory"}
+                </h2>
+                <p style={{ fontSize: "0.82rem", color: "#64748b", margin: "0.2rem 0 0 0" }}>
+                  {currentUser.role === "programme-head"
+                    ? `Enrolled student accounts under ${currentUser.programme || "BSIT"} academic program`
+                    : currentUser.role === "dean"
+                      ? "Manage and oversee user access across Higher Education programs"
+                      : "Manage registered faculty and student accounts"}
+                </p>
+              </div>
             </div>
 
             <AdminUserManagement
@@ -1209,22 +1317,27 @@ export default function App() {
         {activeTab === "quick-scan" && (
           <div>
             <div
-              className="header-container"
-              style={{ marginBottom: "1.5rem" }}
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                flexWrap: "wrap",
+                gap: "1rem",
+                padding: "1.25rem 1.5rem",
+                background: "#ffffff",
+                border: "1px solid #e2e8f0",
+                borderRadius: "12px",
+                marginBottom: "1.25rem",
+              }}
             >
-              <h2 style={{ fontSize: "1.4rem", fontWeight: 800, margin: 0 }}>
-                Quick Bubble Reader
-              </h2>
-              <p
-                style={{
-                  fontSize: "0.85rem",
-                  color: "var(--text-secondary)",
-                  margin: "0.2rem 0 0 0",
-                }}
-              >
-                Upload any completed ZipGrade sheet to read raw student marks
-                instantly.
-              </p>
+              <div>
+                <h2 style={{ fontSize: "1.4rem", fontWeight: 800, margin: 0, color: "#0f172a" }}>
+                  Quick Scanner
+                </h2>
+                <p style={{ fontSize: "0.82rem", color: "#64748b", margin: "0.2rem 0 0 0" }}>
+                  Scan ZipGrade bubble sheets via camera or file upload
+                </p>
+              </div>
             </div>
 
             <div className="scan-mode-tabs">
@@ -1473,41 +1586,20 @@ export default function App() {
         {activeTab === "exams" && (
           <div>
             <div
-              className="header-container"
               style={{
-                marginBottom: "1.5rem",
                 display: "flex",
                 justifyContent: "space-between",
                 alignItems: "center",
                 flexWrap: "wrap",
                 gap: "1rem",
+                padding: "1.25rem 1.5rem",
+                background: "#ffffff",
+                border: "1px solid #e2e8f0",
+                borderRadius: "12px",
+                marginBottom: "1.25rem",
               }}
             >
               <div>
-                <div
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "0.5rem",
-                    marginBottom: "0.25rem",
-                  }}
-                >
-                  <span
-                    style={{
-                      background: "#eff6ff",
-                      color: "#0062ff",
-                      border: "1px solid #bfdbfe",
-                      padding: "0.2rem 0.6rem",
-                      borderRadius: "6px",
-                      fontSize: "0.72rem",
-                      fontWeight: 800,
-                      textTransform: "uppercase",
-                      letterSpacing: "0.04em",
-                    }}
-                  >
-                    Teacher Academic Workspace
-                  </span>
-                </div>
                 <h2
                   style={{
                     fontSize: "1.4rem",
@@ -1516,16 +1608,16 @@ export default function App() {
                     color: "#0f172a",
                   }}
                 >
-                  Exams & Grading Management
+                  Exams & Grading
                 </h2>
                 <p
                   style={{
-                    fontSize: "0.85rem",
+                    fontSize: "0.82rem",
                     color: "#64748b",
                     margin: "0.2rem 0 0 0",
                   }}
                 >
-                  Manage examination answer keys, score student OMR sheets with camera or upload, and compile session records.
+                  Manage answer keys, score student OMR sheets, and compile results
                 </p>
               </div>
 
@@ -2965,35 +3057,40 @@ export default function App() {
         {activeTab === "history" && (
           <div>
             <div
-              className="header-container"
               style={{
-                marginBottom: "1.5rem",
                 display: "flex",
                 justifyContent: "space-between",
                 alignItems: "center",
+                flexWrap: "wrap",
+                gap: "1rem",
+                padding: "1.25rem 1.5rem",
+                background: "#ffffff",
+                border: "1px solid #e2e8f0",
+                borderRadius: "12px",
+                marginBottom: "1.25rem",
               }}
             >
               <div>
-                <h2 style={{ fontSize: "1.4rem", fontWeight: 800, margin: 0 }}>
-                  Teacher Database & Grading Records
+                <h2 style={{ fontSize: "1.4rem", fontWeight: 800, margin: 0, color: "#0f172a" }}>
+                  Grading History
                 </h2>
                 <p
                   style={{
-                    fontSize: "0.85rem",
-                    color: "var(--text-secondary)",
+                    fontSize: "0.82rem",
+                    color: "#64748b",
                     margin: "0.2rem 0 0 0",
                   }}
                 >
-                  Review, audit, and export scanned student submissions using
-                  multiple flexible export methods.
+                  Review and audit scanned student submissions
                 </p>
               </div>
-              <div style={{ display: "flex", gap: "0.75rem" }}>
+              <div style={{ display: "flex", gap: "0.5rem" }}>
                 <button
                   className="btn btn-secondary"
                   onClick={() => setIsRosterModalOpen(true)}
+                  style={{ fontSize: "0.82rem", padding: "0.45rem 0.85rem" }}
                 >
-                  <FileSpreadsheet size={16} /> Import Roster
+                  <FileSpreadsheet size={15} /> Import Roster
                 </button>
               </div>
             </div>
@@ -3699,42 +3796,21 @@ export default function App() {
 
         {/* OBE ITEM ANALYSIS TAB */}
         {activeTab === "item-analysis" && (
-          <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
             <div
-              className="header-container"
               style={{
                 display: "flex",
                 justifyContent: "space-between",
                 alignItems: "center",
                 flexWrap: "wrap",
                 gap: "1rem",
+                padding: "1.25rem 1.5rem",
+                background: "#ffffff",
+                border: "1px solid #e2e8f0",
+                borderRadius: "12px",
               }}
             >
               <div>
-                <div
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "0.5rem",
-                    marginBottom: "0.25rem",
-                  }}
-                >
-                  <span
-                    style={{
-                      background: "#eff6ff",
-                      color: "#0062ff",
-                      border: "1px solid #bfdbfe",
-                      padding: "0.2rem 0.6rem",
-                      borderRadius: "6px",
-                      fontSize: "0.72rem",
-                      fontWeight: 800,
-                      textTransform: "uppercase",
-                      letterSpacing: "0.04em",
-                    }}
-                  >
-                    Outcome-Based Education Psychometrics
-                  </span>
-                </div>
                 <h2
                   style={{
                     fontSize: "1.4rem",
@@ -3743,16 +3819,16 @@ export default function App() {
                     color: "#0f172a",
                   }}
                 >
-                  Outcome-Based Education (OBE) Item Analysis
+                  OBE Analysis
                 </h2>
                 <p
                   style={{
-                    fontSize: "0.85rem",
+                    fontSize: "0.82rem",
                     color: "#64748b",
                     margin: "0.2rem 0 0 0",
                   }}
                 >
-                  Evaluate test validity, question difficulty index (P), and discrimination power (D) in accordance with CHED & PACUCOA accreditation standards.
+                  Item difficulty, discrimination index, and learning outcomes attainment
                 </p>
               </div>
 

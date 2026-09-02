@@ -1,6 +1,5 @@
 import { useState } from "react";
 import {
-  BarChart3,
   TrendingUp,
   Download,
   FileSpreadsheet,
@@ -116,112 +115,68 @@ export default function DeanReportsAnalytics({
 
   return (
     <div style={{ display: "grid", gap: "1.5rem" }}>
-      {/* HEADER BANNER */}
+      {/* HEADER BAR */}
       <div
-        className="card"
         style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          flexWrap: "wrap",
+          gap: "1rem",
+          padding: "1.25rem 1.5rem",
           background: "#ffffff",
           border: "1px solid #e2e8f0",
-          borderRadius: "16px",
-          padding: "1.75rem",
-          boxShadow: "0 2px 10px rgba(0, 98, 255, 0.04)",
+          borderRadius: "12px",
         }}
       >
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "flex-start",
-            flexWrap: "wrap",
-            gap: "1.25rem",
-          }}
-        >
-          <div>
-            <div
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: "0.5rem",
-                padding: "0.3rem 0.75rem",
-                borderRadius: "20px",
-                background: "#eff6ff",
-                border: "1px solid #bfdbfe",
-                color: "#0062ff",
-                fontSize: "0.78rem",
-                fontWeight: 700,
-                textTransform: "uppercase",
-                letterSpacing: "0.05em",
-                marginBottom: "0.75rem",
-              }}
-            >
-              <BarChart3 size={14} /> Executive Academic Intelligence
-            </div>
-            <h1
-              style={{
-                margin: 0,
-                fontSize: "1.65rem",
-                fontWeight: 800,
-                color: "#0f172a",
-                letterSpacing: "-0.02em",
-              }}
-            >
-              Institutional Reports & CHED Analytics
-            </h1>
-            <p
-              style={{
-                color: "#64748b",
-                marginTop: "0.4rem",
-                marginBottom: 0,
-                fontSize: "0.92rem",
-                maxWidth: "720px",
-                lineHeight: 1.5,
-              }}
-            >
-              Comprehensive performance trend analysis, collegiate benchmarks, OBE discrimination matrix evaluation,
-              and official CHED grade transmutation auditing.
-            </p>
-          </div>
+        <div>
+          <h1
+            style={{
+              margin: 0,
+              fontSize: "1.4rem",
+              fontWeight: 800,
+              color: "#0f172a",
+              letterSpacing: "-0.02em",
+            }}
+          >
+            Reports & Analytics
+          </h1>
+          <p
+            style={{
+              color: "#64748b",
+              marginTop: "0.2rem",
+              marginBottom: 0,
+              fontSize: "0.82rem",
+            }}
+          >
+            Performance metrics, grade distributions, and OBE assessments
+          </p>
+        </div>
 
-          <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap" }}>
-            <button
-              type="button"
-              className="btn btn-primary"
-              onClick={handleExportCompleteDb}
-              disabled={downloading}
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: "0.5rem",
-                fontWeight: 700,
-                padding: "0.6rem 1.1rem",
-                background: "#0062ff",
-                color: "#ffffff",
-                border: "none",
-                borderRadius: "10px",
-                boxShadow: "0 2px 8px rgba(0, 98, 255, 0.25)",
-              }}
-            >
-              <Download size={16} /> Complete Master Database (.xlsx)
-            </button>
-            <button
-              type="button"
-              className="btn btn-secondary"
-              onClick={handleExportBatchExams}
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: "0.5rem",
-                fontWeight: 700,
-                padding: "0.6rem 1.1rem",
-                background: "#ffffff",
-                color: "#0f172a",
-                border: "1px solid #e2e8f0",
-                borderRadius: "10px",
-              }}
-            >
-              <FileSpreadsheet size={16} /> CHED Batch Summary
-            </button>
-          </div>
+        <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
+          <button
+            type="button"
+            className="btn btn-primary"
+            onClick={handleExportCompleteDb}
+            disabled={downloading}
+            style={{
+              fontSize: "0.82rem",
+              padding: "0.45rem 1rem",
+            }}
+          >
+            <Download size={15} /> {downloading ? "Exporting..." : "Master Database (.xlsx)"}
+          </button>
+          <button
+            type="button"
+            className="btn btn-secondary"
+            onClick={handleExportBatchExams}
+            style={{
+              fontSize: "0.82rem",
+              padding: "0.45rem 0.85rem",
+            }}
+          >
+            <FileSpreadsheet size={15} /> Batch Summary (.xlsx)
+          </button>
         </div>
       </div>
 

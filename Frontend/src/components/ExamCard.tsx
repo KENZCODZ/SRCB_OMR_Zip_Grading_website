@@ -89,16 +89,33 @@ export const ExamCard: React.FC<ExamCardProps> = ({
       style={{
         cursor: "pointer",
         position: "relative",
-        transition: "all 0.2s ease",
+        transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
         border: isSelected ? "2px solid #0062ff" : "1px solid #e2e8f0",
-        background: isSelected ? "#f8fbff" : "#ffffff",
+        background: isSelected
+          ? "linear-gradient(135deg, #f0f7ff 0%, #e0effe 100%)"
+          : "#ffffff",
         boxShadow: isSelected
-          ? "0 4px 14px rgba(0, 98, 255, 0.12)"
+          ? "0 4px 16px rgba(0, 98, 255, 0.16), 0 0 0 1px #0062ff"
           : "0 2px 6px rgba(0, 0, 0, 0.02)",
         borderRadius: "14px",
         padding: "1rem",
+        overflow: "hidden",
       }}
     >
+      {isSelected && (
+        <div
+          style={{
+            position: "absolute",
+            top: 0,
+            left: 0,
+            bottom: 0,
+            width: "4px",
+            background: "#0062ff",
+            borderTopLeftRadius: "14px",
+            borderBottomLeftRadius: "14px",
+          }}
+        />
+      )}
       <div
         className="flex-justify-between"
         style={{ alignItems: "flex-start" }}
@@ -107,15 +124,17 @@ export const ExamCard: React.FC<ExamCardProps> = ({
           <div
             className="icon-avatar"
             style={{
-              background: isSelected ? "#eff6ff" : "#f8fafc",
-              color: isSelected ? "#0062ff" : "#64748b",
-              border: isSelected ? "1px solid #bfdbfe" : "1px solid #e2e8f0",
-              minWidth: "40px",
-              height: "40px",
-              borderRadius: "10px",
+              background: isSelected ? "#0062ff" : "#eff6ff",
+              color: isSelected ? "#ffffff" : "#0062ff",
+              border: isSelected ? "1px solid #0062ff" : "1px solid #bfdbfe",
+              minWidth: "36px",
+              height: "36px",
+              borderRadius: "8px",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
+              boxShadow: isSelected ? "0 2px 8px rgba(0, 98, 255, 0.3)" : "none",
+              transition: "all 0.2s ease",
             }}
           >
             <BookOpen size={20} />
@@ -144,6 +163,22 @@ export const ExamCard: React.FC<ExamCardProps> = ({
                 {safeExamType}
               </span>
 
+              {isSelected && (
+                <span
+                  style={{
+                    fontSize: "0.7rem",
+                    fontWeight: 700,
+                    background: "#0062ff",
+                    color: "#ffffff",
+                    padding: "0.15rem 0.5rem",
+                    borderRadius: "4px",
+                    letterSpacing: "0.02em",
+                  }}
+                >
+                  Selected
+                </span>
+              )}
+
               {course_code && (
                 <span
                   style={{
@@ -170,7 +205,8 @@ export const ExamCard: React.FC<ExamCardProps> = ({
                 margin: "0 0 4px 0",
                 fontSize: "1.02rem",
                 fontWeight: 700,
-                color: "#0f172a",
+                color: isSelected ? "#0052d9" : "#0f172a",
+                transition: "color 0.2s ease",
               }}
             >
               {name}
@@ -288,7 +324,14 @@ export const ExamCard: React.FC<ExamCardProps> = ({
               <Trash2 size={14} style={{ color: "#ef4444" }} />
             </button>
           )}
-          <ChevronRight size={18} style={{ color: "#94a3b8" }} />
+          <ChevronRight
+            size={18}
+            style={{
+              color: isSelected ? "#0062ff" : "#94a3b8",
+              transform: isSelected ? "translateX(2px)" : "none",
+              transition: "all 0.2s ease",
+            }}
+          />
         </div>
       </div>
     </div>

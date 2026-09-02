@@ -70,7 +70,7 @@ export interface AuthUser {
   programme?: string;
   department?: string;
   studentId?: string;
-  status?: 'pending' | 'active' | 'rejected';
+  status?: 'pending' | 'active' | 'rejected' | 'suspended';
   scope: string;
   permissions: string[];
 }
@@ -83,7 +83,7 @@ export interface PendingUser {
   programme?: string;
   department?: string;
   student_id?: string;
-  status: 'pending' | 'active' | 'rejected';
+  status: 'pending' | 'active' | 'rejected' | 'suspended';
   created_at: string;
 }
 

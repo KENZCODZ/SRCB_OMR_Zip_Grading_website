@@ -40,7 +40,13 @@ export const mockUsers: AuthUser[] = [
     department: 'Office of the Dean',
     programme: 'Institution-wide',
     scope: 'All departments and programmes',
-    permissions: ['View all students', 'Monitor institution analytics', 'Access every exam report', 'Review all item analyses']
+    permissions: [
+      'Monitor examination results across all Higher Education programs',
+      'View student examination scores and academic performance',
+      'Monitor examinations handled by teachers',
+      'View overall examination progress and records',
+      'Manage and oversee user access within the system',
+    ]
   },
   {
     id: 'ph-001',
@@ -50,7 +56,12 @@ export const mockUsers: AuthUser[] = [
     department: 'College of Computing',
     programme: 'BSIT',
     scope: 'BSIT programme only',
-    permissions: ['View BSIT students', 'Monitor programme progress', 'Review programme analytics', 'Access faculty performance insights']
+    permissions: [
+      'Monitor examination results within their assigned academic program only',
+      'View student scores and examination records for their program',
+      'Monitor examinations handled by teachers under their program',
+      'Access examination records and reports within their assigned program',
+    ]
   },
   {
     id: 'teacher-001',
@@ -60,7 +71,17 @@ export const mockUsers: AuthUser[] = [
     department: 'Computer Studies',
     programme: 'BSIT',
     scope: 'Exam creation and grading',
-    permissions: ['Create exams', 'Upload answer keys', 'Scan and grade sheets', 'Publish results and feedback']
+    permissions: [
+      'Manage courses and subjects',
+      'Create and manage examinations',
+      'Create and maintain answer keys',
+      'Upload and automatically process student test papers',
+      'Automatically check and grade student test papers',
+      'Record student submissions and examination scores',
+      'Release and publish grading results for students to view',
+      'Review processed test papers and grading results',
+      'Manage examination records',
+    ]
   },
   {
     id: 'student-001',
@@ -71,7 +92,11 @@ export const mockUsers: AuthUser[] = [
     programme: 'BSIT',
     studentId: '2023-00142',
     scope: 'Own examination records only',
-    permissions: ['View personal results', 'Review feedback', 'Track performance history']
+    permissions: [
+      'View their own examination scores',
+      'View which exam questions were answered correctly or incorrectly',
+      'Access only their personal examination records',
+    ]
   }
 ];
 

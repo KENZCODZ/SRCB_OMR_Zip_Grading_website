@@ -50,6 +50,21 @@ export const TeacherExamCompiler: React.FC<TeacherExamCompilerProps> = ({
   const [selectedSection, setSelectedSection] = useState<string>("All");
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [expandedExamId, setExpandedExamId] = useState<string | null>(null);
+  const [publishedExamIds, setPublishedExamIds] = useState<Set<string>>(new Set());
+
+  const togglePublishResults = (examId: string, examName: string) => {
+    setPublishedExamIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(examId)) {
+        next.delete(examId);
+        if (addToast) addToast("info", `Grading results retracted for "${examName}".`);
+      } else {
+        next.add(examId);
+        if (addToast) addToast("success", `Grading results released for "${examName}". Enrolled students can now view their scores.`);
+      }
+      return next;
+    });
+  };
 
   // Helper map for Student Roster lookup
   const rosterMap = useMemo(() => {
@@ -1035,6 +1050,28 @@ export const TeacherExamCompiler: React.FC<TeacherExamCompilerProps> = ({
                           Inspect
                         </button>
                       )}
+
+                      <button
+                        type="button"
+                        className={`btn btn-sm ${publishedExamIds.has(exam.id) ? "btn-primary" : "btn-secondary"}`}
+                        onClick={() => togglePublishResults(exam.id, exam.name)}
+                        title={
+                          publishedExamIds.has(exam.id)
+                            ? "Results are published to students. Click to retract."
+                            : "Release and publish grading results for students to view."
+                        }
+                        style={{
+                          fontSize: "0.8rem",
+                          borderRadius: "8px",
+                          fontWeight: 700,
+                          background: publishedExamIds.has(exam.id) ? "#0062ff" : "#ffffff",
+                          color: publishedExamIds.has(exam.id) ? "#ffffff" : "#0062ff",
+                          border: publishedExamIds.has(exam.id) ? "1px solid #0062ff" : "1px solid #bfdbfe",
+                        }}
+                      >
+                        <CheckCircle2 size={13} style={{ marginRight: "4px" }} />
+                        {publishedExamIds.has(exam.id) ? "Published" : "Release Results"}
+                      </button>
 
                       <button
                         type="button"

@@ -11,7 +11,6 @@ import {
   CheckCircle2,
   Mail,
   ChevronRight,
-  Sparkles,
   Layers,
 } from "lucide-react";
 import type { AuthUser, Exam, Submission, StudentRosterEntry } from "../../types";
@@ -212,271 +211,160 @@ export default function DeanAcademicManagement({
 
   return (
     <div style={{ display: "grid", gap: "1.5rem" }}>
-      {/* EXECUTIVE HERO BANNER */}
+      {/* EXECUTIVE HEADER BAR */}
       <div
-        className="card"
         style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          flexWrap: "wrap",
+          gap: "1rem",
+          padding: "1.25rem 1.5rem",
           background: "#ffffff",
           border: "1px solid #e2e8f0",
-          borderRadius: "16px",
-          padding: "1.75rem",
-          boxShadow: "0 2px 10px rgba(0, 98, 255, 0.04)",
+          borderRadius: "12px",
         }}
       >
-        <div
+        <div>
+          <h1
+            style={{
+              margin: 0,
+              fontSize: "1.4rem",
+              fontWeight: 800,
+              color: "#0f172a",
+              letterSpacing: "-0.02em",
+            }}
+          >
+            Academic Management
+          </h1>
+          <p
+            style={{
+              color: "#64748b",
+              marginTop: "0.2rem",
+              marginBottom: 0,
+              fontSize: "0.82rem",
+            }}
+          >
+            Collegiate departments, faculty leadership, and curriculum oversight
+          </p>
+        </div>
+
+        <button
+          type="button"
+          className="btn btn-primary"
+          onClick={handleExportDatabase}
+          disabled={exporting}
           style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "flex-start",
-            flexWrap: "wrap",
-            gap: "1.25rem",
+            fontSize: "0.82rem",
+            padding: "0.45rem 1rem",
           }}
         >
-          <div>
-            <div
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: "0.5rem",
-                padding: "0.3rem 0.75rem",
-                borderRadius: "20px",
-                background: "#eff6ff",
-                border: "1px solid #bfdbfe",
-                color: "#0062ff",
-                fontSize: "0.78rem",
-                fontWeight: 700,
-                textTransform: "uppercase",
-                letterSpacing: "0.05em",
-                marginBottom: "0.75rem",
-              }}
-            >
-              <Sparkles size={14} /> Executive Academic Administration
-            </div>
-            <h1
-              style={{
-                margin: 0,
-                fontSize: "1.65rem",
-                fontWeight: 800,
-                color: "#0f172a",
-                letterSpacing: "-0.02em",
-              }}
-            >
-              Academic Management & Institutional Oversight
-            </h1>
-            <p
-              style={{
-                color: "#64748b",
-                marginTop: "0.4rem",
-                marginBottom: 0,
-                fontSize: "0.92rem",
-                maxWidth: "720px",
-                lineHeight: 1.5,
-              }}
-            >
-              Central supervisory module for managing collegiate departments, monitoring instructional faculty
-              performance, reviewing curricular pass rates, and upholding CHED & OBE academic standards.
-            </p>
-          </div>
-
-          <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap" }}>
-            <button
-              type="button"
-              className="btn btn-primary"
-              onClick={handleExportDatabase}
-              disabled={exporting}
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: "0.5rem",
-                fontWeight: 700,
-                padding: "0.6rem 1.1rem",
-                background: "#0062ff",
-                color: "#ffffff",
-                border: "none",
-                borderRadius: "10px",
-                boxShadow: "0 2px 8px rgba(0, 98, 255, 0.25)",
-              }}
-            >
-              <Download size={16} />
-              {exporting ? "Generating Export..." : "Export Institutional Data (.xlsx)"}
-            </button>
-          </div>
-        </div>
+          <Download size={15} />
+          {exporting ? "Exporting..." : "Export Data (.xlsx)"}
+        </button>
       </div>
 
       {/* 4 CORE EXECUTIVE KPI CARDS */}
       <div
         style={{
           display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
-          gap: "1rem",
+          gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+          gap: "0.85rem",
         }}
       >
         <div
-          className="card"
           style={{
-            padding: "1.25rem",
+            padding: "1rem 1.15rem",
             background: "#ffffff",
             border: "1px solid #e2e8f0",
-            borderRadius: "14px",
-            boxShadow: "0 2px 6px rgba(0,0,0,0.02)",
+            borderRadius: "12px",
             display: "flex",
-            flexDirection: "column",
+            alignItems: "center",
             justifyContent: "space-between",
           }}
         >
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.75rem" }}>
-            <span style={{ fontSize: "0.85rem", fontWeight: 600, color: "#64748b" }}>
-              Total Students
-            </span>
-            <div
-              style={{
-                width: "36px",
-                height: "36px",
-                borderRadius: "10px",
-                background: "#eff6ff",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                color: "#0062ff",
-              }}
-            >
-              <GraduationCap size={20} />
-            </div>
-          </div>
           <div>
-            <div style={{ fontSize: "1.8rem", fontWeight: 800, color: "#0f172a" }}>
+            <div style={{ fontSize: "0.78rem", fontWeight: 600, color: "#64748b", marginBottom: "0.25rem" }}>
+              Total Students
+            </div>
+            <div style={{ fontSize: "1.45rem", fontWeight: 800, color: "#0f172a", lineHeight: 1.1 }}>
               {totalStudents.toLocaleString()}
             </div>
-            <div style={{ fontSize: "0.78rem", color: "#10b981", marginTop: "0.25rem", display: "flex", alignItems: "center", gap: "0.3rem", fontWeight: 600 }}>
-              <TrendingUp size={13} /> 100% Enrolment Verified
-            </div>
+          </div>
+          <div style={{ width: "36px", height: "36px", borderRadius: "8px", background: "#eff6ff", display: "flex", alignItems: "center", justifyContent: "center", color: "#0062ff", flexShrink: 0 }}>
+            <GraduationCap size={18} />
           </div>
         </div>
 
         <div
-          className="card"
           style={{
-            padding: "1.25rem",
+            padding: "1rem 1.15rem",
             background: "#ffffff",
             border: "1px solid #e2e8f0",
-            borderRadius: "14px",
-            boxShadow: "0 2px 6px rgba(0,0,0,0.02)",
+            borderRadius: "12px",
             display: "flex",
-            flexDirection: "column",
+            alignItems: "center",
             justifyContent: "space-between",
           }}
         >
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.75rem" }}>
-            <span style={{ fontSize: "0.85rem", fontWeight: 600, color: "#64748b" }}>
-              Instructional Faculty
-            </span>
-            <div
-              style={{
-                width: "36px",
-                height: "36px",
-                borderRadius: "10px",
-                background: "#eff6ff",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                color: "#0062ff",
-              }}
-            >
-              <Users size={20} />
-            </div>
-          </div>
           <div>
-            <div style={{ fontSize: "1.8rem", fontWeight: 800, color: "#0f172a" }}>
+            <div style={{ fontSize: "0.78rem", fontWeight: 600, color: "#64748b", marginBottom: "0.25rem" }}>
+              Faculty
+            </div>
+            <div style={{ fontSize: "1.45rem", fontWeight: 800, color: "#0f172a", lineHeight: 1.1 }}>
               {totalFaculty}
             </div>
-            <div style={{ fontSize: "0.78rem", color: "#64748b", marginTop: "0.25rem" }}>
-              Across 4 Academic Colleges
-            </div>
+          </div>
+          <div style={{ width: "36px", height: "36px", borderRadius: "8px", background: "#eff6ff", display: "flex", alignItems: "center", justifyContent: "center", color: "#0062ff", flexShrink: 0 }}>
+            <Users size={18} />
           </div>
         </div>
 
         <div
-          className="card"
           style={{
-            padding: "1.25rem",
+            padding: "1rem 1.15rem",
             background: "#ffffff",
             border: "1px solid #e2e8f0",
-            borderRadius: "14px",
-            boxShadow: "0 2px 6px rgba(0,0,0,0.02)",
+            borderRadius: "12px",
             display: "flex",
-            flexDirection: "column",
+            alignItems: "center",
             justifyContent: "space-between",
           }}
         >
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.75rem" }}>
-            <span style={{ fontSize: "0.85rem", fontWeight: 600, color: "#64748b" }}>
-              Total Examinations
-            </span>
-            <div
-              style={{
-                width: "36px",
-                height: "36px",
-                borderRadius: "10px",
-                background: "#eff6ff",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                color: "#0062ff",
-              }}
-            >
-              <BookOpen size={20} />
-            </div>
-          </div>
           <div>
-            <div style={{ fontSize: "1.8rem", fontWeight: 800, color: "#0f172a" }}>
+            <div style={{ fontSize: "0.78rem", fontWeight: 600, color: "#64748b", marginBottom: "0.25rem" }}>
+              Examinations
+            </div>
+            <div style={{ fontSize: "1.45rem", fontWeight: 800, color: "#0f172a", lineHeight: 1.1 }}>
               {totalExamsCount}
             </div>
-            <div style={{ fontSize: "0.78rem", color: "#64748b", marginTop: "0.25rem" }}>
-              {submissions.length > 0 ? `${submissions.length} sheets graded` : "Midterms & Finals active"}
-            </div>
+          </div>
+          <div style={{ width: "36px", height: "36px", borderRadius: "8px", background: "#eff6ff", display: "flex", alignItems: "center", justifyContent: "center", color: "#0062ff", flexShrink: 0 }}>
+            <BookOpen size={18} />
           </div>
         </div>
 
         <div
-          className="card"
           style={{
-            padding: "1.25rem",
+            padding: "1rem 1.15rem",
             background: "#ffffff",
             border: "1px solid #e2e8f0",
-            borderRadius: "14px",
-            boxShadow: "0 2px 6px rgba(0,0,0,0.02)",
+            borderRadius: "12px",
             display: "flex",
-            flexDirection: "column",
+            alignItems: "center",
             justifyContent: "space-between",
           }}
         >
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.75rem" }}>
-            <span style={{ fontSize: "0.85rem", fontWeight: 600, color: "#64748b" }}>
-              Institutional Pass Rate
-            </span>
-            <div
-              style={{
-                width: "36px",
-                height: "36px",
-                borderRadius: "10px",
-                background: "#eff6ff",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                color: "#0062ff",
-              }}
-            >
-              <Award size={20} />
-            </div>
-          </div>
           <div>
-            <div style={{ fontSize: "1.8rem", fontWeight: 800, color: "#0062ff" }}>
+            <div style={{ fontSize: "0.78rem", fontWeight: 600, color: "#64748b", marginBottom: "0.25rem" }}>
+              Average Score
+            </div>
+            <div style={{ fontSize: "1.45rem", fontWeight: 800, color: "#0f172a", lineHeight: 1.1 }}>
               {avgScore}
             </div>
-            <div style={{ fontSize: "0.78rem", color: "#10b981", marginTop: "0.25rem", fontWeight: 600 }}>
-              +9.6% above CHED 75% baseline
-            </div>
+          </div>
+          <div style={{ width: "36px", height: "36px", borderRadius: "8px", background: "#eff6ff", display: "flex", alignItems: "center", justifyContent: "center", color: "#0062ff", flexShrink: 0 }}>
+            <TrendingUp size={18} />
           </div>
         </div>
       </div>

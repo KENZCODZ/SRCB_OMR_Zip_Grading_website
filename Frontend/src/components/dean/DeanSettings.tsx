@@ -1,6 +1,5 @@
 import React, { useState } from "react";
 import {
-  ShieldCheck,
   Award,
   Sliders,
   Bell,
@@ -65,112 +64,61 @@ export default function DeanSettings({
     <form onSubmit={handleSaveSettings} style={{ display: "grid", gap: "1.5rem" }}>
       {/* HEADER BANNER */}
       <div
-        className="card"
         style={{
-          background: "#ffffff",
-          border: "1px solid #e2e8f0",
-          borderRadius: "16px",
-          padding: "1.75rem",
-          boxShadow: "0 2px 10px rgba(0, 98, 255, 0.04)",
-        }}
-      >
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "flex-start",
+          display: "flex",
+          justifyContent: "space-between",
+            alignItems: "center",
             flexWrap: "wrap",
-            gap: "1.25rem",
+            gap: "1rem",
+            padding: "1.25rem 1.5rem",
+            background: "#ffffff",
+            border: "1px solid #e2e8f0",
+            borderRadius: "12px",
           }}
         >
           <div>
-            <div
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: "0.5rem",
-                padding: "0.3rem 0.75rem",
-                borderRadius: "20px",
-                background: "#eff6ff",
-                border: "1px solid #bfdbfe",
-                color: "#0062ff",
-                fontSize: "0.78rem",
-                fontWeight: 700,
-                textTransform: "uppercase",
-                letterSpacing: "0.05em",
-                marginBottom: "0.75rem",
-              }}
-            >
-              <ShieldCheck size={14} /> Institutional Governance & Quality Assurance
-            </div>
             <h1
               style={{
                 margin: 0,
-                fontSize: "1.65rem",
+                fontSize: "1.4rem",
                 fontWeight: 800,
                 color: "#0f172a",
                 letterSpacing: "-0.02em",
               }}
             >
-              Dean Governance & System Settings
+              System Settings
             </h1>
             <p
               style={{
                 color: "#64748b",
-                marginTop: "0.4rem",
+                marginTop: "0.2rem",
                 marginBottom: 0,
-                fontSize: "0.92rem",
-                maxWidth: "720px",
-                lineHeight: 1.5,
+                fontSize: "0.82rem",
               }}
             >
-              Configure institutional grading transmutation scales, set OBE quality audit thresholds, customize
-              compliance export watermarks, and manage automated academic alert notifications.
+              Grading scales, passing benchmarks, and OBE thresholds
             </p>
           </div>
 
-          <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap" }}>
+          <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
             <button
               type="button"
-              className="btn"
+              className="btn btn-secondary"
               onClick={handleResetDefaults}
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: "0.4rem",
-                fontSize: "0.85rem",
-                padding: "0.55rem 1rem",
-                background: "#ffffff",
-                border: "1px solid #e2e8f0",
-                color: "#0f172a",
-                borderRadius: "10px",
-              }}
+              style={{ fontSize: "0.82rem", padding: "0.45rem 0.85rem" }}
             >
-              <RotateCcw size={15} /> Reset Defaults
+              <RotateCcw size={14} /> Reset
             </button>
             <button
               type="submit"
               className="btn btn-primary"
               disabled={saving}
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: "0.4rem",
-                fontWeight: 700,
-                fontSize: "0.85rem",
-                padding: "0.55rem 1.25rem",
-                background: "#0062ff",
-                color: "#ffffff",
-                border: "none",
-                borderRadius: "10px",
-                boxShadow: "0 2px 8px rgba(0, 98, 255, 0.25)",
-              }}
+              style={{ fontSize: "0.82rem", padding: "0.45rem 1rem" }}
             >
-              <Save size={16} /> {saving ? "Saving Changes..." : "Save Policies"}
+              <Save size={14} /> {saving ? "Saving..." : "Save Policies"}
             </button>
           </div>
         </div>
-      </div>
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(420px, 1fr))", gap: "1.25rem" }}>
         {/* SECTION 1: ACADEMIC CALENDAR & GRADING FORMULA */}

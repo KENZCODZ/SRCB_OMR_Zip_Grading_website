@@ -428,20 +428,30 @@ h1, h2, h3, h4, h5, h6, .font-heading {
 
 /* Exam Cards */
 .exam-item-card {
-  background: rgba(15, 36, 72, 0.5);
-  border: 1px solid var(--border);
-  transition: transform 0.2s ease, border-color 0.2s ease;
+  background: #ffffff;
+  border: 1px solid var(--border, #e2e8f0);
+  border-radius: 14px;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
 }
 
 .exam-item-card:hover {
-  transform: translateX(4px);
-  border-color: var(--srcb-gold-accent);
+  transform: translateY(-2px);
+  border-color: #93c5fd;
+  box-shadow: 0 4px 12px rgba(0, 98, 255, 0.08);
 }
 
 .exam-card-selected {
-  border-color: var(--srcb-gold-accent) !important;
-  background: linear-gradient(135deg, rgba(30, 58, 138, 0.6), rgba(15, 36, 72, 0.8)) !important;
-  box-shadow: 0 0 15px rgba(245, 158, 11, 0.2);
+  border: 2px solid #0062ff !important;
+  border-color: #0062ff !important;
+  background: linear-gradient(135deg, #f0f7ff 0%, #e0effe 100%) !important;
+  box-shadow: 0 4px 16px rgba(0, 98, 255, 0.16), 0 0 0 1px #0062ff !important;
+}
+
+.exam-card-selected:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(0, 98, 255, 0.22), 0 0 0 1px #0062ff !important;
 }
 
 /* Badges with Gold Shimmer */

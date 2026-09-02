@@ -106,10 +106,11 @@ const ROLE_GUIDES: RoleGuide[] = [
       "Institutional oversight, high-level academic performance monitoring, faculty auditing, and cross-departmental pass-rate evaluations.",
     targetAudience: "Deans, Vice Presidents for Academic Affairs, Executive Committee",
     keyResponsibilities: [
-      "Monitor institutional and departmental grade trends",
-      "Audit exam quality and pass rates across all programmes",
-      "Generate executive summaries for accreditation & CHED compliance",
-      "Manage academic roles and system-wide permission scopes",
+      "Monitor examination results across all Higher Education programs",
+      "View student examination scores and academic performance",
+      "Monitor examinations handled by teachers",
+      "View overall examination progress and records",
+      "Manage and oversee user access within the system",
     ],
     sections: [
       {
@@ -161,10 +162,10 @@ const ROLE_GUIDES: RoleGuide[] = [
       "Departmental exam monitoring, curriculum alignment, section pass-rate tracking, and Outcome-Based Education (OBE) item review.",
     targetAudience: "BSIT Programme Heads, Department Chairs, Curriculum Coordinators",
     keyResponsibilities: [
-      "Oversee exams published within your specific academic programme (e.g., BSIT)",
-      "Evaluate curriculum effectiveness using Item Analysis (Difficulty & Discrimination Indices)",
-      "Track faculty exam creation and scanning activity",
-      "Identify students needing academic intervention or tutoring",
+      "Monitor examination results within their assigned academic program only",
+      "View student scores and examination records for their program",
+      "Monitor examinations handled by teachers under their program",
+      "Access examination records and reports within their assigned program",
     ],
     sections: [
       {
@@ -216,10 +217,15 @@ const ROLE_GUIDES: RoleGuide[] = [
       "Full examination lifecycle: answer key creation, ZipGrade 50-question sheet scanning, automated grading, score transmute, and student feedback.",
     targetAudience: "Instructors, Professors, Lecturers, Exam Proctors",
     keyResponsibilities: [
-      "Create new exams and define official answer keys (Questions 1–50)",
-      "Scan master answer keys using sheet images or camera upload",
-      "Grade student OMR sheets individually or in bulk",
-      "Export CHED transmuted grade sheets and review feedback",
+      "Manage courses and subjects",
+      "Create and manage examinations",
+      "Create and maintain answer keys",
+      "Upload and automatically process student test papers",
+      "Automatically check and grade student test papers",
+      "Record student submissions and examination scores",
+      "Release and publish grading results for students to view",
+      "Review processed test papers and grading results",
+      "Manage examination records",
     ],
     sections: [
       {
@@ -289,10 +295,9 @@ const ROLE_GUIDES: RoleGuide[] = [
       "Personal grade transparency, item-by-item bubble review, official CHED transmuted grade lookup, and performance tracking.",
     targetAudience: "Enrolled Students across all academic departments",
     keyResponsibilities: [
-      "View published scores for quizzes, midterms, and final exams",
-      "Check itemized answer breakdown (your selection vs. correct answer key)",
-      "Understand CHED transmuted grades (1.00 = 99-100%, 3.00 = 75% Passing, 5.00 = Failed)",
-      "Review teacher feedback on weak performance areas",
+      "View their own examination scores",
+      "View which exam questions were answered correctly or incorrectly",
+      "Access only their personal examination records",
     ],
     sections: [
       {

@@ -8,7 +8,6 @@ import {
   Sparkles,
   Award,
   Users,
-  ShieldCheck,
 } from "lucide-react";
 import type { AuthUser, Exam, Submission, StudentRosterEntry } from "../../types";
 import { exportExamBatchExcel, exportCompleteDatabaseExcel } from "../../utils/excelUtils";
@@ -92,197 +91,158 @@ export default function DeanExaminations({
 
   return (
     <div style={{ display: "grid", gap: "1.5rem" }}>
-      {/* HEADER BANNER */}
+      {/* HEADER BAR */}
       <div
-        className="card"
         style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          flexWrap: "wrap",
+          gap: "1rem",
+          padding: "1.25rem 1.5rem",
           background: "#ffffff",
           border: "1px solid #e2e8f0",
-          borderRadius: "16px",
-          padding: "1.75rem",
-          boxShadow: "0 2px 10px rgba(0, 98, 255, 0.04)",
+          borderRadius: "12px",
         }}
       >
-        <div
+        <div>
+          <h1
+            style={{
+              margin: 0,
+              fontSize: "1.4rem",
+              fontWeight: 800,
+              color: "#0f172a",
+              letterSpacing: "-0.02em",
+            }}
+          >
+            Examinations
+          </h1>
+          <p
+            style={{
+              color: "#64748b",
+              marginTop: "0.2rem",
+              marginBottom: 0,
+              fontSize: "0.82rem",
+            }}
+          >
+            Collegiate assessments, answer keys, and standardized grade records
+          </p>
+        </div>
+
+        <button
+          type="button"
+          className="btn btn-primary"
+          onClick={handleBatchExport}
           style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "flex-start",
-            flexWrap: "wrap",
-            gap: "1.25rem",
+            fontSize: "0.82rem",
+            padding: "0.45rem 1rem",
           }}
         >
-          <div>
-            <div
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: "0.5rem",
-                padding: "0.3rem 0.75rem",
-                borderRadius: "20px",
-                background: "#eff6ff",
-                border: "1px solid #bfdbfe",
-                color: "#0062ff",
-                fontSize: "0.78rem",
-                fontWeight: 700,
-                textTransform: "uppercase",
-                letterSpacing: "0.05em",
-                marginBottom: "0.75rem",
-              }}
-            >
-              <ShieldCheck size={14} /> Quality Assurance & Academic Supervision
-            </div>
-            <h1
-              style={{
-                margin: 0,
-                fontSize: "1.65rem",
-                fontWeight: 800,
-                color: "#0f172a",
-                letterSpacing: "-0.02em",
-              }}
-            >
-              Institutional Examination Management
-            </h1>
-            <p
-              style={{
-                color: "#64748b",
-                marginTop: "0.4rem",
-                marginBottom: 0,
-                fontSize: "0.92rem",
-                maxWidth: "720px",
-                lineHeight: 1.5,
-              }}
-            >
-              Review all department assessments, inspect answer keys, evaluate discrimination indices, and download
-              standardized CHED-format grade sheets across every collegiate programme.
-            </p>
-          </div>
-
-          <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap" }}>
-            <button
-              type="button"
-              className="btn btn-primary"
-              onClick={handleBatchExport}
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: "0.5rem",
-                fontWeight: 700,
-                padding: "0.6rem 1.1rem",
-                background: "#0062ff",
-                color: "#ffffff",
-                border: "none",
-                borderRadius: "10px",
-                boxShadow: "0 2px 8px rgba(0, 98, 255, 0.25)",
-              }}
-            >
-              <FileSpreadsheet size={16} /> Batch Export All Exams (.xlsx)
-            </button>
-          </div>
-        </div>
+          <FileSpreadsheet size={15} /> Batch Export (.xlsx)
+        </button>
       </div>
 
       {/* 4 STAT TILES */}
       <div
         style={{
           display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
-          gap: "1rem",
+          gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+          gap: "0.85rem",
         }}
       >
         <div
-          className="card"
           style={{
-            padding: "1.2rem",
+            padding: "1rem 1.15rem",
             background: "#ffffff",
             border: "1px solid #e2e8f0",
-            borderRadius: "14px",
-            boxShadow: "0 2px 6px rgba(0,0,0,0.02)",
+            borderRadius: "12px",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
           }}
         >
-          <div style={{ display: "flex", justifyContent: "space-between", color: "#64748b", marginBottom: "0.5rem" }}>
-            <span style={{ fontSize: "0.83rem", fontWeight: 600 }}>Active Exam Records</span>
-            <div style={{ width: "32px", height: "32px", borderRadius: "8px", background: "#eff6ff", display: "flex", alignItems: "center", justifyContent: "center", color: "#0062ff" }}>
-              <BookOpen size={17} />
+          <div>
+            <div style={{ fontSize: "0.78rem", fontWeight: 600, color: "#64748b", marginBottom: "0.25rem" }}>
+              Total Exams
+            </div>
+            <div style={{ fontSize: "1.45rem", fontWeight: 800, color: "#0f172a", lineHeight: 1.1 }}>
+              {totalExams}
             </div>
           </div>
-          <div style={{ fontSize: "1.75rem", fontWeight: 800, color: "#0f172a" }}>
-            {totalExams}
-          </div>
-          <div style={{ fontSize: "0.75rem", color: "#64748b", marginTop: "0.2rem" }}>
-            Published across all colleges
+          <div style={{ width: "36px", height: "36px", borderRadius: "8px", background: "#eff6ff", display: "flex", alignItems: "center", justifyContent: "center", color: "#0062ff", flexShrink: 0 }}>
+            <BookOpen size={18} />
           </div>
         </div>
 
         <div
-          className="card"
           style={{
-            padding: "1.2rem",
+            padding: "1rem 1.15rem",
             background: "#ffffff",
             border: "1px solid #e2e8f0",
-            borderRadius: "14px",
-            boxShadow: "0 2px 6px rgba(0,0,0,0.02)",
+            borderRadius: "12px",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
           }}
         >
-          <div style={{ display: "flex", justifyContent: "space-between", color: "#64748b", marginBottom: "0.5rem" }}>
-            <span style={{ fontSize: "0.83rem", fontWeight: 600 }}>Graded Submissions</span>
-            <div style={{ width: "32px", height: "32px", borderRadius: "8px", background: "#eff6ff", display: "flex", alignItems: "center", justifyContent: "center", color: "#0062ff" }}>
-              <Sparkles size={17} />
+          <div>
+            <div style={{ fontSize: "0.78rem", fontWeight: 600, color: "#64748b", marginBottom: "0.25rem" }}>
+              Submissions
+            </div>
+            <div style={{ fontSize: "1.45rem", fontWeight: 800, color: "#0f172a", lineHeight: 1.1 }}>
+              {totalSubmissions}
             </div>
           </div>
-          <div style={{ fontSize: "1.75rem", fontWeight: 800, color: "#0f172a" }}>
-            {totalSubmissions}
-          </div>
-          <div style={{ fontSize: "0.75rem", color: "#10b981", marginTop: "0.2rem", fontWeight: 600 }}>
-            OMR optical scan verified
+          <div style={{ width: "36px", height: "36px", borderRadius: "8px", background: "#eff6ff", display: "flex", alignItems: "center", justifyContent: "center", color: "#0062ff", flexShrink: 0 }}>
+            <Sparkles size={18} />
           </div>
         </div>
 
         <div
-          className="card"
           style={{
-            padding: "1.2rem",
+            padding: "1rem 1.15rem",
             background: "#ffffff",
             border: "1px solid #e2e8f0",
-            borderRadius: "14px",
-            boxShadow: "0 2px 6px rgba(0,0,0,0.02)",
+            borderRadius: "12px",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
           }}
         >
-          <div style={{ display: "flex", justifyContent: "space-between", color: "#64748b", marginBottom: "0.5rem" }}>
-            <span style={{ fontSize: "0.83rem", fontWeight: 600 }}>Assessments in Grading</span>
-            <div style={{ width: "32px", height: "32px", borderRadius: "8px", background: "#eff6ff", display: "flex", alignItems: "center", justifyContent: "center", color: "#0062ff" }}>
-              <Users size={17} />
+          <div>
+            <div style={{ fontSize: "0.78rem", fontWeight: 600, color: "#64748b", marginBottom: "0.25rem" }}>
+              Graded Exams
+            </div>
+            <div style={{ fontSize: "1.45rem", fontWeight: 800, color: "#0f172a", lineHeight: 1.1 }}>
+              {gradedExamsCount} / {totalExams}
             </div>
           </div>
-          <div style={{ fontSize: "1.75rem", fontWeight: 800, color: "#0f172a" }}>
-            {gradedExamsCount} / {totalExams}
-          </div>
-          <div style={{ fontSize: "0.75rem", color: "#64748b", marginTop: "0.2rem" }}>
-            Actively collecting student test sheets
+          <div style={{ width: "36px", height: "36px", borderRadius: "8px", background: "#eff6ff", display: "flex", alignItems: "center", justifyContent: "center", color: "#0062ff", flexShrink: 0 }}>
+            <Users size={18} />
           </div>
         </div>
 
         <div
-          className="card"
           style={{
-            padding: "1.2rem",
+            padding: "1rem 1.15rem",
             background: "#ffffff",
             border: "1px solid #e2e8f0",
-            borderRadius: "14px",
-            boxShadow: "0 2px 6px rgba(0,0,0,0.02)",
+            borderRadius: "12px",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
           }}
         >
-          <div style={{ display: "flex", justifyContent: "space-between", color: "#64748b", marginBottom: "0.5rem" }}>
-            <span style={{ fontSize: "0.83rem", fontWeight: 600 }}>OBE Audit Status</span>
-            <div style={{ width: "32px", height: "32px", borderRadius: "8px", background: "#eff6ff", display: "flex", alignItems: "center", justifyContent: "center", color: "#0062ff" }}>
-              <Award size={17} />
+          <div>
+            <div style={{ fontSize: "0.78rem", fontWeight: 600, color: "#64748b", marginBottom: "0.25rem" }}>
+              OBE Audit
+            </div>
+            <div style={{ fontSize: "1.45rem", fontWeight: 800, color: "#059669", lineHeight: 1.1 }}>
+              Verified
             </div>
           </div>
-          <div style={{ fontSize: "1.75rem", fontWeight: 800, color: "#10b981" }}>
-            100% Pass
-          </div>
-          <div style={{ fontSize: "0.75rem", color: "#64748b", marginTop: "0.2rem" }}>
-            All answer keys calibrated
+          <div style={{ width: "36px", height: "36px", borderRadius: "8px", background: "#eff6ff", display: "flex", alignItems: "center", justifyContent: "center", color: "#0062ff", flexShrink: 0 }}>
+            <Award size={18} />
           </div>
         </div>
       </div>
