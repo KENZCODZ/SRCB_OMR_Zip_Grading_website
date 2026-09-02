@@ -1426,6 +1426,10 @@ button.bubble-btn.active {
   margin-bottom: 0.45rem;
 }
 
+.login-password-header .login-field-label {
+  margin-bottom: 0;
+}
+
 .login-forgot-link {
   font-size: 0.75rem;
   color: #0062ff;
@@ -1442,20 +1446,33 @@ button.bubble-btn.active {
   position: relative;
   display: flex;
   align-items: center;
+  width: 100%;
 }
 
 .login-input-icon {
   position: absolute;
-  left: 1rem;
+  left: 0.95rem;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
   color: #94a3b8;
   pointer-events: none;
   transition: color 0.2s ease;
+  z-index: 2;
+  line-height: 0;
 }
 
+.login-input-wrapper input.login-minimal-input,
+input.login-minimal-input,
 .login-minimal-input {
   width: 100%;
-  padding: 0.78rem 1rem 0.78rem 2.65rem;
+  padding: 0.78rem 1rem 0.78rem 2.85rem !important;
   font-size: 0.9rem;
+  line-height: 1.45;
   border-radius: 12px;
   border: 1px solid #cbd5e1;
   background: #ffffff;
@@ -1463,8 +1480,11 @@ button.bubble-btn.active {
   transition: all 0.2s ease;
   outline: none;
   font-family: inherit;
+  box-sizing: border-box;
 }
 
+.login-input-wrapper input.login-minimal-input:focus,
+input.login-minimal-input:focus,
 .login-minimal-input:focus {
   border-color: #0062ff;
   box-shadow: 0 0 0 3px rgba(0, 98, 255, 0.12);
@@ -1475,26 +1495,35 @@ button.bubble-btn.active {
   color: #0062ff;
 }
 
+.login-input-wrapper input.login-minimal-input.with-toggle,
+input.login-minimal-input.with-toggle,
 .login-minimal-input.with-toggle {
-  padding-right: 2.65rem;
+  padding-right: 3rem !important;
 }
 
 .password-toggle-btn {
   position: absolute;
-  right: 0.85rem;
-  background: none;
+  right: 0.75rem;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 32px;
+  height: 32px;
+  background: transparent;
   border: none;
+  border-radius: 8px;
   color: #94a3b8;
   cursor: pointer;
-  padding: 4px;
+  padding: 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: color 0.15s ease;
+  transition: color 0.15s ease, background-color 0.15s ease;
+  z-index: 2;
 }
 
 .password-toggle-btn:hover {
   color: #0f172a;
+  background-color: rgba(241, 245, 249, 0.8);
 }
 
 .login-primary-submit-btn {
@@ -1817,6 +1846,11 @@ button.bubble-btn.active {
 
   .login-glass-card {
     padding: 1.8rem 1.4rem;
+  }
+
+  .login-minimal-card {
+    padding: 2.25rem 1.5rem;
+    border-radius: 20px;
   }
 }
 

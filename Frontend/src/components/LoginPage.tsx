@@ -123,7 +123,7 @@ export default function LoginPage({
           <div className="form-group">
             <label className="login-field-label">Institutional Email</label>
             <div className="login-input-wrapper">
-              <Mail size={16} className="login-input-icon" />
+              <Mail size={18} className="login-input-icon" />
               <input
                 type="email"
                 className="login-minimal-input"
@@ -142,7 +142,7 @@ export default function LoginPage({
               <span className="login-forgot-link">Forgot?</span>
             </div>
             <div className="login-input-wrapper">
-              <Lock size={16} className="login-input-icon" />
+              <Lock size={18} className="login-input-icon" />
               <input
                 type={showPassword ? "text" : "password"}
                 className="login-minimal-input with-toggle"
@@ -159,7 +159,7 @@ export default function LoginPage({
                 title={showPassword ? "Hide password" : "Show password"}
                 aria-label="Toggle password visibility"
               >
-                {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
               </button>
             </div>
           </div>
