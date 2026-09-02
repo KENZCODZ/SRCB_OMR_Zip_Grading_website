@@ -53,7 +53,7 @@ export async function registerUser(payload: RegisterPayload): Promise<{ status: 
   }
 }
 
-export async function loginUser(email: string, password: string): Promise<{ id: string; name: string; email: string; role: string; programme?: string | null; department?: string | null }> {
+export async function loginUser(email: string, password: string): Promise<{ id: string; name: string; email: string; role: string; programme?: string | null; department?: string | null; student_id?: string | null; studentId?: string | null }> {
   try {
     const response = await fetch(`${API_BASE}/api/auth/login`, {
       method: 'POST',

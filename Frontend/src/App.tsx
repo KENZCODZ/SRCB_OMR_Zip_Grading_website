@@ -88,6 +88,7 @@ type AppTab =
   | "settings"
   | "quick-scan"
   | "exams"
+  | "compiler"
   | "history"
   | "item-analysis"
   | "user-guide"
@@ -153,7 +154,7 @@ export default function App() {
 
   // Teacher Exams View Mode State
   const [teacherExamsSubTab, setTeacherExamsSubTab] = useState<
-    "grading" | "quick-scan" | "compiler"
+    "grading" | "quick-scan"
   >("grading");
 
   // Flexible Export System State
@@ -611,6 +612,8 @@ export default function App() {
         role: (backendUser.role as AuthUser["role"]) ?? "student",
         name: backendUser.name,
         email: backendUser.email,
+        studentId: backendUser.student_id || backendUser.studentId || undefined,
+        student_id: backendUser.student_id || backendUser.studentId || undefined,
         programme: backendUser.programme ?? undefined,
         department: backendUser.department ?? undefined,
         scope:
@@ -757,11 +760,6 @@ export default function App() {
           icon: BookOpen,
         },
         {
-          key: "reports" as AppTab,
-          label: "Program Results & OBE",
-          icon: Award,
-        },
-        {
           key: "academic-management" as AppTab,
           label: "Higher Ed Programs",
           icon: GraduationCap,
@@ -770,6 +768,11 @@ export default function App() {
           key: "user-directory" as AppTab,
           label: "User Access",
           icon: Users,
+        },
+        {
+          key: "reports" as AppTab,
+          label: "Program Results & OBE",
+          icon: Award,
         },
         { key: "settings" as AppTab, label: "Settings", icon: Sliders },
       ];
@@ -800,6 +803,11 @@ export default function App() {
       return [
         { key: "dashboard" as AppTab, label: "Dashboard", icon: BarChart3 },
         { key: "exams" as AppTab, label: "Exams & Grading", icon: BookOpen },
+        {
+          key: "compiler" as AppTab,
+          label: "Session & Class Compiler",
+          icon: Layers,
+        },
         { key: "history" as AppTab, label: "Grading History", icon: History },
         {
           key: "item-analysis" as AppTab,
@@ -856,6 +864,8 @@ export default function App() {
       case "examinations":
       case "exams":
         return "Examinations";
+      case "compiler":
+        return "Session & Class Compiler";
       case "quick-scan":
         return "Quick OMR Scanner";
       case "history":
@@ -1188,6 +1198,7 @@ export default function App() {
                     currentUser={currentUser}
                     exams={exams}
                     submissions={submissions}
+                    roster={roster}
                     formatDate={formatDate}
                   />
                 ) : (
@@ -1209,6 +1220,7 @@ export default function App() {
                     currentUser={currentUser}
                     exams={exams}
                     submissions={submissions}
+                    roster={roster}
                     formatDate={formatDate}
                   />
                 ) : (
@@ -1697,33 +1709,6 @@ export default function App() {
                   >
                     <Sparkles size={14} /> Quick Scanner
                   </button>
-                  <button
-                    type="button"
-                    onClick={() => setTeacherExamsSubTab("compiler")}
-                    style={{
-                      padding: "0.45rem 0.85rem",
-                      fontSize: "0.8rem",
-                      fontWeight: 700,
-                      borderRadius: "8px",
-                      border: "none",
-                      cursor: "pointer",
-                      transition: "all 0.2s ease",
-                      background:
-                        teacherExamsSubTab === "compiler"
-                          ? "#ffffff"
-                          : "transparent",
-                      color:
-                        teacherExamsSubTab === "compiler"
-                          ? "#0062ff"
-                          : "#64748b",
-                      boxShadow:
-                        teacherExamsSubTab === "compiler"
-                          ? "0 1px 3px rgba(0,0,0,0.08)"
-                          : "none",
-                    }}
-                  >
-                    Session & Class Compiler
-                  </button>
                 </div>
 
                 <button
@@ -1754,18 +1739,7 @@ export default function App() {
               </div>
             </div>
 
-            {teacherExamsSubTab === "compiler" ? (
-              <TeacherExamCompiler
-                exams={exams}
-                submissions={submissions}
-                roster={roster}
-                currentUser={currentUser}
-                onSelectSubmission={viewSubmissionDetails}
-                onInspectExam={(exam) => setInspectExam(exam)}
-                addToast={addToast}
-                formatDate={formatDate}
-              />
-            ) : teacherExamsSubTab === "quick-scan" ? (
+            {teacherExamsSubTab === "quick-scan" ? (
               /* Integrated Quick Sheet Scanner in Blue and White */
               <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
                 {/* Header Sub-Card */}
@@ -3792,6 +3766,20 @@ export default function App() {
             </div>
 
           </div>
+        )}
+
+        {/* SESSION & CLASS COMPILER TAB (TEACHER) */}
+        {activeTab === "compiler" && currentUser && (
+          <TeacherExamCompiler
+            exams={exams}
+            submissions={submissions}
+            roster={roster}
+            currentUser={currentUser}
+            onSelectSubmission={viewSubmissionDetails}
+            onInspectExam={(exam) => setInspectExam(exam)}
+            addToast={addToast}
+            formatDate={formatDate}
+          />
         )}
 
         {/* OBE ITEM ANALYSIS TAB */}

@@ -8,13 +8,14 @@ import {
   ChevronUp,
   Search,
 } from "lucide-react";
-import type { AuthUser, Exam, Submission } from "../types";
+import type { AuthUser, Exam, Submission, StudentRosterEntry } from "../types";
 import { calculateTransmutedGrade } from "../utils/excelUtils";
 
 interface StudentPortalViewProps {
   currentUser: AuthUser;
   exams: Exam[];
   submissions: Submission[];
+  roster?: StudentRosterEntry[];
   formatDate: (iso: string) => string;
 }
 
@@ -22,6 +23,7 @@ export const StudentPortalView: React.FC<StudentPortalViewProps> = ({
   currentUser,
   exams,
   submissions,
+  roster,
   formatDate,
 }) => {
   const [selectedExamId, setSelectedExamId] = useState<string | null>(null);
@@ -30,17 +32,54 @@ export const StudentPortalView: React.FC<StudentPortalViewProps> = ({
 
   // Filter submissions strictly to the logged-in student (Access only their personal examination records)
   const personalSubmissions = useMemo(() => {
-    const studentId = currentUser.studentId || (currentUser as any).student_id || currentUser.id;
-    const directMatches = submissions.filter(
-      (s) => s.student_id?.toLowerCase() === studentId.toLowerCase()
-    );
+    const rawStudentId = (currentUser.studentId || (currentUser as any).student_id || "").trim();
+    const studentName = (currentUser.name || "").trim().toLowerCase();
+    const studentEmail = (currentUser.email || "").trim().toLowerCase();
 
-    // If direct matches exist, use them strictly
-    if (directMatches.length > 0) return directMatches;
+    // Roster lookup if studentId is not explicitly configured on the user record
+    let resolvedId = rawStudentId;
+    if (!resolvedId && roster && roster.length > 0) {
+      const rosterEntry = roster.find(
+        (r) =>
+          (r.email && r.email.toLowerCase() === studentEmail) ||
+          (r.name && r.name.toLowerCase() === studentName)
+      );
+      if (rosterEntry?.student_id) {
+        resolvedId = rosterEntry.student_id.trim();
+      }
+    }
 
-    // Demonstration fallback for student account if submissions have generic IDs
-    return submissions.slice(0, 3);
-  }, [submissions, currentUser]);
+    // If still no student ID is found, fallback to checking if currentUser.id is a student ID
+    if (!resolvedId && currentUser.id && !currentUser.id.includes("-")) {
+      resolvedId = currentUser.id.trim();
+    }
+
+    if (!resolvedId) {
+      return [];
+    }
+
+    const norm = (str: string) => str.toLowerCase().replace(/[^a-z0-9]/g, "");
+    const cleanId = norm(resolvedId);
+
+    return submissions.filter((s) => {
+      if (!s.student_id) return false;
+      const subId = (s.student_id || "").trim();
+      const cleanSubId = norm(subId);
+
+      // 1. Exact string match (e.g. "12345" === "12345" or "2023-00142" === "2023-00142")
+      if (subId.toLowerCase() === resolvedId.toLowerCase()) return true;
+
+      // 2. Clean alphanumeric match (ignoring dashes, slashes, spaces)
+      if (cleanSubId === cleanId) return true;
+
+      // 3. Suffix match (e.g. student ID is "2023-00142" and sheet grid only bubble-coded "00142" or "142")
+      if (cleanId.length >= 4 && cleanSubId.length >= 3) {
+        if (cleanId.endsWith(cleanSubId) || cleanSubId.endsWith(cleanId)) return true;
+      }
+
+      return false;
+    });
+  }, [submissions, currentUser, roster]);
 
   // Combined examination data with student personal score
   const studentExamRecords = useMemo(() => {
@@ -117,7 +156,7 @@ export const StudentPortalView: React.FC<StudentPortalViewProps> = ({
             My Examination Records
           </h2>
           <p style={{ fontSize: "0.82rem", color: "#64748b", margin: "0.2rem 0 0 0" }}>
-            Student ID: <strong>{currentUser.studentId || "2023-00142"}</strong> • {currentUser.name}
+            Student ID: <strong>{currentUser.studentId || (currentUser as any).student_id || "Unassigned"}</strong> • {currentUser.name}
           </p>
         </div>
 

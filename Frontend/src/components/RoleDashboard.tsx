@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import {
   Award,
   BarChart3,
@@ -11,9 +11,17 @@ import {
   Clock,
   Eye,
   Filter,
+  Users,
 } from "lucide-react";
 import type { AuthUser, Exam, Submission, StudentRosterEntry } from "../types";
 import TeacherExamCompiler from "./TeacherExamCompiler";
+
+interface MetricCard {
+  title: string;
+  value: string;
+  icon: any;
+  subtitle: string;
+}
 
 interface RoleDashboardProps {
   user: AuthUser;
@@ -36,74 +44,92 @@ interface RoleDashboardProps {
 
 const getDashboardCards = (
   user: AuthUser,
-  summary?: {
-    total_accounts: number;
-    total_students: number;
-    total_teachers: number;
-    total_exams: number;
-    average_score: number;
-    total_submissions: number;
-  },
-) => {
-  if (user.role === "admin" || user.role === "dean") {
+  summary?: any,
+  studentStats?: { examsTaken: number; avgScore: string; latestScore: string }
+): MetricCard[] => {
+  if (user.role === "admin") {
     return [
       {
-        title: "Students",
-        value: summary ? summary.total_students.toLocaleString() : "2,184",
-        icon: GraduationCap,
-        subtitle: "Higher Ed Enrolled",
-      },
-      {
-        title: "Faculty",
-        value: summary ? summary.total_teachers.toLocaleString() : "96",
+        title: "Active Users",
+        value: summary ? summary.total_accounts.toString() : "14",
         icon: ShieldCheck,
-        subtitle: "Active Instructors",
+        subtitle: "Role Matrix",
       },
       {
-        title: "Examinations",
-        value: summary ? summary.total_exams.toString() : "128",
+        title: "Total Students",
+        value: summary ? summary.total_students.toString() : "4",
+        icon: GraduationCap,
+        subtitle: "Enrolled",
+      },
+      {
+        title: "Faculty Staff",
+        value: summary ? summary.total_teachers.toString() : "4",
+        icon: Users,
+        subtitle: "Instructors",
+      },
+      {
+        title: "OMR Scans",
+        value: summary ? summary.total_submissions.toString() : "324",
+        icon: Sparkles,
+        subtitle: "Engine Graded",
+      },
+    ];
+  }
+
+  if (user.role === "dean") {
+    return [
+      {
+        title: "Total Exams",
+        value: summary ? summary.total_exams.toString() : "19",
         icon: BookOpen,
-        subtitle: "Published Assessments",
+        subtitle: "Collegiate",
       },
       {
-        title: "Average Score",
-        value: summary ? `${summary.average_score}%` : "84.6%",
-        icon: TrendingUp,
-        subtitle: "Institutional Mean",
+        title: "Graded Sheets",
+        value: summary ? summary.total_submissions.toString() : "3,420",
+        icon: Sparkles,
+        subtitle: "Processed",
       },
       {
-        title: "Passing Rate",
+        title: "Collegiate Pass Rate",
         value: "89.2%",
         icon: Award,
-        subtitle: "CHED Benchmark",
+        subtitle: "Threshold: 75%",
+      },
+      {
+        title: "Collegiate Mean",
+        value: summary ? `${summary.average_score}%` : "84.3%",
+        icon: TrendingUp,
+        subtitle: "Across Programs",
       },
     ];
   }
 
   if (user.role === "programme-head") {
-    const passRate =
-      summary && summary.total_submissions > 0
-        ? `${Math.max(60, Math.min(98, Math.round(summary.average_score)))}%`
-        : "89%";
-
     return [
       {
-        title: "Programme Students",
-        value: summary ? summary.total_students.toLocaleString() : "184",
-        icon: GraduationCap,
-        subtitle: "Enrolled in Program",
-      },
-      {
-        title: "Active Exams",
-        value: summary ? summary.total_exams.toString() : "12",
+        title: "Program Exams",
+        value: summary ? summary.total_exams.toString() : "8",
         icon: BookOpen,
-        subtitle: "Current Term",
+        subtitle: "Oversight",
       },
       {
-        title: "Pass Rate",
-        value: passRate,
+        title: "Total Submissions",
+        value: summary ? summary.total_submissions.toString() : "240",
+        icon: Sparkles,
+        subtitle: "Received",
+      },
+      {
+        title: "Program Faculty",
+        value: summary ? summary.total_teachers.toString() : "6",
+        icon: GraduationCap,
+        subtitle: "Department",
+      },
+      {
+        title: "Average Score",
+        value: summary ? `${summary.average_score}%` : "—",
         icon: TrendingUp,
-        subtitle: "Department Average",
+        subtitle: "Cumulative",
       },
     ];
   }
@@ -140,9 +166,9 @@ const getDashboardCards = (
   return [
     {
       title: "Exams Taken",
-      value: summary ? summary.total_submissions.toString() : "9",
+      value: (studentStats?.examsTaken ?? 0).toString(),
       icon: BookOpen,
-      subtitle: "Completed",
+      subtitle: "Personal Completed",
     },
     {
       title: "Programme",
@@ -152,9 +178,9 @@ const getDashboardCards = (
     },
     {
       title: "Average Score",
-      value: summary ? `${summary.average_score}%` : "—",
+      value: studentStats?.avgScore ?? "—",
       icon: TrendingUp,
-      subtitle: "Cumulative",
+      subtitle: "Personal Average",
     },
   ];
 };
@@ -308,7 +334,70 @@ export default function RoleDashboard({
   addToast,
   formatDate = (iso) => new Date(iso).toLocaleDateString(),
 }: RoleDashboardProps) {
-  const cards = getDashboardCards(user, summary);
+  // Filter submissions strictly to the logged-in student
+  const studentPersonalSubs = useMemo(() => {
+    if (user.role !== "student") return [];
+    const rawId = (user.studentId || (user as any).student_id || "").trim();
+    const studentName = (user.name || "").trim().toLowerCase();
+    const studentEmail = (user.email || "").trim().toLowerCase();
+
+    let resolvedId = rawId;
+    if (!resolvedId && roster && roster.length > 0) {
+      const entry = roster.find(
+        (r) =>
+          (r.email && r.email.toLowerCase() === studentEmail) ||
+          (r.name && r.name.toLowerCase() === studentName)
+      );
+      if (entry?.student_id) resolvedId = entry.student_id.trim();
+    }
+
+    if (!resolvedId && user.id && !user.id.includes("-")) {
+      resolvedId = user.id.trim();
+    }
+
+    if (!resolvedId) return [];
+
+    const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, "");
+    const cleanId = norm(resolvedId);
+
+    return submissions.filter((s) => {
+      if (!s.student_id) return false;
+      const subId = (s.student_id || "").trim();
+      const cleanSubId = norm(subId);
+      if (subId.toLowerCase() === resolvedId.toLowerCase()) return true;
+      if (cleanSubId === cleanId) return true;
+      if (cleanId.length >= 4 && cleanSubId.length >= 3) {
+        if (cleanId.endsWith(cleanSubId) || cleanSubId.endsWith(cleanId)) return true;
+      }
+      return false;
+    });
+  }, [user, submissions, roster]);
+
+  const studentStats = useMemo(() => {
+    if (user.role !== "student") return undefined;
+    const examsTaken = studentPersonalSubs.length;
+    let avgScore = "—";
+    let latestScore = "—";
+
+    if (examsTaken > 0) {
+      const totalPct = studentPersonalSubs.reduce((acc: number, curr: Submission) => {
+        const total = curr.total_questions || 50;
+        return acc + Math.round((curr.score / total) * 100);
+      }, 0);
+      avgScore = `${Math.round(totalPct / examsTaken)}%`;
+
+      const sorted = [...studentPersonalSubs].sort(
+        (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      );
+      const latest = sorted[0];
+      const latestTotal = latest.total_questions || 50;
+      latestScore = `${latest.score} / ${latestTotal} (${Math.round((latest.score / latestTotal) * 100)}%)`;
+    }
+
+    return { examsTaken, avgScore, latestScore };
+  }, [user.role, studentPersonalSubs]);
+
+  const cards = getDashboardCards(user, summary, studentStats);
   const [selectedProgramFilter, setSelectedProgramFilter] = useState<string>("all");
 
   // Filter exam records
@@ -893,19 +982,25 @@ export default function RoleDashboard({
           }}
         >
           <h3 style={{ fontSize: "1rem", fontWeight: 700, margin: "0 0 0.85rem 0", color: "#0f172a" }}>
-            Academic Progress
+            Personal Academic Progress
           </h3>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "1rem" }}>
             <div>
               <span style={{ fontSize: "0.78rem", color: "#64748b" }}>Latest Score</span>
               <div style={{ fontSize: "1.25rem", fontWeight: 800, color: "#0f172a", marginTop: "2px" }}>
-                {summary ? `${summary.average_score}%` : "—"}
+                {studentStats?.latestScore ?? "—"}
               </div>
             </div>
             <div>
               <span style={{ fontSize: "0.78rem", color: "#64748b" }}>Exams Completed</span>
               <div style={{ fontSize: "1.25rem", fontWeight: 800, color: "#0f172a", marginTop: "2px" }}>
-                {summary?.total_submissions ?? 0}
+                {studentStats?.examsTaken ?? 0}
+              </div>
+            </div>
+            <div>
+              <span style={{ fontSize: "0.78rem", color: "#64748b" }}>Assigned Student ID</span>
+              <div style={{ fontSize: "1.25rem", fontWeight: 800, color: "#0062ff", marginTop: "2px" }}>
+                {user.studentId || (user as any).student_id || "Unassigned"}
               </div>
             </div>
           </div>

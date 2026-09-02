@@ -70,6 +70,7 @@ export interface AuthUser {
   programme?: string;
   department?: string;
   studentId?: string;
+  student_id?: string;
   status?: 'pending' | 'active' | 'rejected' | 'suspended';
   scope: string;
   permissions: string[];

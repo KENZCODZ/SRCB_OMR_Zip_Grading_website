@@ -91,6 +91,23 @@ export const mockUsers: AuthUser[] = [
     department: 'Computer Studies',
     programme: 'BSIT',
     studentId: '2023-00142',
+    student_id: '2023-00142',
+    scope: 'Own examination records only',
+    permissions: [
+      'View their own examination scores',
+      'View which exam questions were answered correctly or incorrectly',
+      'Access only their personal examination records',
+    ]
+  },
+  {
+    id: 'student-002',
+    role: 'student',
+    name: 'Juan Dela Cruz',
+    email: 'student12345@srcb.edu.ph',
+    department: 'Computer Studies',
+    programme: 'BSIT',
+    studentId: '12345',
+    student_id: '12345',
     scope: 'Own examination records only',
     permissions: [
       'View their own examination scores',

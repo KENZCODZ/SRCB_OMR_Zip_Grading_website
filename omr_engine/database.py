@@ -142,11 +142,19 @@ def init_db():
             role VARCHAR(50) NOT NULL,
             programme VARCHAR(100),
             department VARCHAR(255),
+            student_id VARCHAR(64) DEFAULT NULL,
             status VARCHAR(20) NOT NULL DEFAULT 'active',
             created_at VARCHAR(64) NOT NULL,
             updated_at VARCHAR(64) NOT NULL
         )
     """)
+
+    # Ensure student_id column exists for existing tables
+    try:
+        cursor.execute("ALTER TABLE users ADD COLUMN student_id VARCHAR(64) DEFAULT NULL")
+        conn.commit()
+    except Exception:
+        pass
 
     # Check for legacy schema (exam_id instead of id) and upgrade cleanly
     try:
@@ -261,7 +269,7 @@ def get_user_by_email(email: str) -> Optional[Dict[str, Any]]:
     conn = get_db_connection()
     cursor = conn.cursor()
     cursor.execute(
-        "SELECT id, name, email, password, role, programme, department, status, created_at, updated_at "
+        "SELECT id, name, email, password, role, programme, department, student_id, status, created_at, updated_at "
         "FROM users WHERE LOWER(email) = %s",
         (email.strip().lower(),),
     )
@@ -278,6 +286,7 @@ def register_user(
     role: str,
     programme: Optional[str] = None,
     department: Optional[str] = None,
+    student_id: Optional[str] = None,
 ) -> Dict[str, Any]:
     user_id = str(uuid.uuid4())
     now_iso = datetime.now(timezone.utc).isoformat()
@@ -287,8 +296,8 @@ def register_user(
     cursor = conn.cursor()
     cursor.execute(
         """
-        INSERT INTO users (id, name, email, password, role, programme, department, status, created_at, updated_at)
-        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+        INSERT INTO users (id, name, email, password, role, programme, department, student_id, status, created_at, updated_at)
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
         """,
         (
             user_id,
@@ -298,6 +307,7 @@ def register_user(
             role.strip().lower(),
             programme.strip() if programme else "BSIT",
             department.strip() if department else "Computing Studies",
+            student_id.strip() if student_id else None,
             status,
             now_iso,
             now_iso,
@@ -314,6 +324,7 @@ def register_user(
         "role": role.strip().lower(),
         "programme": programme or "BSIT",
         "department": department or "Computing Studies",
+        "student_id": student_id.strip() if student_id else None,
         "status": status,
         "created_at": now_iso,
     }
@@ -324,14 +335,14 @@ def list_pending_users(programme: Optional[str] = None) -> List[Dict[str, Any]]:
     cursor = conn.cursor()
     if programme:
         cursor.execute(
-            "SELECT id, name, email, role, programme, department, status, created_at "
+            "SELECT id, name, email, role, programme, department, student_id, status, created_at "
             "FROM users WHERE status = 'pending' AND (programme = %s OR programme IS NULL) "
             "ORDER BY created_at DESC",
             (programme,),
         )
     else:
         cursor.execute(
-            "SELECT id, name, email, role, programme, department, status, created_at "
+            "SELECT id, name, email, role, programme, department, student_id, status, created_at "
             "FROM users WHERE status = 'pending' ORDER BY created_at DESC"
         )
     rows = cursor.fetchall()
@@ -363,6 +374,7 @@ def create_user_account(
     programme: Optional[str] = None,
     department: Optional[str] = None,
     status: str = "active",
+    student_id: Optional[str] = None,
 ) -> Dict[str, Any]:
     user_id = str(uuid.uuid4())
     now_iso = datetime.now(timezone.utc).isoformat()
@@ -371,8 +383,8 @@ def create_user_account(
     cursor = conn.cursor()
     cursor.execute(
         """
-        INSERT INTO users (id, name, email, password, role, programme, department, status, created_at, updated_at)
-        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+        INSERT INTO users (id, name, email, password, role, programme, department, student_id, status, created_at, updated_at)
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
         """,
         (
             user_id,
@@ -382,6 +394,7 @@ def create_user_account(
             role.strip().lower(),
             programme.strip() if programme else "BSIT",
             department.strip() if department else "Computing Studies",
+            student_id.strip() if student_id else None,
             status,
             now_iso,
             now_iso,
@@ -398,6 +411,7 @@ def create_user_account(
         "role": role.strip().lower(),
         "programme": programme or "BSIT",
         "department": department or "Computing Studies",
+        "student_id": student_id.strip() if student_id else None,
         "status": status,
         "created_at": now_iso,
     }
@@ -407,7 +421,7 @@ def list_all_users() -> List[Dict[str, Any]]:
     conn = get_db_connection()
     cursor = conn.cursor()
     cursor.execute(
-        "SELECT id, name, email, role, programme, department, status, created_at "
+        "SELECT id, name, email, role, programme, department, student_id, status, created_at "
         "FROM users ORDER BY created_at DESC"
     )
     rows = cursor.fetchall()
@@ -453,6 +467,7 @@ def authenticate_user(email: str, password: str) -> Dict[str, Any]:
         "role": user["role"],
         "programme": user["programme"],
         "department": user["department"],
+        "student_id": user.get("student_id"),
         "status": user_status,
     }
     return {

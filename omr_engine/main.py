@@ -175,6 +175,7 @@ def register_new_user(payload: RegisterRequest):
         role=role_normalized,
         programme=payload.programme,
         department=payload.department,
+        student_id=payload.student_id,
     )
 
     return {
@@ -256,6 +257,7 @@ def admin_create_user(payload: AdminCreateUserRequest):
         programme=payload.programme,
         department=payload.department,
         status="active",
+        student_id=payload.student_id,
     )
     return {
         "status": "success",
