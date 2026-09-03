@@ -1049,7 +1049,7 @@ export default function App() {
               const Icon = item.icon;
               const isActive = activeTab === item.key;
               return (
-                <li key={item.key} style={{ display: "flex", flexDirection: "column" }}>
+                <li key={item.key} style={{ display: "flex", flexDirection: "column", width: "100%", boxSizing: "border-box" }}>
                   <div
                     className={`sidebar-curved-item ${isActive ? "active" : ""}`}
                     onClick={() => {
@@ -1081,9 +1081,9 @@ export default function App() {
                       boxSizing: "border-box"
                     }}
                   >
-                    <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
-                      <Icon size={19} className="nav-icon" />
-                      <span>{item.label}</span>
+                    <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", minWidth: 0, flex: 1, overflow: "hidden" }}>
+                      <Icon size={19} className="nav-icon" style={{ flexShrink: 0 }} />
+                      <span style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{item.label}</span>
                     </div>
                     {item.subItems && (
                       <ChevronDown
@@ -1091,7 +1091,9 @@ export default function App() {
                         style={{
                           transform: expandedMenus[item.key] ? "rotate(180deg)" : "rotate(0deg)",
                           transition: "transform 0.2s ease",
-                          color: isActive ? "inherit" : "#94a3b8",
+                          color: isActive ? "#0062ff" : "rgba(255, 255, 255, 0.75)",
+                          flexShrink: 0,
+                          marginLeft: "0.35rem",
                         }}
                       />
                     )}

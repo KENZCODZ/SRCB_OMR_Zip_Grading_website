@@ -2965,14 +2965,14 @@ input.login-minimal-input.with-toggle,
   overflow: visible;
 }
 
-/* Vivid Royal Blue Curved Sidebar - Flush to left edge */
+/* Vivid Royal Blue Sidebar - Contained Pill Navigation */
 .sidebar-curved {
-  width: 245px;
-  min-width: 245px;
-  max-width: 245px;
+  width: 255px;
+  min-width: 255px;
+  max-width: 255px;
   background: #0062ff;
   background: linear-gradient(180deg, #0062ff 0%, #0050e6 100%);
-  padding: 2rem 0 1.5rem 1.5rem;
+  padding: 1.75rem 0.85rem 1.5rem 0.85rem;
   display: flex;
   flex-direction: column;
   color: #ffffff;
@@ -2990,20 +2990,21 @@ input.login-minimal-input.with-toggle,
 
 .sidebar-brand-header {
   font-family: 'Plus Jakarta Sans', sans-serif;
-  font-size: 1.18rem;
+  font-size: 1.15rem;
   font-weight: 800;
   color: #ffffff;
   letter-spacing: -0.01em;
-  margin-bottom: 2.2rem;
+  margin-bottom: 1.75rem;
   display: flex;
   align-items: center;
   gap: 0.75rem;
-  padding-right: 1rem;
+  padding: 0 0.5rem;
+  box-sizing: border-box;
 }
 
 .sidebar-brand-logo-frame {
-  width: 42px;
-  height: 42px;
+  width: 38px;
+  height: 38px;
   border-radius: 50%;
   background: #ffffff;
   padding: 2px;
@@ -3023,11 +3024,13 @@ input.login-minimal-input.with-toggle,
 }
 
 .sidebar-brand-title {
-  font-size: 1.15rem;
+  font-size: 1.12rem;
   font-weight: 800;
   color: #ffffff;
   letter-spacing: -0.01em;
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .sidebar-brand-badge {
@@ -3048,74 +3051,75 @@ input.login-minimal-input.with-toggle,
   gap: 0.35rem;
   padding: 0;
   margin: 0;
+  width: 100%;
+  box-sizing: border-box;
   flex: 1;
 }
 
 .sidebar-curved-item {
   display: flex;
   align-items: center;
-  gap: 0.85rem;
-  padding: 0.85rem 1.25rem;
-  color: rgba(255, 255, 255, 0.75);
-  font-size: 0.92rem;
+  gap: 0.75rem;
+  padding: 0.72rem 1rem;
+  width: 100%;
+  box-sizing: border-box;
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 0.88rem;
   font-weight: 600;
   cursor: pointer;
-  border-top-left-radius: 28px;
-  border-bottom-left-radius: 28px;
-  transition: color 0.18s ease, transform 0.18s ease, background-color 0.18s ease;
+  border-radius: 9999px;
+  transition: color 0.18s ease, background-color 0.18s ease;
   position: relative;
   user-select: none;
+  overflow: hidden;
+  text-decoration: none;
+}
+
+.sidebar-curved-item span {
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+  flex: 1;
+}
+
+.sidebar-curved-item .nav-icon {
+  flex-shrink: 0;
+  color: rgba(255, 255, 255, 0.85);
+  transition: color 0.18s ease;
 }
 
 .sidebar-curved-item:hover:not(.active) {
   color: #ffffff;
-  background-color: rgba(255, 255, 255, 0.1);
-  transform: translateX(2px);
+  background-color: rgba(255, 255, 255, 0.12);
 }
 
-/* THE SIGNATURE CONCAVE RADIUS CURVED CUTOUT ACTIVE TAB */
+.sidebar-curved-item:hover:not(.active) .nav-icon {
+  color: #ffffff;
+}
+
+/* WHITE ROUNDED PILL ACTIVE TAB - FULLY CONTAINED INSIDE SIDEBAR */
 .sidebar-curved-item.active {
   background-color: #ffffff !important;
-  color: #0f172a !important;
+  color: #0062ff !important;
   font-weight: 700;
-  position: relative;
-  z-index: 10;
-  border-top-right-radius: 0;
-  border-bottom-right-radius: 0;
-  box-shadow: -4px 0 14px rgba(0, 0, 0, 0.03);
+  border-radius: 9999px !important;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.12);
+  overflow: hidden;
 }
 
 .sidebar-curved-item.active .nav-icon {
-  color: #0062ff;
+  color: #0062ff !important;
 }
 
-/* Concave corner above the active tab */
-.sidebar-curved-item.active::before {
-  content: "";
-  position: absolute;
-  top: -22px;
-  right: 0;
-  width: 22px;
-  height: 22px;
-  background: transparent;
-  border-bottom-right-radius: 22px;
-  box-shadow: 7px 7px 0 7px #ffffff;
-  pointer-events: none;
+.sidebar-curved-item.active span {
+  color: #0062ff !important;
 }
 
-/* Concave corner below the active tab */
+.sidebar-curved-item.active::before,
 .sidebar-curved-item.active::after {
-  content: "";
-  position: absolute;
-  bottom: -22px;
-  right: 0;
-  width: 22px;
-  height: 22px;
-  background: transparent;
-  border-top-right-radius: 22px;
-  box-shadow: 7px -7px 0 7px #ffffff;
-  pointer-events: none;
+  display: none !important;
+  content: none !important;
 }
 
 .sidebar-bottom-links {
