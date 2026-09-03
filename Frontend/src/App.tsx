@@ -23,6 +23,7 @@ import {
   ChevronDown,
   ChevronRight,
   Sliders,
+  Activity,
 } from "lucide-react";
 import confetti from "canvas-confetti";
 import type {
@@ -72,6 +73,7 @@ import DeanAcademicManagement from "./components/dean/DeanAcademicManagement";
 import DeanExaminations from "./components/dean/DeanExaminations";
 import DeanReportsAnalytics from "./components/dean/DeanReportsAnalytics";
 import DeanSettings from "./components/dean/DeanSettings";
+import DeanProgressRecords from "./components/dean/DeanProgressRecords";
 import { StudentPortalView } from "./components/StudentPortalView";
 
 type AppTab =
@@ -79,6 +81,7 @@ type AppTab =
   | "academic-management"
   | "examinations"
   | "reports"
+  | "progress-records"
   | "settings"
   | "quick-scan"
   | "exams"
@@ -94,6 +97,10 @@ export default function App() {
   // Navigation State
   const [activeTab, setActiveTab] = useState<AppTab>("dashboard");
   const [currentUser, setCurrentUser] = useState<AuthUser | null>(null);
+
+  // Sidebar Accordion State
+  const [expandedMenus, setExpandedMenus] = useState<Record<string, boolean>>({});
+  const [sidebarProgramFilter, setSidebarProgramFilter] = useState<string>("all");
   const [selectedAuthUserId, setSelectedAuthUserId] = useState(mockUsers[0].id);
   const [loginEmail, setLoginEmail] = useState("");
   const [loginPassword, setLoginPassword] = useState("");
@@ -667,6 +674,8 @@ export default function App() {
     setLoginError("");
     setActiveTab("dashboard");
     setAuthMessage(message);
+    setExpandedMenus({});
+    setSidebarProgramFilter("all");
   };
 
   const handleSignOut = () => {
@@ -719,6 +728,19 @@ export default function App() {
           key: "user-directory" as AppTab,
           label: "User Access",
           icon: Users,
+        },
+        {
+          key: "progress-records" as AppTab,
+          label: "Progress & Records",
+          icon: Activity,
+          subItems: [
+            { id: "all", label: "All Programs" },
+            { id: "BSIT", label: "BS Information Tech (BSIT)" },
+            { id: "BSEd", label: "BS Education (BSEd)" },
+            { id: "BSCS", label: "BS Computer Science (BSCS)" },
+            { id: "BSBA", label: "BS Business Admin (BSBA)" },
+            { id: "AB Comm", label: "AB Communication Arts" },
+          ],
         },
         {
           key: "reports" as AppTab,
@@ -949,26 +971,102 @@ export default function App() {
               const Icon = item.icon;
               const isActive = activeTab === item.key;
               return (
-                <li
-                  key={item.key}
-                  className={`sidebar-curved-item ${isActive ? "active" : ""}`}
-                  onClick={() => {
-                    if (item.key === "user-guide") {
-                      setIsUserGuideOpen(true);
-                      return;
-                    }
-                    handleTabSelect(item.key);
-                    if (
-                      item.key === "exams" &&
-                      exams.length > 0 &&
-                      !selectedExamId
-                    ) {
-                      setSelectedExamId(exams[0].id);
-                    }
-                  }}
-                >
-                  <Icon size={19} className="nav-icon" />
-                  <span>{item.label}</span>
+                <li key={item.key} style={{ display: "flex", flexDirection: "column" }}>
+                  <div
+                    className={`sidebar-curved-item ${isActive ? "active" : ""}`}
+                    onClick={() => {
+                      if (item.subItems) {
+                        setExpandedMenus((prev) => ({
+                          ...prev,
+                          [item.key]: !prev[item.key],
+                        }));
+                      } else {
+                        if (item.key === "user-guide") {
+                          setIsUserGuideOpen(true);
+                          return;
+                        }
+                        handleTabSelect(item.key);
+                        if (
+                          item.key === "exams" &&
+                          exams.length > 0 &&
+                          !selectedExamId
+                        ) {
+                          setSelectedExamId(exams[0].id);
+                        }
+                      }
+                    }}
+                    style={{ 
+                      display: "flex", 
+                      alignItems: "center", 
+                      justifyContent: "space-between",
+                      width: "100%",
+                      boxSizing: "border-box"
+                    }}
+                  >
+                    <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+                      <Icon size={19} className="nav-icon" />
+                      <span>{item.label}</span>
+                    </div>
+                    {item.subItems && (
+                      <ChevronDown
+                        size={16}
+                        style={{
+                          transform: expandedMenus[item.key] ? "rotate(180deg)" : "rotate(0deg)",
+                          transition: "transform 0.2s ease",
+                          color: isActive ? "inherit" : "#94a3b8",
+                        }}
+                      />
+                    )}
+                  </div>
+                  
+                  {item.subItems && expandedMenus[item.key] && (
+                    <ul style={{ 
+                      listStyle: "none", 
+                      padding: "0.25rem 0 0.5rem 2.5rem", 
+                      margin: 0,
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: "0.25rem"
+                    }}>
+                      {item.subItems.map((subItem) => (
+                        <li 
+                          key={subItem.id}
+                          onClick={() => {
+                            setSidebarProgramFilter(subItem.id);
+                            handleTabSelect(item.key);
+                          }}
+                          style={{
+                            padding: "0.5rem 0.75rem",
+                            borderRadius: "6px",
+                            cursor: "pointer",
+                            fontSize: "0.85rem",
+                            fontWeight: sidebarProgramFilter === subItem.id && isActive ? 700 : 500,
+                            color: sidebarProgramFilter === subItem.id && isActive 
+                              ? "#ffffff" 
+                              : "rgba(255, 255, 255, 0.75)",
+                            background: sidebarProgramFilter === subItem.id && isActive 
+                              ? "rgba(255, 255, 255, 0.2)" 
+                              : "transparent",
+                            transition: "all 0.18s ease",
+                          }}
+                          onMouseEnter={(e) => {
+                            if (sidebarProgramFilter !== subItem.id || !isActive) {
+                              e.currentTarget.style.color = "#ffffff";
+                              e.currentTarget.style.background = "rgba(255, 255, 255, 0.1)";
+                            }
+                          }}
+                          onMouseLeave={(e) => {
+                            if (sidebarProgramFilter !== subItem.id || !isActive) {
+                              e.currentTarget.style.color = "rgba(255, 255, 255, 0.75)";
+                              e.currentTarget.style.background = "transparent";
+                            }
+                          }}
+                        >
+                          {subItem.label}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
                 </li>
               );
             })}
@@ -1189,6 +1287,16 @@ export default function App() {
             </>
           );
         })()}
+
+        {activeTab === "progress-records" && currentUser && (
+          <DeanProgressRecords
+            exams={exams}
+            submissions={submissions}
+            onInspectExam={(exam) => setInspectExam(exam)}
+            formatDate={formatDate}
+            programFilter={sidebarProgramFilter}
+          />
+        )}
 
         {activeTab === "settings" && currentUser && (
           <DeanSettings
