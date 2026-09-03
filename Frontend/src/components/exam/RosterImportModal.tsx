@@ -1,7 +1,7 @@
 import React, { useRef, useState } from 'react';
 import { UploadCloud, CheckCircle2, AlertCircle, FileSpreadsheet, X } from 'lucide-react';
-import type { StudentRosterEntry } from '../types';
-import { parseRosterFile } from '../utils/excelUtils';
+import type { StudentRosterEntry } from '../../types';
+import { parseRosterFile } from '../../utils/excelUtils';
 
 export interface RosterImportModalProps {
   isOpen: boolean;

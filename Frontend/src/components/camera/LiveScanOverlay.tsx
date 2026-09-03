@@ -10,7 +10,7 @@ import {
   RefreshCw,
   HelpCircle,
 } from 'lucide-react';
-import type { QuestionStatus } from '../hooks/useLiveOmrScanner';
+import type { QuestionStatus } from '../../hooks/useLiveOmrScanner';
 
 export interface LiveScanOverlayProps {
   questions: Record<string, QuestionStatus>;
@@ -184,3 +184,5 @@ export const LiveScanOverlay: React.FC<LiveScanOverlayProps> = ({
     </div>
   );
 };
+
+export default LiveScanOverlay;

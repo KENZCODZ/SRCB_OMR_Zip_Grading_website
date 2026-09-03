@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { Eye, Inbox, ChevronLeft, ChevronRight, ChevronDown } from 'lucide-react';
-import type { Submission, Exam, StudentRosterEntry } from '../types';
-import { calculateTransmutedGrade } from '../utils/excelUtils';
+import type { Submission, Exam, StudentRosterEntry } from '../../types';
+import { calculateTransmutedGrade } from '../../utils/excelUtils';
 
 export interface SubmissionTableProps {
   submissions: Submission[];

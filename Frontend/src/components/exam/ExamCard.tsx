@@ -8,7 +8,7 @@ import {
   Layers,
   Eye,
 } from "lucide-react";
-import type { Exam } from "../types";
+import type { Exam } from "../../types";
 
 export interface ExamCardProps {
   exam: Exam;

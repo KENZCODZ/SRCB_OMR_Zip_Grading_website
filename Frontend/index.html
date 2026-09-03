@@ -2,16 +2,32 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎯</text></svg>" />
+    <link rel="icon" type="image/png" href="/srcb-logo.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>AeroOMR — Premium OMR Grading Suite</title>
+    <title>SRCB EduAssess — Academic Assessment Portal</title>
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+      /* Critical pre-hydration zero-flash styling */
+      html, body {
+        background-color: #f8fafc !important;
+        color: #0f172a;
+        margin: 0;
+        padding: 0;
+        min-height: 100vh;
+      }
+      #root {
+        background-color: #f8fafc !important;
+        min-height: 100vh;
+        width: 100%;
+        display: flex;
+      }
+    </style>
   </head>
-  <body>
-    <div id="root"></div>
+  <body style="background-color: #f8fafc; margin: 0; padding: 0;">
+    <div id="root" style="background-color: #f8fafc;"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

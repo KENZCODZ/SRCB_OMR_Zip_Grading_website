@@ -13,7 +13,7 @@ import {
   ArrowRight,
   BookOpen,
 } from "lucide-react";
-import { registerUser } from "../api";
+import { registerUser } from "../../api";
 
 interface RegisterFormProps {
   onSwitchToLogin: () => void;

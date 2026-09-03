@@ -11,8 +11,8 @@ import {
   RotateCcw,
   CheckSquare,
 } from "lucide-react";
-import type { Exam, AuthUser } from "../types";
-import { extractSheet } from "../api";
+import type { Exam, AuthUser } from "../../types";
+import { extractSheet } from "../../api";
 
 interface ExamCreationModalProps {
   isOpen: boolean;

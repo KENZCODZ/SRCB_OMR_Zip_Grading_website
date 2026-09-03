@@ -15,7 +15,7 @@ import {
   CheckCircle2,
   Cpu,
 } from "lucide-react";
-import type { AuthUser } from "../types";
+import type { AuthUser } from "../../types";
 
 interface LoginPageProps {
   email: string;
@@ -112,7 +112,7 @@ export default function LoginPage({
           <div className="login-brand-logo-ring">
             <img src="/srcb-logo.png" alt="SRCB Logo" className="login-logo-img" />
           </div>
-          <h1 className="login-app-title">AeroOMR</h1>
+          <h1 className="login-app-title">SRCB EduAssess</h1>
           <p className="login-app-subtitle">
             St. Rita's College of Balingasag • Academic Assessment Portal
           </p>

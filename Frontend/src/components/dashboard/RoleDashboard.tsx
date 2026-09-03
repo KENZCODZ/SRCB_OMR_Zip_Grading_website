@@ -11,8 +11,8 @@ import {
   Clock,
   Users,
 } from "lucide-react";
-import type { AuthUser, Exam, Submission, StudentRosterEntry } from "../types";
-import TeacherExamCompiler from "./TeacherExamCompiler";
+import type { AuthUser, Exam, Submission, StudentRosterEntry } from "../../types";
+import { TeacherExamCompiler } from "../teacher";
 
 interface MetricCard {
   title: string;

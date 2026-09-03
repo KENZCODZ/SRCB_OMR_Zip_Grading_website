@@ -24,13 +24,13 @@ import {
   X,
   Award,
 } from "lucide-react";
-import type { Exam, Submission, StudentRosterEntry, AuthUser, EmailDeliveryStatus, StudentResultEmailRecord } from "../types";
+import type { Exam, Submission, StudentRosterEntry, AuthUser, EmailDeliveryStatus, StudentResultEmailRecord } from "../../types";
 import {
   calculateTransmutedGrade,
   exportExamBatchExcel,
   exportCHEDGradeSheet,
   exportCompleteDatabaseExcel,
-} from "../utils/excelUtils";
+} from "../../utils/excelUtils";
 
 export interface TeacherExamCompilerProps {
   exams: Exam[];
