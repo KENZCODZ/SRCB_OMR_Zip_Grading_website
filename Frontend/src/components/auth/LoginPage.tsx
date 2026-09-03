@@ -14,6 +14,7 @@ import {
   X,
   CheckCircle2,
   Cpu,
+  Sparkles,
 } from "lucide-react";
 import type { AuthUser } from "../../types";
 
@@ -105,82 +106,126 @@ export default function LoginPage({
       {/* Background Ambient Aesthetics */}
       <div className="login-ambient-mesh" />
 
-      {/* Main Center Card */}
-      <div className="login-minimal-card">
-        {/* Brand Header */}
-        <div className="login-minimal-brand">
-          <div className="login-brand-logo-ring">
-            <img src="/srcb-logo.png" alt="SRCB Logo" className="login-logo-img" />
+      {/* Main Dual-Panel Institutional Container */}
+      <div className="login-dual-container">
+        {/* Left Visual Showcase Panel featuring SRCB 125th Building Image */}
+        <div className="login-hero-showcase">
+          <div className="login-hero-image-frame">
+            <img
+              src="/srcb-building-125.png"
+              alt="St. Rita's College of Balingasag 125 Years of TIME"
+              className="login-hero-bg-img"
+            />
+            <div className="login-hero-overlay" />
           </div>
-          <h1 className="login-app-title">SRCB EduAssess</h1>
-          <p className="login-app-subtitle">
-            St. Rita's College of Balingasag • Academic Assessment Portal
-          </p>
+
+          <div className="login-hero-content">
+            <div className="login-hero-badge">
+              <Sparkles size={14} color="#f59e0b" />
+              <span>125th Jubilee Academic Assessment Portal</span>
+            </div>
+
+            <h2 className="login-hero-title">
+              St. Rita's College of Balingasag
+            </h2>
+            <p className="login-hero-motto">
+              "Rooted in Faith, Driven in Excellence, Reaching out in Humble Service"
+            </p>
+
+            <div className="login-hero-features">
+              <div className="login-feature-item">
+                <CheckCircle2 size={15} className="feature-icon" />
+                <span>ZipGrade 50-Item Automated Camera & OMR Grading</span>
+              </div>
+              <div className="login-feature-item">
+                <CheckCircle2 size={15} className="feature-icon" />
+                <span>Outcomes-Based Education (OBE) Item Analysis</span>
+              </div>
+              <div className="login-feature-item">
+                <CheckCircle2 size={15} className="feature-icon" />
+                <span>Institutional Dean, Faculty & Student Records</span>
+              </div>
+            </div>
+          </div>
         </div>
 
-        {/* Minimalist Login Form */}
-        <form onSubmit={onSubmit} className="login-minimal-form">
-          <div className="form-group">
-            <label className="login-field-label">Institutional Email</label>
-            <div className="login-input-wrapper">
-              <Mail size={18} className="login-input-icon" />
-              <input
-                type="email"
-                className="login-minimal-input"
-                placeholder="username@srcb.edu.ph"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                autoComplete="email"
-              />
+        {/* Right Authentication Form Panel */}
+        <div className="login-minimal-card">
+          {/* Brand Header */}
+          <div className="login-minimal-brand">
+            <div className="login-brand-logo-ring">
+              <img src="/srcb-logo.png" alt="SRCB Logo" className="login-logo-img" />
             </div>
+            <h1 className="login-app-title">SRCB EduAssess</h1>
+            <p className="login-app-subtitle">
+              Sign in to your institutional faculty, dean, or student portal
+            </p>
           </div>
 
-          <div className="form-group">
-            <div className="login-password-header">
-              <label className="login-field-label">Password</label>
-              <span className="login-forgot-link">Forgot?</span>
+          {/* Minimalist Login Form */}
+          <form onSubmit={onSubmit} className="login-minimal-form">
+            <div className="form-group">
+              <label className="login-field-label">Institutional Email</label>
+              <div className="login-input-wrapper">
+                <Mail size={18} className="login-input-icon" />
+                <input
+                  type="email"
+                  className="login-minimal-input"
+                  placeholder="username@srcb.edu.ph"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                  autoComplete="email"
+                />
+              </div>
             </div>
-            <div className="login-input-wrapper">
-              <Lock size={18} className="login-input-icon" />
-              <input
-                type={showPassword ? "text" : "password"}
-                className="login-minimal-input with-toggle"
-                placeholder="••••••••••••"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                autoComplete="current-password"
-              />
-              <button
-                type="button"
-                className="password-toggle-btn"
-                onClick={() => setShowPassword(!showPassword)}
-                title={showPassword ? "Hide password" : "Show password"}
-                aria-label="Toggle password visibility"
-              >
-                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-              </button>
+
+            <div className="form-group">
+              <div className="login-password-header">
+                <label className="login-field-label">Password</label>
+                <span className="login-forgot-link">Forgot Password?</span>
+              </div>
+              <div className="login-input-wrapper">
+                <Lock size={18} className="login-input-icon" />
+                <input
+                  type={showPassword ? "text" : "password"}
+                  className="login-minimal-input with-toggle"
+                  placeholder="••••••••••••"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  autoComplete="current-password"
+                />
+                <button
+                  type="button"
+                  className="password-toggle-btn"
+                  onClick={() => setShowPassword(!showPassword)}
+                  title={showPassword ? "Hide password" : "Show password"}
+                  aria-label="Toggle password visibility"
+                >
+                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                </button>
+              </div>
             </div>
-          </div>
 
-          {loginError && (
-            <div className="login-error-pill">
-              <span>{loginError}</span>
+            {loginError && (
+              <div className="login-error-pill">
+                <span>{loginError}</span>
+              </div>
+            )}
+
+            <button type="submit" className="login-primary-submit-btn">
+              <span>Sign In to Portal</span>
+              <ChevronRight size={17} />
+            </button>
+          </form>
+
+          {/* Minimal Institutional Footer */}
+          <div className="login-minimal-footer">
+            <div className="login-security-tag">
+              <ShieldCheck size={14} color="#0062ff" />
+              <span>256-Bit Encrypted Academic Session</span>
             </div>
-          )}
-
-          <button type="submit" className="login-primary-submit-btn">
-            Sign In
-            <ChevronRight size={16} />
-          </button>
-        </form>
-
-        {/* Minimal Institutional Footer */}
-        <div className="login-minimal-footer">
-          <div className="login-security-tag">
-            <ShieldCheck size={13} color="#0062ff" />
-            <span>256-Bit Encrypted Academic Session</span>
           </div>
         </div>
       </div>
