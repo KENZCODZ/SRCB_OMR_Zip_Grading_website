@@ -16,3 +16,4 @@ export {
 } from "./SkeletonLoader";
 export { SmoothContentTransition, type SmoothContentTransitionProps } from "./SmoothContentTransition";
 export { UserGuideModal, UserGuideCard, type UserGuideModalProps } from "./UserGuideModal";
+export { NotificationDropdown } from "./NotificationDropdown";

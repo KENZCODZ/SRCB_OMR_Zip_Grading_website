@@ -33,6 +33,7 @@ import type {
   QuickScanResult,
   GradeResult,
   StudentRosterEntry,
+  AppNotification,
 } from "./types";
 import {
   fetchExams,
@@ -62,6 +63,7 @@ import {
   SmoothContentTransition,
   UserGuideModal,
   UserGuideCard,
+  NotificationDropdown,
 } from "./components/shared";
 
 // Feature Domain Modules
@@ -111,6 +113,149 @@ type AppTab =
   | "user-management"
   | "user-directory";
 
+const getDefaultNotifications = (role?: string): AppNotification[] => {
+  if (role === "admin") {
+    return [
+      {
+        id: "notif-adm-1",
+        title: "New Student Account Created",
+        message: "Mark Kevin Alcantara (ID: 2023-00155) was successfully activated under BSIT.",
+        timestamp: "5m ago",
+        type: "user",
+        read: false,
+        targetTab: "user-directory",
+      },
+      {
+        id: "notif-adm-2",
+        title: "Automated System Backup",
+        message: "Institutional examination database & OMR records backup completed securely.",
+        timestamp: "1h ago",
+        type: "success",
+        read: false,
+        targetTab: "dashboard",
+      },
+      {
+        id: "notif-adm-3",
+        title: "Quick Scanner WASM Initialized",
+        message: "OpenCV 4.8.0 Computer Vision worker ready for rapid 50-item bubble sheet grading.",
+        timestamp: "3h ago",
+        type: "info",
+        read: true,
+        targetTab: "quick-scan",
+      },
+    ];
+  }
+
+  if (role === "dean") {
+    return [
+      {
+        id: "notif-dean-1",
+        title: "Midterm Examination Milestone",
+        message: "95.2% of Higher Education midterm examinations are encoded and graded.",
+        timestamp: "10m ago",
+        type: "exam",
+        read: false,
+        targetTab: "dashboard",
+      },
+      {
+        id: "notif-dean-2",
+        title: "New Course Examination Published",
+        message: "Ms. Jenny Garcia compiled IT 311: Advanced Web Systems.",
+        timestamp: "45m ago",
+        type: "success",
+        read: false,
+        targetTab: "examinations",
+      },
+      {
+        id: "notif-dean-3",
+        title: "OBE Item Analysis Alert",
+        message: "CS 201 Item #14 flagged with high difficulty index (P = 0.28).",
+        timestamp: "2h ago",
+        type: "warning",
+        read: true,
+        targetTab: "reports",
+      },
+    ];
+  }
+
+  if (role === "programme-head") {
+    return [
+      {
+        id: "notif-ph-1",
+        title: "BSIT Program Exam Submissions",
+        message: "BSIT 3A and 3B answer sheets submitted for outcomes-based OBE evaluation.",
+        timestamp: "15m ago",
+        type: "exam",
+        read: false,
+        targetTab: "academic-management",
+      },
+      {
+        id: "notif-ph-2",
+        title: "Enrolled Student Directory Sync",
+        message: "Active student roster updated for 1st Semester academic term.",
+        timestamp: "1h ago",
+        type: "user",
+        read: false,
+        targetTab: "user-directory",
+      },
+    ];
+  }
+
+  if (role === "teacher") {
+    return [
+      {
+        id: "notif-tch-1",
+        title: "ZipGrade 50-Item Batch Graded",
+        message: "Batch answer sheets processed with 100% accuracy in Examination Compiler.",
+        timestamp: "8m ago",
+        type: "grade",
+        read: false,
+        targetTab: "compiler",
+      },
+      {
+        id: "notif-tch-2",
+        title: "Student Transmuted Scores Computed",
+        message: "Philippine 1.00 - 5.00 transmutation curve generated for midterm exam.",
+        timestamp: "1h ago",
+        type: "success",
+        read: false,
+        targetTab: "history",
+      },
+      {
+        id: "notif-tch-3",
+        title: "Bubble Sheet Calibration Note",
+        message: "Remember to ensure 4 corner black alignment squares are visible when scanning.",
+        timestamp: "1d ago",
+        type: "info",
+        read: true,
+        targetTab: "quick-scan",
+      },
+    ];
+  }
+
+  // Student
+  return [
+    {
+      id: "notif-stu-1",
+      title: "New Examination Result Published",
+      message: "Your score for IT 311: Advanced Web Systems is now available to view.",
+      timestamp: "12m ago",
+      type: "grade",
+      read: false,
+      targetTab: "examinations",
+    },
+    {
+      id: "notif-stu-2",
+      title: "Question-by-Question Item Breakdown",
+      message: "Inspect your bubble sheet scan & answer key feedback in Student Portal.",
+      timestamp: "1h ago",
+      type: "info",
+      read: true,
+      targetTab: "reports",
+    },
+  ];
+};
+
 export default function App() {
   // Navigation & Persistent Auth State (Restores user & tab on refresh)
   const [currentUser, setCurrentUser] = useState<AuthUser | null>(
@@ -120,7 +265,7 @@ export default function App() {
     const saved = getStoredActiveTab();
     if (saved) return saved as AppTab;
     const user = getStoredAuthUser();
-    if (user?.role === "admin") return "quick-scan";
+    if (user?.role === "admin") return "dashboard";
     if (user?.role === "programme-head") return "academic-management";
     return "dashboard";
   });
@@ -133,6 +278,57 @@ export default function App() {
   const [loginPassword, setLoginPassword] = useState("");
   const [loginError, setLoginError] = useState("");
   const [, setAuthMessage] = useState("");
+
+  // Notification State
+  const [notifications, setNotifications] = useState<AppNotification[]>(() => {
+    const user = getStoredAuthUser();
+    const cached = user ? cacheManager.get<AppNotification[]>(`notifications_${user.id}`) : null;
+    return cached || getDefaultNotifications(user?.role);
+  });
+  const [isNotificationMenuOpen, setIsNotificationMenuOpen] = useState(false);
+  const notificationMenuRef = useRef<HTMLDivElement>(null);
+
+  // Sync notifications when user changes
+  useEffect(() => {
+    if (currentUser) {
+      const cached = cacheManager.get<AppNotification[]>(`notifications_${currentUser.id}`);
+      setNotifications(cached || getDefaultNotifications(currentUser.role));
+    }
+  }, [currentUser?.id, currentUser?.role]);
+
+  const saveNotifications = (newNotifs: AppNotification[]) => {
+    setNotifications(newNotifs);
+    if (currentUser) {
+      cacheManager.set(`notifications_${currentUser.id}`, newNotifs);
+    }
+  };
+
+  const handleMarkAsRead = (id: string) => {
+    const updated = notifications.map((n) => (n.id === id ? { ...n, read: true } : n));
+    saveNotifications(updated);
+  };
+
+  const handleMarkAllAsRead = () => {
+    const updated = notifications.map((n) => ({ ...n, read: true }));
+    saveNotifications(updated);
+  };
+
+  const handleClearAll = () => {
+    saveNotifications([]);
+  };
+
+  const handleDeleteNotification = (id: string) => {
+    const updated = notifications.filter((n) => n.id !== id);
+    saveNotifications(updated);
+  };
+
+  const handleSelectNotification = (notif: AppNotification) => {
+    handleMarkAsRead(notif.id);
+    setIsNotificationMenuOpen(false);
+    if (notif.targetTab) {
+      handleTabSelect(notif.targetTab as AppTab);
+    }
+  };
 
   // Core Data State (Instant hydration from cache with mock fallback)
   const [exams, setExams] = useState<Exam[]>(
@@ -220,6 +416,12 @@ export default function App() {
         !profileMenuRef.current.contains(event.target as Node)
       ) {
         setIsProfileMenuOpen(false);
+      }
+      if (
+        notificationMenuRef.current &&
+        !notificationMenuRef.current.contains(event.target as Node)
+      ) {
+        setIsNotificationMenuOpen(false);
       }
     };
     document.addEventListener("mousedown", handleClickOutside);
@@ -1210,18 +1412,49 @@ export default function App() {
             </div>
 
             <div className="reference-header-right">
-
-              <button
-                type="button"
-                className="header-icon-btn"
-                title="Notifications"
-                onClick={() =>
-                  addToast("info", "All systems operational. No unread alerts.")
-                }
+              {/* Notifications Dropdown Container */}
+              <div
+                className="header-notification-container"
+                ref={notificationMenuRef}
+                style={{ position: "relative" }}
               >
-                <Bell size={18} />
-                <span className="header-notif-dot" />
-              </button>
+                <button
+                  type="button"
+                  className={`header-icon-btn ${isNotificationMenuOpen ? "active" : ""}`}
+                  title="Notifications & System Alerts"
+                  onClick={() => setIsNotificationMenuOpen((prev) => !prev)}
+                  style={{ position: "relative" }}
+                >
+                  <Bell size={18} />
+                  {notifications.some((n) => !n.read) && (
+                    <span
+                      className="header-notif-dot"
+                      style={{
+                        position: "absolute",
+                        top: "7px",
+                        right: "7px",
+                        width: "8px",
+                        height: "8px",
+                        borderRadius: "50%",
+                        background: "#0062ff",
+                        border: "2px solid #ffffff",
+                        boxShadow: "0 0 6px rgba(0, 98, 255, 0.6)",
+                      }}
+                    />
+                  )}
+                </button>
+
+                <NotificationDropdown
+                  isOpen={isNotificationMenuOpen}
+                  onClose={() => setIsNotificationMenuOpen(false)}
+                  notifications={notifications}
+                  onMarkAsRead={handleMarkAsRead}
+                  onMarkAllAsRead={handleMarkAllAsRead}
+                  onClearAll={handleClearAll}
+                  onDeleteNotification={handleDeleteNotification}
+                  onSelectNotification={handleSelectNotification}
+                />
+              </div>
 
               <div className="header-profile-container" ref={profileMenuRef}>
                 <div

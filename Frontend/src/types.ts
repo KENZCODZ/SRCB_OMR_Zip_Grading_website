@@ -153,3 +153,13 @@ export interface StudentResultEmailRecord {
   sentAt?: string;
   errorMessage?: string;
 }
+
+export interface AppNotification {
+  id: string;
+  title: string;
+  message: string;
+  timestamp: string;
+  type: 'info' | 'success' | 'warning' | 'alert' | 'exam' | 'user' | 'grade';
+  read: boolean;
+  targetTab?: string;
+}
