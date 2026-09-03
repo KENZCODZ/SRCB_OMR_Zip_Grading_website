@@ -103,7 +103,9 @@ export default function LoginPage({
 
   return (
     <div className="login-minimal-wrapper">
-      {/* Background Ambient Aesthetics */}
+      {/* Background Animated Stripes & Ambient Aesthetics */}
+      <div className="login-animated-stripes" />
+      <div className="login-ambient-glow" />
       <div className="login-ambient-mesh" />
 
       {/* Main Dual-Panel Institutional Container */}
