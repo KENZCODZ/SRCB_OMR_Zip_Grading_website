@@ -15,12 +15,12 @@ import {
   ChevronDown,
   ChevronUp,
 } from "lucide-react";
-import type { Exam, Submission, StudentRosterEntry, AuthUser } from "../types";
+import type { Exam, Submission, StudentRosterEntry, AuthUser } from "../../types";
 import {
   calculateTransmutedGrade,
   exportExamBatchExcel,
   exportCHEDGradeSheet,
-} from "../utils/excelUtils";
+} from "../../utils/excelUtils";
 
 interface TeacherExamCompilerProps {
   exams: Exam[];

@@ -16,11 +16,10 @@ import {
   RefreshCw,
   X,
 } from "lucide-react";
-import type { AuthUser, PendingUser } from "../types";
-import { fetchAllUsers, adminCreateUser, deleteUser } from "../api";
-import { SkeletonTable } from "./SkeletonLoader";
-import { SmoothContentTransition } from "./SmoothContentTransition";
-import { cacheManager } from "../utils/cacheManager";
+import type { AuthUser, PendingUser } from "../../types";
+import { fetchAllUsers, adminCreateUser, deleteUser } from "../../api";
+import { SkeletonTable, SmoothContentTransition } from "../shared";
+import { cacheManager } from "../../utils/cacheManager";
 
 const DEFAULT_SYSTEM_USERS: PendingUser[] = [
   {

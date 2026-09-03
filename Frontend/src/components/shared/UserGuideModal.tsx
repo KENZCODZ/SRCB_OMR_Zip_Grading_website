@@ -18,7 +18,7 @@ import {
   ChevronUp,
   BookOpen,
 } from "lucide-react";
-import type { UserRole } from "../types";
+import type { UserRole } from "../../types";
 
 export interface UserGuideModalProps {
   isOpen: boolean;

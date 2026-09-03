@@ -14,7 +14,7 @@ import {
   CheckCircle2,
   AlertCircle,
 } from "lucide-react";
-import type { Exam } from "../types";
+import type { Exam } from "../../types";
 
 interface ExamDetailsModalProps {
   exam: Exam | null;

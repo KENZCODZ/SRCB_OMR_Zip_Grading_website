@@ -1,7 +1,7 @@
 import React from 'react';
 import { BarChart2, Download, CheckCircle2, HelpCircle, FileSpreadsheet } from 'lucide-react';
-import type { Submission } from '../types';
-import { calculateItemAnalysis, exportItemAnalysisExcel } from '../utils/excelUtils';
+import type { Submission } from '../../types';
+import { calculateItemAnalysis, exportItemAnalysisExcel } from '../../utils/excelUtils';
 
 export interface ItemAnalysisTableProps {
   examName: string;

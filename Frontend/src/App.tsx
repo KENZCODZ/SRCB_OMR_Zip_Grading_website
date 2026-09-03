@@ -58,18 +58,28 @@ import {
 } from "./utils/excelUtils";
 import { cacheManager } from "./utils/cacheManager";
 
-// Imported Isolated UI Components
-import StatusBadge from "./components/StatusBadge";
-import ExamCard from "./components/ExamCard";
-import SubmissionTable from "./components/SubmissionTable";
-import { SkeletonExamList, SkeletonTable } from "./components/SkeletonLoader";
-import { SmoothContentTransition } from "./components/SmoothContentTransition";
-import ToastNotification, {
+// Shared Cross-Cutting UI Components
+import {
+  StatusBadge,
+  ToastNotification,
   type ToastItem,
-} from "./components/ToastNotification";
-import RosterImportModal from "./components/RosterImportModal";
-import ItemAnalysisTable from "./components/ItemAnalysisTable";
-import RoleDashboard from "./components/RoleDashboard";
+  SkeletonExamList,
+  SkeletonTable,
+  SmoothContentTransition,
+  UserGuideModal,
+  UserGuideCard,
+} from "./components/shared";
+
+// Feature Domain Modules
+import {
+  ExamCard,
+  SubmissionTable,
+  RosterImportModal,
+  ItemAnalysisTable,
+  ExamCreationModal,
+  ExamDetailsModal,
+} from "./components/exam";
+import { RoleDashboard } from "./components/dashboard";
 import {
   LoginPage,
   getStoredAuthUser,
@@ -78,16 +88,15 @@ import {
   storeActiveTab,
   clearAuthSession,
 } from "./components/auth";
-import UserGuideModal, { UserGuideCard } from "./components/UserGuideModal";
-import { CameraScanner } from "./components/CameraScanner";
-import ExamCreationModal from "./components/ExamCreationModal";
-import ExamDetailsModal from "./components/ExamDetailsModal";
-import AdminUserManagement from "./components/AdminUserManagement";
-import TeacherExamCompiler from "./components/TeacherExamCompiler";
-import DeanAcademicManagement from "./components/dean/DeanAcademicManagement";
-import DeanExaminations from "./components/dean/DeanExaminations";
-import DeanReportsAnalytics from "./components/dean/DeanReportsAnalytics";
-import DeanSettings from "./components/dean/DeanSettings";
+import { CameraScanner } from "./components/camera";
+import { AdminUserManagement } from "./components/admin";
+import { TeacherExamCompiler } from "./components/teacher";
+import {
+  DeanAcademicManagement,
+  DeanExaminations,
+  DeanReportsAnalytics,
+  DeanSettings,
+} from "./components/dean";
 import { StudentPortalView } from "./components/student";
 
 type AppTab =

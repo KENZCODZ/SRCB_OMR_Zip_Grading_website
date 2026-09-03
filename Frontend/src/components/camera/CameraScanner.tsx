@@ -19,7 +19,7 @@ import {
   Video,
   Timer,
 } from 'lucide-react';
-import { useLiveOmrScanner, type CornerPoint, type LiveScanResult } from '../hooks/useLiveOmrScanner';
+import { useLiveOmrScanner, type CornerPoint, type LiveScanResult } from '../../hooks/useLiveOmrScanner';
 import { LiveScanOverlay } from './LiveScanOverlay';
 
 export interface CameraScannerProps {
@@ -675,3 +675,5 @@ export const CameraScanner: React.FC<CameraScannerProps> = ({
     </div>
   );
 };
+
+export default CameraScanner;
