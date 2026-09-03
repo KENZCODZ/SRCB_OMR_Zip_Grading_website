@@ -56,18 +56,28 @@ import {
   exportExamBatchExcel,
   exportCompleteDatabaseExcel,
 } from "./utils/excelUtils";
+import { cacheManager } from "./utils/cacheManager";
 
 // Imported Isolated UI Components
 import StatusBadge from "./components/StatusBadge";
 import ExamCard from "./components/ExamCard";
 import SubmissionTable from "./components/SubmissionTable";
+import { SkeletonExamList, SkeletonTable } from "./components/SkeletonLoader";
+import { SmoothContentTransition } from "./components/SmoothContentTransition";
 import ToastNotification, {
   type ToastItem,
 } from "./components/ToastNotification";
 import RosterImportModal from "./components/RosterImportModal";
 import ItemAnalysisTable from "./components/ItemAnalysisTable";
 import RoleDashboard from "./components/RoleDashboard";
-import LoginPage from "./components/LoginPage";
+import {
+  LoginPage,
+  getStoredAuthUser,
+  storeAuthUser,
+  getStoredActiveTab,
+  storeActiveTab,
+  clearAuthSession,
+} from "./components/auth";
 import UserGuideModal, { UserGuideCard } from "./components/UserGuideModal";
 import { CameraScanner } from "./components/CameraScanner";
 import ExamCreationModal from "./components/ExamCreationModal";
@@ -78,7 +88,7 @@ import DeanAcademicManagement from "./components/dean/DeanAcademicManagement";
 import DeanExaminations from "./components/dean/DeanExaminations";
 import DeanReportsAnalytics from "./components/dean/DeanReportsAnalytics";
 import DeanSettings from "./components/dean/DeanSettings";
-import { StudentPortalView } from "./components/StudentPortalView";
+import { StudentPortalView } from "./components/student";
 
 type AppTab =
   | "dashboard"
@@ -96,32 +106,64 @@ type AppTab =
   | "user-directory";
 
 export default function App() {
-  // Navigation State
-  const [activeTab, setActiveTab] = useState<AppTab>("dashboard");
-  const [currentUser, setCurrentUser] = useState<AuthUser | null>(null);
+  // Navigation & Persistent Auth State (Restores user & tab on refresh)
+  const [currentUser, setCurrentUser] = useState<AuthUser | null>(
+    () => getStoredAuthUser()
+  );
+  const [activeTab, setActiveTab] = useState<AppTab>(() => {
+    const saved = getStoredActiveTab();
+    if (saved) return saved as AppTab;
+    const user = getStoredAuthUser();
+    if (user?.role === "admin") return "quick-scan";
+    if (user?.role === "programme-head") return "academic-management";
+    return "dashboard";
+  });
   const [selectedAuthUserId, setSelectedAuthUserId] = useState(mockUsers[0].id);
   const [loginEmail, setLoginEmail] = useState("");
   const [loginPassword, setLoginPassword] = useState("");
   const [loginError, setLoginError] = useState("");
   const [, setAuthMessage] = useState("");
 
-  // Core Data State
-  const [exams, setExams] = useState<Exam[]>([]);
-  const [submissions, setSubmissions] = useState<Submission[]>([]);
-  const [roster, setRoster] = useState<StudentRosterEntry[]>([]);
+  // Core Data State (Instant hydration from cache)
+  const [exams, setExams] = useState<Exam[]>(
+    () => cacheManager.get<Exam[]>("exams") || []
+  );
+  const [submissions, setSubmissions] = useState<Submission[]>(
+    () => cacheManager.get<Submission[]>("submissions") || []
+  );
+  const [roster, setRoster] = useState<StudentRosterEntry[]>(
+    () => cacheManager.get<StudentRosterEntry[]>("roster") || []
+  );
   const [isRosterModalOpen, setIsRosterModalOpen] = useState(false);
   const [isUserGuideOpen, setIsUserGuideOpen] = useState(false);
 
   const [loadingExams, setLoadingExams] = useState(false);
   const [loadingSubmissions, setLoadingSubmissions] = useState(false);
-  const [dashboardSummary, setDashboardSummary] = useState({
-    total_accounts: 0,
-    total_students: 0,
-    total_teachers: 0,
-    total_exams: 0,
-    average_score: 0,
-    total_submissions: 0,
-  });
+  const [dashboardSummary, setDashboardSummary] = useState<{
+    total_accounts: number;
+    total_students: number;
+    total_teachers: number;
+    total_exams: number;
+    average_score: number;
+    total_submissions: number;
+  }>(
+    () =>
+      cacheManager.get<{
+        total_accounts: number;
+        total_students: number;
+        total_teachers: number;
+        total_exams: number;
+        average_score: number;
+        total_submissions: number;
+      }>("dashboard_summary") || {
+        total_accounts: 0,
+        total_students: 0,
+        total_teachers: 0,
+        total_exams: 0,
+        average_score: 0,
+        total_submissions: 0,
+      }
+  );
 
   // Quick Scanner State
   const [quickScanMode, setQuickScanMode] = useState<"upload" | "camera">("upload");
@@ -212,10 +254,13 @@ export default function App() {
     setToasts((prev) => prev.filter((t) => t.id !== id));
   };
 
-  const loadExams = useCallback(async () => {
-    setLoadingExams(true);
+  const loadExams = useCallback(async (forceRefresh = false) => {
+    const hasCached = cacheManager.has("exams");
+    if (!hasCached || forceRefresh) {
+      setLoadingExams(true);
+    }
     try {
-      const data = await fetchExams();
+      const data = await fetchExams({ forceRefresh });
       if (data && data.length > 0) {
         setExams(data);
         setSelectedExamId((prev) => {
@@ -229,38 +274,45 @@ export default function App() {
       }
     } catch (err) {
       console.error("Failed to load exams from API:", err);
-      setExams([]);
+      if (!hasCached) setExams([]);
     } finally {
       setLoadingExams(false);
     }
   }, []);
 
-  const loadSubmissions = useCallback(async () => {
-    setLoadingSubmissions(true);
+  const loadSubmissions = useCallback(async (forceRefresh = false) => {
+    const hasCached = cacheManager.has("submissions");
+    if (!hasCached || forceRefresh) {
+      setLoadingSubmissions(true);
+    }
     try {
-      const data = await fetchSubmissions();
+      const data = await fetchSubmissions(undefined, { forceRefresh });
       setSubmissions(data && data.length > 0 ? data : []);
     } catch (err) {
       console.error("Failed to load submissions from API:", err);
-      setSubmissions([]);
+      if (!hasCached) setSubmissions([]);
     } finally {
       setLoadingSubmissions(false);
     }
   }, []);
 
-  const loadDashboardSummary = useCallback(async () => {
+  const loadDashboardSummary = useCallback(async (forceRefresh = false) => {
     try {
-      const data = await fetchDashboardSummary();
-      setDashboardSummary(data);
+      const data = await fetchDashboardSummary({ forceRefresh });
+      if (data) {
+        setDashboardSummary(data);
+      }
     } catch {
-      setDashboardSummary({
-        total_accounts: 12,
-        total_students: 4,
-        total_teachers: 4,
-        total_exams: 0,
-        average_score: 0,
-        total_submissions: 0,
-      });
+      if (!cacheManager.has("dashboard_summary")) {
+        setDashboardSummary({
+          total_accounts: 12,
+          total_students: 4,
+          total_teachers: 4,
+          total_exams: 0,
+          average_score: 0,
+          total_submissions: 0,
+        });
+      }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -327,9 +379,9 @@ export default function App() {
         setInspectExam(null);
         setEditingExam(null);
         await Promise.all([
-          loadExams(),
-          loadSubmissions(),
-          loadDashboardSummary(),
+          loadExams(true),
+          loadSubmissions(true),
+          loadDashboardSummary(true),
         ]);
         return;
       }
@@ -353,9 +405,9 @@ export default function App() {
 
       setSelectedExamId(created.id);
       await Promise.all([
-        loadExams(),
-        loadSubmissions(),
-        loadDashboardSummary(),
+        loadExams(true),
+        loadSubmissions(true),
+        loadDashboardSummary(true),
       ]);
     } catch (err: any) {
       // In mock / offline mode fallback
@@ -418,7 +470,7 @@ export default function App() {
     }
 
     setGradingProgress(null);
-    await Promise.all([loadSubmissions(), loadDashboardSummary()]);
+    await Promise.all([loadSubmissions(true), loadDashboardSummary(true)]);
 
     if (successCount > 0) {
       addToast("success", `Successfully graded ${successCount} sheet(s).`);
@@ -447,9 +499,9 @@ export default function App() {
       });
 
       await Promise.all([
-        loadExams(),
-        loadSubmissions(),
-        loadDashboardSummary(),
+        loadExams(true),
+        loadSubmissions(true),
+        loadDashboardSummary(true),
       ]);
     } catch (err: any) {
       addToast("error", err.message || "Failed to delete exam.");
@@ -579,14 +631,17 @@ export default function App() {
     const selectedUser = mockUsers.find((user) => user.id === userId);
     if (!selectedUser) return;
 
-    setCurrentUser(selectedUser);
-    setActiveTab(
+    const initialTab: AppTab =
       selectedUser.role === "admin"
         ? "quick-scan"
         : selectedUser.role === "programme-head"
           ? "academic-management"
-          : "dashboard",
-    );
+          : "dashboard";
+
+    storeAuthUser(selectedUser);
+    storeActiveTab(initialTab);
+    setCurrentUser(selectedUser);
+    setActiveTab(initialTab);
     setAuthMessage(
       `Welcome back, ${selectedUser.name}. Your ${selectedUser.role.replace("-", " ")} workspace is ready.`,
     );
@@ -667,15 +722,18 @@ export default function App() {
                     ],
       };
 
-      setSelectedAuthUserId(mappedUser.id);
-      setCurrentUser(mappedUser);
-      setActiveTab(
+      const initialTab: AppTab =
         mappedUser.role === "admin"
           ? "quick-scan"
           : mappedUser.role === "programme-head"
             ? "academic-management"
-            : "dashboard",
-      );
+            : "dashboard";
+
+      storeAuthUser(mappedUser);
+      storeActiveTab(initialTab);
+      setSelectedAuthUserId(mappedUser.id);
+      setCurrentUser(mappedUser);
+      setActiveTab(initialTab);
       setAuthMessage(
         `Welcome back, ${mappedUser.name}. Your ${mappedUser.role.replace("-", " ")} workspace is ready.`,
       );
@@ -690,15 +748,18 @@ export default function App() {
           err.message?.includes("NetworkError") ||
           err.name === "TypeError")
       ) {
-        setSelectedAuthUserId(foundMock.id);
-        setCurrentUser(foundMock);
-        setActiveTab(
+        const initialTab: AppTab =
           foundMock.role === "admin"
             ? "quick-scan"
             : foundMock.role === "programme-head"
               ? "academic-management"
-              : "dashboard",
-        );
+              : "dashboard";
+
+        storeAuthUser(foundMock);
+        storeActiveTab(initialTab);
+        setSelectedAuthUserId(foundMock.id);
+        setCurrentUser(foundMock);
+        setActiveTab(initialTab);
         setAuthMessage(
           `Welcome back, ${foundMock.name}. Your ${foundMock.role.replace("-", " ")} workspace is ready.`,
         );
@@ -710,6 +771,7 @@ export default function App() {
   };
 
   const resetAuthView = (message: string) => {
+    clearAuthSession();
     setCurrentUser(null);
     setLoginEmail("");
     setLoginPassword("");
@@ -831,11 +893,11 @@ export default function App() {
   })();
 
   const handleTabSelect = (tab: AppTab) => {
-    if (navigationItems.some((item) => item.key === tab)) {
-      setActiveTab(tab);
-    } else {
-      setActiveTab(navigationItems[0]?.key || "dashboard");
-    }
+    const target = navigationItems.some((item) => item.key === tab)
+      ? tab
+      : (navigationItems[0]?.key || "dashboard");
+    setActiveTab(target);
+    storeActiveTab(target);
   };
 
   const getUserInitials = (name?: string) => {
@@ -935,6 +997,7 @@ export default function App() {
           onClose={() => setIsRosterModalOpen(false)}
           onImportSuccess={(newRoster) => {
             setRoster(newRoster);
+            cacheManager.set("roster", newRoster);
             addToast(
               "success",
               `Successfully imported class roster with ${newRoster.length} students.`,
@@ -986,10 +1049,14 @@ export default function App() {
         {/* Reference Electric Blue Sidebar with Curved Cutout Active Tab */}
         <aside className="sidebar-curved">
           <div className="sidebar-brand-header">
-            <div className="sidebar-brand-badge">
-              <Sparkles size={18} />
+            <div className="sidebar-brand-logo-frame">
+              <img
+                src="/srcb-logo.png"
+                alt="SRCB Logo"
+                className="sidebar-brand-logo-img"
+              />
             </div>
-            <span>AeroOMR</span>
+            <span className="sidebar-brand-title">SRCB EduAssess</span>
           </div>
 
           <ul className="sidebar-curved-menu">
@@ -1024,7 +1091,18 @@ export default function App() {
         </aside>
 
         {/* Main Content Area */}
-        <main className="main-content-reference">
+        <main className="main-content-reference" style={{ position: "relative" }}>
+          {/* Ambient Background Revalidation Shimmer Bar (Zero-Flash SWR) */}
+          {(loadingExams || loadingSubmissions) && (
+            <div
+              className="swr-top-indicator"
+              title="Updating records in background..."
+              style={{ top: "0" }}
+            >
+              <div className="swr-top-indicator-bar" />
+            </div>
+          )}
+
           {/* Top Header matching reference */}
           <div className="reference-top-header">
             <div className="reference-header-left">
@@ -1045,7 +1123,7 @@ export default function App() {
                   boxShadow: "0 1px 3px rgba(0, 0, 0, 0.02)",
                 }}
               >
-                <span style={{ color: "#64748b", fontWeight: 600 }}>SRCB OMR</span>
+                <span style={{ color: "#64748b", fontWeight: 600 }}>SRCB EduAssess</span>
                 <ChevronRight size={14} style={{ color: "#94a3b8", flexShrink: 0 }} />
                 <span
                   style={{
@@ -2315,12 +2393,12 @@ export default function App() {
                     </div>
                   </div>
 
-                  {loadingExams ? (
-                    <div className="spinner-container">
-                      <div className="spinner"></div>
-                    </div>
-                  ) : (
-                    (() => {
+                  <SmoothContentTransition
+                    isLoading={loadingExams}
+                    hasExistingData={exams.length > 0}
+                    skeleton={<SkeletonExamList count={4} />}
+                  >
+                    {(() => {
                       const filtered = exams.filter((ex) => {
                         const q = examListSearch.toLowerCase().trim();
                         const matchesSearch =
@@ -2354,12 +2432,14 @@ export default function App() {
                             style={{
                               color: "#64748b",
                               fontSize: "0.85rem",
-                              padding: "1.5rem 0",
+                              padding: "2rem",
                               textAlign: "center",
+                              background: "#ffffff",
+                              borderRadius: "12px",
+                              border: "1px dashed #cbd5e1",
                             }}
                           >
-                            No matching examinations found. Try adjusting your
-                            filters or click "Create Examination".
+                            No examinations found matching your filter criteria.
                           </div>
                         );
                       }
@@ -2369,7 +2449,7 @@ export default function App() {
                           style={{
                             display: "flex",
                             flexDirection: "column",
-                            gap: "0.75rem",
+                            gap: "0.85rem",
                             maxHeight: "560px",
                             overflowY: "auto",
                             paddingRight: "4px",
@@ -2391,8 +2471,8 @@ export default function App() {
                           ))}
                         </div>
                       );
-                    })()
-                  )}
+                    })()}
+                  </SmoothContentTransition>
                 </div>
 
               {/* Active Exam Grading Controls */}
@@ -3749,11 +3829,11 @@ export default function App() {
                 </div>
               </div>
 
-              {loadingSubmissions ? (
-                <div className="spinner-container">
-                  <div className="spinner"></div>
-                </div>
-              ) : (
+              <SmoothContentTransition
+                isLoading={loadingSubmissions}
+                hasExistingData={submissions.length > 0}
+                skeleton={<SkeletonTable rows={7} columns={6} />}
+              >
                 <SubmissionTable
                   submissions={submissions}
                   exams={exams}
@@ -3762,7 +3842,7 @@ export default function App() {
                   onSelectSubmission={viewSubmissionDetails}
                   formatDate={formatDate}
                 />
-              )}
+              </SmoothContentTransition>
             </div>
 
           </div>
@@ -4060,7 +4140,7 @@ export default function App() {
             >
               <div>
                 <h2 style={{ fontSize: "1.4rem", fontWeight: 800, margin: 0 }}>
-                  AeroOMR User Guide & System Manual
+                  SRCB EduAssess User Guide & System Manual
                 </h2>
                 <p
                   style={{

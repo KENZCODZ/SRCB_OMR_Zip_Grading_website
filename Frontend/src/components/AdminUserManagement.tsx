@@ -18,6 +18,9 @@ import {
 } from "lucide-react";
 import type { AuthUser, PendingUser } from "../types";
 import { fetchAllUsers, adminCreateUser, deleteUser } from "../api";
+import { SkeletonTable } from "./SkeletonLoader";
+import { SmoothContentTransition } from "./SmoothContentTransition";
+import { cacheManager } from "../utils/cacheManager";
 
 const DEFAULT_SYSTEM_USERS: PendingUser[] = [
   {
@@ -142,7 +145,9 @@ export default function AdminUserManagement({
   const isCurrentUserAdmin = currentUser?.role === "admin";
   const isProgrammeHead = currentUser?.role === "programme-head";
   const phProgram = (currentUser?.programme || "BSIT").toLowerCase();
-  const [users, setUsers] = useState<PendingUser[]>([]);
+  const [users, setUsers] = useState<PendingUser[]>(
+    () => cacheManager.get<PendingUser[]>("users_all") || []
+  );
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -189,17 +194,22 @@ export default function AdminUserManagement({
     return `C${clean}`;
   };
 
-  const loadUsers = async () => {
-    setLoading(true);
+  const loadUsers = async (forceRefresh = false) => {
+    const hasCached = cacheManager.has("users_all");
+    if (!hasCached || forceRefresh) {
+      setLoading(true);
+    }
     try {
-      const data = await fetchAllUsers();
+      const data = await fetchAllUsers({ forceRefresh });
       if (data && Array.isArray(data) && data.length > 0) {
         setUsers(data);
       } else {
         setUsers(DEFAULT_SYSTEM_USERS);
       }
     } catch {
-      setUsers(DEFAULT_SYSTEM_USERS);
+      if (!hasCached) {
+        setUsers(DEFAULT_SYSTEM_USERS);
+      }
     } finally {
       setLoading(false);
     }
@@ -289,8 +299,8 @@ export default function AdminUserManagement({
       setPassword("");
       setIdSuffix("");
 
-      // Reload list
-      loadUsers();
+      // Reload list with forceRefresh
+      loadUsers(true);
     } catch (err: any) {
       addToast("error", err.message || "Failed to create account.");
     } finally {
@@ -758,7 +768,7 @@ export default function AdminUserManagement({
             </div>
             <button
               className="btn btn-secondary"
-              onClick={loadUsers}
+              onClick={() => loadUsers(true)}
               disabled={loading}
               title="Refresh users list"
               style={{ padding: "0.4rem 0.75rem", fontSize: "0.8rem" }}
@@ -858,142 +868,174 @@ export default function AdminUserManagement({
             </div>
           </div>
 
-          {/* User Table List */}
-          <div
-            style={{
-              maxHeight: "440px",
-              overflowY: "auto",
-              border: "1px solid #e2e8f0",
-              borderRadius: "10px",
-              background: "#ffffff",
-            }}
+          {/* User Table List with SWR UI Preservation and Smooth Skeleton Transition */}
+          <SmoothContentTransition
+            isLoading={loading}
+            skeleton={<SkeletonTable rows={5} columns={5} />}
           >
-            {loading ? (
-              <div style={{ padding: "2rem", textAlign: "center", color: "#64748b" }}>
-                <RefreshCw size={24} className="spin" style={{ margin: "0 auto 0.5rem", color: "#0062ff" }} />
-                <p>Loading accounts directory...</p>
-              </div>
-            ) : filteredUsers.length === 0 ? (
-              <div style={{ padding: "2rem", textAlign: "center", color: "#64748b" }}>
-                <Users size={32} style={{ margin: "0 auto 0.5rem", color: "#94a3b8" }} />
-                <p>No user accounts matched your search.</p>
-              </div>
-            ) : (
-              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.82rem" }}>
-                <thead>
-                  <tr style={{ borderBottom: "1px solid #e2e8f0", background: "#f8fafc", textAlign: "left" }}>
-                    <th style={{ padding: "0.6rem 0.75rem", color: "#475569" }}>User</th>
-                    <th style={{ padding: "0.6rem 0.75rem", color: "#475569" }}>Role</th>
-                    <th style={{ padding: "0.6rem 0.75rem", color: "#475569" }}>Programme</th>
-                    <th style={{ padding: "0.6rem 0.75rem", color: "#475569" }}>Status</th>
-                    <th style={{ padding: "0.6rem 0.75rem", textAlign: "right", color: "#475569" }}>Action</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredUsers.map((u) => {
-                    const isTeacher = u.role === "teacher";
-                    const isStudent = u.role === "student";
-                    const isAdmin = u.role === "admin";
+            <div
+              style={{
+                position: "relative",
+                maxHeight: "440px",
+                overflowY: "auto",
+                border: "1px solid #e2e8f0",
+                borderRadius: "10px",
+                background: "#ffffff",
+              }}
+            >
+              {filteredUsers.length === 0 ? (
+                <div style={{ padding: "2rem", textAlign: "center", color: "#64748b" }}>
+                  <Users size={32} style={{ margin: "0 auto 0.5rem", color: "#94a3b8" }} />
+                  <p>No user accounts matched your search.</p>
+                </div>
+              ) : (
+                <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.82rem" }}>
+                  <thead>
+                    <tr style={{ borderBottom: "1px solid #e2e8f0", background: "#f8fafc", textAlign: "left" }}>
+                      <th style={{ padding: "0.6rem 0.75rem", color: "#475569" }}>User</th>
+                      <th style={{ padding: "0.6rem 0.75rem", color: "#475569" }}>Role</th>
+                      <th style={{ padding: "0.6rem 0.75rem", color: "#475569" }}>Programme</th>
+                      <th style={{ padding: "0.6rem 0.75rem", color: "#475569" }}>Status</th>
+                      <th style={{ padding: "0.6rem 0.75rem", textAlign: "right", color: "#475569" }}>Action</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredUsers.map((u) => {
+                      const isTeacher = u.role === "teacher";
+                      const isStudent = u.role === "student";
+                      const isAdmin = u.role === "admin";
 
-                    return (
-                      <tr
-                        key={u.id}
-                        style={{
-                          borderBottom: "1px solid #f1f5f9",
-                          transition: "background 0.15s ease",
-                        }}
-                      >
-                        <td style={{ padding: "0.65rem 0.75rem" }}>
-                          <div style={{ fontWeight: 700, color: "#0f172a" }}>{u.name}</div>
-                          <div style={{ fontSize: "0.75rem", color: "#64748b" }}>{u.email}</div>
-                          {u.student_id && (
-                            <div style={{ fontSize: "0.72rem", color: "#0062ff", fontWeight: 700 }}>
-                              ID: {u.student_id}
-                            </div>
-                          )}
-                        </td>
-
-                        <td style={{ padding: "0.65rem 0.75rem" }}>
-                          <span
-                            style={{
-                              display: "inline-flex",
-                              alignItems: "center",
-                              gap: "0.3rem",
-                              padding: "0.2rem 0.5rem",
-                              borderRadius: "6px",
-                              fontSize: "0.72rem",
-                              fontWeight: 700,
-                              background: isTeacher
-                                ? "#eff6ff"
-                                : isStudent
-                                ? "#eff6ff"
-                                : isAdmin
-                                ? "#f5f3ff"
-                                : "#fef2f2",
-                              color: isTeacher
-                                ? "#0062ff"
-                                : isStudent
-                                ? "#0062ff"
-                                : isAdmin
-                                ? "#7c3aed"
-                                : "#dc2626",
-                              border: `1px solid ${
-                                isTeacher
-                                  ? "#bfdbfe"
-                                  : isStudent
-                                  ? "#bfdbfe"
-                                  : isAdmin
-                                  ? "#ddd6fe"
-                                  : "#fecaca"
-                              }`,
-                            }}
-                          >
-                            {isTeacher ? (
-                              <ShieldCheck size={12} />
-                            ) : isStudent ? (
-                              <GraduationCap size={12} />
-                            ) : (
-                              <Award size={12} />
+                      return (
+                        <tr
+                          key={u.id}
+                          style={{
+                            borderBottom: "1px solid #f1f5f9",
+                            transition: "background 0.15s ease",
+                          }}
+                          onMouseEnter={(e) => (e.currentTarget.style.background = "#f8fafc")}
+                          onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+                        >
+                          <td style={{ padding: "0.65rem 0.75rem" }}>
+                            <div style={{ fontWeight: 700, color: "#0f172a" }}>{u.name}</div>
+                            <div style={{ fontSize: "0.75rem", color: "#64748b" }}>{u.email}</div>
+                            {u.student_id && (
+                              <div style={{ fontSize: "0.72rem", color: "#0062ff", fontWeight: 700 }}>
+                                ID: {u.student_id}
+                              </div>
                             )}
-                            {u.role.toUpperCase()}
-                          </span>
-                        </td>
+                          </td>
 
-                        <td style={{ padding: "0.65rem 0.75rem", color: "#0f172a" }}>
-                          <div style={{ fontWeight: 600 }}>{u.programme || "BSIT"}</div>
-                          <div style={{ fontSize: "0.72rem", color: "#64748b" }}>
-                            {u.department || "Computing"}
-                          </div>
-                        </td>
+                          <td style={{ padding: "0.65rem 0.75rem" }}>
+                            <span
+                              style={{
+                                display: "inline-flex",
+                                alignItems: "center",
+                                gap: "0.3rem",
+                                padding: "0.2rem 0.5rem",
+                                borderRadius: "6px",
+                                fontSize: "0.72rem",
+                                fontWeight: 700,
+                                background: isTeacher
+                                  ? "#eff6ff"
+                                  : isStudent
+                                  ? "#eff6ff"
+                                  : isAdmin
+                                  ? "#f5f3ff"
+                                  : "#fef2f2",
+                                color: isTeacher
+                                  ? "#0062ff"
+                                  : isStudent
+                                  ? "#0062ff"
+                                  : isAdmin
+                                  ? "#7c3aed"
+                                  : "#dc2626",
+                                border: `1px solid ${
+                                  isTeacher
+                                    ? "#bfdbfe"
+                                    : isStudent
+                                    ? "#bfdbfe"
+                                    : isAdmin
+                                    ? "#ddd6fe"
+                                    : "#fecaca"
+                                }`,
+                              }}
+                            >
+                              {isTeacher ? (
+                                <ShieldCheck size={12} />
+                              ) : isStudent ? (
+                                <GraduationCap size={12} />
+                              ) : (
+                                <Award size={12} />
+                              )}
+                              {u.role.toUpperCase()}
+                            </span>
+                          </td>
 
-                        <td style={{ padding: "0.65rem 0.75rem" }}>
-                          <span
-                            style={{
-                              padding: "0.15rem 0.45rem",
-                              borderRadius: "6px",
-                              fontSize: "0.72rem",
-                              fontWeight: 700,
-                              background: u.status === "active" ? "#ecfdf5" : "#fffbeb",
-                              color: u.status === "active" ? "#059669" : "#b45309",
-                              border: `1px solid ${u.status === "active" ? "#a7f3d0" : "#fde68a"}`,
-                            }}
-                          >
-                            {u.status || "active"}
-                          </span>
-                        </td>
+                          <td style={{ padding: "0.65rem 0.75rem" }}>
+                            <span style={{ color: "#334155", fontWeight: 500 }}>
+                              {u.programme || "General"}
+                            </span>
+                          </td>
 
-                        <td style={{ padding: "0.65rem 0.75rem", textAlign: "right" }}>
-                          <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", gap: "0.4rem" }}>
-                            {/* Toggle Access Status - ADMIN ONLY */}
-                            {isCurrentUserAdmin && (
+                          <td style={{ padding: "0.65rem 0.75rem" }}>
+                            <span
+                              style={{
+                                padding: "0.15rem 0.45rem",
+                                borderRadius: "6px",
+                                fontSize: "0.72rem",
+                                fontWeight: 700,
+                                background: u.status === "active" ? "#ecfdf5" : "#fffbeb",
+                                color: u.status === "active" ? "#059669" : "#b45309",
+                                border: `1px solid ${u.status === "active" ? "#a7f3d0" : "#fde68a"}`,
+                              }}
+                            >
+                              {u.status || "active"}
+                            </span>
+                          </td>
+
+                          <td style={{ padding: "0.65rem 0.75rem", textAlign: "right" }}>
+                            <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", gap: "0.4rem" }}>
+                              {/* Toggle Access Status - ADMIN ONLY */}
+                              {isCurrentUserAdmin && (
+                                <button
+                                  type="button"
+                                  onClick={() => handleToggleStatus(u.id, u.status, u.name)}
+                                  title={u.status === "suspended" ? "Grant Access (Activate)" : "Revoke Access (Suspend)"}
+                                  style={{
+                                    background: u.status === "suspended" ? "#ecfdf5" : "#fffbeb",
+                                    border: u.status === "suspended" ? "1px solid #a7f3d0" : "1px solid #fde68a",
+                                    color: u.status === "suspended" ? "#059669" : "#d97706",
+                                    padding: "0.25rem 0.55rem",
+                                    borderRadius: "6px",
+                                    cursor: "pointer",
+                                    fontSize: "0.72rem",
+                                    fontWeight: 700,
+                                    display: "inline-flex",
+                                    alignItems: "center",
+                                    gap: "3px",
+                                  }}
+                                >
+                                  {u.status === "suspended" ? (
+                                    <>
+                                      <CheckCircle2 size={11} /> Grant
+                                    </>
+                                  ) : (
+                                    <>
+                                      <Lock size={11} /> Suspend
+                                    </>
+                                  )}
+                                </button>
+                              )}
+
+                              {/* Inspect Access */}
                               <button
                                 type="button"
-                                onClick={() => handleToggleStatus(u.id, u.status, u.name)}
-                                title={u.status === "suspended" ? "Grant Access (Activate)" : "Revoke Access (Suspend)"}
+                                onClick={() => setInspectingUser(u)}
+                                title="Inspect user permissions and access scope"
                                 style={{
-                                  background: u.status === "suspended" ? "#ecfdf5" : "#fffbeb",
-                                  border: u.status === "suspended" ? "1px solid #a7f3d0" : "1px solid #fde68a",
-                                  color: u.status === "suspended" ? "#059669" : "#d97706",
+                                  background: "#eff6ff",
+                                  border: "1px solid #bfdbfe",
+                                  color: "#0062ff",
                                   padding: "0.25rem 0.55rem",
                                   borderRadius: "6px",
                                   cursor: "pointer",
@@ -1004,69 +1046,41 @@ export default function AdminUserManagement({
                                   gap: "3px",
                                 }}
                               >
-                                {u.status === "suspended" ? (
-                                  <>
-                                    <CheckCircle2 size={11} /> Grant
-                                  </>
-                                ) : (
-                                  <>
-                                    <Lock size={11} /> Suspend
-                                  </>
-                                )}
+                                <Eye size={11} /> Inspect
                               </button>
-                            )}
 
-                            {/* Inspect Access */}
-                            <button
-                              type="button"
-                              onClick={() => setInspectingUser(u)}
-                              title="Inspect user permissions and access scope"
-                              style={{
-                                background: "#eff6ff",
-                                border: "1px solid #bfdbfe",
-                                color: "#0062ff",
-                                padding: "0.25rem 0.55rem",
-                                borderRadius: "6px",
-                                cursor: "pointer",
-                                fontSize: "0.72rem",
-                                fontWeight: 700,
-                                display: "inline-flex",
-                                alignItems: "center",
-                                gap: "3px",
-                              }}
-                            >
-                              <Eye size={11} /> Inspect
-                            </button>
-
-                            {/* Delete User - ADMIN ONLY */}
-                            {isCurrentUserAdmin && !isAdmin && (
-                              <button
-                                type="button"
-                                onClick={() => handleDeleteUser(u.id, u.name)}
-                                disabled={deletingId === u.id}
-                                title="Delete account (Admin only)"
-                                style={{
-                                  background: "#fef2f2",
-                                  border: "1px solid #fecaca",
-                                  color: "#ef4444",
-                                  padding: "0.25rem 0.45rem",
-                                  borderRadius: "6px",
-                                  cursor: "pointer",
-                                  transition: "all 0.15s ease",
-                                }}
-                              >
-                                <Trash2 size={12} />
-                              </button>
-                            )}
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            )}
-          </div>
+                              {/* Delete User - ADMIN ONLY */}
+                              {isCurrentUserAdmin && !isAdmin && (
+                                <button
+                                  type="button"
+                                  onClick={() => handleDeleteUser(u.id, u.name)}
+                                  disabled={deletingId === u.id}
+                                  title="Permanently remove account"
+                                  style={{
+                                    background: "#fef2f2",
+                                    border: "1px solid #fecaca",
+                                    color: "#ef4444",
+                                    padding: "0.25rem 0.45rem",
+                                    borderRadius: "6px",
+                                    cursor: deletingId === u.id ? "not-allowed" : "pointer",
+                                    opacity: deletingId === u.id ? 0.6 : 1,
+                                    display: "inline-flex",
+                                    alignItems: "center",
+                                  }}
+                                >
+                                  <Trash2 size={12} />
+                                </button>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              )}
+            </div>
+          </SmoothContentTransition>
         </div>
         )}
       </div>

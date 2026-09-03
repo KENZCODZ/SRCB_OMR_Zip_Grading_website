@@ -1,6 +1,5 @@
 import React, { useState, useMemo } from "react";
 import {
-  BookOpen,
   X,
   Search,
   GraduationCap,
@@ -9,7 +8,6 @@ import {
   Sparkles,
   BarChart3,
   CheckCircle2,
-  HelpCircle,
   Camera,
   FileSpreadsheet,
   Users,
@@ -18,6 +16,7 @@ import {
   Sliders,
   ChevronDown,
   ChevronUp,
+  BookOpen,
 } from "lucide-react";
 import type { UserRole } from "../types";
 
@@ -37,418 +36,510 @@ export interface UserGuideCardProps {
   className?: string;
 }
 
-interface GuideSection {
+interface StepItem {
+  title: string;
+  description: string;
+  tip?: string;
+  note?: string;
+}
+
+interface SectionItem {
   id: string;
   title: string;
   icon: React.ElementType;
-  badge?: string;
   summary: string;
-  steps: {
-    title: string;
-    description: string;
-    tip?: string;
-  }[];
+  steps: StepItem[];
 }
 
-interface RoleGuide {
-  role: UserRole | "omr-guide" | "faq";
-  roleTitle: string;
+interface RoleManual {
+  role: UserRole;
+  portalName: string;
+  portalBadge: string;
+  badgeBg: string;
   badgeColor: string;
+  title: string;
+  subtitle: string;
   icon: React.ElementType;
-  description: string;
-  keyResponsibilities: string[];
-  targetAudience: string;
-  sections: GuideSection[];
+  quickActions: { label: string; tab: string; icon: React.ElementType }[];
+  overview: {
+    mission: string;
+    keyPoints: string[];
+  };
+  sections: SectionItem[];
 }
 
-const ROLE_GUIDES: RoleGuide[] = [
-  {
-    role: "admin",
-    roleTitle: "Admin (Quick Scanner)",
-    badgeColor: "rgba(168, 85, 247, 0.15)",
-    icon: Sparkles,
-    description:
-      "High-speed optical mark recognition and live camera scanning station for instantaneous student answer sheet grading.",
-    targetAudience: "System Administrators, Scanning Station Operators, Proctors",
-    keyResponsibilities: [
-      "Process 50-item and 100-item OMR answer sheets via live camera or file upload",
-      "Instant alignment feedback and real-time bubble detection",
-      "Real-time answer extraction and grading visualization",
+const ROLE_MANUALS: Record<UserRole, RoleManual> = {
+  student: {
+    role: "student",
+    portalName: "Student Portal",
+    portalBadge: "Examinee Workspace",
+    badgeBg: "#ecfdf5",
+    badgeColor: "#059669",
+    title: "Student Portal User Guide",
+    subtitle:
+      "Official student manual for checking exam scores, understanding CHED transmuted grades, and inspecting scanned answer sheets.",
+    icon: Award,
+    quickActions: [
+      { label: "View My Exam Results", tab: "reports", icon: Award },
     ],
+    overview: {
+      mission:
+        "Access your personal examination scores transparently, understand your Philippine CHED transmuted grades, and review digital overlays of your scanned test papers.",
+      keyPoints: [
+        "View raw scores, percentages, and official CHED transmuted grades (1.00–5.00)",
+        "Inspect high-resolution visual overlays of your scanned ZipGrade sheet",
+        "Understand passing remarks (75% = 3.00 Passing threshold)",
+      ],
+    },
     sections: [
       {
-        id: "admin-quick-scanner-guide",
-        title: "1. Operating the AeroOMR Quick Scanner",
-        icon: Sparkles,
-        summary: "Procedure for capturing, detecting bubbles, and grading answer sheets.",
+        id: "student-accessing-results",
+        title: "1. Accessing Your Exam Results & Performance",
+        icon: Award,
+        summary: "Sign in and view your personalized scores and subject records.",
         steps: [
           {
-            title: "Align Sheet with Guide Frame",
+            title: "Sign in with Institutional Student Email",
             description:
-              "Position the physical answer sheet inside the live camera frame until the four corner fiducial markers lock on.",
-            tip: "Maintain flat alignment and balanced ambient lighting without heavy glare.",
+              "Log in using your @srcb.edu.ph email address. Your personal portal opens directly to your latest exam scores, subject codes, and instructor names.",
           },
           {
-            title: "Instant Scoring & Overlay Feedback",
+            title: "Review Summary Metrics",
             description:
-              "The OMR scanner automatically tabulates marked bubbles and renders visual grade overlays instantly.",
-          },
-        ],
-      },
-    ],
-  },
-  {
-    role: "dean",
-    roleTitle: "Dean / Executive Administration",
-    badgeColor: "rgba(239, 68, 68, 0.15)",
-    icon: ShieldCheck,
-    description:
-      "Institutional oversight, high-level academic performance monitoring, faculty auditing, and cross-departmental pass-rate evaluations.",
-    targetAudience: "Deans, Vice Presidents for Academic Affairs, Executive Committee",
-    keyResponsibilities: [
-      "Monitor examination results across all Higher Education programs",
-      "View student examination scores and academic performance",
-      "Monitor examinations handled by teachers",
-      "View overall examination progress and records",
-      "Manage and oversee user access within the system",
-    ],
-    sections: [
-      {
-        id: "dean-dashboard-overview",
-        title: "1. Navigating Academic Management & Oversight",
-        icon: BarChart3,
-        summary: "Understand institutional metrics, passing rates, and active programmes at a glance.",
-        steps: [
-          {
-            title: "Access Institutional Overview",
-            description:
-              "Log in with your Dean credentials. Academic Management displays overall student counts, active faculty, departments, programmes, and institutional performance metrics.",
-            tip: "Use the Metric Tiles to quickly spot departments operating below target performance thresholds.",
-          },
-          {
-            title: "Review Priority Modules",
-            description:
-              "View detailed breakdowns per department (Information Technology, Business Administration, Education, etc.) directly in Academic Management.",
+              "Your dashboard summarizes your average exam percentage, total assessments completed, and official passing status (Passed or Failed).",
+            tip: "Check the 'Remarks' column in your exam table for immediate status clarification.",
           },
         ],
       },
       {
-        id: "dean-reports-compliance",
-        title: "2. Generating Institutional & CHED Compliance Reports",
+        id: "student-transmutation-scale",
+        title: "2. Understanding Philippine CHED Transmuted Grades",
         icon: FileSpreadsheet,
-        summary: "Export standardized grade sheets and academic metrics for CHED and accrediting bodies.",
+        summary: "How raw scores convert to the official 1.00–5.00 grading scale.",
         steps: [
           {
-            title: "Export CHED Grade Sheet Formats",
+            title: "The Standard CHED Formula",
             description:
-              "Go to Reports & Analytics. Select an active exam and click 'Export CHED Grade Sheet (.xlsx)'. The file automatically formats scores into the official Philippine 1.00–5.00 grade conversion scale.",
-            tip: "Reports follow the standard 75% passing threshold required by CHED guidelines.",
+              "SRCB strictly enforces the Commission on Higher Education (CHED) transmutation scale where a raw score of 75% equals 3.00 (Passing Mark). Formula: Transmuted % = 75 + (Raw Score / Total Questions) × 25.",
           },
           {
-            title: "Cross-Programme Auditing",
+            title: "Grade Conversion Table Reference",
             description:
-              "Compare mean scores and item discrimination across multiple terms to ensure consistent grading standards across departments.",
+              "• 99–100% = 1.00 (Excellent)\n• 96–98% = 1.25 (Superior)\n• 93–95% = 1.50 (Very Good)\n• 90–92% = 1.75 (Good)\n• 87–89% = 2.00 (Very Satisfactory)\n• 84–86% = 2.25 (Satisfactory)\n• 81–83% = 2.50 (Fair)\n• 78–80% = 2.75 (Passed)\n• 75–77% = 3.00 (Passing Threshold)\n• Below 75% = 5.00 (Failed)",
+            tip: "Scores below 75% automatically receive 5.00 (Failed) under CHED policies.",
+          },
+        ],
+      },
+      {
+        id: "student-sheet-inspection",
+        title: "3. Inspecting Your Scanned Answer Sheet",
+        icon: FileText,
+        summary: "View the digital scan of your physical test paper with grading annotations.",
+        steps: [
+          {
+            title: "Open Visual Inspection",
+            description:
+              "Click 'Inspect Sheet' on any graded exam entry to view the high-resolution scanned photo of your physical ZipGrade sheet.",
+          },
+          {
+            title: "Understand Annotation Overlays",
+            description:
+              "Correct answers are highlighted in Green circles. Mistakes or missed questions are highlighted in Red circles with the teacher's correct key indicated.",
+          },
+          {
+            title: "Ambiguous or Double Fill Warnings",
+            description:
+              "If you shade two bubbles for a single question or erase incompletely, the system flags the question as 'Ambiguous' and counts it incorrect to maintain exam integrity.",
+            tip: "Always erase cleanly if you change your answer during the exam.",
+          },
+        ],
+      },
+      {
+        id: "student-shading-standards",
+        title: "4. ZipGrade 50-Item Bubble Shading Rules",
+        icon: Camera,
+        summary: "Ensure your answer sheet is read accurately by the optical scanner.",
+        steps: [
+          {
+            title: "Use Dark Lead or Black/Blue Ink",
+            description:
+              "Fill bubbles completely using a dark #2 pencil or black/blue pen. Light checks, x-marks, or faint dots will not trigger the optical density threshold.",
+          },
+          {
+            title: "Shade Your 5-Digit Student ID Correctly",
+            description:
+              "Ensure each digit of your student ID is shaded carefully in the Student ID grid. The system maps your scanned sheet to your portal using this number.",
+            tip: "If your ID is shaded incorrectly, notify your instructor immediately to re-map your score.",
           },
         ],
       },
     ],
   },
-  {
-    role: "programme-head",
-    roleTitle: "Programme Head (Department Chair)",
-    badgeColor: "rgba(245, 158, 11, 0.15)",
-    icon: GraduationCap,
-    description:
-      "Departmental exam monitoring, curriculum alignment, section pass-rate tracking, and Outcome-Based Education (OBE) item review.",
-    targetAudience: "BSIT Programme Heads, Department Chairs, Curriculum Coordinators",
-    keyResponsibilities: [
-      "Monitor examination results within their assigned academic program only",
-      "View student scores and examination records for their program",
-      "Monitor examinations handled by teachers under their program",
-      "Access examination records and reports within their assigned program",
+
+  dean: {
+    role: "dean",
+    portalName: "Dean & Executive Portal",
+    portalBadge: "Executive Administration",
+    badgeBg: "#fef2f2",
+    badgeColor: "#dc2626",
+    title: "Dean of Higher Education User Guide",
+    subtitle:
+      "Operational manual for institutional academic oversight, cross-department audits, and official CHED compliance reporting.",
+    icon: Award,
+    quickActions: [
+      { label: "Institutional Analytics", tab: "reports", icon: BarChart3 },
+      { label: "Export CHED Grade Sheets", tab: "reports", icon: FileSpreadsheet },
     ],
+    overview: {
+      mission:
+        "Provide high-level academic oversight across all collegiate departments, audit faculty examination consistency, and generate accreditation grade sheets.",
+      keyPoints: [
+        "Collegiate KPI monitoring across all Higher Education programmes",
+        "Auditing faculty exam records, completion rates, and grade consistency",
+        "Exporting official CHED Master Grade Sheets (.xlsx) with 1.00–5.00 conversion",
+      ],
+    },
     sections: [
       {
-        id: "ph-programme-analytics",
-        title: "1. Programme Overview & Performance Monitoring",
-        icon: Users,
-        summary: "Track student performance specifically scoped to your assigned academic programme.",
+        id: "dean-institutional-monitoring",
+        title: "1. Navigating Institutional Academic Management",
+        icon: BarChart3,
+        summary: "Collegiate KPIs, enrollment volume, and departmental pass-rate metrics.",
         steps: [
           {
-            title: "Inspect Programme Pass Rates",
+            title: "Collegiate Metric Tiles",
             description:
-              "Your dashboard defaults to your assigned programme (e.g., BSIT). Monitor current term pass rates, active exams, and faculty participation.",
+              "Your dashboard aggregates total student examinees, active faculty instructors, examinations administered, and overall collegiate passing percentage.",
+            tip: "Quickly identify departments operating below institutional benchmarks (<75%).",
           },
           {
-            title: "Review Section Performance",
+            title: "Cross-Department Comparison",
             description:
-              "Filter examinations by section (e.g., BSIT 3A vs. BSIT 3B) to detect learning gaps across different class offerings.",
-            tip: "Sections falling below a 70% average are flagged for curriculum review.",
+              "Filter assessment metrics across Computing Studies, Education, Business Administration, and Criminology to identify academic trends and curriculum needs.",
           },
         ],
       },
       {
-        id: "ph-obe-review",
-        title: "2. Outcome-Based Education (OBE) Item Analysis Review",
-        icon: Sliders,
-        summary: "Analyze test validity using statistical item difficulty and discrimination metrics.",
+        id: "dean-faculty-auditing",
+        title: "2. Faculty Examination & Pass-Rate Auditing",
+        icon: Users,
+        summary: "Monitor instructor test submissions and grading standard compliance.",
         steps: [
           {
-            title: "Evaluate Difficulty Index (P)",
+            title: "Track Faculty Submissions",
             description:
-              "Difficulty Index measures the proportion of students who answered a question correctly (0.0 to 1.0). Questions with P < 0.30 are categorized as 'Difficult', while P > 0.80 are 'Easy'.",
+              "View all examinations handled by instructors, test dates, question quantities, and total processed student submissions per class section.",
           },
           {
-            title: "Evaluate Discrimination Index (D)",
+            title: "Examine Pass/Fail Distributions",
             description:
-              "Discrimination Index compares top 27% high performers against bottom 27% low performers (-1.0 to +1.0). Questions with D < 0.20 are flagged as 'Poor' and should be revised or discarded.",
-            tip: "Export the full OBE Item Analysis table to Excel for department syllabus review meetings.",
+              "Audit score distributions across course offerings to detect abnormal variances or inconsistencies in evaluation difficulty.",
+          },
+        ],
+      },
+      {
+        id: "dean-ched-reports",
+        title: "3. Generating Official CHED Compliance Reports",
+        icon: FileSpreadsheet,
+        summary: "Export standardized grade sheets formatted for accreditation bodies.",
+        steps: [
+          {
+            title: "Export Master Database Formats",
+            description:
+              "Navigate to Reports & Analytics and click 'Export CHED Grade Sheet (.xlsx)' to download collegiate assessment spreadsheets with Philippine 1.00–5.00 scales.",
+            tip: "All calculations strictly apply the Philippine CHED 75% = 3.00 passing benchmark.",
+          },
+          {
+            title: "Multi-Term Accreditation Audits",
+            description:
+              "Utilize exported master databases for PACUCOA, CHED, and institutional quality assurance reviews.",
+          },
+        ],
+      },
+      {
+        id: "dean-access-control",
+        title: "4. User Directory & Institutional Security",
+        icon: ShieldCheck,
+        summary: "Maintain oversight of faculty access and institutional user records.",
+        steps: [
+          {
+            title: "Account Directory Audit",
+            description:
+              "Review registered faculty, chairs, and examinees across all Higher Education departments to verify proper credentials and department assignments.",
           },
         ],
       },
     ],
   },
-  {
-    role: "teacher",
-    roleTitle: "Teacher / Faculty Member",
-    badgeColor: "rgba(59, 130, 246, 0.15)",
-    icon: BookOpen,
-    description:
-      "Full examination lifecycle: answer key creation, ZipGrade 50-question sheet scanning, automated grading, score transmute, and student feedback.",
-    targetAudience: "Instructors, Professors, Lecturers, Exam Proctors",
-    keyResponsibilities: [
-      "Manage courses and subjects",
-      "Create and manage examinations",
-      "Create and maintain answer keys",
-      "Upload and automatically process student test papers",
-      "Automatically check and grade student test papers",
-      "Record student submissions and examination scores",
-      "Release and publish grading results for students to view",
-      "Review processed test papers and grading results",
-      "Manage examination records",
+
+  "programme-head": {
+    role: "programme-head",
+    portalName: "Programme Head Portal",
+    portalBadge: "Department Chair",
+    badgeBg: "#fffbeb",
+    badgeColor: "#d97706",
+    title: "Programme Head User Guide",
+    subtitle:
+      "Department-scoped exam tracking, curriculum review, section comparisons, and Outcome-Based Education (OBE) item analysis.",
+    icon: GraduationCap,
+    quickActions: [
+      { label: "Programme Analytics", tab: "reports", icon: Users },
+      { label: "OBE Item Analysis", tab: "exams", icon: Sliders },
     ],
+    overview: {
+      mission:
+        "Supervise examination quality and curriculum alignment strictly within your assigned academic programme (e.g., BS Information Technology).",
+      keyPoints: [
+        "Programme-scoped pass-rate and exam completion monitoring",
+        "Section-by-section comparison to identify instructor or learning variances",
+        "Statistical Outcome-Based Education (OBE) Item Analysis review",
+      ],
+    },
+    sections: [
+      {
+        id: "ph-programme-monitoring",
+        title: "1. Programme Examination Oversight",
+        icon: Users,
+        summary: "Scoped departmental dashboards and section comparative analytics.",
+        steps: [
+          {
+            title: "Scoped Department View",
+            description:
+              "Your dashboard defaults strictly to your assigned programme (e.g., BS Information Technology), isolating relevant faculty, students, and course examinations.",
+          },
+          {
+            title: "Section Performance Comparison",
+            description:
+              "Compare mean scores and pass percentages between class sections (e.g., BSIT 3A vs. BSIT 3B) to detect learning gaps across different class offerings.",
+            tip: "Sections falling below the 75% institutional threshold are flagged for curriculum review.",
+          },
+        ],
+      },
+      {
+        id: "ph-obe-item-analysis",
+        title: "2. Outcome-Based Education (OBE) Item Analysis",
+        icon: Sliders,
+        summary: "Statistical item evaluation using standard educational measurement metrics.",
+        steps: [
+          {
+            title: "Difficulty Index (P)",
+            description:
+              "Measures question difficulty (0.0 to 1.0). Questions with P < 0.30 are categorized as 'Difficult', while P > 0.80 are 'Easy'. Optimal exam questions target P between 0.40 and 0.70.",
+          },
+          {
+            title: "Discrimination Index (D)",
+            description:
+              "Compares the top 27% high performers against the bottom 27% low performers (-1.0 to +1.0). Questions with D < 0.20 are flagged as 'Poor' and should be revised in test banks.",
+            tip: "Export the full OBE Item Analysis table to Excel for departmental syllabus review meetings.",
+          },
+        ],
+      },
+      {
+        id: "ph-curriculum-reports",
+        title: "3. Departmental Assessment Reporting",
+        icon: FileSpreadsheet,
+        summary: "Export programme examination reports and student achievement summaries.",
+        steps: [
+          {
+            title: "Export Programme Grade Sheets",
+            description:
+              "Download official transmuted grade sheets (.xlsx) formatted with Philippine 1.00–5.00 scales for departmental record keeping.",
+          },
+        ],
+      },
+    ],
+  },
+
+  teacher: {
+    role: "teacher",
+    portalName: "Faculty Portal",
+    portalBadge: "Course Instructor",
+    badgeBg: "#eff6ff",
+    badgeColor: "#0062ff",
+    title: "Faculty Instructor User Guide",
+    subtitle:
+      "Step-by-step instructions for creating examinations, scanning student ZipGrade sheets, importing rosters, and releasing grades.",
+    icon: BookOpen,
+    quickActions: [
+      { label: "Create New Exam", tab: "exams", icon: BookOpen },
+      { label: "Open Quick Scanner", tab: "quick-scan", icon: Sparkles },
+      { label: "View Submissions", tab: "submissions", icon: Award },
+    ],
+    overview: {
+      mission:
+        "Manage your complete examination lifecycle: configure master answer keys, grade paper sheets instantly with OMR, map rosters, and export CHED grade sheets.",
+      keyPoints: [
+        "Create 50-item examinations with manual or scanned answer keys",
+        "Live camera scanning with real-time bubble locking and visual feedback",
+        "Import class rosters (CSV) and export official CHED grade sheets (.xlsx)",
+      ],
+    },
     sections: [
       {
         id: "teacher-create-exam",
-        title: "1. Creating an Exam & Answer Key",
-        icon: Sparkles,
-        summary: "Set up a new 50-question exam and define correct option keys (A–E).",
+        title: "1. Creating Examinations & Master Answer Keys",
+        icon: BookOpen,
+        summary: "Define test parameters and configure correct options (A–E).",
         steps: [
           {
-            title: "Create New Exam Entry",
+            title: "Create Examination Entry",
             description:
-              "Navigate to 'Exams & Grading' tab and click '+ Create New Exam'. Enter the exam title (e.g., 'ITP 305 Midterm Examination').",
+              "Navigate to 'Exams & Grading' and click '+ Create New Exam'. Enter the course code (e.g., ITP 305), subject title, section, and semester.",
           },
           {
-            title: "Input Answer Key (Manual or Scan)",
+            title: "Input Master Answer Key (Choices A–E)",
             description:
-              "Type answers manually or use 'Scan Answer Key Sheet' to upload a pre-filled master ZipGrade sheet. AeroOMR will extract the filled bubbles automatically!",
+              "Enter correct answers manually or click 'Scan Key Image' to upload a pre-filled master ZipGrade sheet. The system extracts the shaded bubbles automatically!",
             tip: "Master answer keys can be updated at any time prior to final grade publishing.",
           },
         ],
       },
       {
-        id: "teacher-scanning-workflow",
-        title: "2. Quick Scanner & Bulk Sheet Grading",
+        id: "teacher-omr-grading",
+        title: "2. Optical Mark Recognition (OMR) Grading",
         icon: Camera,
-        summary: "Process student ZipGrade answer sheets with high-speed Optical Mark Recognition (OMR).",
+        summary: "Grade student sheets with live camera scanning or image uploads.",
         steps: [
           {
-            title: "Quick Scanner Mode",
+            title: "Live Camera Scanner",
             description:
-              "Use the 'Quick Scanner' tab to upload any sheet for instant answer extraction without saving to a specific exam database.",
+              "Select your exam and click 'Scan with Camera'. Position the student sheet inside the viewfinder until the 4 corner alignment boxes lock. The engine detects bubbles in real time and calculates scores instantly.",
+            tip: "Hold the sheet steadily inside the border guides for instant automatic capture.",
           },
           {
-            title: "Grading Student Sheets for an Exam",
+            title: "Batch File Upload",
             description:
-              "Go to 'Exams & Grading', select your target exam. Choose between 'Upload Files' or 'Scan with Camera'. With the camera scanner, the system auto-detects alignment corner boxes in real time, locks bubbles, and automatically calculates scores and visual overlays.",
-            tip: "Green circles indicate correct answers; Red circles highlight incorrect marks or ambiguous fills.",
+              "Alternatively, upload multiple JPG/PNG photos or a ZIP archive for automated bulk background grading.",
           },
         ],
       },
       {
-        id: "teacher-roster-export",
-        title: "3. Importing Class Rosters & Exporting Reports",
-        icon: FileSpreadsheet,
-        summary: "Manage student IDs and export official CHED grade sheets.",
+        id: "teacher-roster-mapping",
+        title: "3. Class Roster Mapping (CSV Import)",
+        icon: Users,
+        summary: "Attach student names to scanned 5-digit student IDs.",
         steps: [
           {
             title: "Import Class Roster",
             description:
-              "Click 'Import Class Roster' modal to upload a CSV file containing Student IDs and Names. This maps scanned Student IDs directly to enrolled students.",
+              "Click 'Import Class Roster' and upload your class list (.csv) containing Student IDs and Names.",
           },
           {
-            title: "Export CHED Grade Sheet",
+            title: "Automatic Name Association",
             description:
-              "Click 'Export CHED Grade Sheet (.xlsx)' to download an Excel document with raw scores, percentages, transmuted grades (1.00–5.00), and pass/fail statuses.",
+              "The system matches the 5-digit Student ID shaded on the paper sheet directly with the student's full name across all score tables and exports.",
+          },
+        ],
+      },
+      {
+        id: "teacher-grade-export",
+        title: "4. Exporting Official CHED Grade Sheets",
+        icon: FileSpreadsheet,
+        summary: "Download formatted Excel sheets with 1.00–5.00 scales.",
+        steps: [
+          {
+            title: "Export Departmental Excel Report",
+            description:
+              "Click 'Export CHED Grade Sheet (.xlsx)' to generate an official spreadsheet complete with raw scores, transmuted grades (1.00–5.00), and passing remarks ready for submission.",
           },
         ],
       },
     ],
   },
-  {
-    role: "student",
-    roleTitle: "Student",
-    badgeColor: "rgba(16, 185, 129, 0.15)",
-    icon: Award,
-    description:
-      "Personal grade transparency, item-by-item bubble review, official CHED transmuted grade lookup, and performance tracking.",
-    targetAudience: "Enrolled Students across all academic departments",
-    keyResponsibilities: [
-      "View their own examination scores",
-      "View which exam questions were answered correctly or incorrectly",
-      "Access only their personal examination records",
-    ],
-    sections: [
-      {
-        id: "student-results-view",
-        title: "1. Accessing Your Exam Grades",
-        icon: Award,
-        summary: "View overall scores, transmuted grades, and passing remarks.",
-        steps: [
-          {
-            title: "Log in to Student Workspace",
-            description:
-              "Sign in with your student email. Your personal dashboard highlights your latest exam scores, average percentage, and class ranking.",
-          },
-          {
-            title: "Understand Transmuted Grades",
-            description:
-              "AeroOMR follows the standard Philippine CHED Transmutation Table where 75% = 3.00 (Passing). High scores (e.g., 96–100%) transmute to 1.00 (Excellent). Scores below 75% result in 5.00 (Failed).",
-            tip: "Check the 'Remarks' column in your results table to see if your exam is Marked Passed or Failed.",
-          },
-        ],
-      },
-      {
-        id: "student-answer-review",
-        title: "2. Detailed Question & Answer Review",
-        icon: FileText,
-        summary: "Inspect your scanned answer sheet to learn from mistakes.",
-        steps: [
-          {
-            title: "View Answer Overlay",
-            description:
-              "Click 'Inspect Sheet' on any graded exam entry to see your scanned sheet image with overlay annotations.",
-          },
-          {
-            title: "Compare Answers",
-            description:
-              "Review questions item by item. Red flags indicate items where your marked bubble differed from the teacher's key or where a bubble was marked too faintly.",
-          },
-        ],
-      },
-    ],
-  },
-  {
-    role: "omr-guide",
-    roleTitle: "ZipGrade 50-Question OMR Best Practices",
-    badgeColor: "rgba(168, 85, 247, 0.15)",
-    icon: Camera,
-    description:
-      "Technical guidelines for capturing high-accuracy OMR sheet images, lighting conditions, corner marker alignment, and bubble shading rules.",
-    targetAudience: "All users scanning or uploading ZipGrade bubble sheets",
-    keyResponsibilities: [
-      "Ensure proper camera angle, lighting, and resolution when capturing sheets",
-      "Maintain clear visibility of the 4 black square corner positioning markers",
-      "Understand threshold settings for empty vs. ambiguous vs. valid bubble marks",
-    ],
-    sections: [
-      {
-        id: "omr-capture-rules",
-        title: "1. Sheet Image Capture Requirements",
-        icon: Camera,
-        summary: "Optimal conditions for 99.9% optical scanning precision.",
-        steps: [
-          {
-            title: "Four Corner Alignment",
-            description:
-              "Ensure all 4 solid black square corner boxes on the ZipGrade form are completely visible inside your photo frame. AeroOMR uses perspective transform mapping based on these 4 anchors.",
-            tip: "Do not cut off or cover any corner marker box with fingers or clips.",
-          },
-          {
-            title: "Lighting & Contrast",
-            description:
-              "Use even, bright light without harsh shadows cast across the bubble area. Avoid extreme camera tilt—hold the phone/camera directly above the paper sheet.",
-          },
-        ],
-      },
-      {
-        id: "omr-bubble-rules",
-        title: "2. Bubble Shading Standards",
-        icon: CheckCircle2,
-        summary: "How student bubble shade intensity is evaluated.",
-        steps: [
-          {
-            title: "Dark Pencil / Black Ink",
-            description:
-              "Bubbles must be shaded cleanly with #2 pencil or dark blue/black ink.",
-          },
-          {
-            title: "Ambiguous or Double Fills",
-            description:
-              "If a student shades two bubbles for a single question, AeroOMR flags the question as 'Ambiguous' and marks it incorrect to preserve exam integrity.",
-          },
-        ],
-      },
-    ],
-  },
-  {
-    role: "faq",
-    roleTitle: "Frequently Asked Questions (FAQ)",
-    badgeColor: "rgba(59, 130, 246, 0.15)",
-    icon: HelpCircle,
-    description:
-      "Quick answers to common questions about AeroOMR grading and system workflows.",
-    targetAudience: "All system users",
-    keyResponsibilities: ["Self-service troubleshooting and system clarification"],
-    sections: [
-      {
-        id: "faq-section",
-        title: "Common Questions & Support",
-        icon: Lightbulb,
-        summary: "Resolving common questions without leaving the app.",
-        steps: [
-          {
-            title: "Q: What sheet format does AeroOMR support?",
-            description:
-              "AeroOMR is optimized for the standard ZipGrade 50-Question Form V2 (supporting Student ID grid + 50 questions with choices A to E).",
-          },
-          {
-            title: "Q: Can I run AeroOMR without an active backend connection?",
-            description:
-              "Yes! If the backend API is offline, AeroOMR automatically falls back to client-side mock demo data so you can continue exploring all dashboard features.",
-          },
-          {
-            title: "Q: How is the Philippine Transmuted Grade calculated?",
-            description:
-              "Transmuted grades use the formula: Transmuted % = 75 + (Raw Score / Total Questions) * 25. The percentage is then mapped to standard CHED grades (1.00 = 99-100%, 1.25 = 96-98%, 1.50 = 93-95%, 3.00 = 75-77% Passing, 5.00 = Below 75%).",
-          },
-        ],
-      },
-    ],
-  },
-];
 
-const getVisibleGuideRoles = (
-  role?: UserRole,
-): Array<UserRole | "omr-guide" | "faq"> => {
-  switch (role) {
-    case "dean":
-      return ["dean", "omr-guide", "faq"];
-    case "programme-head":
-      return ["programme-head", "omr-guide", "faq"];
-    case "teacher":
-      return ["teacher", "omr-guide", "faq"];
-    case "student":
-      return ["student", "omr-guide", "faq"];
-    default:
-      return ["teacher", "omr-guide", "faq"];
-  }
+  admin: {
+    role: "admin",
+    portalName: "Administrator Portal",
+    portalBadge: "System Administration",
+    badgeBg: "#f3e8ff",
+    badgeColor: "#7e22ce",
+    title: "System Administrator User Guide",
+    subtitle:
+      "Administrative procedures for scanning stations, user account provisioning, system security, and database maintenance.",
+    icon: ShieldCheck,
+    quickActions: [
+      { label: "Open Quick Scanner", tab: "quick-scan", icon: Sparkles },
+      { label: "Manage User Accounts", tab: "users", icon: Users },
+      { label: "Exams & Records", tab: "exams", icon: BookOpen },
+    ],
+    overview: {
+      mission:
+        "Oversee portal operations, manage institutional access for all departments, and operate high-speed physical scanning stations.",
+      keyPoints: [
+        "High-speed optical mark recognition for batch exam grading stations",
+        "Account provisioning for Deans, Chairs, Faculty, and Students",
+        "Audit logs, access permissions, and database records integrity",
+      ],
+    },
+    sections: [
+      {
+        id: "admin-quick-scanner-station",
+        title: "1. Operating the OMR Quick Scanner Station",
+        icon: Sparkles,
+        summary: "Rapid optical bubble detection and scoring station workflow.",
+        steps: [
+          {
+            title: "Camera Station Setup",
+            description:
+              "Mount the webcam or mobile camera directly above a flat, clean surface with uniform overhead lighting.",
+          },
+          {
+            title: "Four-Corner Fiducial Locking",
+            description:
+              "Align the physical ZipGrade sheet inside the guide frame until all 4 corner boxes lock into place for 99.9% optical precision.",
+            tip: "Keep ambient lighting even and avoid sharp shadows across the bubble area.",
+          },
+          {
+            title: "Instant Scoring & Overlay Verification",
+            description:
+              "The optical mark recognition engine instantly registers bubble fills, tabulates student IDs, and displays the visual grade overlay.",
+          },
+        ],
+      },
+      {
+        id: "admin-user-provisioning",
+        title: "2. Institutional User Provisioning & Roles",
+        icon: Users,
+        summary: "Provision and audit institutional accounts across departments.",
+        steps: [
+          {
+            title: "Create Institutional Accounts",
+            description:
+              "Navigate to 'User Management' tab to register single accounts or approve pending self-registrations with assigned departments and programmes.",
+          },
+          {
+            title: "Manage Statuses & Access Control",
+            description:
+              "Quickly search accounts by name or email, toggle active/suspended statuses, or purge outdated access records.",
+            tip: "Use the role filter pills to isolate faculty from student records quickly.",
+          },
+        ],
+      },
+      {
+        id: "admin-system-maintenance",
+        title: "3. Cache & Performance Optimization",
+        icon: ShieldCheck,
+        summary: "Maintain instantaneous navigation and offline resilience.",
+        steps: [
+          {
+            title: "Universal High-Performance Cache",
+            description:
+              "The portal automatically caches records in memory and session storage so everyday navigation is instantaneous (0ms wait).",
+          },
+          {
+            title: "Offline Fallback Operation",
+            description:
+              "If the backend Python server is offline or restarting, SRCB EduAssess seamlessly falls back to cached offline mock data so users can continue viewing views.",
+          },
+        ],
+      },
+    ],
+  },
 };
 
 /**
  * UserGuideCard
- * Renders the complete, unified user guide inside a single seamless Card component.
+ * Renders the dedicated, distinct user guide for the user's specific role.
  */
 export const UserGuideCard: React.FC<UserGuideCardProps> = ({
   initialRole = "teacher",
@@ -458,39 +549,28 @@ export const UserGuideCard: React.FC<UserGuideCardProps> = ({
   style = {},
   className = "",
 }) => {
-  const [activeRoleTab, setActiveRoleTab] = useState<
-    UserRole | "omr-guide" | "faq"
-  >(initialRole);
+  // Normalize role to ensure valid lookup
+  const safeRole: UserRole = ROLE_MANUALS[initialRole] ? initialRole : "teacher";
+  const [selectedRole, setSelectedRole] = useState<UserRole>(safeRole);
   const [searchQuery, setSearchQuery] = useState("");
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
     all: true,
   });
 
-  const visibleGuideRoles = useMemo(
-    () => getVisibleGuideRoles(initialRole),
-    [initialRole],
-  );
-
+  // Keep selected role in sync if initialRole changes
   React.useEffect(() => {
-    if (
-      !activeRoleTab ||
-      !visibleGuideRoles.includes(activeRoleTab as UserRole | "omr-guide" | "faq")
-    ) {
-      setActiveRoleTab(visibleGuideRoles[0] ?? initialRole);
+    if (ROLE_MANUALS[initialRole]) {
+      setSelectedRole(initialRole);
     }
-  }, [activeRoleTab, initialRole, visibleGuideRoles]);
+  }, [initialRole]);
 
-  const currentRoleGuide = useMemo(() => {
-    return (
-      ROLE_GUIDES.find((g) => g.role === activeRoleTab) || ROLE_GUIDES[0]
-    );
-  }, [activeRoleTab]);
+  const currentManual = ROLE_MANUALS[selectedRole] || ROLE_MANUALS.teacher;
 
-  // Filter sections by search query
+  // Filter sections by search query within this role's manual
   const filteredSections = useMemo(() => {
-    if (!searchQuery.trim()) return currentRoleGuide.sections;
+    if (!searchQuery.trim()) return currentManual.sections;
     const q = searchQuery.toLowerCase();
-    return currentRoleGuide.sections.filter(
+    return currentManual.sections.filter(
       (sec) =>
         sec.title.toLowerCase().includes(q) ||
         sec.summary.toLowerCase().includes(q) ||
@@ -501,7 +581,7 @@ export const UserGuideCard: React.FC<UserGuideCardProps> = ({
             (st.tip && st.tip.toLowerCase().includes(q)),
         ),
     );
-  }, [currentRoleGuide, searchQuery]);
+  }, [currentManual, searchQuery]);
 
   const toggleSection = (id: string) => {
     setExpandedSections((prev) => ({
@@ -515,24 +595,24 @@ export const UserGuideCard: React.FC<UserGuideCardProps> = ({
     return expandedSections[id] !== false;
   };
 
-  const IconComp = currentRoleGuide.icon;
+  const IconComp = currentManual.icon;
+  const isAdmin = initialRole === "admin";
 
   return (
     <div
-      className={`card ${className}`}
+      className={`user-guide-card ${className}`}
       style={{
-        padding: 0,
-        overflow: "hidden",
         display: "flex",
         flexDirection: "column",
         background: "#ffffff",
         border: "1px solid #e2e8f0",
         borderRadius: "16px",
-        boxShadow: "0 20px 40px -15px rgba(0, 0, 0, 0.15)",
+        boxShadow: "0 10px 30px -10px rgba(0, 30, 80, 0.08)",
+        overflow: "hidden",
         ...style,
       }}
     >
-      {/* ── CARD UNIFIED HEADER ── */}
+      {/* ── CARD HEADER (DISTINCT PER ROLE) ── */}
       <div
         style={{
           padding: "1.25rem 1.5rem",
@@ -543,39 +623,57 @@ export const UserGuideCard: React.FC<UserGuideCardProps> = ({
           gap: "1rem",
         }}
       >
-        {/* Top Title & Close Bar */}
+        {/* Top Title & Close Action */}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "0.85rem" }}>
             <div
               style={{
-                width: "42px",
-                height: "42px",
-                borderRadius: "10px",
-                background: "#eff6ff",
-                border: "1px solid #bfdbfe",
+                width: "44px",
+                height: "44px",
+                borderRadius: "50%",
+                background: "#ffffff",
+                border: "2px solid #0062ff",
+                padding: "2px",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
-                color: "#0062ff",
+                boxShadow: "0 2px 8px rgba(0, 98, 255, 0.15)",
                 flexShrink: 0,
               }}
             >
-              <BookOpen size={20} />
+              <img
+                src="/srcb-logo.png"
+                alt="SRCB Logo"
+                style={{ width: "100%", height: "100%", objectFit: "contain", borderRadius: "50%" }}
+              />
             </div>
             <div>
-              <h2
-                style={{
-                  fontSize: "1.25rem",
-                  fontWeight: 800,
-                  margin: 0,
-                  color: "#0f172a",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "0.5rem",
-                }}
-              >
-                AeroOMR User Guide & Manual
-              </h2>
+              <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", flexWrap: "wrap" }}>
+                <h2
+                  style={{
+                    fontSize: "1.25rem",
+                    fontWeight: 800,
+                    margin: 0,
+                    color: "#0f172a",
+                    letterSpacing: "-0.01em",
+                  }}
+                >
+                  {currentManual.title}
+                </h2>
+                <span
+                  style={{
+                    background: currentManual.badgeBg,
+                    color: currentManual.badgeColor,
+                    border: `1px solid ${currentManual.badgeColor}33`,
+                    fontSize: "0.72rem",
+                    fontWeight: 700,
+                    padding: "0.15rem 0.6rem",
+                    borderRadius: "20px",
+                  }}
+                >
+                  {currentManual.portalBadge}
+                </span>
+              </div>
               <p
                 style={{
                   fontSize: "0.82rem",
@@ -583,7 +681,7 @@ export const UserGuideCard: React.FC<UserGuideCardProps> = ({
                   margin: "0.15rem 0 0 0",
                 }}
               >
-                Comprehensive system workflow, scanning rules, and role procedures in a single card
+                {currentManual.subtitle}
               </p>
             </div>
           </div>
@@ -591,120 +689,106 @@ export const UserGuideCard: React.FC<UserGuideCardProps> = ({
           {isModal && onClose && (
             <button
               onClick={onClose}
-              className="btn btn-outline"
               style={{
-                padding: "0.4rem 0.6rem",
+                width: "32px",
+                height: "32px",
                 borderRadius: "8px",
-                border: "1px solid #cbd5e1",
+                border: "1px solid #e2e8f0",
                 background: "#f8fafc",
                 color: "#64748b",
                 cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                transition: "all 0.15s ease",
               }}
-              title="Close User Guide (Esc)"
+              title="Close User Guide"
             >
-              <X size={18} />
+              <X size={16} />
             </button>
           )}
         </div>
 
-        {/* Search Bar & Role Pill Tabs */}
-        <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+        {/* Search Bar & Optional Admin Role Switcher */}
+        <div style={{ display: "flex", flexDirection: "column", gap: "0.65rem" }}>
           <div style={{ position: "relative" }}>
             <Search
-              size={16}
+              size={15}
               style={{
                 position: "absolute",
                 left: "12px",
                 top: "50%",
                 transform: "translateY(-50%)",
                 color: "#94a3b8",
+                pointerEvents: "none",
               }}
             />
             <input
               type="text"
-              className="form-input"
               style={{
-                paddingLeft: "36px",
+                width: "100%",
+                padding: "0.55rem 1rem 0.55rem 2.35rem",
                 background: "#f8fafc",
                 border: "1px solid #cbd5e1",
+                borderRadius: "10px",
+                fontSize: "0.86rem",
                 color: "#0f172a",
-                fontSize: "0.88rem",
-                borderRadius: "8px",
-                width: "100%",
+                outline: "none",
+                transition: "all 0.15s ease",
               }}
-              placeholder="Search user guide topics, CHED rules, OMR steps, or key terms..."
+              placeholder={`Search within ${currentManual.portalName} manual...`}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
           </div>
 
-          {/* Role Navigation Pills */}
-          <div
-            style={{
-              display: "flex",
-              gap: "0.5rem",
-              overflowX: "auto",
-              paddingBottom: "0.2rem",
-            }}
-          >
-            {visibleGuideRoles.map((role) => {
-              const guide = ROLE_GUIDES.find((item) => item.role === role);
-              if (!guide) return null;
-
-              const TabIcon = guide.icon;
-              const isActive = activeRoleTab === guide.role;
-              return (
-                <button
-                  key={guide.role}
-                  onClick={() => setActiveRoleTab(guide.role)}
-                  style={{
-                    padding: "0.45rem 0.85rem",
-                    fontSize: "0.82rem",
-                    whiteSpace: "nowrap",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "0.4rem",
-                    borderRadius: "20px",
-                    border: isActive
-                      ? "1px solid #0062ff"
-                      : "1px solid #cbd5e1",
-                    background: isActive
-                      ? "#0062ff"
-                      : "#ffffff",
-                    color: isActive ? "#ffffff" : "#475569",
-                    fontWeight: isActive ? 700 : 500,
-                    cursor: "pointer",
-                    transition: "all 0.2s ease",
-                    boxShadow: isActive ? "0 2px 6px rgba(0, 98, 255, 0.2)" : "none",
-                  }}
-                >
-                  <TabIcon size={14} />
-                  {guide.role === "admin"
-                    ? "Admin Guide"
-                    : guide.role === "dean"
-                      ? "Dean Guide"
-                      : guide.role === "programme-head"
-                        ? "Programme Head"
-                        : guide.role === "teacher"
-                          ? "Teacher Guide"
-                          : guide.role === "student"
-                            ? "Student Guide"
-                            : guide.role === "omr-guide"
-                              ? "OMR Scanning Rules"
-                              : "FAQ & Help"}
-                </button>
-              );
-            })}
-          </div>
+          {/* Admin-only Switcher to inspect other role guides if needed */}
+          {isAdmin && (
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "0.45rem",
+                overflowX: "auto",
+                paddingTop: "0.1rem",
+              }}
+            >
+              <span style={{ fontSize: "0.75rem", color: "#64748b", fontWeight: 700, textTransform: "uppercase" }}>
+                Admin View Switch:
+              </span>
+              {(["admin", "dean", "programme-head", "teacher", "student"] as UserRole[]).map((r) => {
+                const isActive = selectedRole === r;
+                return (
+                  <button
+                    key={r}
+                    onClick={() => setSelectedRole(r)}
+                    style={{
+                      padding: "0.3rem 0.65rem",
+                      fontSize: "0.75rem",
+                      borderRadius: "16px",
+                      border: isActive ? "1px solid #0062ff" : "1px solid #e2e8f0",
+                      background: isActive ? "#0062ff" : "#ffffff",
+                      color: isActive ? "#ffffff" : "#475569",
+                      fontWeight: isActive ? 700 : 500,
+                      cursor: "pointer",
+                      textTransform: "capitalize",
+                    }}
+                  >
+                    {r.replace("-", " ")}
+                  </button>
+                );
+              })}
+            </div>
+          )}
         </div>
       </div>
 
-      {/* ── CARD BODY (UNIFIED CONTINUOUS STREAM) ── */}
+      {/* ── CARD BODY (AIRY, MINIMALIST & SPECIFIC TO THIS ROLE) ── */}
       <div
         style={{
           padding: "1.5rem",
           overflowY: isModal ? "auto" : "visible",
-          maxHeight: isModal ? "calc(85vh - 200px)" : "none",
+          maxHeight: isModal ? "calc(86vh - 220px)" : "none",
           display: "flex",
           flexDirection: "column",
           gap: "1.25rem",
@@ -714,74 +798,71 @@ export const UserGuideCard: React.FC<UserGuideCardProps> = ({
         {/* Role Overview Banner */}
         <div
           style={{
-            background: "#f8fafc",
+            background: "linear-gradient(135deg, #f8fafc 0%, #f0f7ff 100%)",
             border: "1px solid #e2e8f0",
             borderLeft: "4px solid #0062ff",
-            borderRadius: "10px",
-            padding: "1.1rem",
+            borderRadius: "12px",
+            padding: "1.1rem 1.25rem",
           }}
         >
           <div
             style={{
               display: "flex",
               alignItems: "center",
-              justifyContent: "space-between",
-              gap: "0.75rem",
-              flexWrap: "wrap",
-              marginBottom: "0.5rem",
+              gap: "0.6rem",
+              marginBottom: "0.45rem",
             }}
           >
-            <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-              <IconComp size={20} style={{ color: "#0062ff" }} />
-              <h3 style={{ fontSize: "1.1rem", margin: 0, fontWeight: 800, color: "#0f172a" }}>
-                {currentRoleGuide.roleTitle}
-              </h3>
-            </div>
-            <span
+            <div
               style={{
+                width: "32px",
+                height: "32px",
+                borderRadius: "8px",
                 background: "#eff6ff",
-                color: "#0062ff",
                 border: "1px solid #bfdbfe",
-                fontSize: "0.75rem",
-                fontWeight: 700,
-                padding: "0.2rem 0.6rem",
-                borderRadius: "6px",
+                color: "#0062ff",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
               }}
             >
-              Audience: {currentRoleGuide.targetAudience}
-            </span>
+              <IconComp size={16} />
+            </div>
+            <h3 style={{ fontSize: "1.05rem", margin: 0, fontWeight: 800, color: "#0f172a" }}>
+              {currentManual.portalName} Overview
+            </h3>
           </div>
 
-          <p style={{ color: "#64748b", fontSize: "0.88rem", margin: "0 0 0.75rem 0", lineHeight: "1.5" }}>
-            {currentRoleGuide.description}
+          <p style={{ color: "#475569", fontSize: "0.85rem", margin: "0 0 0.85rem 0", lineHeight: "1.5" }}>
+            {currentManual.overview.mission}
           </p>
 
-          {/* Key Capabilities */}
+          {/* Key Points */}
           <div
             style={{
-              background: "#f8fafc",
+              background: "#ffffff",
               padding: "0.75rem 1rem",
               borderRadius: "8px",
               border: "1px solid #e2e8f0",
             }}
           >
-            <div style={{ fontSize: "0.78rem", fontWeight: 700, color: "var(--text-primary)", marginBottom: "0.4rem" }}>
-              Key Responsibilities:
+            <div style={{ fontSize: "0.75rem", fontWeight: 700, color: "#0f172a", marginBottom: "0.4rem", textTransform: "uppercase", letterSpacing: "0.03em" }}>
+              Key Guidelines for Your Role:
             </div>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: "0.35rem" }}>
-              {currentRoleGuide.keyResponsibilities.map((resp, idx) => (
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: "0.4rem" }}>
+              {currentManual.overview.keyPoints.map((pt, idx) => (
                 <div
                   key={idx}
                   style={{
                     display: "flex",
                     alignItems: "flex-start",
-                    gap: "0.4rem",
+                    gap: "0.45rem",
                     fontSize: "0.82rem",
-                    color: "var(--text-secondary)",
+                    color: "#334155",
                   }}
                 >
-                  <CheckCircle2 size={13} style={{ color: "var(--success)", flexShrink: 0, marginTop: "2px" }} />
-                  <span>{resp}</span>
+                  <CheckCircle2 size={14} style={{ color: "#10b981", flexShrink: 0, marginTop: "2px" }} />
+                  <span>{pt}</span>
                 </div>
               ))}
             </div>
@@ -789,90 +870,59 @@ export const UserGuideCard: React.FC<UserGuideCardProps> = ({
         </div>
 
         {/* Quick Action Navigation Buttons */}
-        {onNavigateTab && (
+        {onNavigateTab && currentManual.quickActions.length > 0 && (
           <div
             style={{
               display: "flex",
               alignItems: "center",
               gap: "0.6rem",
               flexWrap: "wrap",
-              padding: "0.6rem 0.9rem",
-              borderRadius: "8px",
-              background: "rgba(15, 23, 42, 0.5)",
-              border: "1px solid rgba(255, 255, 255, 0.05)",
+              padding: "0.65rem 1rem",
+              borderRadius: "10px",
+              background: "#f8fafc",
+              border: "1px solid #e2e8f0",
             }}
           >
-            <span style={{ fontSize: "0.8rem", color: "var(--text-muted)", fontWeight: 600 }}>
-              Quick Action:
+            <span style={{ fontSize: "0.78rem", color: "#64748b", fontWeight: 700, textTransform: "uppercase" }}>
+              Quick Navigation:
             </span>
-            {currentRoleGuide.role === "teacher" && (
-              <>
+            {currentManual.quickActions.map((action, aIdx) => {
+              const ActionIcon = action.icon;
+              return (
                 <button
-                  className="btn btn-outline"
-                  style={{ fontSize: "0.78rem", padding: "0.3rem 0.6rem", borderRadius: "6px" }}
+                  key={aIdx}
+                  type="button"
                   onClick={() => {
                     if (onClose) onClose();
-                    onNavigateTab("quick-scan");
+                    onNavigateTab(action.tab);
+                  }}
+                  style={{
+                    padding: "0.35rem 0.75rem",
+                    borderRadius: "6px",
+                    border: "1px solid #cbd5e1",
+                    background: "#ffffff",
+                    color: "#0f172a",
+                    fontSize: "0.78rem",
+                    fontWeight: 600,
+                    cursor: "pointer",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "0.4rem",
+                    transition: "all 0.15s ease",
                   }}
                 >
-                  <Sparkles size={13} /> Open Quick Scanner
+                  <ActionIcon size={13} color="#0062ff" /> {action.label}
                 </button>
-                <button
-                  className="btn btn-outline"
-                  style={{ fontSize: "0.78rem", padding: "0.3rem 0.6rem", borderRadius: "6px" }}
-                  onClick={() => {
-                    if (onClose) onClose();
-                    onNavigateTab("exams");
-                  }}
-                >
-                  <BookOpen size={13} /> Open Exams & Grading
-                </button>
-              </>
-            )}
-            {currentRoleGuide.role === "admin" && (
-              <button
-                className="btn btn-outline"
-                style={{ fontSize: "0.78rem", padding: "0.3rem 0.6rem", borderRadius: "6px" }}
-                onClick={() => {
-                  if (onClose) onClose();
-                  onNavigateTab("quick-scan");
-                }}
-              >
-                <Sparkles size={13} /> Open Quick Scanner
-              </button>
-            )}
-            {(currentRoleGuide.role === "dean" || currentRoleGuide.role === "programme-head") && (
-              <button
-                className="btn btn-outline"
-                style={{ fontSize: "0.78rem", padding: "0.3rem 0.6rem", borderRadius: "6px" }}
-                onClick={() => {
-                  if (onClose) onClose();
-                  onNavigateTab("reports");
-                }}
-              >
-                <BarChart3 size={13} /> View Reports & Analytics
-              </button>
-            )}
-            {currentRoleGuide.role === "student" && (
-              <button
-                className="btn btn-outline"
-                style={{ fontSize: "0.78rem", padding: "0.3rem 0.6rem", borderRadius: "6px" }}
-                onClick={() => {
-                  if (onClose) onClose();
-                  onNavigateTab("reports");
-                }}
-              >
-                <Award size={13} /> View My Exam Results
-              </button>
-            )}
+              );
+            })}
           </div>
         )}
 
-        {/* Continuous Step-by-Step Sections */}
-        <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+        {/* Minimalist Step-by-Step Sections */}
+        <div style={{ display: "flex", flexDirection: "column", gap: "0.9rem" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <h4 style={{ fontSize: "0.95rem", fontWeight: 700, margin: 0, color: "var(--text-primary)" }}>
-              Step-by-Step Instructions & Workflow Procedures ({filteredSections.length})
+            <h4 style={{ fontSize: "0.9rem", fontWeight: 700, margin: 0, color: "#0f172a", textTransform: "uppercase", letterSpacing: "0.02em" }}>
+              Operational Procedures ({filteredSections.length})
             </h4>
           </div>
 
@@ -880,13 +930,15 @@ export const UserGuideCard: React.FC<UserGuideCardProps> = ({
             <div
               style={{
                 textAlign: "center",
-                padding: "2rem",
-                color: "var(--text-muted)",
-                background: "rgba(15, 23, 42, 0.4)",
-                borderRadius: "8px",
+                padding: "2.5rem 1.5rem",
+                color: "#64748b",
+                background: "#f8fafc",
+                borderRadius: "10px",
+                border: "1px dashed #cbd5e1",
+                fontSize: "0.85rem",
               }}
             >
-              No guide topics matched your search "{searchQuery}". Try searching for terms like "CHED", "ZipGrade", "Pass Rate", or "Scan".
+              No guide topics matched "{searchQuery}". Try searching for other terms or clear your search query.
             </div>
           ) : (
             filteredSections.map((section) => {
@@ -897,96 +949,90 @@ export const UserGuideCard: React.FC<UserGuideCardProps> = ({
                 <div
                   key={section.id}
                   style={{
-                    background: "rgba(15, 23, 42, 0.6)",
-                    border: "1px solid rgba(255, 255, 255, 0.08)",
-                    borderRadius: "10px",
+                    background: "#ffffff",
+                    border: "1px solid #e2e8f0",
+                    borderRadius: "12px",
                     overflow: "hidden",
+                    transition: "border-color 0.15s ease",
                   }}
                 >
                   {/* Section Title Bar */}
                   <div
                     onClick={() => toggleSection(section.id)}
                     style={{
-                      padding: "0.85rem 1.1rem",
-                      background: "rgba(30, 41, 59, 0.5)",
+                      padding: "0.85rem 1.15rem",
+                      background: open ? "#f8fafc" : "#ffffff",
                       cursor: "pointer",
                       display: "flex",
                       justifyContent: "space-between",
                       alignItems: "center",
                       userSelect: "none",
+                      borderBottom: open ? "1px solid #e2e8f0" : "none",
+                      transition: "background 0.15s ease",
                     }}
                   >
                     <div style={{ display: "flex", alignItems: "center", gap: "0.65rem" }}>
                       <div
                         style={{
-                          padding: "0.35rem",
+                          width: "28px",
+                          height: "28px",
                           borderRadius: "6px",
-                          background: "rgba(59, 130, 246, 0.15)",
-                          color: "var(--accent)",
+                          background: "#eff6ff",
+                          color: "#0062ff",
                           display: "flex",
                           alignItems: "center",
                           justifyContent: "center",
+                          flexShrink: 0,
                         }}
                       >
-                        <SecIcon size={16} />
+                        <SecIcon size={15} />
                       </div>
                       <div>
-                        <div style={{ fontSize: "0.92rem", fontWeight: 700, color: "var(--text-primary)" }}>
+                        <div style={{ fontSize: "0.9rem", fontWeight: 700, color: "#0f172a" }}>
                           {section.title}
                         </div>
-                        <div style={{ fontSize: "0.78rem", color: "var(--text-secondary)", marginTop: "1px" }}>
+                        <div style={{ fontSize: "0.76rem", color: "#64748b", marginTop: "1px" }}>
                           {section.summary}
                         </div>
                       </div>
                     </div>
 
                     <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                      {section.badge && (
-                        <span
-                          className="badge"
-                          style={{
-                            background: "rgba(168, 85, 247, 0.2)",
-                            color: "#c084fc",
-                            fontSize: "0.72rem",
-                          }}
-                        >
-                          {section.badge}
-                        </span>
-                      )}
                       {open ? (
-                        <ChevronUp size={16} style={{ color: "var(--text-muted)" }} />
+                        <ChevronUp size={16} style={{ color: "#94a3b8" }} />
                       ) : (
-                        <ChevronDown size={16} style={{ color: "var(--text-muted)" }} />
+                        <ChevronDown size={16} style={{ color: "#94a3b8" }} />
                       )}
                     </div>
                   </div>
 
-                  {/* Section Steps Flow */}
+                  {/* Section Steps */}
                   {open && (
                     <div
                       style={{
-                        padding: "1rem 1.1rem",
+                        padding: "1rem 1.15rem",
                         display: "flex",
                         flexDirection: "column",
-                        gap: "0.85rem",
-                        borderTop: "1px solid rgba(255, 255, 255, 0.05)",
+                        gap: "0.75rem",
+                        background: "#ffffff",
                       }}
                     >
                       {section.steps.map((step, sIdx) => (
                         <div
                           key={sIdx}
                           style={{
-                            padding: "0.8rem 1rem",
-                            borderRadius: "8px",
+                            padding: "0.85rem 1rem",
+                            borderRadius: "10px",
                             background: "#f8fafc",
+                            border: "1px solid #f1f5f9",
                             borderLeft: "3px solid #0062ff",
                           }}
                         >
                           <div
                             style={{
                               fontWeight: 700,
-                              fontSize: "0.88rem",
-                              color: "var(--text-primary)",
+                              fontSize: "0.86rem",
+                              color: "#0f172a",
                               marginBottom: "0.3rem",
                               display: "flex",
                               alignItems: "center",
@@ -995,16 +1041,17 @@ export const UserGuideCard: React.FC<UserGuideCardProps> = ({
                           >
                             <span
                               style={{
-                                background: "var(--accent)",
-                                color: "#000",
+                                background: "#0062ff",
+                                color: "#ffffff",
                                 width: "18px",
                                 height: "18px",
                                 borderRadius: "50%",
                                 display: "inline-flex",
                                 alignItems: "center",
                                 justifyContent: "center",
-                                fontSize: "0.7rem",
+                                fontSize: "0.68rem",
                                 fontWeight: 800,
+                                flexShrink: 0,
                               }}
                             >
                               {sIdx + 1}
@@ -1014,10 +1061,11 @@ export const UserGuideCard: React.FC<UserGuideCardProps> = ({
 
                           <p
                             style={{
-                              fontSize: "0.84rem",
-                              color: "var(--text-secondary)",
+                              fontSize: "0.82rem",
+                              color: "#475569",
                               margin: 0,
-                              lineHeight: "1.5",
+                              lineHeight: "1.55",
+                              whiteSpace: "pre-line",
                             }}
                           >
                             {step.description}
@@ -1027,20 +1075,20 @@ export const UserGuideCard: React.FC<UserGuideCardProps> = ({
                             <div
                               style={{
                                 marginTop: "0.45rem",
-                                padding: "0.45rem 0.65rem",
+                                padding: "0.4rem 0.65rem",
                                 borderRadius: "6px",
                                 background: "#eff6ff",
                                 border: "1px solid #bfdbfe",
                                 display: "flex",
                                 alignItems: "flex-start",
                                 gap: "0.4rem",
-                                fontSize: "0.8rem",
-                                color: "#0062ff",
+                                fontSize: "0.78rem",
+                                color: "#0052d9",
                               }}
                             >
                               <Lightbulb size={13} style={{ flexShrink: 0, marginTop: "2px" }} />
                               <span>
-                                <strong>Pro Tip:</strong> {step.tip}
+                                <strong>Tip:</strong> {step.tip}
                               </span>
                             </div>
                           )}
@@ -1058,7 +1106,7 @@ export const UserGuideCard: React.FC<UserGuideCardProps> = ({
       {/* ── CARD FOOTER ── */}
       <div
         style={{
-          padding: "0.9rem 1.5rem",
+          padding: "0.85rem 1.5rem",
           background: "#f8fafc",
           borderTop: "1px solid #e2e8f0",
           display: "flex",
@@ -1071,18 +1119,32 @@ export const UserGuideCard: React.FC<UserGuideCardProps> = ({
         <div
           style={{
             fontSize: "0.78rem",
-            color: "var(--text-muted)",
+            color: "#64748b",
             display: "flex",
             alignItems: "center",
             gap: "0.4rem",
           }}
         >
-          <span>St. Rita's College of Balingasag • Higher Education IT Department</span>
+          <span>St. Rita's College of Balingasag • Academic Assessment Portal</span>
         </div>
 
         {isModal && onClose && (
-          <button className="btn btn-primary" onClick={onClose} style={{ fontSize: "0.85rem", padding: "0.4rem 0.9rem" }}>
-            Got it, Close Manual
+          <button
+            type="button"
+            className="btn btn-primary"
+            onClick={onClose}
+            style={{
+              fontSize: "0.82rem",
+              padding: "0.4rem 0.95rem",
+              borderRadius: "8px",
+              background: "#0062ff",
+              color: "#ffffff",
+              border: "none",
+              fontWeight: 600,
+              cursor: "pointer",
+            }}
+          >
+            Done
           </button>
         )}
       </div>
@@ -1092,7 +1154,7 @@ export const UserGuideCard: React.FC<UserGuideCardProps> = ({
 
 /**
  * UserGuideModal
- * Overlay modal wrapper around the unified UserGuideCard.
+ * Overlay modal wrapper around the dedicated UserGuideCard.
  */
 export const UserGuideModal: React.FC<UserGuideModalProps> = ({
   isOpen,
@@ -1109,15 +1171,11 @@ export const UserGuideModal: React.FC<UserGuideModalProps> = ({
       style={{
         position: "fixed",
         inset: 0,
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
         width: "100vw",
         height: "100vh",
-        background: "rgba(4, 9, 18, 0.85)",
-        backdropFilter: "blur(10px)",
-        WebkitBackdropFilter: "blur(10px)",
+        background: "rgba(15, 23, 42, 0.65)",
+        backdropFilter: "blur(6px)",
+        WebkitBackdropFilter: "blur(6px)",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
@@ -1128,15 +1186,15 @@ export const UserGuideModal: React.FC<UserGuideModalProps> = ({
       <div
         className="modal-content"
         style={{
-          maxWidth: "920px",
+          maxWidth: "880px",
           width: "100%",
-          maxHeight: "90vh",
+          maxHeight: "88vh",
           display: "flex",
           flexDirection: "column",
           borderRadius: "16px",
           overflow: "hidden",
-          border: "1px solid rgba(245, 158, 11, 0.25)",
-          boxShadow: "0 25px 60px -15px rgba(0, 0, 0, 0.95), 0 0 35px rgba(245, 158, 11, 0.15)",
+          border: "1px solid #cbd5e1",
+          boxShadow: "0 25px 60px -15px rgba(0, 20, 60, 0.25)",
         }}
         onClick={(e) => e.stopPropagation()}
       >
@@ -1145,7 +1203,7 @@ export const UserGuideModal: React.FC<UserGuideModalProps> = ({
           onNavigateTab={onNavigateTab}
           onClose={onClose}
           isModal={true}
-          style={{ border: "none", borderRadius: 0, boxShadow: "none", maxHeight: "90vh" }}
+          style={{ border: "none", borderRadius: 0, boxShadow: "none", maxHeight: "88vh" }}
         />
       </div>
     </div>
