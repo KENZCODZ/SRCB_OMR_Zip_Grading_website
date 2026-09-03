@@ -633,7 +633,11 @@ export function exportCHEDGradeSheet(
   const rosterMap = new Map<string, StudentRosterEntry>();
   roster.forEach(r => rosterMap.set(r.student_id.toLowerCase(), r));
 
-  const totalItems = exam?.num_items || 50;
+  const totalItems =
+    exam?.num_items ||
+    (submissions.length > 0 ? submissions[0].total_questions : 0) ||
+    Object.keys(exam?.answer_key || {}).length ||
+    50;
 
   const headerRows = buildExaminationMetadataHeader(exam);
 

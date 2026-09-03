@@ -919,7 +919,7 @@ export default function RoleDashboard({
                         </div>
                       </td>
                       <td style={{ padding: "0.75rem 0.85rem", fontWeight: 700, color: "#0f172a" }}>
-                        {rec.mean} / 50
+                        {rec.mean} / {(rec as any).totalItems || (rec as any).rawExam?.num_items || 50}
                       </td>
                       <td style={{ padding: "0.75rem 0.85rem" }}>
                         <span

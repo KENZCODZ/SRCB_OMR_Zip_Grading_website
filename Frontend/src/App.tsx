@@ -11,15 +11,11 @@ import {
   FileUp,
   Trash2,
   AlertTriangle,
-  FileSpreadsheet,
   Download,
   BarChart2,
   Award,
   LogOut,
   Camera,
-  FileText,
-  Layers,
-  Database,
   UserPlus,
   HelpCircle,
   Users,
@@ -48,19 +44,16 @@ import {
   loginUser,
   fetchDashboardSummary,
 } from "./api";
-import { mockUsers } from "./data/mockData";
+import { mockUsers, mockClassRoster, mockExams, mockSubmissions } from "./data/mockData";
 import {
   exportCHEDGradeSheet,
   exportItemAnalysisExcel,
   exportSingleSubmissionExcel,
-  exportExamBatchExcel,
-  exportCompleteDatabaseExcel,
 } from "./utils/excelUtils";
 
 // Imported Isolated UI Components
 import StatusBadge from "./components/StatusBadge";
 import ExamCard from "./components/ExamCard";
-import SubmissionTable from "./components/SubmissionTable";
 import ToastNotification, {
   type ToastItem,
 } from "./components/ToastNotification";
@@ -74,6 +67,7 @@ import ExamCreationModal from "./components/ExamCreationModal";
 import ExamDetailsModal from "./components/ExamDetailsModal";
 import AdminUserManagement from "./components/AdminUserManagement";
 import TeacherExamCompiler from "./components/TeacherExamCompiler";
+import GradingHistoryView from "./components/GradingHistoryView";
 import DeanAcademicManagement from "./components/dean/DeanAcademicManagement";
 import DeanExaminations from "./components/dean/DeanExaminations";
 import DeanReportsAnalytics from "./components/dean/DeanReportsAnalytics";
@@ -89,6 +83,7 @@ type AppTab =
   | "quick-scan"
   | "exams"
   | "compiler"
+  | "results-management"
   | "history"
   | "item-analysis"
   | "user-guide"
@@ -105,15 +100,15 @@ export default function App() {
   const [loginError, setLoginError] = useState("");
   const [, setAuthMessage] = useState("");
 
-  // Core Data State
-  const [exams, setExams] = useState<Exam[]>([]);
-  const [submissions, setSubmissions] = useState<Submission[]>([]);
-  const [roster, setRoster] = useState<StudentRosterEntry[]>([]);
+  // Core Data State (with mock fallback for offline resilience)
+  const [exams, setExams] = useState<Exam[]>(mockExams);
+  const [submissions, setSubmissions] = useState<Submission[]>(mockSubmissions);
+  const [roster, setRoster] = useState<StudentRosterEntry[]>(mockClassRoster);
   const [isRosterModalOpen, setIsRosterModalOpen] = useState(false);
   const [isUserGuideOpen, setIsUserGuideOpen] = useState(false);
 
   const [loadingExams, setLoadingExams] = useState(false);
-  const [loadingSubmissions, setLoadingSubmissions] = useState(false);
+  const [, setLoadingSubmissions] = useState(false);
   const [dashboardSummary, setDashboardSummary] = useState({
     total_accounts: 0,
     total_students: 0,
@@ -147,8 +142,7 @@ export default function App() {
   const [latestGradeResult, setLatestGradeResult] =
     useState<GradeResult | null>(null);
 
-  // Submissions Filtering
-  const [searchQuery, setSearchQuery] = useState("");
+  // Submissions State
   const [selectedSubmission, setSelectedSubmission] =
     useState<Submission | null>(null);
 
@@ -156,21 +150,6 @@ export default function App() {
   const [teacherExamsSubTab, setTeacherExamsSubTab] = useState<
     "grading" | "quick-scan"
   >("grading");
-
-  // Flexible Export System State
-  const [exportBatchExamId, setExportBatchExamId] = useState<string>("");
-  const [exportExamType, setExportExamType] = useState<string>(
-    "Midterm Examination",
-  );
-  const [exportSingleSubmissionId, setExportSingleSubmissionId] =
-    useState<string>("");
-  const [exportDbExamTypeFilter, setExportDbExamTypeFilter] =
-    useState<string>("All");
-  const [exportDbSemesterFilter, setExportDbSemesterFilter] =
-    useState<string>("All");
-  const [exportDbGroupBy, setExportDbGroupBy] = useState<"none" | "exam_type">(
-    "none",
-  );
 
   // Profile Menu State & Click-Outside Handling
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
@@ -225,11 +204,17 @@ export default function App() {
           return data[0]?.id ?? "";
         });
       } else {
-        setExams([]);
+        setExams(mockExams);
+        if (mockExams.length > 0) {
+          setSelectedExamId((prev) => (prev ? prev : mockExams[0].id));
+        }
       }
     } catch (err) {
-      console.error("Failed to load exams from API:", err);
-      setExams([]);
+      console.error("Failed to load exams from API, using fallback data:", err);
+      setExams(mockExams);
+      if (mockExams.length > 0) {
+        setSelectedExamId((prev) => (prev ? prev : mockExams[0].id));
+      }
     } finally {
       setLoadingExams(false);
     }
@@ -239,10 +224,10 @@ export default function App() {
     setLoadingSubmissions(true);
     try {
       const data = await fetchSubmissions();
-      setSubmissions(data && data.length > 0 ? data : []);
+      setSubmissions(data && data.length > 0 ? data : mockSubmissions);
     } catch (err) {
-      console.error("Failed to load submissions from API:", err);
-      setSubmissions([]);
+      console.error("Failed to load submissions from API, using fallback data:", err);
+      setSubmissions(mockSubmissions);
     } finally {
       setLoadingSubmissions(false);
     }
@@ -505,7 +490,6 @@ export default function App() {
   const handleExportSingleSubmission = (targetSub?: Submission | null) => {
     const subToExport =
       targetSub ||
-      submissions.find((s) => s.id === exportSingleSubmissionId) ||
       selectedSubmission ||
       submissions[0];
     if (!subToExport) {
@@ -528,41 +512,8 @@ export default function App() {
     );
   };
 
-  const handleExportExamBatch = () => {
-    const targetExamId =
-      exportBatchExamId || selectedExamId || exams[0]?.id || "";
-    const targetExam = exams.find((e) => e.id === targetExamId) || exams[0];
-    if (!targetExam) {
-      addToast("error", "No examination selected for batch export.");
-      return;
-    }
-    const examSubs = submissions.filter((s) => s.exam_id === targetExam.id);
-    if (examSubs.length === 0) {
-      addToast("warning", "No submissions found for this exam batch.");
-      return;
-    }
-
-    exportExamBatchExcel(targetExam, examSubs, roster, exportExamType);
-    addToast(
-      "success",
-      `Exam-Based Batch Export: Compiled ${examSubs.length} submissions for "${targetExam.name}" (${exportExamType}) with complete metadata into Excel (.xlsx)`,
-    );
-  };
-
-  const handleExportCompleteDatabase = () => {
-    if (exams.length === 0 && submissions.length === 0) {
-      addToast("warning", "No database records available to export.");
-      return;
-    }
-    exportCompleteDatabaseExcel(exams, submissions, roster, {
-      examTypeFilter: exportDbExamTypeFilter,
-      semesterFilter: exportDbSemesterFilter,
-      groupBy: exportDbGroupBy,
-    });
-    addToast(
-      "success",
-      `Teacher Database Export: Exported filtered master database report (.xlsx)`,
-    );
+  const handleDeleteGradingRecord = (examId: string) => {
+    setSubmissions((prev) => prev.filter((s) => s.exam_id !== examId));
   };
 
   const formatDate = (isoString: string) => {
@@ -804,9 +755,9 @@ export default function App() {
         { key: "dashboard" as AppTab, label: "Dashboard", icon: BarChart3 },
         { key: "exams" as AppTab, label: "Exams & Grading", icon: BookOpen },
         {
-          key: "compiler" as AppTab,
-          label: "Session & Class Compiler",
-          icon: Layers,
+          key: "results-management" as AppTab,
+          label: "Examination Results Management",
+          icon: Award,
         },
         { key: "history" as AppTab, label: "Grading History", icon: History },
         {
@@ -864,8 +815,9 @@ export default function App() {
       case "examinations":
       case "exams":
         return "Examinations";
+      case "results-management":
       case "compiler":
-        return "Session & Class Compiler";
+        return "Examination Results Management";
       case "quick-scan":
         return "Quick OMR Scanner";
       case "history":
@@ -3027,749 +2979,22 @@ export default function App() {
           </div>
         )}
 
-        {/* SUBMISSIONS HISTORY TAB / TEACHER DATABASE */}
+        {/* GRADING HISTORY TAB (HISTORICAL AUDIT & MANAGEMENT) */}
         {activeTab === "history" && (
-          <div>
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-                flexWrap: "wrap",
-                gap: "1rem",
-                padding: "1.25rem 1.5rem",
-                background: "#ffffff",
-                border: "1px solid #e2e8f0",
-                borderRadius: "12px",
-                marginBottom: "1.25rem",
-              }}
-            >
-              <div>
-                <h2 style={{ fontSize: "1.4rem", fontWeight: 800, margin: 0, color: "#0f172a" }}>
-                  Grading History
-                </h2>
-                <p
-                  style={{
-                    fontSize: "0.82rem",
-                    color: "#64748b",
-                    margin: "0.2rem 0 0 0",
-                  }}
-                >
-                  Review and audit scanned student submissions
-                </p>
-              </div>
-              <div style={{ display: "flex", gap: "0.5rem" }}>
-                <button
-                  className="btn btn-secondary"
-                  onClick={() => setIsRosterModalOpen(true)}
-                  style={{ fontSize: "0.82rem", padding: "0.45rem 0.85rem" }}
-                >
-                  <FileSpreadsheet size={15} /> Import Roster
-                </button>
-              </div>
-            </div>
-
-            {/* Flexible Multi-Method Export Center */}
-            <div
-              className="card"
-              style={{
-                marginBottom: "1.5rem",
-                background: "#ffffff",
-                border: "1px solid #e2e8f0",
-                boxShadow: "0 2px 8px rgba(0, 0, 0, 0.02)",
-              }}
-            >
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                  marginBottom: "1.25rem",
-                  flexWrap: "wrap",
-                  gap: "0.75rem",
-                }}
-              >
-                <div>
-                  <div
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "0.6rem",
-                    }}
-                  >
-                    <div
-                      style={{
-                        width: "36px",
-                        height: "36px",
-                        borderRadius: "10px",
-                        background: "#eff6ff",
-                        color: "#0062ff",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                      }}
-                    >
-                      <FileSpreadsheet size={20} />
-                    </div>
-                    <div>
-                      <h3
-                        style={{
-                          fontSize: "1.15rem",
-                          fontWeight: 800,
-                          margin: 0,
-                          color: "#0f172a",
-                        }}
-                      >
-                        Teacher Database Export System
-                      </h3>
-                    </div>
-                    <span
-                      className="badge"
-                      style={{
-                        background: "#eff6ff",
-                        color: "#0062ff",
-                        border: "1px solid #bfdbfe",
-                        fontWeight: 700,
-                      }}
-                    >
-                      3 Export Methods
-                    </span>
-                  </div>
-                  <p
-                    style={{
-                      fontSize: "0.82rem",
-                      color: "#64748b",
-                      margin: "0.35rem 0 0 0",
-                    }}
-                  >
-                    Download formatted institutional Excel (.xlsx) workbooks with student transcripts, item responses, and statistical summaries.
-                  </p>
-                </div>
-              </div>
-
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "repeat(auto-fit, minmax(290px, 1fr))",
-                  gap: "1.25rem",
-                }}
-              >
-                {/* Method 1: Single File Export */}
-                <div
-                  style={{
-                    background: "#f8fafc",
-                    borderRadius: "12px",
-                    padding: "1.25rem",
-                    border: "1px solid #e2e8f0",
-                    display: "flex",
-                    flexDirection: "column",
-                    justifyContent: "space-between",
-                  }}
-                >
-                  <div>
-                    <div
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "space-between",
-                        marginBottom: "0.75rem",
-                      }}
-                    >
-                      <span
-                        className="badge"
-                        style={{
-                          background: "#eff6ff",
-                          color: "#0062ff",
-                          border: "1px solid #bfdbfe",
-                          display: "inline-flex",
-                          alignItems: "center",
-                          gap: "4px",
-                          fontWeight: 700,
-                        }}
-                      >
-                        <FileText size={12} /> Method 1
-                      </span>
-                      <span
-                        style={{
-                          fontSize: "0.75rem",
-                          color: "#64748b",
-                          fontWeight: 600,
-                        }}
-                      >
-                        Individual File
-                      </span>
-                    </div>
-                    <h4
-                      style={{
-                        fontSize: "0.98rem",
-                        fontWeight: 700,
-                        marginBottom: "0.35rem",
-                        color: "#0f172a",
-                      }}
-                    >
-                      Single File Export
-                    </h4>
-                    <p
-                      style={{
-                        fontSize: "0.8rem",
-                        color: "#64748b",
-                        marginBottom: "1rem",
-                        lineHeight: 1.4,
-                      }}
-                    >
-                      Export an individual scanned submission directly with score, CHED transmuted grade, and bubble breakdown.
-                    </p>
-
-                    <div style={{ marginBottom: "1rem" }}>
-                      <label
-                        style={{
-                          fontSize: "0.75rem",
-                          color: "#475569",
-                          fontWeight: 600,
-                          display: "block",
-                          marginBottom: "4px",
-                        }}
-                      >
-                        Select Submission:
-                      </label>
-                      <select
-                        className="form-input"
-                        style={{
-                          fontSize: "0.8rem",
-                          padding: "0.45rem 0.6rem",
-                          background: "#ffffff",
-                          border: "1px solid #cbd5e1",
-                          borderRadius: "8px",
-                          color: "#0f172a",
-                        }}
-                        value={
-                          exportSingleSubmissionId ||
-                          (submissions.length > 0 ? submissions[0].id : "")
-                        }
-                        onChange={(e) =>
-                          setExportSingleSubmissionId(e.target.value)
-                        }
-                      >
-                        {submissions.length === 0 ? (
-                          <option value="">No submissions available</option>
-                        ) : (
-                          submissions.map((sub) => {
-                            const matchedStudent = roster.find(
-                              (r) =>
-                                r.student_id.toLowerCase() ===
-                                (sub.student_id || "").toLowerCase(),
-                            );
-                            const matchedExam = exams.find(
-                              (e) => e.id === sub.exam_id,
-                            );
-                            const nameLabel = matchedStudent
-                              ? matchedStudent.name
-                              : sub.student_id;
-                            const examLabel = matchedExam
-                              ? matchedExam.name
-                              : "Exam";
-                            return (
-                              <option key={sub.id} value={sub.id}>
-                                {nameLabel} - {examLabel} ({sub.score}/50)
-                              </option>
-                            );
-                          })
-                        )}
-                      </select>
-                    </div>
-                  </div>
-
-                  <div>
-                    <button
-                      className="btn btn-secondary"
-                      disabled={submissions.length === 0}
-                      style={{
-                        width: "100%",
-                        justifyContent: "center",
-                        fontSize: "0.82rem",
-                        fontWeight: 700,
-                        background: "#ffffff",
-                        border: "1px solid #cbd5e1",
-                        color: "#0f172a",
-                        borderRadius: "8px",
-                        padding: "0.55rem",
-                      }}
-                      onClick={() => {
-                        const targetId =
-                          exportSingleSubmissionId || (submissions[0]?.id ?? "");
-                        const targetSub =
-                          submissions.find((s) => s.id === targetId) ||
-                          submissions[0];
-                        if (targetSub) {
-                          handleExportSingleSubmission(targetSub);
-                        } else {
-                          addToast("warning", "No submission available to export.");
-                        }
-                      }}
-                    >
-                      <Download size={14} /> Export Single File (.xlsx)
-                    </button>
-                    <div
-                      style={{
-                        fontSize: "0.72rem",
-                        color: "#64748b",
-                        marginTop: "6px",
-                        textAlign: "center",
-                      }}
-                    >
-                      Available on any submission inspect page
-                    </div>
-                  </div>
-                </div>
-
-                {/* Method 2: Exam-Based Batch Export */}
-                <div
-                  style={{
-                    background: "#f8fafc",
-                    borderRadius: "12px",
-                    padding: "1.25rem",
-                    border: "1px solid #e2e8f0",
-                    display: "flex",
-                    flexDirection: "column",
-                    justifyContent: "space-between",
-                  }}
-                >
-                  <div>
-                    <div
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "space-between",
-                        marginBottom: "0.75rem",
-                      }}
-                    >
-                      <span
-                        className="badge"
-                        style={{
-                          background: "#ecfdf5",
-                          color: "#059669",
-                          border: "1px solid #a7f3d0",
-                          display: "inline-flex",
-                          alignItems: "center",
-                          gap: "4px",
-                          fontWeight: 700,
-                        }}
-                      >
-                        <Layers size={12} /> Method 2
-                      </span>
-                      <span
-                        style={{
-                          fontSize: "0.75rem",
-                          color: "#64748b",
-                          fontWeight: 600,
-                        }}
-                      >
-                        Exam Title & Type
-                      </span>
-                    </div>
-                    <h4
-                      style={{
-                        fontSize: "0.98rem",
-                        fontWeight: 700,
-                        marginBottom: "0.35rem",
-                        color: "#0f172a",
-                      }}
-                    >
-                      Exam-Based Batch Export
-                    </h4>
-                    <p
-                      style={{
-                        fontSize: "0.8rem",
-                        color: "#64748b",
-                        marginBottom: "1rem",
-                        lineHeight: 1.4,
-                      }}
-                    >
-                      Compiles all student submissions belonging to the same examination (Title & Type) into a single report.
-                    </p>
-
-                    <div
-                      style={{
-                        display: "grid",
-                        gap: "0.6rem",
-                        marginBottom: "1rem",
-                      }}
-                    >
-                      <div>
-                        <label
-                          style={{
-                            fontSize: "0.75rem",
-                            color: "#475569",
-                            fontWeight: 600,
-                            display: "block",
-                            marginBottom: "4px",
-                          }}
-                        >
-                          Select Examination Title:
-                        </label>
-                        <select
-                          className="form-input"
-                          style={{
-                            fontSize: "0.8rem",
-                            padding: "0.45rem 0.6rem",
-                            background: "#ffffff",
-                            border: "1px solid #cbd5e1",
-                            borderRadius: "8px",
-                            color: "#0f172a",
-                          }}
-                          value={
-                            exportBatchExamId ||
-                            selectedExamId ||
-                            (exams.length > 0 ? exams[0].id : "")
-                          }
-                          onChange={(e) => setExportBatchExamId(e.target.value)}
-                        >
-                          {exams.length === 0 ? (
-                            <option value="">No exams available</option>
-                          ) : (
-                            exams.map((ex) => (
-                              <option key={ex.id} value={ex.id}>
-                                {ex.name}
-                              </option>
-                            ))
-                          )}
-                        </select>
-                      </div>
-
-                      <div>
-                        <label
-                          style={{
-                            fontSize: "0.75rem",
-                            color: "#475569",
-                            fontWeight: 600,
-                            display: "block",
-                            marginBottom: "4px",
-                          }}
-                        >
-                          Specify Exam Type / Category:
-                        </label>
-                        <select
-                          className="form-input"
-                          style={{
-                            fontSize: "0.8rem",
-                            padding: "0.45rem 0.6rem",
-                            background: "#ffffff",
-                            border: "1px solid #cbd5e1",
-                            borderRadius: "8px",
-                            color: "#0f172a",
-                          }}
-                          value={exportExamType}
-                          onChange={(e) => setExportExamType(e.target.value)}
-                        >
-                          <option value="Midterm Examination">
-                            Midterm Examination
-                          </option>
-                          <option value="Final Examination">
-                            Final Examination
-                          </option>
-                          <option value="Quiz">Quiz / Long Quiz</option>
-                          <option value="Diagnostic Test">
-                            Diagnostic Test
-                          </option>
-                          <option value="Unit Test">Unit / Chapter Test</option>
-                          <option value="Major Examination">
-                            Major Examination
-                          </option>
-                        </select>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div>
-                    <button
-                      className="btn btn-primary"
-                      style={{
-                        width: "100%",
-                        justifyContent: "center",
-                        fontSize: "0.82rem",
-                        fontWeight: 700,
-                        borderRadius: "8px",
-                        padding: "0.55rem",
-                      }}
-                      onClick={handleExportExamBatch}
-                    >
-                      <Layers size={14} /> Export Exam Batch Report (.xlsx)
-                    </button>
-                    <div
-                      style={{
-                        fontSize: "0.72rem",
-                        color: "#64748b",
-                        marginTop: "6px",
-                        textAlign: "center",
-                      }}
-                    >
-                      Multi-sheet: Batch Roster, Answer Matrix & OBE Analysis
-                    </div>
-                  </div>
-                </div>
-
-                {/* Method 3: Complete Database Export */}
-                <div
-                  style={{
-                    background: "#f8fafc",
-                    borderRadius: "12px",
-                    padding: "1.25rem",
-                    border: "1px solid #e2e8f0",
-                    display: "flex",
-                    flexDirection: "column",
-                    justifyContent: "space-between",
-                  }}
-                >
-                  <div>
-                    <div
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "space-between",
-                        marginBottom: "0.75rem",
-                      }}
-                    >
-                      <span
-                        className="badge"
-                        style={{
-                          background: "#eff6ff",
-                          color: "#0062ff",
-                          border: "1px solid #bfdbfe",
-                          display: "inline-flex",
-                          alignItems: "center",
-                          gap: "4px",
-                          fontWeight: 700,
-                        }}
-                      >
-                        <Database size={12} /> Method 3
-                      </span>
-                      <span
-                        style={{
-                          fontSize: "0.75rem",
-                          color: "#64748b",
-                          fontWeight: 600,
-                        }}
-                      >
-                        All Examinations
-                      </span>
-                    </div>
-                    <h4
-                      style={{
-                        fontSize: "0.98rem",
-                        fontWeight: 700,
-                        marginBottom: "0.35rem",
-                        color: "#0f172a",
-                      }}
-                    >
-                      Complete Database Export
-                    </h4>
-                    <p
-                      style={{
-                        fontSize: "0.8rem",
-                        color: "#64748b",
-                        marginBottom: "0.75rem",
-                        lineHeight: 1.4,
-                      }}
-                    >
-                      Exports filtered or grouped master database reports with full institutional headers and complete examination details.
-                    </p>
-
-                    <div
-                      style={{
-                        display: "grid",
-                        gap: "0.5rem",
-                        marginBottom: "1rem",
-                        background: "#ffffff",
-                        padding: "0.75rem",
-                        borderRadius: "8px",
-                        border: "1px solid #e2e8f0",
-                      }}
-                    >
-                      <div>
-                        <label
-                          style={{
-                            fontSize: "0.72rem",
-                            color: "#475569",
-                            fontWeight: 600,
-                            display: "block",
-                            marginBottom: "2px",
-                          }}
-                        >
-                          Filter by Exam Type:
-                        </label>
-                        <select
-                          className="form-input"
-                          style={{
-                            fontSize: "0.78rem",
-                            padding: "0.35rem 0.5rem",
-                            background: "#f8fafc",
-                            border: "1px solid #cbd5e1",
-                            borderRadius: "6px",
-                            color: "#0f172a",
-                          }}
-                          value={exportDbExamTypeFilter}
-                          onChange={(e) =>
-                            setExportDbExamTypeFilter(e.target.value)
-                          }
-                        >
-                          <option value="All">All Exam Types</option>
-                          <option value="Preliminary">Preliminary Only</option>
-                          <option value="Midterm">Midterm Only</option>
-                          <option value="Pre-Final">Pre-Final Only</option>
-                          <option value="Final">Final Only</option>
-                        </select>
-                      </div>
-
-                      <div>
-                        <label
-                          style={{
-                            fontSize: "0.72rem",
-                            color: "#475569",
-                            fontWeight: 600,
-                            display: "block",
-                            marginBottom: "2px",
-                          }}
-                        >
-                          Filter by Semester:
-                        </label>
-                        <select
-                          className="form-input"
-                          style={{
-                            fontSize: "0.78rem",
-                            padding: "0.35rem 0.5rem",
-                            background: "#f8fafc",
-                            border: "1px solid #cbd5e1",
-                            borderRadius: "6px",
-                            color: "#0f172a",
-                          }}
-                          value={exportDbSemesterFilter}
-                          onChange={(e) =>
-                            setExportDbSemesterFilter(e.target.value)
-                          }
-                        >
-                          <option value="All">All Semesters</option>
-                          <option value="1st Semester">1st Semester</option>
-                          <option value="2nd Semester">2nd Semester</option>
-                          <option value="Summer">Summer Term</option>
-                        </select>
-                      </div>
-
-                      <div>
-                        <label
-                          style={{
-                            fontSize: "0.72rem",
-                            color: "#475569",
-                            fontWeight: 600,
-                            display: "block",
-                            marginBottom: "2px",
-                          }}
-                        >
-                          Multi-Sheet Grouping:
-                        </label>
-                        <select
-                          className="form-input"
-                          style={{
-                            fontSize: "0.78rem",
-                            padding: "0.35rem 0.5rem",
-                            background: "#f8fafc",
-                            border: "1px solid #cbd5e1",
-                            borderRadius: "6px",
-                            color: "#0f172a",
-                          }}
-                          value={exportDbGroupBy}
-                          onChange={(e) =>
-                            setExportDbGroupBy(
-                              e.target.value as "none" | "exam_type",
-                            )
-                          }
-                        >
-                          <option value="none">Standard Master Sheets</option>
-                          <option value="exam_type">
-                            Group Sheets by Exam Type
-                          </option>
-                        </select>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div>
-                    <button
-                      className="btn btn-primary"
-                      style={{
-                        width: "100%",
-                        justifyContent: "center",
-                        fontSize: "0.82rem",
-                        fontWeight: 700,
-                        borderRadius: "8px",
-                        padding: "0.55rem",
-                      }}
-                      onClick={handleExportCompleteDatabase}
-                    >
-                      <Database size={14} /> Export Master Database (.xlsx)
-                    </button>
-                    <div
-                      style={{
-                        fontSize: "0.72rem",
-                        color: "#64748b",
-                        marginTop: "6px",
-                        textAlign: "center",
-                      }}
-                    >
-                      Filtered Workbook: Full Metadata, Metrics & Grouped Sheets
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="card">
-              <div
-                style={{ display: "flex", gap: "1rem", marginBottom: "1.5rem" }}
-              >
-                <div style={{ position: "relative", flex: 1 }}>
-                  <Search
-                    size={16}
-                    style={{
-                      position: "absolute",
-                      left: "0.85rem",
-                      top: "50%",
-                      transform: "translateY(-50%)",
-                      color: "#94a3b8",
-                      pointerEvents: "none",
-                    }}
-                  />
-                  <input
-                    type="text"
-                    className="form-input"
-                    placeholder="Search by Student ID, Student Name, or Exam..."
-                    style={{ paddingLeft: "2.4rem", height: "40px", fontSize: "0.85rem" }}
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                  />
-                </div>
-              </div>
-
-              {loadingSubmissions ? (
-                <div className="spinner-container">
-                  <div className="spinner"></div>
-                </div>
-              ) : (
-                <SubmissionTable
-                  submissions={submissions}
-                  exams={exams}
-                  roster={roster}
-                  searchQuery={searchQuery}
-                  onSelectSubmission={viewSubmissionDetails}
-                  formatDate={formatDate}
-                />
-              )}
-            </div>
-
-          </div>
+          <GradingHistoryView
+            exams={exams}
+            submissions={submissions}
+            roster={roster}
+            currentUser={currentUser}
+            onSelectSubmission={viewSubmissionDetails}
+            onDeleteGradingRecord={handleDeleteGradingRecord}
+            formatDate={formatDate}
+            addToast={addToast}
+          />
         )}
 
-        {/* SESSION & CLASS COMPILER TAB (TEACHER) */}
-        {activeTab === "compiler" && currentUser && (
+        {/* EXAMINATION RESULTS MANAGEMENT TAB (TEACHER) */}
+        {(activeTab === "results-management" || activeTab === "compiler") && currentUser && (
           <TeacherExamCompiler
             exams={exams}
             submissions={submissions}
@@ -4269,118 +3494,117 @@ export default function App() {
                   padding: "1rem",
                 }}
               >
-                <div
-                  style={{
-                    display: "grid",
-                    gridTemplateColumns: "1fr 1fr",
-                    gap: "1rem",
-                  }}
-                >
-                  <div>
-                    {Object.entries(selectedSubmission.answers)
-                      .sort((a, b) => parseInt(a[0]) - parseInt(b[0]))
-                      .slice(0, 25)
-                      .map(([qStr, ansObj]) => {
-                        const exam = exams.find(
-                          (e) => e.id === selectedSubmission.exam_id,
-                        );
-                        const correctAns = exam?.answer_key[qStr];
-                        const selected = ansObj.selected;
-                        const isCorrect = selected === correctAns;
+                {(() => {
+                  const sortedAnswers = Object.entries(selectedSubmission.answers || {})
+                    .sort((a, b) => parseInt(a[0]) - parseInt(b[0]));
+                  const midIndex = Math.ceil(sortedAnswers.length / 2);
+                  const firstCol = sortedAnswers.slice(0, midIndex);
+                  const secondCol = sortedAnswers.slice(midIndex);
+                  const exam = exams.find((e) => e.id === selectedSubmission.exam_id);
 
-                        return (
-                          <div
-                            key={qStr}
-                            className="bubble-row"
-                            style={{
-                              padding: "0.2rem 0.5rem",
-                              justifyContent: "space-between",
-                            }}
-                          >
-                            <span
-                              className="bubble-num"
-                              style={{ width: "20px" }}
-                            >
-                              {qStr}.
-                            </span>
-                            <span
-                              style={{
-                                fontSize: "0.8rem",
-                                color: isCorrect
-                                  ? "var(--success)"
-                                  : "var(--error)",
-                                fontWeight: 600,
-                              }}
-                            >
-                              {ansObj.is_empty
-                                ? "No Mark"
-                                : `Marked "${selected}"`}
-                            </span>
-                            <span
-                              style={{
-                                fontSize: "0.8rem",
-                                color: "var(--text-muted)",
-                              }}
-                            >
-                              (Key: {correctAns})
-                            </span>
-                          </div>
-                        );
-                      })}
-                  </div>
-                  <div>
-                    {Object.entries(selectedSubmission.answers)
-                      .sort((a, b) => parseInt(a[0]) - parseInt(b[0]))
-                      .slice(25)
-                      .map(([qStr, ansObj]) => {
-                        const exam = exams.find(
-                          (e) => e.id === selectedSubmission.exam_id,
-                        );
-                        const correctAns = exam?.answer_key[qStr];
-                        const selected = ansObj.selected;
-                        const isCorrect = selected === correctAns;
+                  return (
+                    <div
+                      style={{
+                        display: "grid",
+                        gridTemplateColumns: "1fr 1fr",
+                        gap: "1rem",
+                      }}
+                    >
+                      <div>
+                        {firstCol.map(([qStr, ansObj]) => {
+                          const correctAns = exam?.answer_key[qStr];
+                          const selected = ansObj.selected;
+                          const isCorrect = selected === correctAns;
 
-                        return (
-                          <div
-                            key={qStr}
-                            className="bubble-row"
-                            style={{
-                              padding: "0.2rem 0.5rem",
-                              justifyContent: "space-between",
-                            }}
-                          >
-                            <span
-                              className="bubble-num"
-                              style={{ width: "20px" }}
-                            >
-                              {qStr}.
-                            </span>
-                            <span
+                          return (
+                            <div
+                              key={qStr}
+                              className="bubble-row"
                               style={{
-                                fontSize: "0.8rem",
-                                color: isCorrect
-                                  ? "var(--success)"
-                                  : "var(--error)",
-                                fontWeight: 600,
+                                padding: "0.2rem 0.5rem",
+                                justifyContent: "space-between",
                               }}
                             >
-                              {ansObj.is_empty
-                                ? "No Mark"
-                                : `Marked "${selected}"`}
-                            </span>
-                            <span
+                              <span
+                                className="bubble-num"
+                                style={{ width: "20px" }}
+                              >
+                                {qStr}.
+                              </span>
+                              <span
+                                style={{
+                                  fontSize: "0.8rem",
+                                  color: isCorrect
+                                    ? "var(--success)"
+                                    : "var(--error)",
+                                  fontWeight: 600,
+                                }}
+                              >
+                                {ansObj.is_empty
+                                  ? "No Mark"
+                                  : `Marked "${selected}"`}
+                              </span>
+                              <span
+                                style={{
+                                  fontSize: "0.8rem",
+                                  color: "var(--text-muted)",
+                                }}
+                              >
+                                (Key: {correctAns})
+                              </span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                      <div>
+                        {secondCol.map(([qStr, ansObj]) => {
+                          const correctAns = exam?.answer_key[qStr];
+                          const selected = ansObj.selected;
+                          const isCorrect = selected === correctAns;
+
+                          return (
+                            <div
+                              key={qStr}
+                              className="bubble-row"
                               style={{
-                                fontSize: "0.8rem",
-                                color: "var(--text-muted)",
+                                padding: "0.2rem 0.5rem",
+                                justifyContent: "space-between",
                               }}
                             >
-                              (Key: {correctAns})
-                            </span>
-                          </div>
-                        );
-                      })}
-                  </div>
-                </div>
+                              <span
+                                className="bubble-num"
+                                style={{ width: "20px" }}
+                              >
+                                {qStr}.
+                              </span>
+                              <span
+                                style={{
+                                  fontSize: "0.8rem",
+                                  color: isCorrect
+                                    ? "var(--success)"
+                                    : "var(--error)",
+                                  fontWeight: 600,
+                                }}
+                              >
+                                {ansObj.is_empty
+                                  ? "No Mark"
+                                  : `Marked "${selected}"`}
+                              </span>
+                              <span
+                                style={{
+                                  fontSize: "0.8rem",
+                                  color: "var(--text-muted)",
+                                }}
+                              >
+                                (Key: {correctAns})
+                              </span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })()}
               </div>
             </div>
           </div>

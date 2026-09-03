@@ -127,3 +127,29 @@ export interface ItemAnalysisRow {
     empty: number;
   };
 }
+
+// Student Result Email Distribution Status & Record
+export type EmailDeliveryStatus = 'pending' | 'sent' | 'failed';
+
+export interface StudentResultEmailRecord {
+  id: string;
+  submissionId: string;
+  studentId: string;
+  studentName: string;
+  studentEmail: string;
+  examId: string;
+  examTitle: string;
+  examType: string;
+  courseCode?: string;
+  subject?: string;
+  section?: string;
+  score: number;
+  totalQuestions: number;
+  percentage: number;
+  grade: string;
+  status: 'Passed' | 'Failed' | 'Incomplete';
+  remarks: string;
+  deliveryStatus: EmailDeliveryStatus;
+  sentAt?: string;
+  errorMessage?: string;
+}
