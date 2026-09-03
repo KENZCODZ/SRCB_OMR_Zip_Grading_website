@@ -14,7 +14,6 @@ import {
   Eye,
   EyeOff,
   RefreshCw,
-  X,
 } from "lucide-react";
 import type { AuthUser, PendingUser } from "../../types";
 import { fetchAllUsers, adminCreateUser, deleteUser } from "../../api";
@@ -102,7 +101,7 @@ const DEFAULT_SYSTEM_USERS: PendingUser[] = [
     programme: "BSEd",
     department: "Teacher Education",
     student_id: "2023-00388",
-    status: "suspended",
+    status: "active",
     created_at: "2026-08-17T08:00:00Z",
   },
   {
@@ -151,9 +150,7 @@ export default function AdminUserManagement({
   const [submitting, setSubmitting] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [roleFilter, setRoleFilter] = useState<"all" | "teacher" | "student">("all");
-  const [statusFilter, setStatusFilter] = useState<"all" | "active" | "suspended">("all");
   const [targetRole, setTargetRole] = useState<"teacher" | "student">("teacher");
-  const [inspectingUser, setInspectingUser] = useState<PendingUser | null>(null);
 
   // Name Parts Form State
   const [honorific, setHonorific] = useState("Prof.");
@@ -324,20 +321,6 @@ export default function AdminUserManagement({
     }
   };
 
-  const handleToggleStatus = (userId: string, currentStatus?: string, userName?: string) => {
-    const nextStatus = currentStatus === "suspended" ? "active" : "suspended";
-    setUsers((prev) =>
-      prev.map((u) => (u.id === userId ? { ...u, status: nextStatus } : u))
-    );
-    addToast(
-      nextStatus === "active" ? "success" : "info",
-      `Access ${nextStatus === "active" ? "granted (Active)" : "revoked (Suspended)"} for "${userName || "User"}".`
-    );
-    if (inspectingUser && inspectingUser.id === userId) {
-      setInspectingUser({ ...inspectingUser, status: nextStatus });
-    }
-  };
-
   // Stats calculation
   const totalTeachers = users.filter((u) => u.role === "teacher").length;
   const totalStudents = users.filter((u) => u.role === "student").length;
@@ -349,11 +332,6 @@ export default function AdminUserManagement({
       if ((u.programme || "").toLowerCase() !== phProgram) return false;
     } else {
       if (roleFilter !== "all" && u.role !== roleFilter) return false;
-      if (statusFilter !== "all") {
-        const isSuspended = u.status === "suspended";
-        if (statusFilter === "active" && isSuspended) return false;
-        if (statusFilter === "suspended" && !isSuspended) return false;
-      }
     }
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
@@ -817,12 +795,9 @@ export default function AdminUserManagement({
                 <>
                   <button
                     type="button"
-                    className={`btn btn-sm ${roleFilter === "all" && statusFilter === "all" ? "btn-primary" : "btn-secondary"}`}
+                    className={`btn btn-sm ${roleFilter === "all" ? "btn-primary" : "btn-secondary"}`}
                     style={{ fontSize: "0.78rem", padding: "0.3rem 0.7rem", borderRadius: "20px" }}
-                    onClick={() => {
-                      setRoleFilter("all");
-                      setStatusFilter("all");
-                    }}
+                    onClick={() => setRoleFilter("all")}
                   >
                     All ({users.length})
                   </button>
@@ -842,26 +817,6 @@ export default function AdminUserManagement({
                   >
                     Students ({totalStudents})
                   </button>
-                  {isCurrentUserAdmin && (
-                    <>
-                      <button
-                        type="button"
-                        className={`btn btn-sm ${statusFilter === "active" ? "btn-primary" : "btn-secondary"}`}
-                        style={{ fontSize: "0.78rem", padding: "0.3rem 0.7rem", borderRadius: "20px" }}
-                        onClick={() => setStatusFilter("active")}
-                      >
-                        Active ({users.filter((u) => u.status === "active").length})
-                      </button>
-                      <button
-                        type="button"
-                        className={`btn btn-sm ${statusFilter === "suspended" ? "btn-primary" : "btn-secondary"}`}
-                        style={{ fontSize: "0.78rem", padding: "0.3rem 0.7rem", borderRadius: "20px" }}
-                        onClick={() => setStatusFilter("suspended")}
-                      >
-                        Suspended ({users.filter((u) => u.status === "suspended").length})
-                      </button>
-                    </>
-                  )}
                 </>
               )}
             </div>
@@ -994,60 +949,6 @@ export default function AdminUserManagement({
 
                           <td style={{ padding: "0.65rem 0.75rem", textAlign: "right" }}>
                             <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", gap: "0.4rem" }}>
-                              {/* Toggle Access Status - ADMIN ONLY */}
-                              {isCurrentUserAdmin && (
-                                <button
-                                  type="button"
-                                  onClick={() => handleToggleStatus(u.id, u.status, u.name)}
-                                  title={u.status === "suspended" ? "Grant Access (Activate)" : "Revoke Access (Suspend)"}
-                                  style={{
-                                    background: u.status === "suspended" ? "#ecfdf5" : "#fffbeb",
-                                    border: u.status === "suspended" ? "1px solid #a7f3d0" : "1px solid #fde68a",
-                                    color: u.status === "suspended" ? "#059669" : "#d97706",
-                                    padding: "0.25rem 0.55rem",
-                                    borderRadius: "6px",
-                                    cursor: "pointer",
-                                    fontSize: "0.72rem",
-                                    fontWeight: 700,
-                                    display: "inline-flex",
-                                    alignItems: "center",
-                                    gap: "3px",
-                                  }}
-                                >
-                                  {u.status === "suspended" ? (
-                                    <>
-                                      <CheckCircle2 size={11} /> Grant
-                                    </>
-                                  ) : (
-                                    <>
-                                      <Lock size={11} /> Suspend
-                                    </>
-                                  )}
-                                </button>
-                              )}
-
-                              {/* Inspect Access */}
-                              <button
-                                type="button"
-                                onClick={() => setInspectingUser(u)}
-                                title="Inspect user permissions and access scope"
-                                style={{
-                                  background: "#eff6ff",
-                                  border: "1px solid #bfdbfe",
-                                  color: "#0062ff",
-                                  padding: "0.25rem 0.55rem",
-                                  borderRadius: "6px",
-                                  cursor: "pointer",
-                                  fontSize: "0.72rem",
-                                  fontWeight: 700,
-                                  display: "inline-flex",
-                                  alignItems: "center",
-                                  gap: "3px",
-                                }}
-                              >
-                                <Eye size={11} /> Inspect
-                              </button>
-
                               {/* Delete User - ADMIN ONLY */}
                               {isCurrentUserAdmin && !isAdmin && (
                                 <button
@@ -1083,193 +984,6 @@ export default function AdminUserManagement({
         </div>
         )}
       </div>
-
-      {/* INSPECT USER ACCESS MODAL */}
-      {inspectingUser && (
-        <div
-          style={{
-            position: "fixed",
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            backgroundColor: "rgba(15, 23, 42, 0.6)",
-            backdropFilter: "blur(4px)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            zIndex: 1050,
-            padding: "1rem",
-          }}
-          onClick={() => setInspectingUser(null)}
-        >
-          <div
-            style={{
-              background: "#ffffff",
-              borderRadius: "16px",
-              padding: "1.75rem",
-              maxWidth: "520px",
-              width: "100%",
-              boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)",
-              border: "1px solid #e2e8f0",
-            }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            {/* Modal Header */}
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "1.25rem" }}>
-              <div>
-                <span
-                  style={{
-                    fontSize: "0.72rem",
-                    fontWeight: 700,
-                    textTransform: "uppercase",
-                    padding: "0.2rem 0.55rem",
-                    borderRadius: "6px",
-                    background: inspectingUser.status === "active" ? "#ecfdf5" : "#fffbeb",
-                    color: inspectingUser.status === "active" ? "#059669" : "#d97706",
-                    border: `1px solid ${inspectingUser.status === "active" ? "#a7f3d0" : "#fde68a"}`,
-                  }}
-                >
-                  Access: {inspectingUser.status === "active" ? "Active" : "Suspended"}
-                </span>
-                <h3 style={{ margin: "0.4rem 0 0 0", fontSize: "1.2rem", fontWeight: 800, color: "#0f172a" }}>
-                  {inspectingUser.name}
-                </h3>
-                <p style={{ margin: "0.15rem 0 0 0", fontSize: "0.82rem", color: "#64748b" }}>
-                  {inspectingUser.email}
-                </p>
-              </div>
-
-              <button
-                type="button"
-                onClick={() => setInspectingUser(null)}
-                style={{
-                  background: "#f1f5f9",
-                  border: "none",
-                  borderRadius: "50%",
-                  width: "32px",
-                  height: "32px",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  color: "#64748b",
-                  cursor: "pointer",
-                }}
-              >
-                <X size={16} />
-              </button>
-            </div>
-
-            {/* User Details Grid */}
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "1fr 1fr",
-                gap: "0.75rem",
-                padding: "1rem",
-                background: "#f8fafc",
-                borderRadius: "10px",
-                border: "1px solid #e2e8f0",
-                marginBottom: "1.25rem",
-                fontSize: "0.82rem",
-              }}
-            >
-              <div>
-                <span style={{ color: "#64748b", fontSize: "0.72rem" }}>Role</span>
-                <div style={{ fontWeight: 700, color: "#0f172a", textTransform: "capitalize" }}>
-                  {inspectingUser.role}
-                </div>
-              </div>
-
-              <div>
-                <span style={{ color: "#64748b", fontSize: "0.72rem" }}>Department</span>
-                <div style={{ fontWeight: 700, color: "#0f172a" }}>
-                  {inspectingUser.department || "Computing Studies"}
-                </div>
-              </div>
-
-              <div>
-                <span style={{ color: "#64748b", fontSize: "0.72rem" }}>Academic Program</span>
-                <div style={{ fontWeight: 700, color: "#0062ff" }}>
-                  {inspectingUser.programme || "BSIT"}
-                </div>
-              </div>
-
-              {inspectingUser.student_id && (
-                <div>
-                  <span style={{ color: "#64748b", fontSize: "0.72rem" }}>Student ID</span>
-                  <div style={{ fontWeight: 700, color: "#0062ff" }}>
-                    {inspectingUser.student_id}
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Assigned Access Privileges */}
-            <div style={{ marginBottom: "1.5rem" }}>
-              <div style={{ fontSize: "0.78rem", fontWeight: 700, color: "#0f172a", marginBottom: "0.5rem" }}>
-                Active System Privileges
-              </div>
-              <div style={{ display: "flex", flexDirection: "column", gap: "0.4rem" }}>
-                {[
-                  inspectingUser.role === "teacher"
-                    ? "Create and compile course examinations"
-                    : "Access personal examination results and feedback",
-                  inspectingUser.role === "teacher"
-                    ? "Automatic ZipGrade 50-item bubble sheet scanning"
-                    : "Inspect question-by-question answer key breakdown",
-                  inspectingUser.role === "teacher"
-                    ? "Publish grades to enrolled students"
-                    : "Protected encrypted student score transparency",
-                ].map((priv, idx) => (
-                  <div
-                    key={idx}
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "0.5rem",
-                      fontSize: "0.78rem",
-                      color: "#334155",
-                    }}
-                  >
-                    <CheckCircle2 size={14} style={{ color: "#059669", flexShrink: 0 }} />
-                    <span>{priv}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Modal Actions */}
-            <div style={{ display: "flex", justifyContent: "flex-end", gap: "0.75rem" }}>
-              <button
-                type="button"
-                className="btn btn-secondary btn-sm"
-                onClick={() => setInspectingUser(null)}
-                style={{ fontSize: "0.82rem" }}
-              >
-                Close
-              </button>
-
-              {isCurrentUserAdmin && (
-                <button
-                  type="button"
-                  className={`btn btn-sm ${inspectingUser.status === "suspended" ? "btn-primary" : "btn-secondary"}`}
-                  onClick={() => handleToggleStatus(inspectingUser.id, inspectingUser.status, inspectingUser.name)}
-                  style={{
-                    fontSize: "0.82rem",
-                    fontWeight: 700,
-                    background: inspectingUser.status === "suspended" ? "#059669" : "#fffbeb",
-                    color: inspectingUser.status === "suspended" ? "#ffffff" : "#d97706",
-                    border: inspectingUser.status === "suspended" ? "1px solid #059669" : "1px solid #fde68a",
-                  }}
-                >
-                  {inspectingUser.status === "suspended" ? "Grant Access (Activate)" : "Suspend Access"}
-                </button>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

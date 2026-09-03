@@ -692,7 +692,7 @@ export default function App() {
 
       const initialTab: AppTab =
         mappedUser.role === "admin"
-          ? "quick-scan"
+          ? "dashboard"
           : mappedUser.role === "programme-head"
             ? "academic-management"
             : "dashboard";
@@ -718,7 +718,7 @@ export default function App() {
       ) {
         const initialTab: AppTab =
           foundMock.role === "admin"
-            ? "quick-scan"
+            ? "dashboard"
             : foundMock.role === "programme-head"
               ? "academic-management"
               : "dashboard";
@@ -769,6 +769,7 @@ export default function App() {
 
     if (currentUser.role === "admin") {
       return [
+        { key: "dashboard" as AppTab, label: "Overview & Progress", icon: BarChart3 },
         { key: "quick-scan" as AppTab, label: "Quick Scanner", icon: Sparkles },
         {
           key: "user-management" as AppTab,
