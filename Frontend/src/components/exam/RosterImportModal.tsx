@@ -77,7 +77,7 @@ export const RosterImportModal: React.FC<RosterImportModalProps> = ({
       >
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem', borderBottom: '1px solid #f1f5f9', paddingBottom: '0.75rem' }}>
           <h3 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#0f172a', fontWeight: 800, fontSize: '1.15rem' }}>
-            <FileSpreadsheet color="#0062ff" size={22} />
+            <FileSpreadsheet color="var(--primary, #28166f)" size={22} />
             Import Class Roster (.xlsx / .csv)
           </h3>
           <button
@@ -115,7 +115,7 @@ export const RosterImportModal: React.FC<RosterImportModalProps> = ({
             padding: '2.5rem 1.5rem',
             marginBottom: '1.5rem',
             background: '#f8fafc',
-            border: '2px dashed #bfdbfe',
+            border: '2px dashed var(--primary-light-border, #ddd6fe)',
             borderRadius: '12px',
             textAlign: 'center',
             cursor: 'pointer',
@@ -129,7 +129,7 @@ export const RosterImportModal: React.FC<RosterImportModalProps> = ({
             }
           }}
         >
-          <UploadCloud size={44} color="#0062ff" style={{ marginBottom: '0.5rem' }} />
+          <UploadCloud size={44} color="var(--primary, #28166f)" style={{ marginBottom: '0.5rem' }} />
           <h4 style={{ margin: '0.5rem 0 0.25rem 0', color: '#0f172a', fontWeight: 800 }}>Click or drag a Class Roster file here</h4>
           <p style={{ fontSize: '0.82rem', color: '#64748b', margin: 0 }}>
             Supports Excel (.xlsx, .xls) or CSV files with headers: <strong>Student ID, Student Name, Course & Section</strong>
@@ -139,7 +139,7 @@ export const RosterImportModal: React.FC<RosterImportModalProps> = ({
         {loading && (
           <div className="spinner-container" style={{ padding: '1rem', textAlign: 'center' }}>
             <div className="spinner"></div>
-            <p style={{ fontSize: '0.85rem', color: '#0062ff', fontWeight: 700, marginTop: '0.5rem' }}>Parsing roster spreadsheet data...</p>
+            <p style={{ fontSize: '0.85rem', color: 'var(--primary, #28166f)', fontWeight: 700, marginTop: '0.5rem' }}>Parsing roster spreadsheet data...</p>
           </div>
         )}
 
@@ -199,7 +199,7 @@ export const RosterImportModal: React.FC<RosterImportModalProps> = ({
                 <tbody>
                   {previewRoster.slice(0, 10).map((r, idx) => (
                     <tr key={idx} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                      <td style={{ fontWeight: 700, color: '#0062ff', padding: '0.6rem 0.8rem' }}>{r.student_id}</td>
+                      <td style={{ fontWeight: 700, color: 'var(--primary, #28166f)', padding: '0.6rem 0.8rem' }}>{r.student_id}</td>
                       <td style={{ color: '#0f172a', padding: '0.6rem 0.8rem' }}>{r.name}</td>
                       <td style={{ color: '#64748b', padding: '0.6rem 0.8rem' }}>{r.course_section || 'N/A'}</td>
                     </tr>
@@ -230,7 +230,7 @@ export const RosterImportModal: React.FC<RosterImportModalProps> = ({
               <button
                 className="btn btn-primary"
                 style={{
-                  background: '#0062ff',
+                  background: 'var(--primary, #28166f)',
                   color: '#ffffff',
                   fontWeight: 700,
                   borderRadius: '8px',

@@ -603,9 +603,9 @@ export const TeacherExamCompiler: React.FC<TeacherExamCompilerProps> = ({
               width: "48px",
               height: "48px",
               borderRadius: "12px",
-              background: "#eff6ff",
-              color: "#0062ff",
-              border: "1px solid #bfdbfe",
+              background: "var(--primary-light-surface, #f5f3ff)",
+              color: "var(--primary, #28166f)",
+              border: "1px solid var(--primary-light-border, #ddd6fe)",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
@@ -626,9 +626,9 @@ export const TeacherExamCompiler: React.FC<TeacherExamCompilerProps> = ({
               <span
                 className="badge"
                 style={{
-                  background: "#eff6ff",
-                  color: "#0062ff",
-                  border: "1px solid #bfdbfe",
+                  background: "var(--primary-light-surface, #f5f3ff)",
+                  color: "var(--primary, #28166f)",
+                  border: "1px solid var(--primary-light-border, #ddd6fe)",
                   fontWeight: 700,
                   fontSize: "0.75rem",
                 }}
@@ -716,7 +716,7 @@ export const TeacherExamCompiler: React.FC<TeacherExamCompilerProps> = ({
               style={{
                 fontSize: "1.2rem",
                 fontWeight: 800,
-                color: "#0062ff",
+                color: "var(--primary, #28166f)",
               }}
             >
               {overallCompilerStats.totalSubmissionsCount}
@@ -777,7 +777,7 @@ export const TeacherExamCompiler: React.FC<TeacherExamCompilerProps> = ({
             border: "none",
             cursor: "pointer",
             transition: "all 0.15s ease",
-            background: activeSubTab === "results-reports" ? "#0062ff" : "transparent",
+            background: activeSubTab === "results-reports" ? "var(--primary, #28166f)" : "transparent",
             color: activeSubTab === "results-reports" ? "#ffffff" : "#475569",
           }}
         >
@@ -799,7 +799,7 @@ export const TeacherExamCompiler: React.FC<TeacherExamCompilerProps> = ({
             border: "none",
             cursor: "pointer",
             transition: "all 0.15s ease",
-            background: activeSubTab === "send-results" ? "#0062ff" : "transparent",
+            background: activeSubTab === "send-results" ? "var(--primary, #28166f)" : "transparent",
             color: activeSubTab === "send-results" ? "#ffffff" : "#475569",
           }}
         >
@@ -850,7 +850,7 @@ export const TeacherExamCompiler: React.FC<TeacherExamCompilerProps> = ({
               }}
             >
               <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                <Filter size={16} style={{ color: "#0062ff" }} />
+                <Filter size={16} style={{ color: "var(--primary, #28166f)" }} />
                 <span
                   style={{
                     fontSize: "0.9rem",
@@ -1131,7 +1131,7 @@ export const TeacherExamCompiler: React.FC<TeacherExamCompilerProps> = ({
                     style={{
                       background: "#ffffff",
                       borderRadius: "16px",
-                      border: isExpanded ? "2px solid #0062ff" : "1px solid #e2e8f0",
+                      border: isExpanded ? "2px solid var(--primary, #28166f)" : "1px solid #e2e8f0",
                       overflow: "hidden",
                       boxShadow: isExpanded
                         ? "0 4px 14px rgba(0, 98, 255, 0.08)"
@@ -1166,9 +1166,9 @@ export const TeacherExamCompiler: React.FC<TeacherExamCompilerProps> = ({
                             width: "44px",
                             height: "44px",
                             borderRadius: "10px",
-                            background: "#eff6ff",
-                            color: "#0062ff",
-                            border: "1px solid #bfdbfe",
+                            background: "var(--primary-light-surface, #f5f3ff)",
+                            color: "var(--primary, #28166f)",
+                            border: "1px solid var(--primary-light-border, #ddd6fe)",
                             display: "flex",
                             alignItems: "center",
                             justifyContent: "center",
@@ -1193,9 +1193,9 @@ export const TeacherExamCompiler: React.FC<TeacherExamCompilerProps> = ({
                             <span
                               className="badge"
                               style={{
-                                background: "#eff6ff",
-                                color: "#0062ff",
-                                border: "1px solid #bfdbfe",
+                                background: "var(--primary-light-surface, #f5f3ff)",
+                                color: "var(--primary, #28166f)",
+                                border: "1px solid var(--primary-light-border, #ddd6fe)",
                                 fontSize: "0.72rem",
                                 fontWeight: 700,
                               }}
@@ -1208,7 +1208,7 @@ export const TeacherExamCompiler: React.FC<TeacherExamCompilerProps> = ({
                                 style={{
                                   fontSize: "0.78rem",
                                   fontWeight: 800,
-                                  color: "#0062ff",
+                                  color: "var(--primary, #28166f)",
                                 }}
                               >
                                 [{exam.course_code}]
@@ -1271,7 +1271,7 @@ export const TeacherExamCompiler: React.FC<TeacherExamCompilerProps> = ({
                               • Instructor:{" "}
                               {exam.instructor_name || "Faculty Member"}
                             </span>
-                            <span style={{ fontWeight: 700, color: "#0062ff" }}>
+                            <span style={{ fontWeight: 700, color: "var(--primary, #28166f)" }}>
                               • {totalItems} Test Items
                             </span>
                             {exam.exam_date && (
@@ -1351,7 +1351,7 @@ export const TeacherExamCompiler: React.FC<TeacherExamCompilerProps> = ({
                               style={{
                                 fontSize: "0.95rem",
                                 fontWeight: 800,
-                                color: "#0062ff",
+                                color: "var(--primary, #28166f)",
                               }}
                             >
                               {meanScore}/{totalItems} ({avgPercentage}%)
@@ -1464,9 +1464,9 @@ export const TeacherExamCompiler: React.FC<TeacherExamCompilerProps> = ({
                               fontSize: "0.8rem",
                               borderRadius: "8px",
                               fontWeight: 700,
-                              background: publishedExamIds.has(exam.id) ? "#0062ff" : "#ffffff",
-                              color: publishedExamIds.has(exam.id) ? "#ffffff" : "#0062ff",
-                              border: publishedExamIds.has(exam.id) ? "1px solid #0062ff" : "1px solid #bfdbfe",
+                              background: publishedExamIds.has(exam.id) ? "var(--primary, #28166f)" : "#ffffff",
+                              color: publishedExamIds.has(exam.id) ? "#ffffff" : "var(--primary, #28166f)",
+                              border: publishedExamIds.has(exam.id) ? "1px solid var(--primary, #28166f)" : "1px solid var(--primary-light-border, #ddd6fe)",
                             }}
                           >
                             <CheckCircle2 size={13} style={{ marginRight: "4px" }} />
@@ -1503,9 +1503,9 @@ export const TeacherExamCompiler: React.FC<TeacherExamCompilerProps> = ({
                             onClick={() => handleJumpToSendResults(exam.id)}
                             style={{
                               fontSize: "0.8rem",
-                              background: "#eff6ff",
-                              border: "1px solid #bfdbfe",
-                              color: "#0062ff",
+                              background: "var(--primary-light-surface, #f5f3ff)",
+                              border: "1px solid var(--primary-light-border, #ddd6fe)",
+                              color: "var(--primary, #28166f)",
                               borderRadius: "8px",
                               fontWeight: 700,
                             }}
@@ -1570,7 +1570,7 @@ export const TeacherExamCompiler: React.FC<TeacherExamCompilerProps> = ({
                               gap: "0.5rem",
                             }}
                           >
-                            <UserCheck size={16} style={{ color: "#0062ff" }} /> Compiled Student Examination
+                            <UserCheck size={16} style={{ color: "var(--primary, #28166f)" }} /> Compiled Student Examination
                             Roster ({groupSubs.length} Scanned • {totalItems} Test Items)
                           </h4>
 
@@ -1702,7 +1702,7 @@ export const TeacherExamCompiler: React.FC<TeacherExamCompilerProps> = ({
                                           ) : (
                                             <GraduationCap
                                               size={16}
-                                              style={{ color: "#0062ff" }}
+                                              style={{ color: "var(--primary, #28166f)" }}
                                             />
                                           )}
                                           <div>
@@ -1853,9 +1853,9 @@ export const TeacherExamCompiler: React.FC<TeacherExamCompilerProps> = ({
                                               alignItems: "center",
                                               gap: "4px",
                                               fontSize: "0.78rem",
-                                              background: emailLog?.status === "sent" ? "#ecfdf5" : "#eff6ff",
-                                              border: emailLog?.status === "sent" ? "1px solid #a7f3d0" : "1px solid #bfdbfe",
-                                              color: emailLog?.status === "sent" ? "#059669" : "#0062ff",
+                                              background: emailLog?.status === "sent" ? "#ecfdf5" : "var(--primary-light-surface, #f5f3ff)",
+                                              border: emailLog?.status === "sent" ? "1px solid #a7f3d0" : "1px solid var(--primary-light-border, #ddd6fe)",
+                                              color: emailLog?.status === "sent" ? "#059669" : "var(--primary, #28166f)",
                                               borderRadius: "6px",
                                               fontWeight: 700,
                                             }}
@@ -1917,7 +1917,7 @@ export const TeacherExamCompiler: React.FC<TeacherExamCompilerProps> = ({
                     marginBottom: "0.3rem",
                   }}
                 >
-                  <Send size={18} style={{ color: "#0062ff" }} />
+                  <Send size={18} style={{ color: "var(--primary, #28166f)" }} />
                   <h3
                     style={{
                       fontSize: "1.2rem",
@@ -1990,7 +1990,7 @@ export const TeacherExamCompiler: React.FC<TeacherExamCompilerProps> = ({
               <div
                 style={{
                   background: "#f8fbff",
-                  border: "1px solid #dbeafe",
+                  border: "1px solid var(--primary-light-border, #ddd6fe)",
                   borderRadius: "12px",
                   padding: "1rem 1.25rem",
                   display: "flex",
@@ -2005,7 +2005,7 @@ export const TeacherExamCompiler: React.FC<TeacherExamCompilerProps> = ({
                     <span
                       className="badge"
                       style={{
-                        background: "#0062ff",
+                        background: "var(--primary, #28166f)",
                         color: "#ffffff",
                         fontWeight: 700,
                         fontSize: "0.75rem",
@@ -2021,7 +2021,7 @@ export const TeacherExamCompiler: React.FC<TeacherExamCompilerProps> = ({
                   <div style={{ fontSize: "0.82rem", color: "#64748b" }}>
                     • Section: <strong>{currentSendExam.section || "All Sections"}</strong>
                   </div>
-                  <div style={{ fontSize: "0.82rem", color: "#0062ff", fontWeight: 700 }}>
+                  <div style={{ fontSize: "0.82rem", color: "var(--primary, #28166f)", fontWeight: 700 }}>
                     • {currentSendTotalItems} Test Items (Variable Length)
                   </div>
                   {currentSendExam.exam_date && (
@@ -2073,7 +2073,7 @@ export const TeacherExamCompiler: React.FC<TeacherExamCompilerProps> = ({
               }}
             >
               <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                <Mail size={16} style={{ color: "#0062ff" }} />
+                <Mail size={16} style={{ color: "var(--primary, #28166f)" }} />
                 <span style={{ fontSize: "0.92rem", fontWeight: 800, color: "#0f172a" }}>
                   Select Distribution Method:
                 </span>
@@ -2100,7 +2100,7 @@ export const TeacherExamCompiler: React.FC<TeacherExamCompilerProps> = ({
                     border: "none",
                     cursor: "pointer",
                     background: sendMode === "multiple" ? "#ffffff" : "transparent",
-                    color: sendMode === "multiple" ? "#0062ff" : "#64748b",
+                    color: sendMode === "multiple" ? "var(--primary, #28166f)" : "#64748b",
                     boxShadow: sendMode === "multiple" ? "0 1px 3px rgba(0,0,0,0.08)" : "none",
                   }}
                 >
@@ -2118,7 +2118,7 @@ export const TeacherExamCompiler: React.FC<TeacherExamCompilerProps> = ({
                     border: "none",
                     cursor: "pointer",
                     background: sendMode === "individual" ? "#ffffff" : "transparent",
-                    color: sendMode === "individual" ? "#0062ff" : "#64748b",
+                    color: sendMode === "individual" ? "var(--primary, #28166f)" : "#64748b",
                     boxShadow: sendMode === "individual" ? "0 1px 3px rgba(0,0,0,0.08)" : "none",
                   }}
                 >
@@ -2136,7 +2136,7 @@ export const TeacherExamCompiler: React.FC<TeacherExamCompilerProps> = ({
                     border: "none",
                     cursor: "pointer",
                     background: sendMode === "compiled" ? "#ffffff" : "transparent",
-                    color: sendMode === "compiled" ? "#0062ff" : "#64748b",
+                    color: sendMode === "compiled" ? "var(--primary, #28166f)" : "#64748b",
                     boxShadow: sendMode === "compiled" ? "0 1px 3px rgba(0,0,0,0.08)" : "none",
                   }}
                 >
@@ -2279,7 +2279,7 @@ export const TeacherExamCompiler: React.FC<TeacherExamCompilerProps> = ({
                               style={{
                                 borderBottom: "1px solid #f1f5f9",
                                 backgroundColor: isSelected
-                                  ? "#eff6ff"
+                                  ? "var(--primary-light-surface, #f5f3ff)"
                                   : idx % 2 === 0
                                     ? "#ffffff"
                                     : "#f8fafc",
@@ -2300,7 +2300,7 @@ export const TeacherExamCompiler: React.FC<TeacherExamCompilerProps> = ({
 
                               <td style={{ padding: "0.65rem 1rem" }}>
                                 <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                                  <Mail size={13} style={{ color: "#0062ff" }} />
+                                  <Mail size={13} style={{ color: "var(--primary, #28166f)" }} />
                                   <span style={{ fontWeight: 600, color: "#1e293b" }}>{email}</span>
                                 </div>
                               </td>
@@ -2405,9 +2405,9 @@ export const TeacherExamCompiler: React.FC<TeacherExamCompilerProps> = ({
                                       fontSize: "0.75rem",
                                       padding: "0.25rem 0.55rem",
                                       borderRadius: "6px",
-                                      background: log?.status === "sent" ? "#ecfdf5" : "#eff6ff",
-                                      border: log?.status === "sent" ? "1px solid #a7f3d0" : "1px solid #bfdbfe",
-                                      color: log?.status === "sent" ? "#059669" : "#0062ff",
+                                      background: log?.status === "sent" ? "#ecfdf5" : "var(--primary-light-surface, #f5f3ff)",
+                                      border: log?.status === "sent" ? "1px solid #a7f3d0" : "1px solid var(--primary-light-border, #ddd6fe)",
+                                      color: log?.status === "sent" ? "#059669" : "var(--primary, #28166f)",
                                       fontWeight: 700,
                                     }}
                                   >
@@ -2491,7 +2491,7 @@ export const TeacherExamCompiler: React.FC<TeacherExamCompilerProps> = ({
                     <div
                       style={{
                         background: "#f8fbff",
-                        border: "1px solid #bfdbfe",
+                        border: "1px solid var(--primary-light-border, #ddd6fe)",
                         borderRadius: "12px",
                         padding: "1.5rem",
                         display: "flex",
@@ -2507,7 +2507,7 @@ export const TeacherExamCompiler: React.FC<TeacherExamCompilerProps> = ({
                           justifyContent: "space-between",
                           flexWrap: "wrap",
                           gap: "0.75rem",
-                          borderBottom: "1px solid #dbeafe",
+                          borderBottom: "1px solid var(--primary-light-border, #ddd6fe)",
                           paddingBottom: "1rem",
                         }}
                       >
@@ -2533,7 +2533,7 @@ export const TeacherExamCompiler: React.FC<TeacherExamCompilerProps> = ({
                               <AlertTriangle size={13} style={{ marginRight: "4px" }} /> Delivery Failed
                             </span>
                           ) : (
-                            <span className="badge" style={{ background: "#eff6ff", color: "#0062ff", border: "1px solid #bfdbfe", fontWeight: 700 }}>
+                            <span className="badge" style={{ background: "var(--primary-light-surface, #f5f3ff)", color: "var(--primary, #28166f)", border: "1px solid var(--primary-light-border, #ddd6fe)", fontWeight: 700 }}>
                               Ready to Send
                             </span>
                           )}
@@ -2556,7 +2556,7 @@ export const TeacherExamCompiler: React.FC<TeacherExamCompilerProps> = ({
 
                         <div>
                           <div style={{ fontSize: "0.72rem", color: "#64748b", textTransform: "uppercase", fontWeight: 700 }}>Registered Gmail / Email</div>
-                          <div style={{ fontSize: "0.95rem", fontWeight: 700, color: "#0062ff", display: "flex", alignItems: "center", gap: "4px" }}>
+                          <div style={{ fontSize: "0.95rem", fontWeight: 700, color: "var(--primary, #28166f)", display: "flex", alignItems: "center", gap: "4px" }}>
                             <Mail size={14} /> {studentEmail}
                           </div>
                           <div style={{ fontSize: "0.75rem", color: "#059669" }}>✓ Auto-Resolved from System Roster</div>
@@ -2581,7 +2581,7 @@ export const TeacherExamCompiler: React.FC<TeacherExamCompilerProps> = ({
                           alignItems: "center",
                           justifyContent: "flex-end",
                           gap: "0.75rem",
-                          borderTop: "1px solid #dbeafe",
+                          borderTop: "1px solid var(--primary-light-border, #ddd6fe)",
                           paddingTop: "1rem",
                         }}
                       >
@@ -2655,7 +2655,7 @@ export const TeacherExamCompiler: React.FC<TeacherExamCompilerProps> = ({
                   </div>
                   <div>
                     <div style={{ fontSize: "0.72rem", color: "#64748b", textTransform: "uppercase", fontWeight: 700 }}>Test Length</div>
-                    <div style={{ fontWeight: 800, color: "#0062ff", fontSize: "0.95rem" }}>{currentSendTotalItems} Test Items</div>
+                    <div style={{ fontWeight: 800, color: "var(--primary, #28166f)", fontSize: "0.95rem" }}>{currentSendTotalItems} Test Items</div>
                   </div>
                   <div>
                     <div style={{ fontSize: "0.72rem", color: "#64748b", textTransform: "uppercase", fontWeight: 700 }}>Compiled Candidates</div>
@@ -2745,7 +2745,7 @@ export const TeacherExamCompiler: React.FC<TeacherExamCompilerProps> = ({
               }}
             >
               <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                <Mail size={20} style={{ color: "#0062ff" }} />
+                <Mail size={20} style={{ color: "var(--primary, #28166f)" }} />
                 <h3 style={{ fontSize: "1.1rem", fontWeight: 800, margin: 0, color: "#0f172a" }}>
                   Student Email Notification Preview
                 </h3>
@@ -2779,7 +2779,7 @@ export const TeacherExamCompiler: React.FC<TeacherExamCompilerProps> = ({
               </div>
               <div>
                 <strong style={{ color: "#64748b" }}>To: </strong>
-                <span style={{ fontWeight: 700, color: "#0062ff" }}>
+                <span style={{ fontWeight: 700, color: "var(--primary, #28166f)" }}>
                   {previewModalRecord.studentName} &lt;{previewModalRecord.studentEmail}&gt;
                 </span>
               </div>
@@ -2794,7 +2794,7 @@ export const TeacherExamCompiler: React.FC<TeacherExamCompilerProps> = ({
             {/* Email Body Preview Card */}
             <div
               style={{
-                border: "1px solid #dbeafe",
+                border: "1px solid var(--primary-light-border, #ddd6fe)",
                 background: "#ffffff",
                 borderRadius: "12px",
                 padding: "1.25rem",
@@ -2804,7 +2804,7 @@ export const TeacherExamCompiler: React.FC<TeacherExamCompilerProps> = ({
               }}
             >
               <div style={{ textAlign: "center", borderBottom: "1px solid #f1f5f9", paddingBottom: "0.75rem" }}>
-                <h4 style={{ margin: 0, fontSize: "1rem", color: "#0062ff", fontWeight: 800 }}>
+                <h4 style={{ margin: 0, fontSize: "1rem", color: "var(--primary, #28166f)", fontWeight: 800 }}>
                   ST. RITA'S COLLEGE OF BALINGASAG
                 </h4>
                 <div style={{ fontSize: "0.75rem", color: "#64748b" }}>Higher Education Department • Official Grade Release</div>

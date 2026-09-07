@@ -1293,7 +1293,7 @@ export default function App() {
                         style={{
                           transform: expandedMenus[item.key] ? "rotate(180deg)" : "rotate(0deg)",
                           transition: "transform 0.2s ease",
-                          color: isActive ? "#0062ff" : "rgba(255, 255, 255, 0.75)",
+                          color: isActive ? "var(--primary, #28166f)" : "rgba(255, 255, 255, 0.75)",
                           flexShrink: 0,
                           marginLeft: "0.35rem",
                         }}
@@ -1392,13 +1392,13 @@ export default function App() {
                 <ChevronRight size={14} style={{ color: "#94a3b8", flexShrink: 0 }} />
                 <span
                   style={{
-                    color: "#0062ff",
+                    color: "var(--primary, #28166f)",
                     fontWeight: 700,
                     textTransform: "capitalize",
-                    background: "#eff6ff",
+                    background: "var(--primary-light-surface, #f5f3ff)",
                     padding: "0.15rem 0.55rem",
                     borderRadius: "6px",
-                    border: "1px solid #bfdbfe",
+                    border: "1px solid var(--primary-light-border, #ddd6fe)",
                     fontSize: "0.82rem",
                   }}
                 >
@@ -1436,7 +1436,7 @@ export default function App() {
                         width: "8px",
                         height: "8px",
                         borderRadius: "50%",
-                        background: "#0062ff",
+                        background: "var(--primary, #28166f)",
                         border: "2px solid #ffffff",
                         boxShadow: "0 0 6px rgba(0, 98, 255, 0.6)",
                       }}
@@ -2053,7 +2053,7 @@ export default function App() {
                           : "transparent",
                       color:
                         teacherExamsSubTab === "grading"
-                          ? "#0062ff"
+                          ? "var(--primary, #28166f)"
                           : "#64748b",
                       boxShadow:
                         teacherExamsSubTab === "grading"
@@ -2083,7 +2083,7 @@ export default function App() {
                           : "transparent",
                       color:
                         teacherExamsSubTab === "quick-scan"
-                          ? "#0062ff"
+                          ? "var(--primary, #28166f)"
                           : "#64748b",
                       boxShadow:
                         teacherExamsSubTab === "quick-scan"
@@ -2148,9 +2148,9 @@ export default function App() {
                         width: "42px",
                         height: "42px",
                         borderRadius: "10px",
-                        background: "#eff6ff",
-                        color: "#0062ff",
-                        border: "1px solid #bfdbfe",
+                        background: "var(--primary-light-surface, #f5f3ff)",
+                        color: "var(--primary, #28166f)",
+                        border: "1px solid var(--primary-light-border, #ddd6fe)",
                         display: "flex",
                         alignItems: "center",
                         justifyContent: "center",
@@ -2195,7 +2195,7 @@ export default function App() {
                         transition: "all 0.2s ease",
                         background:
                           quickScanMode === "upload"
-                            ? "#0062ff"
+                            ? "var(--primary, #28166f)"
                             : "transparent",
                         color:
                           quickScanMode === "upload"
@@ -2225,7 +2225,7 @@ export default function App() {
                         transition: "all 0.2s ease",
                         background:
                           quickScanMode === "camera"
-                            ? "#0062ff"
+                            ? "var(--primary, #28166f)"
                             : "transparent",
                         color:
                           quickScanMode === "camera"
@@ -2293,7 +2293,7 @@ export default function App() {
                     >
                       <UploadCloud
                         size={48}
-                        style={{ color: "#0062ff", marginBottom: "0.5rem" }}
+                        style={{ color: "var(--primary, #28166f)", marginBottom: "0.5rem" }}
                       />
                       <h3 style={{ fontSize: "1.05rem", fontWeight: 800, color: "#0f172a", margin: "0 0 0.25rem 0" }}>
                         Drag & drop a ZipGrade sheet image here
@@ -2323,7 +2323,7 @@ export default function App() {
                     }}
                   >
                     <div className="spinner"></div>
-                    <p style={{ fontWeight: 700, color: "#0062ff", marginTop: "1rem" }}>
+                    <p style={{ fontWeight: 700, color: "var(--primary, #28166f)", marginTop: "1rem" }}>
                       OMR engine calibrating markers and extracting marks...
                     </p>
                   </div>
@@ -2581,9 +2581,9 @@ export default function App() {
                       <span
                         className="badge"
                         style={{
-                          background: "#eff6ff",
-                          color: "#0062ff",
-                          border: "1px solid #bfdbfe",
+                          background: "var(--primary-light-surface, #f5f3ff)",
+                          color: "var(--primary, #28166f)",
+                          border: "1px solid var(--primary-light-border, #ddd6fe)",
                           fontSize: "0.75rem",
                           fontWeight: 700,
                         }}
@@ -2880,7 +2880,7 @@ export default function App() {
                               transition: "all 0.2s ease",
                               background:
                                 studentScanMode === "upload"
-                                  ? "#0062ff"
+                                  ? "var(--primary, #28166f)"
                                   : "transparent",
                               color:
                                 studentScanMode === "upload"
@@ -2910,7 +2910,7 @@ export default function App() {
                               transition: "all 0.2s ease",
                               background:
                                 studentScanMode === "camera"
-                                  ? "#0062ff"
+                                  ? "var(--primary, #28166f)"
                                   : "transparent",
                               color:
                                 studentScanMode === "camera"
@@ -2969,7 +2969,7 @@ export default function App() {
                                 <div
                                   style={{
                                     height: "100%",
-                                    background: "#0062ff",
+                                    background: "var(--primary, #28166f)",
                                     width: `${(gradingProgress.current / gradingProgress.total) * 100}%`,
                                     transition: "width 0.2s",
                                   }}
@@ -3036,7 +3036,7 @@ export default function App() {
                                           style={{
                                             padding: "0.3rem",
                                             fontWeight: 800,
-                                            color: "#0062ff",
+                                            color: "var(--primary, #28166f)",
                                           }}
                                         >
                                           {ans}
@@ -3100,7 +3100,7 @@ export default function App() {
                             >
                               <FileUp
                                 size={36}
-                                style={{ color: "#0062ff", marginBottom: "0.5rem" }}
+                                style={{ color: "var(--primary, #28166f)", marginBottom: "0.5rem" }}
                               />
                               <h4 style={{ fontSize: "0.9rem", fontWeight: 700, color: "#0f172a", margin: "0 0 0.2rem 0" }}>
                                 Upload Student OMR Sheets
@@ -3146,7 +3146,7 @@ export default function App() {
                                   <div
                                     style={{
                                       height: "100%",
-                                      background: "#0062ff",
+                                      background: "var(--primary, #28166f)",
                                       width: `${(gradingProgress.current / gradingProgress.total) * 100}%`,
                                       transition: "width 0.2s",
                                     }}
@@ -3202,7 +3202,7 @@ export default function App() {
                                           style={{
                                             padding: "0.3rem 0.5rem",
                                             fontWeight: 800,
-                                            color: "#0062ff",
+                                            color: "var(--primary, #28166f)",
                                           }}
                                         >
                                           {ans}
@@ -3254,7 +3254,7 @@ export default function App() {
                               <span>Student ID:</span>
                               <strong
                                 style={{
-                                  color: "#0062ff",
+                                  color: "var(--primary, #28166f)",
                                   fontWeight: 800,
                                 }}
                               >
@@ -3523,9 +3523,9 @@ export default function App() {
                     width: "42px",
                     height: "42px",
                     borderRadius: "10px",
-                    background: "#eff6ff",
-                    color: "#0062ff",
-                    border: "1px solid #bfdbfe",
+                    background: "var(--primary-light-surface, #f5f3ff)",
+                    color: "var(--primary, #28166f)",
+                    border: "1px solid var(--primary-light-border, #ddd6fe)",
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
@@ -3583,9 +3583,9 @@ export default function App() {
                   {activeExam.course_code && (
                     <span
                       style={{
-                        background: "#eff6ff",
-                        color: "#0062ff",
-                        border: "1px solid #bfdbfe",
+                        background: "var(--primary-light-surface, #f5f3ff)",
+                        color: "var(--primary, #28166f)",
+                        border: "1px solid var(--primary-light-border, #ddd6fe)",
                         padding: "0.3rem 0.6rem",
                         borderRadius: "6px",
                         fontSize: "0.75rem",
@@ -3626,8 +3626,8 @@ export default function App() {
                   <span
                     style={{
                       background: "#f8fafc",
-                      color: "#0062ff",
-                      border: "1px solid #bfdbfe",
+                      color: "var(--primary, #28166f)",
+                      border: "1px solid var(--primary-light-border, #ddd6fe)",
                       padding: "0.3rem 0.6rem",
                       borderRadius: "6px",
                       fontSize: "0.75rem",

@@ -50,9 +50,9 @@ export const ExamCard: React.FC<ExamCardProps> = ({
       case "preliminary":
       case "prelim":
         return {
-          background: "#eff6ff",
+          background: "var(--primary-light-surface, #f5f3ff)",
           color: "#2563eb",
-          border: "1px solid #bfdbfe",
+          border: "1px solid var(--primary-light-border, #ddd6fe)",
         };
       case "midterm":
         return {
@@ -90,12 +90,12 @@ export const ExamCard: React.FC<ExamCardProps> = ({
         cursor: "pointer",
         position: "relative",
         transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
-        border: isSelected ? "2px solid #0062ff" : "1px solid #e2e8f0",
+        border: isSelected ? "2px solid var(--primary, #28166f)" : "1px solid #e2e8f0",
         background: isSelected
           ? "linear-gradient(135deg, #f0f7ff 0%, #e0effe 100%)"
           : "#ffffff",
         boxShadow: isSelected
-          ? "0 4px 16px rgba(0, 98, 255, 0.16), 0 0 0 1px #0062ff"
+          ? "0 4px 16px rgba(0, 98, 255, 0.16), 0 0 0 1px var(--primary, #28166f)"
           : "0 2px 6px rgba(0, 0, 0, 0.02)",
         borderRadius: "14px",
         padding: "1rem",
@@ -110,7 +110,7 @@ export const ExamCard: React.FC<ExamCardProps> = ({
             left: 0,
             bottom: 0,
             width: "4px",
-            background: "#0062ff",
+            background: "var(--primary, #28166f)",
             borderTopLeftRadius: "14px",
             borderBottomLeftRadius: "14px",
           }}
@@ -124,9 +124,9 @@ export const ExamCard: React.FC<ExamCardProps> = ({
           <div
             className="icon-avatar"
             style={{
-              background: isSelected ? "#0062ff" : "#eff6ff",
-              color: isSelected ? "#ffffff" : "#0062ff",
-              border: isSelected ? "1px solid #0062ff" : "1px solid #bfdbfe",
+              background: isSelected ? "var(--primary, #28166f)" : "var(--primary-light-surface, #f5f3ff)",
+              color: isSelected ? "#ffffff" : "var(--primary, #28166f)",
+              border: isSelected ? "1px solid var(--primary, #28166f)" : "1px solid var(--primary-light-border, #ddd6fe)",
               minWidth: "36px",
               height: "36px",
               borderRadius: "8px",
@@ -168,7 +168,7 @@ export const ExamCard: React.FC<ExamCardProps> = ({
                   style={{
                     fontSize: "0.7rem",
                     fontWeight: 700,
-                    background: "#0062ff",
+                    background: "var(--primary, #28166f)",
                     color: "#ffffff",
                     padding: "0.15rem 0.5rem",
                     borderRadius: "4px",
@@ -184,7 +184,7 @@ export const ExamCard: React.FC<ExamCardProps> = ({
                   style={{
                     fontSize: "0.75rem",
                     fontWeight: 700,
-                    color: "#0062ff",
+                    color: "var(--primary, #28166f)",
                   }}
                 >
                   [{course_code}]
@@ -205,7 +205,7 @@ export const ExamCard: React.FC<ExamCardProps> = ({
                 margin: "0 0 4px 0",
                 fontSize: "1.02rem",
                 fontWeight: 700,
-                color: isSelected ? "#0052d9" : "#0f172a",
+                color: isSelected ? "var(--primary-hover, #371f98)" : "#0f172a",
                 transition: "color 0.2s ease",
               }}
             >
@@ -237,7 +237,7 @@ export const ExamCard: React.FC<ExamCardProps> = ({
               <span
                 style={{ display: "flex", alignItems: "center", gap: "4px" }}
               >
-                <Layers size={13} color="#0062ff" />
+                <Layers size={13} color="var(--primary, #28166f)" />
                 <strong style={{ color: "#0f172a" }}>{questionCount}</strong> items
               </span>
 
@@ -327,7 +327,7 @@ export const ExamCard: React.FC<ExamCardProps> = ({
           <ChevronRight
             size={18}
             style={{
-              color: isSelected ? "#0062ff" : "#94a3b8",
+              color: isSelected ? "var(--primary, #28166f)" : "#94a3b8",
               transform: isSelected ? "translateX(2px)" : "none",
               transition: "all 0.2s ease",
             }}

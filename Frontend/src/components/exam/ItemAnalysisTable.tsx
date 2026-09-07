@@ -77,8 +77,8 @@ export const ItemAnalysisTable: React.FC<ItemAnalysisTableProps> = ({
               width: '40px',
               height: '40px',
               borderRadius: '10px',
-              background: '#eff6ff',
-              color: '#0062ff',
+              background: 'var(--primary-light-surface, #f5f3ff)',
+              color: 'var(--primary, #28166f)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -200,7 +200,7 @@ export const ItemAnalysisTable: React.FC<ItemAnalysisTableProps> = ({
                 gap: '0.5rem',
               }}
             >
-              <FileSpreadsheet size={18} style={{ color: '#0062ff' }} />
+              <FileSpreadsheet size={18} style={{ color: 'var(--primary, #28166f)' }} />
               Item Psychometric Diagnostics
             </h3>
             <p style={{ margin: '0.2rem 0 0 0', fontSize: '0.82rem', color: '#64748b' }}>
@@ -267,7 +267,7 @@ export const ItemAnalysisTable: React.FC<ItemAnalysisTableProps> = ({
                 const isModerate = row.difficulty_category === 'Moderate';
 
                 const pBadgeStyle = isEasy
-                  ? { background: '#eff6ff', color: '#2563eb', border: '1px solid #bfdbfe' }
+                  ? { background: 'var(--primary-light-surface, #f5f3ff)', color: '#2563eb', border: '1px solid var(--primary-light-border, #ddd6fe)' }
                   : isModerate
                     ? { background: '#ecfdf5', color: '#059669', border: '1px solid #a7f3d0' }
                     : { background: '#fff7ed', color: '#c2410c', border: '1px solid #fed7aa' };
@@ -294,7 +294,7 @@ export const ItemAnalysisTable: React.FC<ItemAnalysisTableProps> = ({
                     <td style={{ padding: '0.65rem 1rem', fontWeight: 800, color: '#0f172a' }}>
                       Q{row.question_number}
                     </td>
-                    <td style={{ padding: '0.65rem 1rem', fontWeight: 800, color: '#0062ff' }}>
+                    <td style={{ padding: '0.65rem 1rem', fontWeight: 800, color: 'var(--primary, #28166f)' }}>
                       {row.correct_answer}
                     </td>
                     <td style={{ padding: '0.65rem 1rem', color: '#334155' }}>

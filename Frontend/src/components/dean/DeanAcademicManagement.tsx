@@ -291,7 +291,7 @@ export default function DeanAcademicManagement({
               {totalStudents.toLocaleString()}
             </div>
           </div>
-          <div style={{ width: "36px", height: "36px", borderRadius: "8px", background: "#eff6ff", display: "flex", alignItems: "center", justifyContent: "center", color: "#0062ff", flexShrink: 0 }}>
+          <div style={{ width: "36px", height: "36px", borderRadius: "8px", background: "var(--primary-light-surface, #f5f3ff)", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--primary, #28166f)", flexShrink: 0 }}>
             <GraduationCap size={18} />
           </div>
         </div>
@@ -315,7 +315,7 @@ export default function DeanAcademicManagement({
               {totalFaculty}
             </div>
           </div>
-          <div style={{ width: "36px", height: "36px", borderRadius: "8px", background: "#eff6ff", display: "flex", alignItems: "center", justifyContent: "center", color: "#0062ff", flexShrink: 0 }}>
+          <div style={{ width: "36px", height: "36px", borderRadius: "8px", background: "var(--primary-light-surface, #f5f3ff)", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--primary, #28166f)", flexShrink: 0 }}>
             <Users size={18} />
           </div>
         </div>
@@ -339,7 +339,7 @@ export default function DeanAcademicManagement({
               {totalExamsCount}
             </div>
           </div>
-          <div style={{ width: "36px", height: "36px", borderRadius: "8px", background: "#eff6ff", display: "flex", alignItems: "center", justifyContent: "center", color: "#0062ff", flexShrink: 0 }}>
+          <div style={{ width: "36px", height: "36px", borderRadius: "8px", background: "var(--primary-light-surface, #f5f3ff)", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--primary, #28166f)", flexShrink: 0 }}>
             <BookOpen size={18} />
           </div>
         </div>
@@ -363,7 +363,7 @@ export default function DeanAcademicManagement({
               {avgScore}
             </div>
           </div>
-          <div style={{ width: "36px", height: "36px", borderRadius: "8px", background: "#eff6ff", display: "flex", alignItems: "center", justifyContent: "center", color: "#0062ff", flexShrink: 0 }}>
+          <div style={{ width: "36px", height: "36px", borderRadius: "8px", background: "var(--primary-light-surface, #f5f3ff)", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--primary, #28166f)", flexShrink: 0 }}>
             <TrendingUp size={18} />
           </div>
         </div>
@@ -390,7 +390,7 @@ export default function DeanAcademicManagement({
               padding: "0.55rem 1rem",
               borderRadius: "10px",
               fontWeight: 600,
-              background: activeSubTab === "departments" ? "#0062ff" : "#ffffff",
+              background: activeSubTab === "departments" ? "var(--primary, #28166f)" : "#ffffff",
               color: activeSubTab === "departments" ? "#ffffff" : "#475569",
               border: activeSubTab === "departments" ? "none" : "1px solid #e2e8f0",
               boxShadow: activeSubTab === "departments" ? "0 2px 6px rgba(0, 98, 255, 0.2)" : "none",
@@ -408,7 +408,7 @@ export default function DeanAcademicManagement({
               padding: "0.55rem 1rem",
               borderRadius: "10px",
               fontWeight: 600,
-              background: activeSubTab === "faculty" ? "#0062ff" : "#ffffff",
+              background: activeSubTab === "faculty" ? "var(--primary, #28166f)" : "#ffffff",
               color: activeSubTab === "faculty" ? "#ffffff" : "#475569",
               border: activeSubTab === "faculty" ? "none" : "1px solid #e2e8f0",
               boxShadow: activeSubTab === "faculty" ? "0 2px 6px rgba(0, 98, 255, 0.2)" : "none",
@@ -426,7 +426,7 @@ export default function DeanAcademicManagement({
               padding: "0.55rem 1rem",
               borderRadius: "10px",
               fontWeight: 600,
-              background: activeSubTab === "curriculum" ? "#0062ff" : "#ffffff",
+              background: activeSubTab === "curriculum" ? "var(--primary, #28166f)" : "#ffffff",
               color: activeSubTab === "curriculum" ? "#ffffff" : "#475569",
               border: activeSubTab === "curriculum" ? "none" : "1px solid #e2e8f0",
               boxShadow: activeSubTab === "curriculum" ? "0 2px 6px rgba(0, 98, 255, 0.2)" : "none",
@@ -510,13 +510,13 @@ export default function DeanAcademicManagement({
                       <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
                         <span
                           style={{
-                            background: "#eff6ff",
-                            color: "#0062ff",
+                            background: "var(--primary-light-surface, #f5f3ff)",
+                            color: "var(--primary, #28166f)",
                             fontSize: "0.75rem",
                             fontWeight: 800,
                             padding: "0.2rem 0.55rem",
                             borderRadius: "6px",
-                            border: "1px solid #bfdbfe",
+                            border: "1px solid var(--primary-light-border, #ddd6fe)",
                           }}
                         >
                           {dept.code}
@@ -575,7 +575,7 @@ export default function DeanAcademicManagement({
                             gap: "0.4rem",
                           }}
                         >
-                          <ChevronRight size={13} color="#0062ff" />
+                          <ChevronRight size={13} color="var(--primary, #28166f)" />
                           <span>{prog}</span>
                         </div>
                       ))}
@@ -614,7 +614,7 @@ export default function DeanAcademicManagement({
                     </div>
                     <div>
                       <div style={{ fontSize: "0.72rem", color: "#64748b" }}>OBE QA</div>
-                      <div style={{ fontWeight: 700, fontSize: "0.95rem", color: "#0062ff", marginTop: "0.15rem" }}>
+                      <div style={{ fontWeight: 700, fontSize: "0.95rem", color: "var(--primary, #28166f)", marginTop: "0.15rem" }}>
                         {dept.obeCompliance}%
                       </div>
                     </div>
@@ -674,13 +674,13 @@ export default function DeanAcademicManagement({
                       <div style={{ fontSize: "0.75rem", color: "#64748b" }}>{f.college}</div>
                     </td>
                     <td style={{ padding: "0.85rem 1rem" }}>
-                      <span className="badge" style={{ background: "#eff6ff", color: "#0062ff", border: "1px solid #bfdbfe" }}>
+                      <span className="badge" style={{ background: "var(--primary-light-surface, #f5f3ff)", color: "var(--primary, #28166f)", border: "1px solid var(--primary-light-border, #ddd6fe)" }}>
                         {f.programme}
                       </span>
                     </td>
                     <td style={{ padding: "0.85rem 1rem", color: "#475569" }}>{f.load}</td>
                     <td style={{ padding: "0.85rem 1rem" }}>
-                      <span style={{ fontWeight: 700, color: "#0062ff" }}>{f.activeExams} Sets</span>
+                      <span style={{ fontWeight: 700, color: "var(--primary, #28166f)" }}>{f.activeExams} Sets</span>
                     </td>
                     <td style={{ padding: "0.85rem 1rem", fontWeight: 700, color: "#10b981" }}>{f.avgScore}</td>
                     <td style={{ padding: "0.85rem 1rem", textAlign: "right" }}>
@@ -737,14 +737,14 @@ export default function DeanAcademicManagement({
 
           <div className="card" style={{ padding: "1.4rem", borderRadius: "16px", background: "#ffffff", border: "1px solid #e2e8f0", boxShadow: "0 2px 8px rgba(0,0,0,0.02)" }}>
             <h3 style={{ margin: "0 0 0.8rem 0", fontSize: "1.1rem", display: "flex", alignItems: "center", gap: "0.5rem", color: "#0f172a" }}>
-              <Award size={18} color="#0062ff" /> OBE Assessment Governance Policies
+              <Award size={18} color="var(--primary, #28166f)" /> OBE Assessment Governance Policies
             </h3>
             <p style={{ fontSize: "0.83rem", color: "#64748b", lineHeight: 1.5, marginBottom: "1rem" }}>
               Quality audit principles enforced by the Office of the Dean for all optical bubble-sheet graded examinations:
             </p>
 
             <div style={{ display: "grid", gap: "0.75rem" }}>
-              <div style={{ borderLeft: "3px solid #0062ff", paddingLeft: "0.75rem" }}>
+              <div style={{ borderLeft: "3px solid var(--primary, #28166f)", paddingLeft: "0.75rem" }}>
                 <strong style={{ fontSize: "0.85rem", color: "#0f172a" }}>Item Discrimination Index Requirement:</strong>
                 <p style={{ margin: "0.2rem 0 0 0", fontSize: "0.78rem", color: "#64748b" }}>
                   Exam items with a discrimination index below 0.20 are automatically flagged for instructional review.

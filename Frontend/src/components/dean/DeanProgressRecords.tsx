@@ -228,13 +228,13 @@ export default function DeanProgressRecords({
                   <td style={{ padding: "0.75rem 0.85rem" }}>
                     <span
                       style={{
-                        background: "#eff6ff",
-                        color: "#0062ff",
+                        background: "var(--primary-light-surface, #f5f3ff)",
+                        color: "var(--primary, #28166f)",
                         padding: "0.15rem 0.5rem",
                         borderRadius: "5px",
                         fontSize: "0.72rem",
                         fontWeight: 700,
-                        border: "1px solid #bfdbfe",
+                        border: "1px solid var(--primary-light-border, #ddd6fe)",
                       }}
                     >
                       {rec.program}
@@ -243,10 +243,10 @@ export default function DeanProgressRecords({
                   <td style={{ padding: "0.75rem 0.85rem", minWidth: "140px" }}>
                     <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.72rem", marginBottom: "2px" }}>
                       <span style={{ color: "#64748b" }}>{rec.graded} / {rec.total} sheets</span>
-                      <span style={{ fontWeight: 700, color: "#0062ff" }}>{rec.progress}%</span>
+                      <span style={{ fontWeight: 700, color: "var(--primary, #28166f)" }}>{rec.progress}%</span>
                     </div>
                     <div style={{ width: "100%", height: "6px", background: "#e2e8f0", borderRadius: "3px", overflow: "hidden" }}>
-                      <div style={{ width: `${rec.progress}%`, height: "100%", background: "#0062ff", borderRadius: "3px" }} />
+                      <div style={{ width: `${rec.progress}%`, height: "100%", background: "var(--primary, #28166f)", borderRadius: "3px" }} />
                     </div>
                   </td>
                   <td style={{ padding: "0.75rem 0.85rem", fontWeight: 700, color: "#0f172a" }}>

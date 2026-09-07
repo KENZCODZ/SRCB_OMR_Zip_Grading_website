@@ -354,8 +354,8 @@ const ROLE_MANUALS: Record<UserRole, RoleManual> = {
     role: "teacher",
     portalName: "Faculty Portal",
     portalBadge: "Course Instructor",
-    badgeBg: "#eff6ff",
-    badgeColor: "#0062ff",
+    badgeBg: "var(--primary-light-surface, #f5f3ff)",
+    badgeColor: "var(--primary, #28166f)",
     title: "Faculty Instructor User Guide",
     subtitle:
       "Step-by-step instructions for creating examinations, scanning student ZipGrade sheets, importing rosters, and releasing grades.",
@@ -632,7 +632,7 @@ export const UserGuideCard: React.FC<UserGuideCardProps> = ({
                 height: "44px",
                 borderRadius: "50%",
                 background: "#ffffff",
-                border: "2px solid #0062ff",
+                border: "2px solid var(--primary, #28166f)",
                 padding: "2px",
                 display: "flex",
                 alignItems: "center",
@@ -766,8 +766,8 @@ export const UserGuideCard: React.FC<UserGuideCardProps> = ({
                       padding: "0.3rem 0.65rem",
                       fontSize: "0.75rem",
                       borderRadius: "16px",
-                      border: isActive ? "1px solid #0062ff" : "1px solid #e2e8f0",
-                      background: isActive ? "#0062ff" : "#ffffff",
+                      border: isActive ? "1px solid var(--primary, #28166f)" : "1px solid #e2e8f0",
+                      background: isActive ? "var(--primary, #28166f)" : "#ffffff",
                       color: isActive ? "#ffffff" : "#475569",
                       fontWeight: isActive ? 700 : 500,
                       cursor: "pointer",
@@ -800,7 +800,7 @@ export const UserGuideCard: React.FC<UserGuideCardProps> = ({
           style={{
             background: "linear-gradient(135deg, #f8fafc 0%, #f0f7ff 100%)",
             border: "1px solid #e2e8f0",
-            borderLeft: "4px solid #0062ff",
+            borderLeft: "4px solid var(--primary, #28166f)",
             borderRadius: "12px",
             padding: "1.1rem 1.25rem",
           }}
@@ -818,9 +818,9 @@ export const UserGuideCard: React.FC<UserGuideCardProps> = ({
                 width: "32px",
                 height: "32px",
                 borderRadius: "8px",
-                background: "#eff6ff",
-                border: "1px solid #bfdbfe",
-                color: "#0062ff",
+                background: "var(--primary-light-surface, #f5f3ff)",
+                border: "1px solid var(--primary-light-border, #ddd6fe)",
+                color: "var(--primary, #28166f)",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
@@ -911,7 +911,7 @@ export const UserGuideCard: React.FC<UserGuideCardProps> = ({
                     transition: "all 0.15s ease",
                   }}
                 >
-                  <ActionIcon size={13} color="#0062ff" /> {action.label}
+                  <ActionIcon size={13} color="var(--primary, #28166f)" /> {action.label}
                 </button>
               );
             })}
@@ -977,8 +977,8 @@ export const UserGuideCard: React.FC<UserGuideCardProps> = ({
                           width: "28px",
                           height: "28px",
                           borderRadius: "6px",
-                          background: "#eff6ff",
-                          color: "#0062ff",
+                          background: "var(--primary-light-surface, #f5f3ff)",
+                          color: "var(--primary, #28166f)",
                           display: "flex",
                           alignItems: "center",
                           justifyContent: "center",
@@ -1025,7 +1025,7 @@ export const UserGuideCard: React.FC<UserGuideCardProps> = ({
                             borderRadius: "10px",
                             background: "#f8fafc",
                             border: "1px solid #f1f5f9",
-                            borderLeft: "3px solid #0062ff",
+                            borderLeft: "3px solid var(--primary, #28166f)",
                           }}
                         >
                           <div
@@ -1041,7 +1041,7 @@ export const UserGuideCard: React.FC<UserGuideCardProps> = ({
                           >
                             <span
                               style={{
-                                background: "#0062ff",
+                                background: "var(--primary, #28166f)",
                                 color: "#ffffff",
                                 width: "18px",
                                 height: "18px",
@@ -1077,13 +1077,13 @@ export const UserGuideCard: React.FC<UserGuideCardProps> = ({
                                 marginTop: "0.45rem",
                                 padding: "0.4rem 0.65rem",
                                 borderRadius: "6px",
-                                background: "#eff6ff",
-                                border: "1px solid #bfdbfe",
+                                background: "var(--primary-light-surface, #f5f3ff)",
+                                border: "1px solid var(--primary-light-border, #ddd6fe)",
                                 display: "flex",
                                 alignItems: "flex-start",
                                 gap: "0.4rem",
                                 fontSize: "0.78rem",
-                                color: "#0052d9",
+                                color: "var(--primary-hover, #371f98)",
                               }}
                             >
                               <Lightbulb size={13} style={{ flexShrink: 0, marginTop: "2px" }} />
@@ -1137,7 +1137,7 @@ export const UserGuideCard: React.FC<UserGuideCardProps> = ({
               fontSize: "0.82rem",
               padding: "0.4rem 0.95rem",
               borderRadius: "8px",
-              background: "#0062ff",
+              background: "var(--primary, #28166f)",
               color: "#ffffff",
               border: "none",
               fontWeight: 600,

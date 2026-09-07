@@ -379,12 +379,12 @@ export default function AdminUserManagement({
                 width: "38px",
                 height: "38px",
                 borderRadius: "10px",
-                background: "#eff6ff",
-                border: "1px solid #bfdbfe",
+                background: "var(--primary-light-surface, #f5f3ff)",
+                border: "1px solid var(--primary-light-border, #ddd6fe)",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
-                color: "#0062ff",
+                color: "var(--primary, #28166f)",
               }}
             >
               <UserPlus size={20} />
@@ -427,7 +427,7 @@ export default function AdminUserManagement({
                 fontSize: "0.85rem",
                 cursor: "pointer",
                 transition: "all 0.2s ease",
-                background: targetRole === "teacher" ? "#0062ff" : "transparent",
+                background: targetRole === "teacher" ? "var(--primary, #28166f)" : "transparent",
                 color: targetRole === "teacher" ? "#ffffff" : "#64748b",
                 boxShadow: targetRole === "teacher" ? "0 2px 6px rgba(0, 98, 255, 0.25)" : "none",
               }}
@@ -450,7 +450,7 @@ export default function AdminUserManagement({
                 fontSize: "0.85rem",
                 cursor: "pointer",
                 transition: "all 0.2s ease",
-                background: targetRole === "student" ? "#0062ff" : "transparent",
+                background: targetRole === "student" ? "var(--primary, #28166f)" : "transparent",
                 color: targetRole === "student" ? "#ffffff" : "#64748b",
                 boxShadow: targetRole === "student" ? "0 2px 6px rgba(0, 98, 255, 0.25)" : "none",
               }}
@@ -528,7 +528,7 @@ export default function AdminUserManagement({
 
               {(firstName.trim() || lastName.trim()) && (
                 <div style={{ fontSize: "0.75rem", color: "#64748b", marginTop: "0.3rem" }}>
-                  Display Name: <strong style={{ color: "#0062ff" }}>{getFullName()}</strong>
+                  Display Name: <strong style={{ color: "var(--primary, #28166f)" }}>{getFullName()}</strong>
                 </div>
               )}
             </div>
@@ -542,9 +542,9 @@ export default function AdminUserManagement({
               <div style={{ display: "flex", alignItems: "center", gap: "0.4rem" }}>
                 <span
                   style={{
-                    background: "#eff6ff",
-                    border: "1px solid #bfdbfe",
-                    color: "#0062ff",
+                    background: "var(--primary-light-surface, #f5f3ff)",
+                    border: "1px solid var(--primary-light-border, #ddd6fe)",
+                    color: "var(--primary, #28166f)",
                     fontWeight: 800,
                     padding: "0.55rem 0.8rem",
                     borderRadius: "8px",
@@ -570,7 +570,7 @@ export default function AdminUserManagement({
 
               {idSuffix.trim() && (
                 <div style={{ fontSize: "0.72rem", color: "#64748b", marginTop: "0.25rem" }}>
-                  Assigned Institutional ID: <strong style={{ color: "#0062ff" }}>{getFormattedId()}</strong>
+                  Assigned Institutional ID: <strong style={{ color: "var(--primary, #28166f)" }}>{getFormattedId()}</strong>
                 </div>
               )}
             </div>
@@ -606,7 +606,7 @@ export default function AdminUserManagement({
                   style={{
                     background: "none",
                     border: "none",
-                    color: "#0062ff",
+                    color: "var(--primary, #28166f)",
                     fontSize: "0.75rem",
                     fontWeight: 700,
                     cursor: "pointer",
@@ -699,7 +699,7 @@ export default function AdminUserManagement({
                 padding: "0.75rem",
                 fontWeight: 700,
                 fontSize: "0.95rem",
-                background: "#0062ff",
+                background: "var(--primary, #28166f)",
                 color: "#ffffff",
                 borderRadius: "10px",
                 border: "none",
@@ -779,11 +779,11 @@ export default function AdminUserManagement({
                   style={{
                     fontSize: "0.78rem",
                     fontWeight: 700,
-                    background: "#eff6ff",
-                    color: "#0062ff",
+                    background: "var(--primary-light-surface, #f5f3ff)",
+                    color: "var(--primary, #28166f)",
                     padding: "0.3rem 0.75rem",
                     borderRadius: "20px",
-                    border: "1px solid #bfdbfe",
+                    border: "1px solid var(--primary-light-border, #ddd6fe)",
                     display: "inline-flex",
                     alignItems: "center",
                     gap: "5px",
@@ -873,7 +873,7 @@ export default function AdminUserManagement({
                             <div style={{ fontWeight: 700, color: "#0f172a" }}>{u.name}</div>
                             <div style={{ fontSize: "0.75rem", color: "#64748b" }}>{u.email}</div>
                             {u.student_id && (
-                              <div style={{ fontSize: "0.72rem", color: "#0062ff", fontWeight: 700 }}>
+                              <div style={{ fontSize: "0.72rem", color: "var(--primary, #28166f)", fontWeight: 700 }}>
                                 ID: {u.student_id}
                               </div>
                             )}
@@ -890,24 +890,24 @@ export default function AdminUserManagement({
                                 fontSize: "0.72rem",
                                 fontWeight: 700,
                                 background: isTeacher
-                                  ? "#eff6ff"
+                                  ? "var(--primary-light-surface, #f5f3ff)"
                                   : isStudent
-                                  ? "#eff6ff"
+                                  ? "var(--primary-light-surface, #f5f3ff)"
                                   : isAdmin
                                   ? "#f5f3ff"
                                   : "#fef2f2",
                                 color: isTeacher
-                                  ? "#0062ff"
+                                  ? "var(--primary, #28166f)"
                                   : isStudent
-                                  ? "#0062ff"
+                                  ? "var(--primary, #28166f)"
                                   : isAdmin
                                   ? "#7c3aed"
                                   : "#dc2626",
                                 border: `1px solid ${
                                   isTeacher
-                                    ? "#bfdbfe"
+                                    ? "var(--primary-light-border, #ddd6fe)"
                                     : isStudent
-                                    ? "#bfdbfe"
+                                    ? "var(--primary-light-border, #ddd6fe)"
                                     : isAdmin
                                     ? "#ddd6fe"
                                     : "#fecaca"

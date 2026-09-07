@@ -23,7 +23,7 @@ export const HeaderBanner: React.FC<HeaderBannerProps> = ({
         <div>
           <h2 className="srcb-title-main">
             {title}
-            <Award size={18} className="text-secondary" style={{ color: '#0062ff' }} />
+            <Award size={18} className="text-secondary" style={{ color: 'var(--srcb-gold-light, #f59e0b)' }} />
           </h2>
           <p className="srcb-subtitle-info">
             <GraduationCap size={14} style={{ display: 'inline', marginRight: '4px', verticalAlign: 'middle' }} />

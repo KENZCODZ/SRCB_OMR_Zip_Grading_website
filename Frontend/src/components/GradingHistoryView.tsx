@@ -302,9 +302,9 @@ export const GradingHistoryView: React.FC<GradingHistoryViewProps> = ({
         };
       case "Processed":
         return {
-          background: "#eff6ff",
-          color: "#0062ff",
-          border: "1px solid #bfdbfe",
+          background: "var(--primary-light-surface, #f5f3ff)",
+          color: "var(--primary, #28166f)",
+          border: "1px solid var(--primary-light-border, #ddd6fe)",
           icon: <FileCheck size={13} />,
         };
       case "Incomplete":
@@ -343,7 +343,7 @@ export const GradingHistoryView: React.FC<GradingHistoryViewProps> = ({
               height: "48px",
               borderRadius: "12px",
               background: "#f8fafc",
-              color: "#0062ff",
+              color: "var(--primary, #28166f)",
               border: "1px solid #e2e8f0",
               display: "flex",
               alignItems: "center",
@@ -365,9 +365,9 @@ export const GradingHistoryView: React.FC<GradingHistoryViewProps> = ({
               <span
                 className="badge"
                 style={{
-                  background: "#eff6ff",
-                  color: "#0062ff",
-                  border: "1px solid #bfdbfe",
+                  background: "var(--primary-light-surface, #f5f3ff)",
+                  color: "var(--primary, #28166f)",
+                  border: "1px solid var(--primary-light-border, #ddd6fe)",
                   fontWeight: 700,
                   fontSize: "0.72rem",
                 }}
@@ -441,7 +441,7 @@ export const GradingHistoryView: React.FC<GradingHistoryViewProps> = ({
             >
               Processed Sheets
             </div>
-            <div style={{ fontSize: "1.2rem", fontWeight: 800, color: "#0062ff" }}>
+            <div style={{ fontSize: "1.2rem", fontWeight: 800, color: "var(--primary, #28166f)" }}>
               {overallStats.totalSheets}
             </div>
           </div>
@@ -489,7 +489,7 @@ export const GradingHistoryView: React.FC<GradingHistoryViewProps> = ({
           }}
         >
           <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-            <Filter size={16} style={{ color: "#0062ff" }} />
+            <Filter size={16} style={{ color: "var(--primary, #28166f)" }} />
             <span style={{ fontSize: "0.9rem", fontWeight: 700, color: "#0f172a" }}>
               Search & Filter Past Grading Activities
             </span>
@@ -741,8 +741,8 @@ export const GradingHistoryView: React.FC<GradingHistoryViewProps> = ({
                               width: "36px",
                               height: "36px",
                               borderRadius: "8px",
-                              background: "#eff6ff",
-                              color: "#0062ff",
+                              background: "var(--primary-light-surface, #f5f3ff)",
+                              color: "var(--primary, #28166f)",
                               display: "flex",
                               alignItems: "center",
                               justifyContent: "center",
@@ -780,11 +780,11 @@ export const GradingHistoryView: React.FC<GradingHistoryViewProps> = ({
                         <span
                           style={{
                             fontWeight: 800,
-                            color: "#0062ff",
-                            background: "#eff6ff",
+                            color: "var(--primary, #28166f)",
+                            background: "var(--primary-light-surface, #f5f3ff)",
                             padding: "0.2rem 0.6rem",
                             borderRadius: "6px",
-                            border: "1px solid #bfdbfe",
+                            border: "1px solid var(--primary-light-border, #ddd6fe)",
                             fontSize: "0.8rem",
                             display: "inline-block",
                           }}
@@ -796,7 +796,7 @@ export const GradingHistoryView: React.FC<GradingHistoryViewProps> = ({
                       {/* Graded Submissions */}
                       <td style={{ padding: "0.85rem 1rem" }}>
                         <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                          <GraduationCap size={15} style={{ color: "#0062ff" }} />
+                          <GraduationCap size={15} style={{ color: "var(--primary, #28166f)" }} />
                           <span style={{ fontWeight: 800, color: "#0f172a", fontSize: "0.88rem" }}>
                             {totalGraded}
                           </span>
@@ -961,9 +961,9 @@ export const GradingHistoryView: React.FC<GradingHistoryViewProps> = ({
                   <span
                     className="badge"
                     style={{
-                      background: "#eff6ff",
-                      color: "#0062ff",
-                      border: "1px solid #bfdbfe",
+                      background: "var(--primary-light-surface, #f5f3ff)",
+                      color: "var(--primary, #28166f)",
+                      border: "1px solid var(--primary-light-border, #ddd6fe)",
                       fontWeight: 700,
                       fontSize: "0.72rem",
                     }}
@@ -1015,7 +1015,7 @@ export const GradingHistoryView: React.FC<GradingHistoryViewProps> = ({
                 <div style={{ fontSize: "0.68rem", color: "#64748b", textTransform: "uppercase", fontWeight: 700 }}>
                   Test Items
                 </div>
-                <div style={{ fontSize: "1.15rem", fontWeight: 800, color: "#0062ff" }}>
+                <div style={{ fontSize: "1.15rem", fontWeight: 800, color: "var(--primary, #28166f)" }}>
                   {inspectedRecord.totalItems} Items
                 </div>
               </div>

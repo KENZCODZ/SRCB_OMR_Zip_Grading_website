@@ -98,7 +98,7 @@ export const SubmissionTable: React.FC<SubmissionTableProps> = ({
       return { label: 'High Distinction', dotColor: '#10b981' };
     }
     if (pct >= 75) {
-      return { label: 'Passed', dotColor: '#0062ff' };
+      return { label: 'Passed', dotColor: 'var(--primary, #28166f)' };
     }
     if (pct >= 60) {
       return { label: 'Conditional', dotColor: '#f59e0b' };

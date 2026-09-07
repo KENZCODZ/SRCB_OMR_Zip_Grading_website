@@ -60,11 +60,11 @@ export const StudentStatsHeader: React.FC<StudentStatsHeaderProps> = ({
             width: "36px",
             height: "36px",
             borderRadius: "8px",
-            background: "#eff6ff",
+            background: "var(--primary-light-surface, #f5f3ff)",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            color: "#0062ff",
+            color: "var(--primary, #28166f)",
           }}
         >
           <BookOpen size={18} />
@@ -111,11 +111,11 @@ export const StudentStatsHeader: React.FC<StudentStatsHeaderProps> = ({
             width: "36px",
             height: "36px",
             borderRadius: "8px",
-            background: "#eff6ff",
+            background: "var(--primary-light-surface, #f5f3ff)",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            color: "#0062ff",
+            color: "var(--primary, #28166f)",
           }}
         >
           <TrendingUp size={18} />

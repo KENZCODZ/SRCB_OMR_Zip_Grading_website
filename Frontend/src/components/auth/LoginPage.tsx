@@ -225,7 +225,7 @@ export default function LoginPage({
           {/* Minimal Institutional Footer */}
           <div className="login-minimal-footer">
             <div className="login-security-tag">
-              <ShieldCheck size={14} color="#0062ff" />
+              <ShieldCheck size={14} color="var(--primary, #28166f)" />
               <span>256-Bit Encrypted Academic Session</span>
             </div>
           </div>
@@ -249,7 +249,7 @@ export default function LoginPage({
           <div className="devtool-drawer-card">
             <div className="devtool-header">
               <div className="devtool-header-left">
-                <Cpu size={15} color="#0062ff" />
+                <Cpu size={15} color="var(--primary, #28166f)" />
                 <span className="devtool-title">DevTools & Role Switcher</span>
               </div>
               <button

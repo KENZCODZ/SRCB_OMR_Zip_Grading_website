@@ -356,9 +356,9 @@ export default function RoleDashboard({
               borderRadius: "20px",
               fontSize: "0.75rem",
               fontWeight: 700,
-              background: "#eff6ff",
-              color: "#0062ff",
-              border: "1px solid #bfdbfe",
+              background: "var(--primary-light-surface, #f5f3ff)",
+              color: "var(--primary, #28166f)",
+              border: "1px solid var(--primary-light-border, #ddd6fe)",
               textTransform: "uppercase",
               letterSpacing: "0.03em",
             }}
@@ -411,13 +411,13 @@ export default function RoleDashboard({
                   width: "38px",
                   height: "38px",
                   borderRadius: "10px",
-                  background: "#eff6ff",
+                  background: "var(--primary-light-surface, #f5f3ff)",
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
-                  color: "#0062ff",
+                  color: "var(--primary, #28166f)",
                   flexShrink: 0,
-                  border: "1px solid #dbeafe",
+                  border: "1px solid var(--primary-light-border, #ddd6fe)",
                 }}
               >
                 <Icon size={19} />
@@ -499,13 +499,13 @@ export default function RoleDashboard({
                     <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
                       <span
                         style={{
-                          background: "#eff6ff",
-                          color: "#0062ff",
+                          background: "var(--primary-light-surface, #f5f3ff)",
+                          color: "var(--primary, #28166f)",
                           fontWeight: 800,
                           fontSize: "0.72rem",
                           padding: "0.15rem 0.45rem",
                           borderRadius: "6px",
-                          border: "1px solid #bfdbfe",
+                          border: "1px solid var(--primary-light-border, #ddd6fe)",
                         }}
                       >
                         {prog.code}
@@ -528,7 +528,7 @@ export default function RoleDashboard({
                       <span
                         style={{
                           fontWeight: 800,
-                          color: "#0062ff",
+                          color: "var(--primary, #28166f)",
                           minWidth: "42px",
                           textAlign: "right",
                         }}
@@ -554,8 +554,8 @@ export default function RoleDashboard({
                         height: "100%",
                         background:
                           prog.progress >= 90
-                            ? "linear-gradient(90deg, #0062ff, #22c55e)"
-                            : "linear-gradient(90deg, #0062ff, #3b82f6)",
+                            ? "linear-gradient(90deg, var(--primary, #28166f), #22c55e)"
+                            : "linear-gradient(90deg, var(--primary, #28166f), #3b82f6)",
                         borderRadius: "6px",
                         transition: "width 0.4s ease",
                       }}
@@ -604,10 +604,10 @@ export default function RoleDashboard({
                 <div>
                   <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.78rem", marginBottom: "3px" }}>
                     <span style={{ fontWeight: 600, color: "#0f172a" }}>2.00 – 2.75 (Very Good / Good)</span>
-                    <span style={{ fontWeight: 700, color: "#0062ff" }}>44%</span>
+                    <span style={{ fontWeight: 700, color: "var(--primary, #28166f)" }}>44%</span>
                   </div>
                   <div style={{ width: "100%", height: "7px", background: "#e2e8f0", borderRadius: "4px", overflow: "hidden" }}>
-                    <div style={{ width: "44%", height: "100%", background: "#0062ff", borderRadius: "4px" }} />
+                    <div style={{ width: "44%", height: "100%", background: "var(--primary, #28166f)", borderRadius: "4px" }} />
                   </div>
                 </div>
 
@@ -660,7 +660,7 @@ export default function RoleDashboard({
                 </div>
 
                 <div style={{ padding: "0.85rem", background: "#f8fafc", borderRadius: "10px", border: "1px solid #e2e8f0" }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: "0.4rem", color: "#0062ff", marginBottom: "0.2rem" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "0.4rem", color: "var(--primary, #28166f)", marginBottom: "0.2rem" }}>
                     <Clock size={16} />
                     <span style={{ fontSize: "0.72rem", fontWeight: 700, textTransform: "uppercase" }}>Turnaround</span>
                   </div>
@@ -669,7 +669,7 @@ export default function RoleDashboard({
                 </div>
 
                 <div style={{ padding: "0.85rem", background: "#f8fafc", borderRadius: "10px", border: "1px solid #e2e8f0" }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: "0.4rem", color: "#0062ff", marginBottom: "0.2rem" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "0.4rem", color: "var(--primary, #28166f)", marginBottom: "0.2rem" }}>
                     <Sparkles size={16} />
                     <span style={{ fontSize: "0.72rem", fontWeight: 700, textTransform: "uppercase" }}>Sheets Scanned</span>
                   </div>
@@ -733,7 +733,7 @@ export default function RoleDashboard({
             </div>
             <div>
               <span style={{ fontSize: "0.78rem", color: "#64748b" }}>Assigned Student ID</span>
-              <div style={{ fontSize: "1.25rem", fontWeight: 800, color: "#0062ff", marginTop: "2px" }}>
+              <div style={{ fontSize: "1.25rem", fontWeight: 800, color: "var(--primary, #28166f)", marginTop: "2px" }}>
                 {user.studentId || (user as any).student_id || "Unassigned"}
               </div>
             </div>

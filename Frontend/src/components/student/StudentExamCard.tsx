@@ -29,7 +29,7 @@ export const StudentExamCard: React.FC<StudentExamCardProps> = ({
     <div
       style={{
         background: "#ffffff",
-        border: isSelected ? "2px solid #0062ff" : "1px solid #e2e8f0",
+        border: isSelected ? "2px solid var(--primary, #28166f)" : "1px solid #e2e8f0",
         borderRadius: "12px",
         overflow: "hidden",
         transition: "all 0.2s ease",
@@ -62,13 +62,13 @@ export const StudentExamCard: React.FC<StudentExamCardProps> = ({
             {exam.course_code && (
               <span
                 style={{
-                  background: "#eff6ff",
-                  color: "#0062ff",
+                  background: "var(--primary-light-surface, #f5f3ff)",
+                  color: "var(--primary, #28166f)",
                   padding: "0.15rem 0.5rem",
                   borderRadius: "5px",
                   fontSize: "0.72rem",
                   fontWeight: 700,
-                  border: "1px solid #bfdbfe",
+                  border: "1px solid var(--primary-light-border, #ddd6fe)",
                 }}
               >
                 {exam.course_code}
@@ -158,7 +158,7 @@ export const StudentExamCard: React.FC<StudentExamCardProps> = ({
               style={{
                 fontSize: "1.25rem",
                 fontWeight: 800,
-                color: "#0062ff",
+                color: "var(--primary, #28166f)",
               }}
             >
               {transmuted.grade}

@@ -2,40 +2,44 @@
 @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&family=Inter:wght@400;500;600;700&display=swap');
 
 :root {
-  /* SRCB Official School Color Palette */
-  --srcb-navy-dark: #081120;
-  --srcb-navy-surface: #0f2448;
-  --srcb-blue-primary: #1e3a8a;
-  --srcb-blue-light: #2563eb;
-  --srcb-blue-glow: rgba(37, 99, 235, 0.25);
+  /* SRCB Official School Color Palette - Directly extracted from St. Rita's College of Balingasag Seal */
+  --srcb-navy-dark: #120a3a;
+  --srcb-navy-surface: #1b0f52;
+  --srcb-blue-primary: #28166f;
+  --srcb-blue-light: #4326b8;
+  --srcb-blue-glow: rgba(40, 22, 111, 0.25);
 
-  /* SRCB Heritage Gold Accent Tokens */
-  --srcb-gold-primary: #0052d9;
-  --srcb-gold-accent: #0062ff;
-  --srcb-gold-light: #3b82f6;
-  --srcb-gold-glow: rgba(0, 98, 255, 0.2);
+  /* SRCB Heritage Gold Accent Tokens (Cascia floral pistil & radiance from seal) */
+  --srcb-gold-primary: #b45309;
+  --srcb-gold-accent: #d97706;
+  --srcb-gold-light: #f59e0b;
+  --srcb-gold-glow: rgba(217, 119, 6, 0.25);
 
   /* Base & Glass Surfaces */
   --bg-base: #f8fafc;
   --bg-surface: #ffffff;
-  --bg-surface-hover: #f1f5f9;
+  --bg-surface-hover: #f5f3ff;
   --bg-sidebar: #ffffff;
   
-  --primary: #0062ff;
-  --primary-hover: #0052d9;
-  --primary-glow: rgba(0, 98, 255, 0.2);
+  --primary: #28166f;
+  --primary-hover: #371f98;
+  --primary-active: #1e0f59;
+  --primary-glow: rgba(40, 22, 111, 0.25);
+  --primary-light-surface: #f5f3ff;
+  --primary-light-border: #ddd6fe;
   
   --secondary: #ffffff;
   --secondary-hover: #f8fafc;
   
-  --accent: #0062ff;
-  --success: #10b981;
-  --success-glow: rgba(16, 185, 129, 0.2);
+  --accent: #28166f;
+  --success: #43792b; /* SRCB Laurel Leaf Botanical Green from Seal */
+  --success-hover: #376423;
+  --success-glow: rgba(67, 121, 43, 0.2);
   --error: #ef4444;
   --error-glow: rgba(239, 68, 68, 0.2);
-  --warning: #f59e0b;
-  --warning-glow: rgba(245, 158, 11, 0.2);
-  --info: #0062ff;
+  --warning: #d97706;
+  --warning-glow: rgba(217, 119, 6, 0.2);
+  --info: #28166f;
   
   --text-primary: #0f172a;
   --text-secondary: #475569;
@@ -43,7 +47,7 @@
   
   --border: #e2e8f0;
   --border-hover: #cbd5e1;
-  --border-focus: #0062ff;
+  --border-focus: #28166f;
   
   --radius-sm: 8px;
   --radius-md: 12px;
@@ -96,10 +100,10 @@
 
 .modal-content {
   position: relative !important;
-  background: linear-gradient(180deg, #0f1d36, #091326) !important;
-  border: 1px solid rgba(245, 158, 11, 0.25) !important;
+  background: linear-gradient(180deg, #160a45, #0f0632) !important;
+  border: 1px solid rgba(217, 119, 6, 0.3) !important;
   border-radius: 16px !important;
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.9), 0 0 35px rgba(245, 158, 11, 0.12) !important;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.9), 0 0 35px rgba(40, 22, 111, 0.25) !important;
   max-width: 920px !important;
   width: 100% !important;
   max-height: 90vh !important;
@@ -178,7 +182,7 @@ h1, h2, h3, h4, h5, h6, .font-heading {
 
 /* SRCB Header Banner */
 .srcb-banner-container {
-  background: linear-gradient(135deg, rgba(15, 36, 72, 0.9) 0%, rgba(30, 58, 138, 0.75) 60%, rgba(217, 119, 6, 0.2) 100%);
+  background: linear-gradient(135deg, rgba(22, 10, 69, 0.96) 0%, rgba(40, 22, 111, 0.88) 60%, rgba(217, 119, 6, 0.22) 100%);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   border: 1px solid var(--srcb-gold-glow);
@@ -188,7 +192,7 @@ h1, h2, h3, h4, h5, h6, .font-heading {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.5), 0 0 20px rgba(245, 158, 11, 0.1);
+  box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.5), 0 0 20px rgba(40, 22, 111, 0.18);
   position: relative;
   overflow: hidden;
 }
@@ -330,11 +334,11 @@ h1, h2, h3, h4, h5, h6, .font-heading {
 }
 
 .sidebar-item.active {
-  background: linear-gradient(135deg, var(--srcb-blue-primary), #1e40af);
+  background: linear-gradient(135deg, var(--srcb-blue-primary), #371f98);
   color: #ffffff;
   font-weight: 700;
   border-color: var(--srcb-gold-accent);
-  box-shadow: 0 4px 12px rgba(30, 58, 138, 0.4);
+  box-shadow: 0 4px 12px rgba(40, 22, 111, 0.4);
 }
 
 .sidebar-footer {
@@ -438,20 +442,20 @@ h1, h2, h3, h4, h5, h6, .font-heading {
 
 .exam-item-card:hover {
   transform: translateY(-2px);
-  border-color: #93c5fd;
-  box-shadow: 0 4px 12px rgba(0, 98, 255, 0.08);
+  border-color: #ddd6fe;
+  box-shadow: 0 4px 12px rgba(40, 22, 111, 0.1);
 }
 
 .exam-card-selected {
-  border: 2px solid #0062ff !important;
-  border-color: #0062ff !important;
-  background: linear-gradient(135deg, #f0f7ff 0%, #e0effe 100%) !important;
-  box-shadow: 0 4px 16px rgba(0, 98, 255, 0.16), 0 0 0 1px #0062ff !important;
+  border: 2px solid #28166f !important;
+  border-color: #28166f !important;
+  background: linear-gradient(135deg, #f5f3ff 0%, #ede9fe 100%) !important;
+  box-shadow: 0 4px 16px rgba(40, 22, 111, 0.18), 0 0 0 1px #28166f !important;
 }
 
 .exam-card-selected:hover {
   transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(0, 98, 255, 0.22), 0 0 0 1px #0062ff !important;
+  box-shadow: 0 6px 20px rgba(40, 22, 111, 0.24), 0 0 0 1px #28166f !important;
 }
 
 /* Badges with Gold Shimmer */
@@ -508,17 +512,17 @@ h1, h2, h3, h4, h5, h6, .font-heading {
 }
 
 .btn-primary {
-  background: #0062ff;
+  background: #28166f;
   color: #ffffff !important;
   font-weight: 700;
-  border: 1px solid #0062ff;
-  box-shadow: 0 2px 8px rgba(0, 98, 255, 0.25);
+  border: 1px solid #28166f;
+  box-shadow: 0 2px 8px rgba(40, 22, 111, 0.28);
 }
 
 .btn-primary:hover {
-  background: #0052d9;
-  border-color: #0052d9;
-  box-shadow: 0 4px 12px rgba(0, 98, 255, 0.35);
+  background: #371f98;
+  border-color: #371f98;
+  box-shadow: 0 4px 12px rgba(40, 22, 111, 0.38);
   transform: translateY(-1px);
 }
 
@@ -532,7 +536,7 @@ h1, h2, h3, h4, h5, h6, .font-heading {
 .btn-secondary:hover {
   background: #f8fafc;
   border-color: #94a3b8;
-  color: #0062ff !important;
+  color: #28166f !important;
 }
 
 .btn-outline {
@@ -543,8 +547,8 @@ h1, h2, h3, h4, h5, h6, .font-heading {
 
 .btn-outline:hover {
   background: #f8fafc;
-  color: #0062ff;
-  border-color: #0062ff;
+  color: #28166f;
+  border-color: #28166f;
 }
 
 .btn-danger {
@@ -605,12 +609,12 @@ h1, h2, h3, h4, h5, h6, .font-heading {
 }
 
 .dropzone:hover {
-  border-color: #0062ff;
-  background: #eff6ff;
+  border-color: #28166f;
+  background: #f5f3ff;
 }
 
 .dropzone-icon {
-  color: #0062ff;
+  color: #28166f;
   margin-bottom: 0.75rem;
 }
 
@@ -790,8 +794,8 @@ select:focus,
 select.form-input:focus,
 select.input:focus {
   background: #ffffff;
-  border-color: #0062ff;
-  box-shadow: 0 0 0 3px rgba(0, 98, 255, 0.14);
+  border-color: #28166f;
+  box-shadow: 0 0 0 3px rgba(40, 22, 111, 0.14);
 }
 
 .form-input:disabled,
@@ -880,7 +884,7 @@ select option {
 .search-box:focus-within .search-icon,
 .search-wrapper:focus-within .search-icon,
 .search-container:focus-within .search-icon {
-  color: #0062ff;
+  color: #28166f;
 }
 
 /* ================================================================
@@ -1028,18 +1032,18 @@ button.bubble-btn {
 }
 
 button.bubble-btn:hover:not(.active) {
-  border-color: #0062ff;
-  color: #0062ff;
-  background: #eff6ff;
+  border-color: #28166f;
+  color: #28166f;
+  background: #f5f3ff;
   transform: scale(1.08);
 }
 
 /* Override active state for clickable exam-key buttons */
 button.bubble-btn.active {
-  background: #0062ff !important;
-  border-color: #0062ff !important;
+  background: #28166f !important;
+  border-color: #28166f !important;
   color: #ffffff !important;
-  box-shadow: 0 2px 6px rgba(0, 98, 255, 0.3) !important;
+  box-shadow: 0 2px 6px rgba(40, 22, 111, 0.35) !important;
 }
 
 /* ================================================================
@@ -1106,7 +1110,7 @@ button.bubble-btn.active {
 .text-success   { color: var(--success); }
 .text-warning   { color: var(--warning); }
 .text-error     { color: var(--error); }
-.text-gold      { color: #0062ff; }
+.text-gold      { color: #d97706; }
 
 /* ================================================================
    BUTTON VARIANT â€” SMALL
@@ -1240,7 +1244,7 @@ button.bubble-btn.active {
 }
 
 .login-hero-title span {
-  background: linear-gradient(135deg, #38bdf8 0%, #2563eb 50%, #f59e0b 100%);
+  background: linear-gradient(135deg, #7c5cff 0%, #28166f 50%, #d97706 100%);
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -1540,13 +1544,13 @@ button.bubble-btn.active {
   height: 76px;
   border-radius: 50%;
   background: #ffffff;
-  border: 2.5px solid #0062ff;
+  border: 2.5px solid #28166f;
   margin: 0 auto 1rem;
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 3px;
-  box-shadow: 0 8px 24px -4px rgba(0, 98, 255, 0.22);
+  box-shadow: 0 8px 24px -4px rgba(40, 22, 111, 0.28);
   transition: transform 0.25s ease;
 }
 
@@ -1603,7 +1607,7 @@ button.bubble-btn.active {
 
 .login-forgot-link {
   font-size: 0.75rem;
-  color: #0062ff;
+  color: #28166f;
   font-weight: 600;
   cursor: pointer;
   text-decoration: none;
@@ -1657,13 +1661,12 @@ input.login-minimal-input,
 .login-input-wrapper input.login-minimal-input:focus,
 input.login-minimal-input:focus,
 .login-minimal-input:focus {
-  border-color: #0062ff;
-  box-shadow: 0 0 0 3px rgba(0, 98, 255, 0.12);
+  border-color: #28166f;
+  box-shadow: 0 0 0 3.5px rgba(40, 22, 111, 0.12);
 }
 
-.login-minimal-input:focus + .login-input-icon,
 .login-input-wrapper:focus-within .login-input-icon {
-  color: #0062ff;
+  color: #28166f;
 }
 
 .login-input-wrapper input.login-minimal-input.with-toggle,
@@ -1703,7 +1706,7 @@ input.login-minimal-input.with-toggle,
   font-size: 0.95rem;
   font-weight: 700;
   border-radius: 12px;
-  background: linear-gradient(135deg, #0062ff 0%, #004ecc 100%);
+  background: linear-gradient(135deg, #28166f 0%, #1e0f59 100%);
   color: #ffffff;
   border: none;
   cursor: pointer;
@@ -1711,16 +1714,16 @@ input.login-minimal-input.with-toggle,
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
-  box-shadow: 0 8px 24px -4px rgba(0, 98, 255, 0.38);
+  box-shadow: 0 8px 24px -4px rgba(40, 22, 111, 0.38);
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   margin-top: 0.35rem;
   font-family: inherit;
 }
 
 .login-primary-submit-btn:hover {
-  background: linear-gradient(135deg, #0056e0 0%, #003db3 100%);
+  background: linear-gradient(135deg, #20115a 0%, #170b47 100%);
   transform: translateY(-1px);
-  box-shadow: 0 10px 28px -4px rgba(0, 98, 255, 0.48);
+  box-shadow: 0 10px 28px -4px rgba(40, 22, 111, 0.48);
 }
 
 .login-error-pill {
@@ -1811,8 +1814,8 @@ input.login-minimal-input.with-toggle,
   width: 7px;
   height: 7px;
   border-radius: 50%;
-  background: #10b981;
-  box-shadow: 0 0 8px #10b981;
+  background: #558b2f;
+  box-shadow: 0 0 8px #558b2f;
 }
 
 .devtool-drawer-card {
@@ -1901,7 +1904,7 @@ input.login-minimal-input.with-toggle,
   display: flex;
   align-items: center;
   gap: 0.3rem;
-  color: #059669;
+  color: #558b2f;
   font-weight: 600;
   font-size: 0.74rem;
 }
@@ -1964,8 +1967,8 @@ input.login-minimal-input.with-toggle,
 }
 
 .devtool-role-card.selected {
-  border-color: #0062ff;
-  background: rgba(0, 98, 255, 0.03);
+  border-color: #28166f;
+  background: rgba(40, 22, 111, 0.03);
 }
 
 .devtool-role-avatar {
@@ -3083,22 +3086,22 @@ input.login-minimal-input.with-toggle,
   width: 50px;
   height: 50px;
   border-radius: 50%;
-  background: linear-gradient(135deg, var(--srcb-blue-primary), #1e40af);
+  background: linear-gradient(135deg, var(--srcb-blue-primary), #371f98);
   border: 1.5px solid var(--srcb-gold-accent);
   color: #ffffff;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.45), 0 0 16px rgba(245, 158, 11, 0.35);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.45), 0 0 16px rgba(217, 119, 6, 0.35);
   z-index: 9999;
   transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .floating-help-btn:hover {
   transform: translateY(-3px) scale(1.08);
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.55), 0 0 24px rgba(245, 158, 11, 0.55);
-  background: linear-gradient(135deg, #1d4ed8, #2563eb);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.55), 0 0 24px rgba(217, 119, 6, 0.55);
+  background: linear-gradient(135deg, #371f98, #4f2ed6);
   border-color: #fde047;
   color: #ffffff;
 }
@@ -3160,13 +3163,13 @@ input.login-minimal-input.with-toggle,
   overflow: visible;
 }
 
-/* Vivid Royal Blue Sidebar - Contained Pill Navigation */
+/* SRCB Official Royal Indigo Sidebar - Contained Pill Navigation */
 .sidebar-curved {
   width: 255px;
   min-width: 255px;
   max-width: 255px;
-  background: #0062ff;
-  background: linear-gradient(180deg, #0062ff 0%, #0050e6 100%);
+  background: #28166f;
+  background: linear-gradient(180deg, #160a45 0%, #28166f 100%);
   padding: 1.75rem 0.85rem 1.5rem 0.85rem;
   display: flex;
   flex-direction: column;
@@ -3230,7 +3233,7 @@ input.login-minimal-input.with-toggle,
 
 .sidebar-brand-badge {
   background: #ffffff;
-  color: #0062ff;
+  color: #28166f;
   padding: 5px 8px;
   border-radius: 8px;
   display: flex;
@@ -3296,7 +3299,7 @@ input.login-minimal-input.with-toggle,
 /* WHITE ROUNDED PILL ACTIVE TAB - FULLY CONTAINED INSIDE SIDEBAR */
 .sidebar-curved-item.active {
   background-color: #ffffff !important;
-  color: #0062ff !important;
+  color: #28166f !important;
   font-weight: 700;
   border-radius: 9999px !important;
   box-shadow: 0 4px 14px rgba(0, 0, 0, 0.12);
@@ -3304,11 +3307,11 @@ input.login-minimal-input.with-toggle,
 }
 
 .sidebar-curved-item.active .nav-icon {
-  color: #0062ff !important;
+  color: #28166f !important;
 }
 
 .sidebar-curved-item.active span {
-  color: #0062ff !important;
+  color: #28166f !important;
 }
 
 .sidebar-curved-item.active::before,
@@ -3415,8 +3418,8 @@ input.login-minimal-input.with-toggle,
 
 .header-search-input:focus {
   background: #ffffff;
-  border-color: #0062ff;
-  box-shadow: 0 0 0 3px rgba(0, 98, 255, 0.1);
+  border-color: #28166f;
+  box-shadow: 0 0 0 3px rgba(40, 22, 111, 0.1);
   width: 260px;
 }
 
@@ -3480,7 +3483,7 @@ input.login-minimal-input.with-toggle,
   width: 32px;
   height: 32px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #0062ff, #2563eb);
+  background: linear-gradient(135deg, #28166f, #371f98);
   color: #ffffff;
   display: flex;
   align-items: center;
@@ -3537,7 +3540,7 @@ input.login-minimal-input.with-toggle,
 
 .reference-tab-btn.active {
   color: #0f172a;
-  border-bottom-color: #0062ff;
+  border-bottom-color: #28166f;
   font-weight: 700;
 }
 
@@ -3615,13 +3618,13 @@ input.login-minimal-input.with-toggle,
   box-shadow: 0 3px 12px rgba(0, 0, 0, 0.03);
 }
 
-/* THE SIGNATURE HERO HIGHLIGHTED ROW IN ELECTRIC BLUE */
+/* THE SIGNATURE HERO HIGHLIGHTED ROW IN SRCB ROYAL SEAL BLUE */
 .floating-row-card.highlighted {
-  background: linear-gradient(90deg, #0062ff 0%, #0050e6 100%) !important;
+  background: linear-gradient(90deg, #28166f 0%, #1e0f59 100%) !important;
   border-color: transparent !important;
   color: #ffffff !important;
   transform: translateY(-1.5px);
-  box-shadow: 0 10px 24px rgba(0, 98, 255, 0.4) !important;
+  box-shadow: 0 10px 24px rgba(40, 22, 111, 0.35) !important;
   z-index: 5;
 }
 
@@ -3753,7 +3756,7 @@ input.login-minimal-input.with-toggle,
 .score-transmuted {
   font-size: 0.72rem;
   font-weight: 600;
-  color: #0062ff;
+  color: #28166f;
   margin-top: 0.1rem;
 }
 
@@ -3868,10 +3871,10 @@ input.login-minimal-input.with-toggle,
 }
 
 .page-num-btn.active {
-  background: #0062ff;
+  background: #28166f;
   color: #ffffff;
   font-weight: 700;
-  box-shadow: 0 2px 6px rgba(0, 98, 255, 0.25);
+  box-shadow: 0 2px 6px rgba(40, 22, 111, 0.28);
 }
 
 .page-nav-btn:disabled {
@@ -3987,7 +3990,7 @@ input.login-minimal-input.with-toggle,
   width: 36px;
   height: 36px;
   border-radius: 10px;
-  background: linear-gradient(135deg, #0062ff 0%, #004ecc 100%);
+  background: linear-gradient(135deg, #28166f 0%, #1e0f59 100%);
   color: #ffffff;
   font-weight: 700;
   font-size: 0.85rem;
@@ -3995,7 +3998,7 @@ input.login-minimal-input.with-toggle,
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  box-shadow: 0 2px 8px rgba(0, 98, 255, 0.25);
+  box-shadow: 0 2px 8px rgba(40, 22, 111, 0.28);
 }
 
 .header-user-name {
@@ -4048,7 +4051,7 @@ input.login-minimal-input.with-toggle,
   width: 42px;
   height: 42px;
   border-radius: 12px;
-  background: linear-gradient(135deg, #0062ff 0%, #004ecc 100%);
+  background: linear-gradient(135deg, #28166f 0%, #1e0f59 100%);
   color: #ffffff;
   font-weight: 800;
   font-size: 0.95rem;
@@ -4056,7 +4059,7 @@ input.login-minimal-input.with-toggle,
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  box-shadow: 0 4px 12px rgba(0, 98, 255, 0.3);
+  box-shadow: 0 4px 12px rgba(40, 22, 111, 0.32);
 }
 
 .profile-dropdown-info {
@@ -4088,9 +4091,9 @@ input.login-minimal-input.with-toggle,
   font-weight: 700;
   padding: 0.15rem 0.45rem;
   border-radius: 6px;
-  background: #eff6ff;
-  color: #0062ff;
-  border: 1px solid #dbeafe;
+  background: #f5f3ff;
+  color: #28166f;
+  border: 1px solid #ddd6fe;
   letter-spacing: 0.03em;
 }
 
@@ -4344,6 +4347,6 @@ input.login-minimal-input.with-toggle,
 .swr-top-indicator-bar {
   width: 60%;
   height: 100%;
-  background: linear-gradient(90deg, transparent, #0062ff, transparent);
+  background: linear-gradient(90deg, transparent, #28166f, transparent);
   animation: swrTopBarShimmer 1.2s ease-in-out infinite;
 }

@@ -169,7 +169,7 @@ export default function DeanExaminations({
               {totalExams}
             </div>
           </div>
-          <div style={{ width: "36px", height: "36px", borderRadius: "8px", background: "#eff6ff", display: "flex", alignItems: "center", justifyContent: "center", color: "#0062ff", flexShrink: 0 }}>
+          <div style={{ width: "36px", height: "36px", borderRadius: "8px", background: "var(--primary-light-surface, #f5f3ff)", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--primary, #28166f)", flexShrink: 0 }}>
             <BookOpen size={18} />
           </div>
         </div>
@@ -193,7 +193,7 @@ export default function DeanExaminations({
               {totalSubmissions}
             </div>
           </div>
-          <div style={{ width: "36px", height: "36px", borderRadius: "8px", background: "#eff6ff", display: "flex", alignItems: "center", justifyContent: "center", color: "#0062ff", flexShrink: 0 }}>
+          <div style={{ width: "36px", height: "36px", borderRadius: "8px", background: "var(--primary-light-surface, #f5f3ff)", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--primary, #28166f)", flexShrink: 0 }}>
             <Sparkles size={18} />
           </div>
         </div>
@@ -217,7 +217,7 @@ export default function DeanExaminations({
               {gradedExamsCount} / {totalExams}
             </div>
           </div>
-          <div style={{ width: "36px", height: "36px", borderRadius: "8px", background: "#eff6ff", display: "flex", alignItems: "center", justifyContent: "center", color: "#0062ff", flexShrink: 0 }}>
+          <div style={{ width: "36px", height: "36px", borderRadius: "8px", background: "var(--primary-light-surface, #f5f3ff)", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--primary, #28166f)", flexShrink: 0 }}>
             <Users size={18} />
           </div>
         </div>
@@ -241,7 +241,7 @@ export default function DeanExaminations({
               Verified
             </div>
           </div>
-          <div style={{ width: "36px", height: "36px", borderRadius: "8px", background: "#eff6ff", display: "flex", alignItems: "center", justifyContent: "center", color: "#0062ff", flexShrink: 0 }}>
+          <div style={{ width: "36px", height: "36px", borderRadius: "8px", background: "var(--primary-light-surface, #f5f3ff)", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--primary, #28166f)", flexShrink: 0 }}>
             <Award size={18} />
           </div>
         </div>
@@ -380,13 +380,13 @@ export default function DeanExaminations({
                   <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.35rem" }}>
                     <span
                       style={{
-                        background: "#eff6ff",
-                        color: "#0062ff",
+                        background: "var(--primary-light-surface, #f5f3ff)",
+                        color: "var(--primary, #28166f)",
                         fontSize: "0.72rem",
                         fontWeight: 700,
                         padding: "0.15rem 0.5rem",
                         borderRadius: "5px",
-                        border: "1px solid #bfdbfe",
+                        border: "1px solid var(--primary-light-border, #ddd6fe)",
                       }}
                     >
                       {exam.program || "BSIT"}
@@ -462,7 +462,7 @@ export default function DeanExaminations({
                           alignItems: "center",
                           gap: "0.4rem",
                           borderRadius: "8px",
-                          background: "#0062ff",
+                          background: "var(--primary, #28166f)",
                           color: "#ffffff",
                           border: "none",
                         }}

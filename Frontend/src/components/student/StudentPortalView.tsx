@@ -167,9 +167,9 @@ export const StudentPortalView: React.FC<StudentPortalViewProps> = ({
           <span
             style={{
               padding: "0.3rem 0.75rem",
-              background: "#eff6ff",
-              color: "#0062ff",
-              border: "1px solid #bfdbfe",
+              background: "var(--primary-light-surface, #f5f3ff)",
+              color: "var(--primary, #28166f)",
+              border: "1px solid var(--primary-light-border, #ddd6fe)",
               borderRadius: "20px",
               fontSize: "0.78rem",
               fontWeight: 700,

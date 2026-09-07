@@ -123,12 +123,12 @@ const ExamDetailsModal: React.FC<ExamDetailsModalProps> = ({
                 width: "44px",
                 height: "44px",
                 borderRadius: "12px",
-                background: "#eff6ff",
-                border: "1px solid #bfdbfe",
+                background: "var(--primary-light-surface, #f5f3ff)",
+                border: "1px solid var(--primary-light-border, #ddd6fe)",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
-                color: "#0062ff",
+                color: "var(--primary, #28166f)",
                 flexShrink: 0,
               }}
             >
@@ -146,9 +146,9 @@ const ExamDetailsModal: React.FC<ExamDetailsModalProps> = ({
               >
                 <span
                   style={{
-                    background: "#eff6ff",
-                    color: "#0062ff",
-                    border: "1px solid #bfdbfe",
+                    background: "var(--primary-light-surface, #f5f3ff)",
+                    color: "var(--primary, #28166f)",
+                    border: "1px solid var(--primary-light-border, #ddd6fe)",
                     fontSize: "0.7rem",
                     padding: "0.15rem 0.5rem",
                     borderRadius: "4px",
@@ -162,7 +162,7 @@ const ExamDetailsModal: React.FC<ExamDetailsModalProps> = ({
                     style={{
                       fontSize: "0.75rem",
                       fontWeight: 700,
-                      color: "#0062ff",
+                      color: "var(--primary, #28166f)",
                     }}
                   >
                     [{exam.course_code}]
@@ -270,7 +270,7 @@ const ExamDetailsModal: React.FC<ExamDetailsModalProps> = ({
                 gap: "0.5rem",
               }}
             >
-              <FileText size={16} color="#0062ff" /> Examination Identity & Academic Context
+              <FileText size={16} color="var(--primary, #28166f)" /> Examination Identity & Academic Context
             </h3>
             <div
               style={{
@@ -346,7 +346,7 @@ const ExamDetailsModal: React.FC<ExamDetailsModalProps> = ({
                       marginBottom: "4px",
                     }}
                   >
-                    <Icon size={12} color="#0062ff" />
+                    <Icon size={12} color="var(--primary, #28166f)" />
                     <span
                       style={{
                         fontSize: "0.68rem",
@@ -393,7 +393,7 @@ const ExamDetailsModal: React.FC<ExamDetailsModalProps> = ({
                     marginBottom: "6px",
                   }}
                 >
-                  <FileText size={12} color="#0062ff" />
+                  <FileText size={12} color="var(--primary, #28166f)" />
                   <span
                     style={{
                       fontSize: "0.68rem",
@@ -450,7 +450,7 @@ const ExamDetailsModal: React.FC<ExamDetailsModalProps> = ({
                   gap: "0.5rem",
                 }}
               >
-                <CheckCircle2 size={16} color="#0062ff" /> Configured Answer Key
+                <CheckCircle2 size={16} color="var(--primary, #28166f)" /> Configured Answer Key
               </h3>
               <div>
                 {configuredAnswers === questionCount && questionCount > 0 ? (
@@ -544,9 +544,9 @@ const ExamDetailsModal: React.FC<ExamDetailsModalProps> = ({
                             width: "24px",
                             height: "24px",
                             borderRadius: "50%",
-                            background: "#eff6ff",
-                            border: "1.5px solid #0062ff",
-                            color: "#0062ff",
+                            background: "var(--primary-light-surface, #f5f3ff)",
+                            border: "1.5px solid var(--primary, #28166f)",
+                            color: "var(--primary, #28166f)",
                             fontSize: "0.75rem",
                             fontWeight: 800,
                             display: "flex",
@@ -587,7 +587,7 @@ const ExamDetailsModal: React.FC<ExamDetailsModalProps> = ({
                 fontWeight: 600,
               }}
             >
-              <Calendar size={12} color="#0062ff" />
+              <Calendar size={12} color="var(--primary, #28166f)" />
               Created: {formatDate(exam.created_at)}
             </span>
             <button

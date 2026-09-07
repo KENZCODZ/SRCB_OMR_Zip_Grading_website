@@ -294,12 +294,12 @@ export const ExamCreationModal: React.FC<ExamCreationModalProps> = ({
                 width: "42px",
                 height: "42px",
                 borderRadius: "10px",
-                background: "#eff6ff",
-                border: "1px solid #bfdbfe",
+                background: "var(--primary-light-surface, #f5f3ff)",
+                border: "1px solid var(--primary-light-border, #ddd6fe)",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
-                color: "#0062ff",
+                color: "var(--primary, #28166f)",
               }}
             >
               <BookOpen size={22} />
@@ -362,7 +362,7 @@ export const ExamCreationModal: React.FC<ExamCreationModalProps> = ({
                   gap: "0.5rem",
                 }}
               >
-                <FileText size={18} color="#0062ff" /> 1. Examination Identity & Metadata
+                <FileText size={18} color="var(--primary, #28166f)" /> 1. Examination Identity & Metadata
               </h3>
 
               <div
@@ -669,7 +669,7 @@ export const ExamCreationModal: React.FC<ExamCreationModalProps> = ({
                   gap: "0.5rem",
                 }}
               >
-                <Calendar size={18} color="#0062ff" /> 2. Exam Schedule & Administration
+                <Calendar size={18} color="var(--primary, #28166f)" /> 2. Exam Schedule & Administration
                 Settings (Optional)
               </h3>
 
@@ -761,7 +761,7 @@ export const ExamCreationModal: React.FC<ExamCreationModalProps> = ({
                       gap: "0.5rem",
                     }}
                   >
-                    <CheckSquare size={18} color="#0062ff" /> 3. Answer Key Editor ({numItems}{" "}
+                    <CheckSquare size={18} color="var(--primary, #28166f)" /> 3. Answer Key Editor ({numItems}{" "}
                     Items)
                   </h3>
                   <p
@@ -943,8 +943,8 @@ export const ExamCreationModal: React.FC<ExamCreationModalProps> = ({
                                     fontSize: "0.8rem",
                                     fontWeight: 700,
                                     borderRadius: "50%",
-                                    border: isActive ? "1px solid #0062ff" : "1px solid #cbd5e1",
-                                    background: isActive ? "#0062ff" : "#ffffff",
+                                    border: isActive ? "1px solid var(--primary, #28166f)" : "1px solid #cbd5e1",
+                                    background: isActive ? "var(--primary, #28166f)" : "#ffffff",
                                     color: isActive ? "#ffffff" : "#64748b",
                                     cursor: "pointer",
                                     transition: "all 0.15s ease",
@@ -1000,8 +1000,8 @@ export const ExamCreationModal: React.FC<ExamCreationModalProps> = ({
                                       fontSize: "0.8rem",
                                       fontWeight: 700,
                                       borderRadius: "50%",
-                                      border: isActive ? "1px solid #0062ff" : "1px solid #cbd5e1",
-                                      background: isActive ? "#0062ff" : "#ffffff",
+                                      border: isActive ? "1px solid var(--primary, #28166f)" : "1px solid #cbd5e1",
+                                      background: isActive ? "var(--primary, #28166f)" : "#ffffff",
                                       color: isActive ? "#ffffff" : "#64748b",
                                       cursor: "pointer",
                                       transition: "all 0.15s ease",
@@ -1066,7 +1066,7 @@ export const ExamCreationModal: React.FC<ExamCreationModalProps> = ({
                 display: "flex",
                 alignItems: "center",
                 gap: "0.5rem",
-                background: "#0062ff",
+                background: "var(--primary, #28166f)",
                 color: "#ffffff",
                 borderRadius: "8px",
                 border: "none",

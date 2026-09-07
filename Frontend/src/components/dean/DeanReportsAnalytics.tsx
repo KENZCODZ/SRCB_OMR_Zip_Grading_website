@@ -31,7 +31,7 @@ interface DeanReportsAnalyticsProps {
 
 const GRADE_DISTRIBUTION = [
   { grade: "1.00 - 1.25", label: "Excellent / Superior", percentage: "18.4%", count: "402 Students", color: "#10b981", barWidth: "75%" },
-  { grade: "1.50 - 1.75", label: "Very Good / High Satisfactory", percentage: "34.2%", count: "747 Students", color: "#0062ff", barWidth: "90%" },
+  { grade: "1.50 - 1.75", label: "Very Good / High Satisfactory", percentage: "34.2%", count: "747 Students", color: "var(--primary, #28166f)", barWidth: "90%" },
   { grade: "2.00 - 2.50", label: "Good / Satisfactory", percentage: "28.6%", count: "625 Students", color: "#6366f1", barWidth: "65%" },
   { grade: "2.75 - 3.00", label: "Fair / Minimum Passing", percentage: "11.2%", count: "244 Students", color: "#f59e0b", barWidth: "35%" },
   { grade: "5.00", label: "Did Not Meet Benchmark (Failed)", percentage: "7.6%", count: "166 Students", color: "#f43f5e", barWidth: "22%" },
@@ -200,7 +200,7 @@ export default function DeanReportsAnalytics({
         >
           <div style={{ display: "flex", justifyContent: "space-between", color: "#64748b", marginBottom: "0.5rem" }}>
             <span style={{ fontSize: "0.85rem", fontWeight: 600 }}>Overall Mean Score</span>
-            <div style={{ width: "32px", height: "32px", borderRadius: "8px", background: "#eff6ff", display: "flex", alignItems: "center", justifyContent: "center", color: "#0062ff" }}>
+            <div style={{ width: "32px", height: "32px", borderRadius: "8px", background: "var(--primary-light-surface, #f5f3ff)", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--primary, #28166f)" }}>
               <TrendingUp size={17} />
             </div>
           </div>
@@ -224,11 +224,11 @@ export default function DeanReportsAnalytics({
         >
           <div style={{ display: "flex", justifyContent: "space-between", color: "#64748b", marginBottom: "0.5rem" }}>
             <span style={{ fontSize: "0.85rem", fontWeight: 600 }}>Collegiate Passing Rate</span>
-            <div style={{ width: "32px", height: "32px", borderRadius: "8px", background: "#eff6ff", display: "flex", alignItems: "center", justifyContent: "center", color: "#0062ff" }}>
+            <div style={{ width: "32px", height: "32px", borderRadius: "8px", background: "var(--primary-light-surface, #f5f3ff)", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--primary, #28166f)" }}>
               <Award size={17} />
             </div>
           </div>
-          <div style={{ fontSize: "1.8rem", fontWeight: 800, color: "#0062ff" }}>
+          <div style={{ fontSize: "1.8rem", fontWeight: 800, color: "var(--primary, #28166f)" }}>
             88.8%
           </div>
           <div style={{ fontSize: "0.75rem", color: "#64748b", marginTop: "0.2rem" }}>
@@ -248,7 +248,7 @@ export default function DeanReportsAnalytics({
         >
           <div style={{ display: "flex", justifyContent: "space-between", color: "#64748b", marginBottom: "0.5rem" }}>
             <span style={{ fontSize: "0.85rem", fontWeight: 600 }}>OBE QA Quality Rating</span>
-            <div style={{ width: "32px", height: "32px", borderRadius: "8px", background: "#eff6ff", display: "flex", alignItems: "center", justifyContent: "center", color: "#0062ff" }}>
+            <div style={{ width: "32px", height: "32px", borderRadius: "8px", background: "var(--primary-light-surface, #f5f3ff)", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--primary, #28166f)" }}>
               <ShieldCheck size={17} />
             </div>
           </div>
@@ -271,7 +271,7 @@ export default function DeanReportsAnalytics({
             padding: "0.55rem 1rem",
             borderRadius: "10px",
             fontWeight: 600,
-            background: activeReportTab === "grades" ? "#0062ff" : "#ffffff",
+            background: activeReportTab === "grades" ? "var(--primary, #28166f)" : "#ffffff",
             color: activeReportTab === "grades" ? "#ffffff" : "#475569",
             border: activeReportTab === "grades" ? "none" : "1px solid #e2e8f0",
             boxShadow: activeReportTab === "grades" ? "0 2px 6px rgba(0, 98, 255, 0.2)" : "none",
@@ -289,7 +289,7 @@ export default function DeanReportsAnalytics({
             padding: "0.55rem 1rem",
             borderRadius: "10px",
             fontWeight: 600,
-            background: activeReportTab === "colleges" ? "#0062ff" : "#ffffff",
+            background: activeReportTab === "colleges" ? "var(--primary, #28166f)" : "#ffffff",
             color: activeReportTab === "colleges" ? "#ffffff" : "#475569",
             border: activeReportTab === "colleges" ? "none" : "1px solid #e2e8f0",
             boxShadow: activeReportTab === "colleges" ? "0 2px 6px rgba(0, 98, 255, 0.2)" : "none",
@@ -307,7 +307,7 @@ export default function DeanReportsAnalytics({
             padding: "0.55rem 1rem",
             borderRadius: "10px",
             fontWeight: 600,
-            background: activeReportTab === "accreditation" ? "#0062ff" : "#ffffff",
+            background: activeReportTab === "accreditation" ? "var(--primary, #28166f)" : "#ffffff",
             color: activeReportTab === "accreditation" ? "#ffffff" : "#475569",
             border: activeReportTab === "accreditation" ? "none" : "1px solid #e2e8f0",
             boxShadow: activeReportTab === "accreditation" ? "0 2px 6px rgba(0, 98, 255, 0.2)" : "none",
@@ -388,11 +388,11 @@ export default function DeanReportsAnalytics({
                   style={{
                     padding: "0.85rem",
                     borderRadius: "10px",
-                    background: "#eff6ff",
-                    border: "1px solid #bfdbfe",
+                    background: "var(--primary-light-surface, #f5f3ff)",
+                    border: "1px solid var(--primary-light-border, #ddd6fe)",
                   }}
                 >
-                  <div style={{ display: "flex", alignItems: "center", gap: "0.4rem", color: "#0062ff", fontWeight: 700, fontSize: "0.85rem" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "0.4rem", color: "var(--primary, #28166f)", fontWeight: 700, fontSize: "0.85rem" }}>
                     <Sparkles size={16} /> Zero Discrimination Anomaly
                   </div>
                   <p style={{ margin: "0.3rem 0 0 0", fontSize: "0.8rem", color: "#475569", lineHeight: 1.4 }}>
@@ -453,12 +453,12 @@ export default function DeanReportsAnalytics({
                   >
                     <td style={{ padding: "0.85rem 1rem", fontWeight: 600 }}>
                       <div style={{ color: "#0f172a" }}>{d.name}</div>
-                      <div style={{ fontSize: "0.74rem", color: "#0062ff", fontWeight: 700 }}>Code: {d.code}</div>
+                      <div style={{ fontSize: "0.74rem", color: "var(--primary, #28166f)", fontWeight: 700 }}>Code: {d.code}</div>
                     </td>
                     <td style={{ padding: "0.85rem 1rem", color: "#475569" }}>{d.exams} Sets</td>
                     <td style={{ padding: "0.85rem 1rem", color: "#475569" }}>{d.sheets} Sheets</td>
                     <td style={{ padding: "0.85rem 1rem", fontWeight: 700, color: "#10b981" }}>{d.meanScore}%</td>
-                    <td style={{ padding: "0.85rem 1rem", fontWeight: 700, color: "#0062ff" }}>{d.passRate}%</td>
+                    <td style={{ padding: "0.85rem 1rem", fontWeight: 700, color: "var(--primary, #28166f)" }}>{d.passRate}%</td>
                     <td style={{ padding: "0.85rem 1rem" }}>
                       <span className="badge badge-success" style={{ fontSize: "0.72rem" }}>
                         {d.obeStatus}
@@ -519,7 +519,7 @@ export default function DeanReportsAnalytics({
 
           <div className="card" style={{ padding: "1.4rem", borderRadius: "16px", background: "#ffffff", border: "1px solid #e2e8f0", boxShadow: "0 2px 8px rgba(0,0,0,0.02)" }}>
             <h3 style={{ margin: "0 0 0.8rem 0", fontSize: "1.1rem", display: "flex", alignItems: "center", gap: "0.5rem", color: "#0f172a" }}>
-              <Award size={18} color="#0062ff" /> Institutional Export Package
+              <Award size={18} color="var(--primary, #28166f)" /> Institutional Export Package
             </h3>
             <p style={{ fontSize: "0.83rem", color: "#64748b", lineHeight: 1.5, marginBottom: "1rem" }}>
               Download official institutional summaries ready for submission to accrediting panels:
@@ -549,7 +549,7 @@ export default function DeanReportsAnalytics({
                     Includes roster, exams, item keys, and all student grades
                   </div>
                 </div>
-                <Download size={16} color="#0062ff" />
+                <Download size={16} color="var(--primary, #28166f)" />
               </button>
 
               <button
@@ -575,7 +575,7 @@ export default function DeanReportsAnalytics({
                     Batch compilation of all active examination results
                   </div>
                 </div>
-                <Download size={16} color="#0062ff" />
+                <Download size={16} color="var(--primary, #28166f)" />
               </button>
             </div>
           </div>

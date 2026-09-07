@@ -129,11 +129,11 @@ export default function DeanSettings({
                 width: "36px",
                 height: "36px",
                 borderRadius: "8px",
-                background: "#eff6ff",
+                background: "var(--primary-light-surface, #f5f3ff)",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
-                color: "#0062ff",
+                color: "var(--primary, #28166f)",
               }}
             >
               <Sliders size={18} />
@@ -182,7 +182,7 @@ export default function DeanSettings({
             <div>
               <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "0.35rem" }}>
                 <label style={{ fontSize: "0.82rem", fontWeight: 600, color: "#334155" }}>CHED Minimum Passing Benchmark (%)</label>
-                <strong style={{ color: "#0062ff", fontSize: "0.85rem" }}>{passingThreshold}%</strong>
+                <strong style={{ color: "var(--primary, #28166f)", fontSize: "0.85rem" }}>{passingThreshold}%</strong>
               </div>
               <input
                 type="range"
@@ -191,7 +191,7 @@ export default function DeanSettings({
                 step="1"
                 value={passingThreshold}
                 onChange={(e) => setPassingThreshold(e.target.value)}
-                style={{ width: "100%", accentColor: "#0062ff" }}
+                style={{ width: "100%", accentColor: "var(--primary, #28166f)" }}
               />
               <span style={{ fontSize: "0.72rem", color: "#64748b" }}>
                 CHED CMO Standard: 75% minimum passing grade equivalent to 3.00.
@@ -224,11 +224,11 @@ export default function DeanSettings({
                 width: "36px",
                 height: "36px",
                 borderRadius: "8px",
-                background: "#eff6ff",
+                background: "var(--primary-light-surface, #f5f3ff)",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
-                color: "#0062ff",
+                color: "var(--primary, #28166f)",
               }}
             >
               <Award size={18} />
@@ -282,7 +282,7 @@ export default function DeanSettings({
                 type="checkbox"
                 checked={autoLockAnswerKeys}
                 onChange={(e) => setAutoLockAnswerKeys(e.target.checked)}
-                style={{ width: "18px", height: "18px", accentColor: "#0062ff" }}
+                style={{ width: "18px", height: "18px", accentColor: "var(--primary, #28166f)" }}
               />
             </div>
 
@@ -307,7 +307,7 @@ export default function DeanSettings({
                 type="checkbox"
                 checked={requireProgrammeHeadApproval}
                 onChange={(e) => setRequireProgrammeHeadApproval(e.target.checked)}
-                style={{ width: "18px", height: "18px", accentColor: "#0062ff" }}
+                style={{ width: "18px", height: "18px", accentColor: "var(--primary, #28166f)" }}
               />
             </div>
           </div>
@@ -321,11 +321,11 @@ export default function DeanSettings({
                 width: "36px",
                 height: "36px",
                 borderRadius: "8px",
-                background: "#eff6ff",
+                background: "var(--primary-light-surface, #f5f3ff)",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
-                color: "#0062ff",
+                color: "var(--primary, #28166f)",
               }}
             >
               <Lock size={18} />
@@ -360,7 +360,7 @@ export default function DeanSettings({
                 type="checkbox"
                 checked={watermarkExports}
                 onChange={(e) => setWatermarkExports(e.target.checked)}
-                style={{ width: "18px", height: "18px", accentColor: "#0062ff" }}
+                style={{ width: "18px", height: "18px", accentColor: "var(--primary, #28166f)" }}
               />
             </div>
 
@@ -385,7 +385,7 @@ export default function DeanSettings({
                 type="checkbox"
                 checked={autoAuditLogs}
                 onChange={(e) => setAutoAuditLogs(e.target.checked)}
-                style={{ width: "18px", height: "18px", accentColor: "#0062ff" }}
+                style={{ width: "18px", height: "18px", accentColor: "var(--primary, #28166f)" }}
               />
             </div>
           </div>
@@ -399,11 +399,11 @@ export default function DeanSettings({
                 width: "36px",
                 height: "36px",
                 borderRadius: "8px",
-                background: "#eff6ff",
+                background: "var(--primary-light-surface, #f5f3ff)",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
-                color: "#0062ff",
+                color: "var(--primary, #28166f)",
               }}
             >
               <Bell size={18} />
@@ -438,7 +438,7 @@ export default function DeanSettings({
                 type="checkbox"
                 checked={lowPassAlerts}
                 onChange={(e) => setLowPassAlerts(e.target.checked)}
-                style={{ width: "18px", height: "18px", accentColor: "#0062ff" }}
+                style={{ width: "18px", height: "18px", accentColor: "var(--primary, #28166f)" }}
               />
             </div>
 
@@ -463,7 +463,7 @@ export default function DeanSettings({
                 type="checkbox"
                 checked={weeklyDigest}
                 onChange={(e) => setWeeklyDigest(e.target.checked)}
-                style={{ width: "18px", height: "18px", accentColor: "#0062ff" }}
+                style={{ width: "18px", height: "18px", accentColor: "var(--primary, #28166f)" }}
               />
             </div>
           </div>

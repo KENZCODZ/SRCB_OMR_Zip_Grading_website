@@ -46,7 +46,7 @@ export const NotificationDropdown: React.FC<NotificationDropdownProps> = ({
   const getNotificationIcon = (type: AppNotification["type"]) => {
     switch (type) {
       case "exam":
-        return <FileText size={16} color="#0062ff" />;
+        return <FileText size={16} color="var(--primary, #28166f)" />;
       case "grade":
         return <GraduationCap size={16} color="#059669" />;
       case "user":
@@ -65,7 +65,7 @@ export const NotificationDropdown: React.FC<NotificationDropdownProps> = ({
   const getNotificationBadgeBg = (type: AppNotification["type"]) => {
     switch (type) {
       case "exam":
-        return "#eff6ff";
+        return "var(--primary-light-surface, #f5f3ff)";
       case "grade":
         return "#ecfdf5";
       case "user":
@@ -125,7 +125,7 @@ export const NotificationDropdown: React.FC<NotificationDropdownProps> = ({
             {unreadCount > 0 && (
               <span
                 style={{
-                  background: "#0062ff",
+                  background: "var(--primary, #28166f)",
                   color: "#ffffff",
                   fontSize: "0.7rem",
                   fontWeight: 800,
@@ -147,7 +147,7 @@ export const NotificationDropdown: React.FC<NotificationDropdownProps> = ({
                 style={{
                   background: "transparent",
                   border: "none",
-                  color: "#0062ff",
+                  color: "var(--primary, #28166f)",
                   fontSize: "0.75rem",
                   fontWeight: 600,
                   cursor: "pointer",
@@ -216,7 +216,7 @@ export const NotificationDropdown: React.FC<NotificationDropdownProps> = ({
               fontWeight: 700,
               border: "none",
               cursor: "pointer",
-              background: filter === "all" ? "#0062ff" : "#f1f5f9",
+              background: filter === "all" ? "var(--primary, #28166f)" : "#f1f5f9",
               color: filter === "all" ? "#ffffff" : "#64748b",
               transition: "all 0.15s ease",
             }}
@@ -233,7 +233,7 @@ export const NotificationDropdown: React.FC<NotificationDropdownProps> = ({
               fontWeight: 700,
               border: "none",
               cursor: "pointer",
-              background: filter === "unread" ? "#0062ff" : "#f1f5f9",
+              background: filter === "unread" ? "var(--primary, #28166f)" : "#f1f5f9",
               color: filter === "unread" ? "#ffffff" : "#64748b",
               transition: "all 0.15s ease",
             }}
@@ -384,7 +384,7 @@ export const NotificationDropdown: React.FC<NotificationDropdownProps> = ({
                       width: "8px",
                       height: "8px",
                       borderRadius: "50%",
-                      background: "#0062ff",
+                      background: "var(--primary, #28166f)",
                     }}
                   />
                 )}
@@ -429,7 +429,7 @@ export const NotificationDropdown: React.FC<NotificationDropdownProps> = ({
         }}
       >
         <span>SRCB Academic Stream</span>
-        <span style={{ display: "flex", alignItems: "center", gap: "2px", color: "#0062ff", fontWeight: 700 }}>
+        <span style={{ display: "flex", alignItems: "center", gap: "2px", color: "var(--primary, #28166f)", fontWeight: 700 }}>
           Real-time <ChevronRight size={12} />
         </span>
       </div>
