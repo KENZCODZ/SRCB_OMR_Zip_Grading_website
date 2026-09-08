@@ -24,6 +24,8 @@ import {
   ChevronRight,
   Sliders,
   Activity,
+  Menu,
+  X,
 } from "lucide-react";
 import confetti from "canvas-confetti";
 import type {
@@ -273,6 +275,9 @@ export default function App() {
   // Sidebar Accordion State
   const [expandedMenus, setExpandedMenus] = useState<Record<string, boolean>>({});
   const [sidebarProgramFilter, setSidebarProgramFilter] = useState<string>("all");
+
+  // Mobile Sidebar State
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const [selectedAuthUserId, setSelectedAuthUserId] = useState(mockUsers[0].id);
   const [loginEmail, setLoginEmail] = useState("");
   const [loginPassword, setLoginPassword] = useState("");
@@ -1084,6 +1089,7 @@ export default function App() {
       : (navigationItems[0]?.key || "dashboard");
     setActiveTab(target);
     storeActiveTab(target);
+    setIsMobileSidebarOpen(false);
   };
 
   const getUserInitials = (name?: string) => {
@@ -1233,8 +1239,26 @@ export default function App() {
           }}
         />
 
+        {/* Mobile Hamburger Button */}
+        <button
+          type="button"
+          className="mobile-menu-btn"
+          onClick={() => setIsMobileSidebarOpen(true)}
+          aria-label="Open navigation menu"
+        >
+          <Menu size={24} />
+        </button>
+
+        {/* Mobile Sidebar Backdrop */}
+        {isMobileSidebarOpen && (
+          <div
+            className="sidebar-mobile-backdrop"
+            onClick={() => setIsMobileSidebarOpen(false)}
+          />
+        )}
+
         {/* Reference Electric Blue Sidebar with Curved Cutout Active Tab */}
-        <aside className="sidebar-curved">
+        <aside className={`sidebar-curved ${isMobileSidebarOpen ? "sidebar-mobile-open" : ""}`}>
           <div className="sidebar-brand-header">
             <div className="sidebar-brand-logo-frame">
               <img
@@ -1244,6 +1268,14 @@ export default function App() {
               />
             </div>
             <span className="sidebar-brand-title">SRCB EduAssess</span>
+            <button
+              type="button"
+              className="mobile-sidebar-close-btn"
+              onClick={() => setIsMobileSidebarOpen(false)}
+              aria-label="Close navigation menu"
+            >
+              <X size={20} />
+            </button>
           </div>
 
           <ul className="sidebar-curved-menu">
