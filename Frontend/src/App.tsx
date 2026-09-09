@@ -26,6 +26,8 @@ import {
   Activity,
   Menu,
   X,
+  Home,
+  Eye,
 } from "lucide-react";
 import confetti from "canvas-confetti";
 import type {
@@ -272,9 +274,6 @@ export default function App() {
     return "dashboard";
   });
 
-  // Sidebar Accordion State
-  const [expandedMenus, setExpandedMenus] = useState<Record<string, boolean>>({});
-  const [sidebarProgramFilter, setSidebarProgramFilter] = useState<string>("all");
 
   // Mobile Sidebar State
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
@@ -953,8 +952,6 @@ export default function App() {
     setLoginError("");
     setActiveTab("dashboard");
     setAuthMessage(message);
-    setExpandedMenus({});
-    setSidebarProgramFilter("all");
   };
 
   const handleSignOut = () => {
@@ -1013,14 +1010,6 @@ export default function App() {
           key: "progress-records" as AppTab,
           label: "Progress & Records",
           icon: Activity,
-          subItems: [
-            { id: "all", label: "All Programs" },
-            { id: "BSIT", label: "BS Information Tech (BSIT)" },
-            { id: "BSEd", label: "BS Education (BSEd)" },
-            { id: "BSCS", label: "BS Computer Science (BSCS)" },
-            { id: "BSBA", label: "BS Business Admin (BSBA)" },
-            { id: "AB Comm", label: "AB Communication Arts" },
-          ],
         },
         {
           key: "reports" as AppTab,
@@ -1287,24 +1276,17 @@ export default function App() {
                   <div
                     className={`sidebar-curved-item ${isActive ? "active" : ""}`}
                     onClick={() => {
-                      if (item.subItems) {
-                        setExpandedMenus((prev) => ({
-                          ...prev,
-                          [item.key]: !prev[item.key],
-                        }));
-                      } else {
-                        if (item.key === "user-guide") {
-                          setIsUserGuideOpen(true);
-                          return;
-                        }
-                        handleTabSelect(item.key);
-                        if (
-                          item.key === "exams" &&
-                          exams.length > 0 &&
-                          !selectedExamId
-                        ) {
-                          setSelectedExamId(exams[0].id);
-                        }
+                      if (item.key === "user-guide") {
+                        setIsUserGuideOpen(true);
+                        return;
+                      }
+                      handleTabSelect(item.key);
+                      if (
+                        item.key === "exams" &&
+                        exams.length > 0 &&
+                        !selectedExamId
+                      ) {
+                        setSelectedExamId(exams[0].id);
                       }
                     }}
                     style={{ 
@@ -1319,68 +1301,7 @@ export default function App() {
                       <Icon size={19} className="nav-icon" style={{ flexShrink: 0 }} />
                       <span style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{item.label}</span>
                     </div>
-                    {item.subItems && (
-                      <ChevronDown
-                        size={16}
-                        style={{
-                          transform: expandedMenus[item.key] ? "rotate(180deg)" : "rotate(0deg)",
-                          transition: "transform 0.2s ease",
-                          color: isActive ? "var(--primary, #28166f)" : "rgba(255, 255, 255, 0.75)",
-                          flexShrink: 0,
-                          marginLeft: "0.35rem",
-                        }}
-                      />
-                    )}
                   </div>
-                  
-                  {item.subItems && expandedMenus[item.key] && (
-                    <ul style={{ 
-                      listStyle: "none", 
-                      padding: "0.25rem 0 0.5rem 2.5rem", 
-                      margin: 0,
-                      display: "flex",
-                      flexDirection: "column",
-                      gap: "0.25rem"
-                    }}>
-                      {item.subItems.map((subItem) => (
-                        <li 
-                          key={subItem.id}
-                          onClick={() => {
-                            setSidebarProgramFilter(subItem.id);
-                            handleTabSelect(item.key);
-                          }}
-                          style={{
-                            padding: "0.5rem 0.75rem",
-                            borderRadius: "6px",
-                            cursor: "pointer",
-                            fontSize: "0.85rem",
-                            fontWeight: sidebarProgramFilter === subItem.id && isActive ? 700 : 500,
-                            color: sidebarProgramFilter === subItem.id && isActive 
-                              ? "#ffffff" 
-                              : "rgba(255, 255, 255, 0.75)",
-                            background: sidebarProgramFilter === subItem.id && isActive 
-                              ? "rgba(255, 255, 255, 0.2)" 
-                              : "transparent",
-                            transition: "all 0.18s ease",
-                          }}
-                          onMouseEnter={(e) => {
-                            if (sidebarProgramFilter !== subItem.id || !isActive) {
-                              e.currentTarget.style.color = "#ffffff";
-                              e.currentTarget.style.background = "rgba(255, 255, 255, 0.1)";
-                            }
-                          }}
-                          onMouseLeave={(e) => {
-                            if (sidebarProgramFilter !== subItem.id || !isActive) {
-                              e.currentTarget.style.color = "rgba(255, 255, 255, 0.75)";
-                              e.currentTarget.style.background = "transparent";
-                            }
-                          }}
-                        >
-                          {subItem.label}
-                        </li>
-                      ))}
-                    </ul>
-                  )}
                 </li>
               );
             })}
@@ -1406,40 +1327,105 @@ export default function App() {
               <nav
                 className="header-breadcrumbs"
                 aria-label="Breadcrumb"
-                style={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: "0.5rem",
-                  fontSize: "0.92rem",
-                  fontWeight: 600,
-                  color: "#64748b",
-                  background: "#ffffff",
-                  padding: "0.45rem 0.95rem",
-                  borderRadius: "10px",
-                  border: "1px solid #e2e8f0",
-                  boxShadow: "0 1px 3px rgba(0, 0, 0, 0.02)",
-                }}
               >
-                <span style={{ color: "#64748b", fontWeight: 600 }}>SRCB EduAssess</span>
-                <ChevronRight size={14} style={{ color: "#94a3b8", flexShrink: 0 }} />
-                <span
-                  style={{
-                    color: "var(--primary, #28166f)",
-                    fontWeight: 700,
-                    textTransform: "capitalize",
-                    background: "var(--primary-light-surface, #f5f3ff)",
-                    padding: "0.15rem 0.55rem",
-                    borderRadius: "6px",
-                    border: "1px solid var(--primary-light-border, #ddd6fe)",
-                    fontSize: "0.82rem",
+                <button
+                  type="button"
+                  className="breadcrumb-btn"
+                  onClick={() => {
+                    if (inspectExam) setInspectExam(null);
+                    const homeTab: AppTab =
+                      currentUser.role === "programme-head"
+                        ? "academic-management"
+                        : "dashboard";
+                    handleTabSelect(homeTab);
+                    const container = document.querySelector(".main-content-reference");
+                    if (container) container.scrollTo({ top: 0, behavior: "smooth" });
+                    window.scrollTo({ top: 0, behavior: "smooth" });
                   }}
+                  title="Go to Home Dashboard"
+                >
+                  <Home size={14} style={{ color: "var(--primary, #28166f)", flexShrink: 0 }} />
+                  <span>SRCB EduAssess</span>
+                </button>
+
+                <ChevronRight size={14} style={{ color: "#94a3b8", flexShrink: 0 }} />
+
+                <button
+                  type="button"
+                  className="breadcrumb-role-btn"
+                  onClick={() => {
+                    if (inspectExam) setInspectExam(null);
+                    const homeTab: AppTab =
+                      currentUser.role === "programme-head"
+                        ? "academic-management"
+                        : "dashboard";
+                    handleTabSelect(homeTab);
+                    const container = document.querySelector(".main-content-reference");
+                    if (container) container.scrollTo({ top: 0, behavior: "smooth" });
+                    window.scrollTo({ top: 0, behavior: "smooth" });
+                  }}
+                  title={`Go to ${currentUser.role.replace("-", " ")} Home Overview`}
                 >
                   {currentUser.role.replace("-", " ")}
-                </span>
+                </button>
+
                 <ChevronRight size={14} style={{ color: "#94a3b8", flexShrink: 0 }} />
-                <span style={{ color: "#0f172a", fontWeight: 800 }}>
+
+                <button
+                  type="button"
+                  className="breadcrumb-current-btn"
+                  onClick={() => {
+                    if (inspectExam) setInspectExam(null);
+                    if (activeTab === "exams" && teacherExamsSubTab !== "grading") {
+                      setTeacherExamsSubTab("grading");
+                    }
+                    handleTabSelect(activeTab);
+                    const container = document.querySelector(".main-content-reference");
+                    if (container) container.scrollTo({ top: 0, behavior: "smooth" });
+                    window.scrollTo({ top: 0, behavior: "smooth" });
+                  }}
+                  title={`Current Section: ${getActiveTabTitle(activeTab)} (click to view or scroll to top)`}
+                >
                   {getActiveTabTitle(activeTab)}
-                </span>
+                </button>
+
+                {activeTab === "exams" && teacherExamsSubTab === "quick-scan" && (
+                  <>
+                    <ChevronRight size={14} style={{ color: "#94a3b8", flexShrink: 0 }} />
+                    <button
+                      type="button"
+                      className="breadcrumb-sub-badge"
+                      title="Quick OMR Scanner Mode"
+                      onClick={() => {
+                        const container = document.querySelector(".main-content-reference");
+                        if (container) container.scrollTo({ top: 0, behavior: "smooth" });
+                        window.scrollTo({ top: 0, behavior: "smooth" });
+                      }}
+                    >
+                      <Sparkles size={13} style={{ color: "var(--primary, #28166f)", flexShrink: 0 }} />
+                      <span>Quick Scanner</span>
+                    </button>
+                  </>
+                )}
+
+                {inspectExam && (
+                  <>
+                    <ChevronRight size={14} style={{ color: "#94a3b8", flexShrink: 0 }} />
+                    <button
+                      type="button"
+                      className="breadcrumb-sub-badge"
+                      title={`Inspecting: ${inspectExam.name}`}
+                      onClick={() => {
+                        const container = document.querySelector(".main-content-reference");
+                        if (container) container.scrollTo({ top: 0, behavior: "smooth" });
+                        window.scrollTo({ top: 0, behavior: "smooth" });
+                      }}
+                    >
+                      <Eye size={13} style={{ color: "var(--primary, #28166f)", flexShrink: 0 }} />
+                      <span>{inspectExam.course_code ? `${inspectExam.course_code} Details` : inspectExam.name}</span>
+                    </button>
+                  </>
+                )}
               </nav>
             </div>
 
@@ -1650,7 +1636,7 @@ export default function App() {
             submissions={submissions}
             onInspectExam={(exam) => setInspectExam(exam)}
             formatDate={formatDate}
-            programFilter={sidebarProgramFilter}
+            programFilter="all"
           />
         )}
 
