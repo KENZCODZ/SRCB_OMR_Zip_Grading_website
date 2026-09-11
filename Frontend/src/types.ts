@@ -60,7 +60,7 @@ export interface StudentRosterEntry {
   email?: string;
 }
 
-export type UserRole = 'dean' | 'programme-head' | 'teacher' | 'student';
+export type UserRole = 'admin' | 'dean' | 'programme-head' | 'teacher' | 'student';
 
 export interface AuthUser {
   id: string;
@@ -70,7 +70,8 @@ export interface AuthUser {
   programme?: string;
   department?: string;
   studentId?: string;
-  status?: 'pending' | 'active' | 'rejected';
+  student_id?: string;
+  status?: 'pending' | 'active' | 'rejected' | 'suspended';
   scope: string;
   permissions: string[];
 }
@@ -83,7 +84,7 @@ export interface PendingUser {
   programme?: string;
   department?: string;
   student_id?: string;
-  status: 'pending' | 'active' | 'rejected';
+  status: 'pending' | 'active' | 'rejected' | 'suspended';
   created_at: string;
 }
 
@@ -125,4 +126,40 @@ export interface ItemAnalysisRow {
     E: number;
     empty: number;
   };
+}
+
+// Student Result Email Distribution Status & Record
+export type EmailDeliveryStatus = 'pending' | 'sent' | 'failed';
+
+export interface StudentResultEmailRecord {
+  id: string;
+  submissionId: string;
+  studentId: string;
+  studentName: string;
+  studentEmail: string;
+  examId: string;
+  examTitle: string;
+  examType: string;
+  courseCode?: string;
+  subject?: string;
+  section?: string;
+  score: number;
+  totalQuestions: number;
+  percentage: number;
+  grade: string;
+  status: 'Passed' | 'Failed' | 'Incomplete';
+  remarks: string;
+  deliveryStatus: EmailDeliveryStatus;
+  sentAt?: string;
+  errorMessage?: string;
+}
+
+export interface AppNotification {
+  id: string;
+  title: string;
+  message: string;
+  timestamp: string;
+  type: 'info' | 'success' | 'warning' | 'alert' | 'exam' | 'user' | 'grade';
+  read: boolean;
+  targetTab?: string;
 }

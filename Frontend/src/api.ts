@@ -1,4 +1,5 @@
 import type { Exam, Submission, QuickScanResult, GradeResult, PendingUser, RegisterPayload } from './types';
+import { cacheManager } from './utils/cacheManager';
 
 // Detect whether we are running in local Vite development server
 const API_BASE = import.meta.env.VITE_API_BASE ?? '';
@@ -47,13 +48,15 @@ export async function registerUser(payload: RegisterPayload): Promise<{ status: 
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
     });
-    return await handleResponse(response, 'Registration failed');
+    const result = await handleResponse<{ status: string; message: string; user: any }>(response, 'Registration failed');
+    cacheManager.invalidate(/^users_pending/);
+    return result;
   } catch (err) {
     catchNetworkError(err, 'Registration failed');
   }
 }
 
-export async function loginUser(email: string, password: string): Promise<{ id: string; name: string; email: string; role: string; programme?: string | null; department?: string | null }> {
+export async function loginUser(email: string, password: string): Promise<{ id: string; name: string; email: string; role: string; programme?: string | null; department?: string | null; student_id?: string | null; studentId?: string | null }> {
   try {
     const response = await fetch(`${API_BASE}/api/auth/login`, {
       method: 'POST',
@@ -66,14 +69,21 @@ export async function loginUser(email: string, password: string): Promise<{ id: 
   }
 }
 
-export async function fetchPendingUsers(programme?: string): Promise<PendingUser[]> {
-  try {
-    const query = programme ? `?programme=${encodeURIComponent(programme)}` : '';
-    const response = await fetch(`${API_BASE}/api/users/pending${query}`);
-    return await handleResponse(response, 'Failed to fetch pending registrations');
-  } catch (err) {
-    catchNetworkError(err, 'Failed to fetch pending registrations');
-  }
+export async function fetchPendingUsers(programme?: string, options?: { forceRefresh?: boolean }): Promise<PendingUser[]> {
+  const cacheKey = programme ? `users_pending_${programme}` : 'users_pending_all';
+  return cacheManager.fetchWithCache(
+    cacheKey,
+    async () => {
+      try {
+        const query = programme ? `?programme=${encodeURIComponent(programme)}` : '';
+        const response = await fetch(`${API_BASE}/api/users/pending${query}`);
+        return await handleResponse<PendingUser[]>(response, 'Failed to fetch pending registrations');
+      } catch (err) {
+        catchNetworkError(err, 'Failed to fetch pending registrations');
+      }
+    },
+    options
+  );
 }
 
 export async function approveUser(userId: string): Promise<{ status: string; message: string }> {
@@ -81,7 +91,11 @@ export async function approveUser(userId: string): Promise<{ status: string; mes
     const response = await fetch(`${API_BASE}/api/users/${userId}/approve`, {
       method: 'POST',
     });
-    return await handleResponse(response, 'Failed to approve registration');
+    const result = await handleResponse<{ status: string; message: string }>(response, 'Failed to approve registration');
+    cacheManager.invalidate(/^users_pending/);
+    cacheManager.invalidate('users_all');
+    cacheManager.invalidate('dashboard_summary');
+    return result;
   } catch (err) {
     catchNetworkError(err, 'Failed to approve registration');
   }
@@ -92,28 +106,97 @@ export async function rejectUser(userId: string): Promise<{ status: string; mess
     const response = await fetch(`${API_BASE}/api/users/${userId}/reject`, {
       method: 'POST',
     });
-    return await handleResponse(response, 'Failed to reject registration');
+    const result = await handleResponse<{ status: string; message: string }>(response, 'Failed to reject registration');
+    cacheManager.invalidate(/^users_pending/);
+    cacheManager.invalidate('users_all');
+    cacheManager.invalidate('dashboard_summary');
+    return result;
   } catch (err) {
     catchNetworkError(err, 'Failed to reject registration');
   }
 }
 
-export async function fetchDashboardSummary(): Promise<{ total_students: number; total_exams: number; average_score: number; total_submissions: number }> {
+export async function fetchAllUsers(options?: { forceRefresh?: boolean }): Promise<PendingUser[]> {
+  return cacheManager.fetchWithCache(
+    'users_all',
+    async () => {
+      try {
+        const response = await fetch(`${API_BASE}/api/users`);
+        return await handleResponse<PendingUser[]>(response, 'Failed to fetch user accounts');
+      } catch (err) {
+        catchNetworkError(err, 'Failed to fetch user accounts');
+      }
+    },
+    options
+  );
+}
+
+export async function adminCreateUser(payload: {
+  name: string;
+  email: string;
+  password: string;
+  role: 'teacher' | 'student';
+  programme?: string;
+  department?: string;
+  student_id?: string;
+}): Promise<{ status: string; message: string; user: any }> {
   try {
-    const response = await fetch(`${API_BASE}/api/dashboard/summary`);
-    return await handleResponse(response, 'Failed to fetch dashboard summary');
+    const response = await fetch(`${API_BASE}/api/admin/users`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    const result = await handleResponse<{ status: string; message: string; user: any }>(response, 'Failed to create user account');
+    cacheManager.invalidate('users_all');
+    cacheManager.invalidate('dashboard_summary');
+    return result;
   } catch (err) {
-    catchNetworkError(err, 'Failed to fetch dashboard summary');
+    catchNetworkError(err, 'Failed to create user account');
   }
 }
 
-export async function fetchExams(): Promise<Exam[]> {
+export async function deleteUser(userId: string): Promise<{ status: string; message: string }> {
   try {
-    const response = await fetch(`${API_BASE}/api/exams`);
-    return await handleResponse(response, 'Failed to fetch exams');
+    const response = await fetch(`${API_BASE}/api/users/${userId}`, {
+      method: 'DELETE',
+    });
+    const result = await handleResponse<{ status: string; message: string }>(response, 'Failed to delete user account');
+    cacheManager.invalidate('users_all');
+    cacheManager.invalidate('dashboard_summary');
+    return result;
   } catch (err) {
-    catchNetworkError(err, 'Failed to fetch exams');
+    catchNetworkError(err, 'Failed to delete user account');
   }
+}
+
+export async function fetchDashboardSummary(options?: { forceRefresh?: boolean }): Promise<{ total_accounts: number; total_students: number; total_teachers: number; total_exams: number; average_score: number; total_submissions: number }> {
+  return cacheManager.fetchWithCache(
+    'dashboard_summary',
+    async () => {
+      try {
+        const response = await fetch(`${API_BASE}/api/dashboard/summary`);
+        return await handleResponse<{ total_accounts: number; total_students: number; total_teachers: number; total_exams: number; average_score: number; total_submissions: number }>(response, 'Failed to fetch dashboard summary');
+      } catch (err) {
+        catchNetworkError(err, 'Failed to fetch dashboard summary');
+      }
+    },
+    options
+  );
+}
+
+export async function fetchExams(options?: { forceRefresh?: boolean }): Promise<Exam[]> {
+  return cacheManager.fetchWithCache(
+    'exams',
+    async () => {
+      try {
+        const response = await fetch(`${API_BASE}/api/exams`);
+        return await handleResponse<Exam[]>(response, 'Failed to fetch exams');
+      } catch (err) {
+        catchNetworkError(err, 'Failed to fetch exams');
+      }
+    },
+    options
+  );
 }
 
 export interface ExamPayload {
@@ -157,7 +240,10 @@ export async function createExam(payload: ExamPayload): Promise<Exam> {
         exam_date: payload.exam_date ?? null,
       }),
     });
-    return await handleResponse(response, 'Failed to create exam');
+    const result = await handleResponse<Exam>(response, 'Failed to create exam');
+    cacheManager.invalidate('exams');
+    cacheManager.invalidate('dashboard_summary');
+    return result;
   } catch (err) {
     catchNetworkError(err, 'Failed to create exam');
   }
@@ -187,7 +273,9 @@ export async function updateExam(examId: string, payload: ExamPayload): Promise<
         exam_date: payload.exam_date ?? null,
       }),
     });
-    return await handleResponse(response, 'Failed to update exam');
+    const result = await handleResponse<Exam>(response, 'Failed to update exam');
+    cacheManager.invalidate('exams');
+    return result;
   } catch (err) {
     catchNetworkError(err, 'Failed to update exam');
   }
@@ -203,7 +291,10 @@ export async function gradeSheet(examId: string, file: File): Promise<GradeResul
       method: 'POST',
       body: formData,
     });
-    return await handleResponse(response, 'Failed to grade sheet');
+    const result = await handleResponse<GradeResult>(response, 'Failed to grade sheet');
+    cacheManager.invalidate(/^submissions/);
+    cacheManager.invalidate('dashboard_summary');
+    return result;
   } catch (err) {
     catchNetworkError(err, 'Failed to grade sheet');
   }
@@ -218,20 +309,27 @@ export async function extractSheet(file: File): Promise<QuickScanResult> {
       method: 'POST',
       body: formData,
     });
-    return await handleResponse(response, 'Failed to extract sheet data');
+    return await handleResponse<QuickScanResult>(response, 'Failed to extract sheet data');
   } catch (err) {
     catchNetworkError(err, 'Failed to extract sheet data');
   }
 }
 
-export async function fetchSubmissions(examId?: string): Promise<Submission[]> {
-  try {
-    const url = examId ? `${API_BASE}/api/submissions?exam_id=${examId}` : `${API_BASE}/api/submissions`;
-    const response = await fetch(url);
-    return await handleResponse(response, 'Failed to fetch submissions');
-  } catch (err) {
-    catchNetworkError(err, 'Failed to fetch submissions');
-  }
+export async function fetchSubmissions(examId?: string, options?: { forceRefresh?: boolean }): Promise<Submission[]> {
+  const cacheKey = examId ? `submissions_${examId}` : 'submissions';
+  return cacheManager.fetchWithCache(
+    cacheKey,
+    async () => {
+      try {
+        const url = examId ? `${API_BASE}/api/submissions?exam_id=${examId}` : `${API_BASE}/api/submissions`;
+        const response = await fetch(url);
+        return await handleResponse<Submission[]>(response, 'Failed to fetch submissions');
+      } catch (err) {
+        catchNetworkError(err, 'Failed to fetch submissions');
+      }
+    },
+    options
+  );
 }
 
 export async function deleteExam(examId: string): Promise<{ status: string, message: string }> {
@@ -239,9 +337,14 @@ export async function deleteExam(examId: string): Promise<{ status: string, mess
     const response = await fetch(`${API_BASE}/api/exams/${examId}`, {
       method: 'DELETE',
     });
-    return await handleResponse(response, 'Failed to delete exam');
+    const result = await handleResponse<{ status: string, message: string }>(response, 'Failed to delete exam');
+    cacheManager.invalidate('exams');
+    cacheManager.invalidate(/^submissions/);
+    cacheManager.invalidate('dashboard_summary');
+    return result;
   } catch (err) {
     catchNetworkError(err, 'Failed to delete exam');
   }
 }
+
 

@@ -7,22 +7,27 @@ import {
   BookOpen,
   GraduationCap,
   Search,
-  Info,
   Sparkles,
   FileUp,
   Trash2,
   AlertTriangle,
-  Award,
-  FileSpreadsheet,
   Download,
   BarChart2,
-  UserCheck,
-  ShieldCheck,
+  Award,
   LogOut,
   Camera,
-  FileText,
-  Layers,
-  Database,
+  UserPlus,
+  HelpCircle,
+  Users,
+  Bell,
+  ChevronDown,
+  ChevronRight,
+  Sliders,
+  Activity,
+  Menu,
+  X,
+  Home,
+  Eye,
 } from "lucide-react";
 import confetti from "canvas-confetti";
 import type {
@@ -32,6 +37,7 @@ import type {
   QuickScanResult,
   GradeResult,
   StudentRosterEntry,
+  AppNotification,
 } from "./types";
 import {
   fetchExams,
@@ -44,78 +50,330 @@ import {
   loginUser,
   fetchDashboardSummary,
 } from "./api";
-import {
-  mockExams,
-  mockSubmissions,
-  mockSystemMetrics,
-  mockClassRoster,
-  mockUsers,
-} from "./data/mockData";
+import { mockUsers, mockClassRoster, mockExams, mockSubmissions } from "./data/mockData";
 import {
   exportCHEDGradeSheet,
   exportItemAnalysisExcel,
   exportSingleSubmissionExcel,
-  exportExamBatchExcel,
-  exportCompleteDatabaseExcel,
 } from "./utils/excelUtils";
+import { cacheManager } from "./utils/cacheManager";
 
-// Imported Isolated UI Components
-import HeaderBanner from "./components/HeaderBanner";
-import MetricTile from "./components/MetricTile";
-import StatusBadge from "./components/StatusBadge";
-import ExamCard from "./components/ExamCard";
-import SubmissionTable from "./components/SubmissionTable";
-import ToastNotification, {
+// Shared Cross-Cutting UI Components
+import {
+  StatusBadge,
+  ToastNotification,
   type ToastItem,
-} from "./components/ToastNotification";
-import RosterImportModal from "./components/RosterImportModal";
-import ItemAnalysisTable from "./components/ItemAnalysisTable";
-import RoleDashboard from "./components/RoleDashboard";
-import LoginPage from "./components/LoginPage";
-import UserGuideModal, { UserGuideCard } from "./components/UserGuideModal";
-import { CameraScanner } from "./components/CameraScanner";
-import ExamCreationModal from "./components/ExamCreationModal";
-import ExamDetailsModal from "./components/ExamDetailsModal";
+  SkeletonExamList,
+  SmoothContentTransition,
+  UserGuideModal,
+  UserGuideCard,
+  NotificationDropdown,
+} from "./components/shared";
+
+// Feature Domain Modules
+import {
+  ExamCard,
+  RosterImportModal,
+  ItemAnalysisTable,
+  ExamCreationModal,
+  ExamDetailsModal,
+} from "./components/exam";
+import { RoleDashboard } from "./components/dashboard";
+import {
+  LoginPage,
+  getStoredAuthUser,
+  storeAuthUser,
+  getStoredActiveTab,
+  storeActiveTab,
+  clearAuthSession,
+} from "./components/auth";
+import { CameraScanner } from "./components/camera";
+import { AdminUserManagement } from "./components/admin";
+import { TeacherExamCompiler } from "./components/teacher";
+import GradingHistoryView from "./components/GradingHistoryView";
+import {
+  DeanAcademicManagement,
+  DeanExaminations,
+  DeanReportsAnalytics,
+  DeanSettings,
+  DeanProgressRecords,
+} from "./components/dean";
+import { StudentPortalView } from "./components/student";
 
 type AppTab =
   | "dashboard"
   | "academic-management"
   | "examinations"
   | "reports"
+  | "progress-records"
   | "settings"
   | "quick-scan"
   | "exams"
+  | "compiler"
+  | "results-management"
   | "history"
   | "item-analysis"
-  | "user-guide";
+  | "user-guide"
+  | "user-management"
+  | "user-directory";
+
+const getDefaultNotifications = (role?: string): AppNotification[] => {
+  if (role === "admin") {
+    return [
+      {
+        id: "notif-adm-1",
+        title: "New Student Account Created",
+        message: "Mark Kevin Alcantara (ID: 2023-00155) was successfully activated under BSIT.",
+        timestamp: "5m ago",
+        type: "user",
+        read: false,
+        targetTab: "user-directory",
+      },
+      {
+        id: "notif-adm-2",
+        title: "Automated System Backup",
+        message: "Institutional examination database & OMR records backup completed securely.",
+        timestamp: "1h ago",
+        type: "success",
+        read: false,
+        targetTab: "dashboard",
+      },
+      {
+        id: "notif-adm-3",
+        title: "Quick Scanner WASM Initialized",
+        message: "OpenCV 4.8.0 Computer Vision worker ready for rapid 50-item bubble sheet grading.",
+        timestamp: "3h ago",
+        type: "info",
+        read: true,
+        targetTab: "quick-scan",
+      },
+    ];
+  }
+
+  if (role === "dean") {
+    return [
+      {
+        id: "notif-dean-1",
+        title: "Midterm Examination Milestone",
+        message: "95.2% of Higher Education midterm examinations are encoded and graded.",
+        timestamp: "10m ago",
+        type: "exam",
+        read: false,
+        targetTab: "dashboard",
+      },
+      {
+        id: "notif-dean-2",
+        title: "New Course Examination Published",
+        message: "Ms. Jenny Garcia compiled IT 311: Advanced Web Systems.",
+        timestamp: "45m ago",
+        type: "success",
+        read: false,
+        targetTab: "examinations",
+      },
+      {
+        id: "notif-dean-3",
+        title: "OBE Item Analysis Alert",
+        message: "CS 201 Item #14 flagged with high difficulty index (P = 0.28).",
+        timestamp: "2h ago",
+        type: "warning",
+        read: true,
+        targetTab: "reports",
+      },
+    ];
+  }
+
+  if (role === "programme-head") {
+    return [
+      {
+        id: "notif-ph-1",
+        title: "BSIT Program Exam Submissions",
+        message: "BSIT 3A and 3B answer sheets submitted for outcomes-based OBE evaluation.",
+        timestamp: "15m ago",
+        type: "exam",
+        read: false,
+        targetTab: "academic-management",
+      },
+      {
+        id: "notif-ph-2",
+        title: "Enrolled Student Directory Sync",
+        message: "Active student roster updated for 1st Semester academic term.",
+        timestamp: "1h ago",
+        type: "user",
+        read: false,
+        targetTab: "user-directory",
+      },
+    ];
+  }
+
+  if (role === "teacher") {
+    return [
+      {
+        id: "notif-tch-1",
+        title: "ZipGrade 50-Item Batch Graded",
+        message: "Batch answer sheets processed with 100% accuracy in Examination Compiler.",
+        timestamp: "8m ago",
+        type: "grade",
+        read: false,
+        targetTab: "compiler",
+      },
+      {
+        id: "notif-tch-2",
+        title: "Student Transmuted Scores Computed",
+        message: "Philippine 1.00 - 5.00 transmutation curve generated for midterm exam.",
+        timestamp: "1h ago",
+        type: "success",
+        read: false,
+        targetTab: "history",
+      },
+      {
+        id: "notif-tch-3",
+        title: "Bubble Sheet Calibration Note",
+        message: "Remember to ensure 4 corner black alignment squares are visible when scanning.",
+        timestamp: "1d ago",
+        type: "info",
+        read: true,
+        targetTab: "quick-scan",
+      },
+    ];
+  }
+
+  // Student
+  return [
+    {
+      id: "notif-stu-1",
+      title: "New Examination Result Published",
+      message: "Your score for IT 311: Advanced Web Systems is now available to view.",
+      timestamp: "12m ago",
+      type: "grade",
+      read: false,
+      targetTab: "examinations",
+    },
+    {
+      id: "notif-stu-2",
+      title: "Question-by-Question Item Breakdown",
+      message: "Inspect your bubble sheet scan & answer key feedback in Student Portal.",
+      timestamp: "1h ago",
+      type: "info",
+      read: true,
+      targetTab: "reports",
+    },
+  ];
+};
 
 export default function App() {
-  // Navigation State
-  const [activeTab, setActiveTab] = useState<AppTab>("dashboard");
-  const [currentUser, setCurrentUser] = useState<AuthUser | null>(null);
+  // Navigation & Persistent Auth State (Restores user & tab on refresh)
+  const [currentUser, setCurrentUser] = useState<AuthUser | null>(
+    () => getStoredAuthUser()
+  );
+  const [activeTab, setActiveTab] = useState<AppTab>(() => {
+    const saved = getStoredActiveTab();
+    if (saved) return saved as AppTab;
+    const user = getStoredAuthUser();
+    if (user?.role === "admin") return "dashboard";
+    if (user?.role === "programme-head") return "academic-management";
+    return "dashboard";
+  });
+
+
+  // Mobile Sidebar State
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const [selectedAuthUserId, setSelectedAuthUserId] = useState(mockUsers[0].id);
   const [loginEmail, setLoginEmail] = useState("");
   const [loginPassword, setLoginPassword] = useState("");
   const [loginError, setLoginError] = useState("");
-  const [authMessage, setAuthMessage] = useState(
-    "Sign in with your school Google Workspace account to unlock your role-based dashboard.",
-  );
+  const [, setAuthMessage] = useState("");
 
-  // Core Data State
-  const [exams, setExams] = useState<Exam[]>([]);
-  const [submissions, setSubmissions] = useState<Submission[]>([]);
-  const [roster, setRoster] = useState<StudentRosterEntry[]>(mockClassRoster);
+  // Notification State
+  const [notifications, setNotifications] = useState<AppNotification[]>(() => {
+    const user = getStoredAuthUser();
+    const cached = user ? cacheManager.get<AppNotification[]>(`notifications_${user.id}`) : null;
+    return cached || getDefaultNotifications(user?.role);
+  });
+  const [isNotificationMenuOpen, setIsNotificationMenuOpen] = useState(false);
+  const notificationMenuRef = useRef<HTMLDivElement>(null);
+
+  // Sync notifications when user changes
+  useEffect(() => {
+    if (currentUser) {
+      const cached = cacheManager.get<AppNotification[]>(`notifications_${currentUser.id}`);
+      setNotifications(cached || getDefaultNotifications(currentUser.role));
+    }
+  }, [currentUser?.id, currentUser?.role]);
+
+  const saveNotifications = (newNotifs: AppNotification[]) => {
+    setNotifications(newNotifs);
+    if (currentUser) {
+      cacheManager.set(`notifications_${currentUser.id}`, newNotifs);
+    }
+  };
+
+  const handleMarkAsRead = (id: string) => {
+    const updated = notifications.map((n) => (n.id === id ? { ...n, read: true } : n));
+    saveNotifications(updated);
+  };
+
+  const handleMarkAllAsRead = () => {
+    const updated = notifications.map((n) => ({ ...n, read: true }));
+    saveNotifications(updated);
+  };
+
+  const handleClearAll = () => {
+    saveNotifications([]);
+  };
+
+  const handleDeleteNotification = (id: string) => {
+    const updated = notifications.filter((n) => n.id !== id);
+    saveNotifications(updated);
+  };
+
+  const handleSelectNotification = (notif: AppNotification) => {
+    handleMarkAsRead(notif.id);
+    setIsNotificationMenuOpen(false);
+    if (notif.targetTab) {
+      handleTabSelect(notif.targetTab as AppTab);
+    }
+  };
+
+  // Core Data State (Instant hydration from cache with mock fallback)
+  const [exams, setExams] = useState<Exam[]>(
+    () => cacheManager.get<Exam[]>("exams") || mockExams
+  );
+  const [submissions, setSubmissions] = useState<Submission[]>(
+    () => cacheManager.get<Submission[]>("submissions") || mockSubmissions
+  );
+  const [roster, setRoster] = useState<StudentRosterEntry[]>(
+    () => cacheManager.get<StudentRosterEntry[]>("roster") || mockClassRoster
+  );
   const [isRosterModalOpen, setIsRosterModalOpen] = useState(false);
   const [isUserGuideOpen, setIsUserGuideOpen] = useState(false);
 
   const [loadingExams, setLoadingExams] = useState(false);
   const [loadingSubmissions, setLoadingSubmissions] = useState(false);
-  const [dashboardSummary, setDashboardSummary] = useState({
-    total_students: 0,
-    total_exams: 0,
-    average_score: 0,
-    total_submissions: 0,
-  });
+  const [dashboardSummary, setDashboardSummary] = useState<{
+    total_accounts: number;
+    total_students: number;
+    total_teachers: number;
+    total_exams: number;
+    average_score: number;
+    total_submissions: number;
+  }>(
+    () =>
+      cacheManager.get<{
+        total_accounts: number;
+        total_students: number;
+        total_teachers: number;
+        total_exams: number;
+        average_score: number;
+        total_submissions: number;
+      }>("dashboard_summary") || {
+        total_accounts: 0,
+        total_students: 0,
+        total_teachers: 0,
+        total_exams: 0,
+        average_score: 0,
+        total_submissions: 0,
+      }
+  );
 
   // Quick Scanner State
   const [quickScanMode, setQuickScanMode] = useState<"upload" | "camera">("upload");
@@ -141,25 +399,40 @@ export default function App() {
   const [latestGradeResult, setLatestGradeResult] =
     useState<GradeResult | null>(null);
 
-  // Submissions Filtering
-  const [searchQuery, setSearchQuery] = useState("");
+  // Submissions State
   const [selectedSubmission, setSelectedSubmission] =
     useState<Submission | null>(null);
 
-  // Flexible Export System State
-  const [exportBatchExamId, setExportBatchExamId] = useState<string>("");
-  const [exportExamType, setExportExamType] = useState<string>(
-    "Midterm Examination",
-  );
-  const [exportSingleSubmissionId, setExportSingleSubmissionId] =
-    useState<string>("");
-  const [exportDbExamTypeFilter, setExportDbExamTypeFilter] =
-    useState<string>("All");
-  const [exportDbSemesterFilter, setExportDbSemesterFilter] =
-    useState<string>("All");
-  const [exportDbGroupBy, setExportDbGroupBy] = useState<"none" | "exam_type">(
-    "none",
-  );
+  // Teacher Exams View Mode State
+  const [teacherExamsSubTab, setTeacherExamsSubTab] = useState<
+    "grading" | "quick-scan"
+  >("grading");
+
+  // Profile Menu State & Click-Outside Handling
+  const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
+  const [isSignOutModalOpen, setIsSignOutModalOpen] = useState(false);
+  const profileMenuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        profileMenuRef.current &&
+        !profileMenuRef.current.contains(event.target as Node)
+      ) {
+        setIsProfileMenuOpen(false);
+      }
+      if (
+        notificationMenuRef.current &&
+        !notificationMenuRef.current.contains(event.target as Node)
+      ) {
+        setIsNotificationMenuOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
 
   // Toast State
   const [toasts, setToasts] = useState<ToastItem[]>([]);
@@ -169,7 +442,7 @@ export default function App() {
   const studentScanInputRef = useRef<HTMLInputElement>(null);
 
   // Add a Toast Notification
-  const addToast = (type: "success" | "error" | "info", message: string) => {
+  const addToast = (type: "success" | "error" | "info" | "warning", message: string) => {
     const id = Math.random().toString(36).substring(2, 9);
     setToasts((prev) => [...prev, { id, type, message }]);
     setTimeout(() => {
@@ -181,10 +454,13 @@ export default function App() {
     setToasts((prev) => prev.filter((t) => t.id !== id));
   };
 
-  const loadExams = useCallback(async () => {
-    setLoadingExams(true);
+  const loadExams = useCallback(async (forceRefresh = false) => {
+    const hasCached = cacheManager.has("exams");
+    if (!hasCached || forceRefresh) {
+      setLoadingExams(true);
+    }
     try {
-      const data = await fetchExams();
+      const data = await fetchExams({ forceRefresh });
       if (data && data.length > 0) {
         setExams(data);
         setSelectedExamId((prev) => {
@@ -193,75 +469,58 @@ export default function App() {
           }
           return data[0]?.id ?? "";
         });
-        return;
-      }
-
-      try {
-        const seededExam = await createExam({
-          name: mockExams[0].name,
-          answer_key: mockExams[0].answer_key,
-          exam_type: mockExams[0].exam_type,
-          academic_year: mockExams[0].academic_year,
-          semester: mockExams[0].semester,
-          subject: mockExams[0].subject,
-          course_code: mockExams[0].course_code,
-          section: mockExams[0].section,
-          program: mockExams[0].program,
-          instructor_name: mockExams[0].instructor_name,
-          num_items: mockExams[0].num_items,
-          passing_score: mockExams[0].passing_score,
-          instructions: mockExams[0].instructions,
-          exam_date: mockExams[0].exam_date,
-        });
-        setExams([seededExam]);
-        setSelectedExamId(seededExam.id);
-        addToast(
-          "info",
-          `A starter exam was created automatically so grading can begin.`,
-        );
-      } catch {
+      } else {
         setExams(mockExams);
-        setSelectedExamId(mockExams[0]?.id ?? "");
-        addToast(
-          "info",
-          "No exams were found in the backend. Using demo data until you create a real exam.",
-        );
+        if (mockExams.length > 0) {
+          setSelectedExamId((prev) => (prev ? prev : mockExams[0].id));
+        }
       }
-    } catch {
-      addToast("info", "Using fallback mock exams (Backend API offline)");
-      setExams(mockExams);
-      setSelectedExamId(mockExams[0]?.id ?? "");
+    } catch (err) {
+      console.error("Failed to load exams from API:", err);
+      if (!hasCached) {
+        setExams(mockExams);
+        if (mockExams.length > 0) {
+          setSelectedExamId((prev) => (prev ? prev : mockExams[0].id));
+        }
+      }
     } finally {
       setLoadingExams(false);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const loadSubmissions = useCallback(async () => {
-    setLoadingSubmissions(true);
+  const loadSubmissions = useCallback(async (forceRefresh = false) => {
+    const hasCached = cacheManager.has("submissions");
+    if (!hasCached || forceRefresh) {
+      setLoadingSubmissions(true);
+    }
     try {
-      const data = await fetchSubmissions();
-      setSubmissions(data && data.length > 0 ? data : mockSubmissions);
-    } catch {
-      addToast("info", "Using fallback mock submissions (Backend API offline)");
-      setSubmissions(mockSubmissions);
+      const data = await fetchSubmissions(undefined, { forceRefresh });
+      setSubmissions(data && data.length > 0 ? data : (hasCached ? [] : mockSubmissions));
+    } catch (err) {
+      console.error("Failed to load submissions from API:", err);
+      if (!hasCached) setSubmissions(mockSubmissions);
     } finally {
       setLoadingSubmissions(false);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const loadDashboardSummary = useCallback(async () => {
+  const loadDashboardSummary = useCallback(async (forceRefresh = false) => {
     try {
-      const data = await fetchDashboardSummary();
-      setDashboardSummary(data);
+      const data = await fetchDashboardSummary({ forceRefresh });
+      if (data) {
+        setDashboardSummary(data);
+      }
     } catch {
-      setDashboardSummary({
-        total_students: 4,
-        total_exams: 0,
-        average_score: 0,
-        total_submissions: 0,
-      });
+      if (!cacheManager.has("dashboard_summary")) {
+        setDashboardSummary({
+          total_accounts: 12,
+          total_students: 4,
+          total_teachers: 4,
+          total_exams: 0,
+          average_score: 0,
+          total_submissions: 0,
+        });
+      }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -328,9 +587,9 @@ export default function App() {
         setInspectExam(null);
         setEditingExam(null);
         await Promise.all([
-          loadExams(),
-          loadSubmissions(),
-          loadDashboardSummary(),
+          loadExams(true),
+          loadSubmissions(true),
+          loadDashboardSummary(true),
         ]);
         return;
       }
@@ -354,9 +613,9 @@ export default function App() {
 
       setSelectedExamId(created.id);
       await Promise.all([
-        loadExams(),
-        loadSubmissions(),
-        loadDashboardSummary(),
+        loadExams(true),
+        loadSubmissions(true),
+        loadDashboardSummary(true),
       ]);
     } catch (err: any) {
       // In mock / offline mode fallback
@@ -419,7 +678,7 @@ export default function App() {
     }
 
     setGradingProgress(null);
-    await Promise.all([loadSubmissions(), loadDashboardSummary()]);
+    await Promise.all([loadSubmissions(true), loadDashboardSummary(true)]);
 
     if (successCount > 0) {
       addToast("success", `Successfully graded ${successCount} sheet(s).`);
@@ -448,9 +707,9 @@ export default function App() {
       });
 
       await Promise.all([
-        loadExams(),
-        loadSubmissions(),
-        loadDashboardSummary(),
+        loadExams(true),
+        loadSubmissions(true),
+        loadDashboardSummary(true),
       ]);
     } catch (err: any) {
       addToast("error", err.message || "Failed to delete exam.");
@@ -468,12 +727,12 @@ export default function App() {
       ? submissions.filter((s) => s.exam_id === selectedExamId)
       : submissions;
 
-    exportCHEDGradeSheet(
-      examName,
-      examSubs.length > 0 ? examSubs : mockSubmissions,
-      roster,
-      targetExam,
-    );
+    if (examSubs.length === 0) {
+      addToast("warning", "No submissions available to export.");
+      return;
+    }
+
+    exportCHEDGradeSheet(examName, examSubs, roster, targetExam);
     addToast(
       "success",
       `Exported CHED Transmuted Grade Sheet for "${examName}" (.xlsx)`,
@@ -482,12 +741,19 @@ export default function App() {
 
   const handleExportItemAnalysis = () => {
     const targetExam = exams.find((e) => e.id === selectedExamId) || exams[0];
-    if (!targetExam) return;
+    if (!targetExam) {
+      addToast("warning", "No examination available for item analysis.");
+      return;
+    }
     const examSubs = submissions.filter((s) => s.exam_id === targetExam.id);
+    if (examSubs.length === 0) {
+      addToast("warning", "No submissions available to analyze for this exam.");
+      return;
+    }
     exportItemAnalysisExcel(
       targetExam.name,
       targetExam.answer_key,
-      examSubs.length > 0 ? examSubs : mockSubmissions,
+      examSubs,
       targetExam,
     );
     addToast(
@@ -497,20 +763,15 @@ export default function App() {
   };
 
   const handleExportSingleSubmission = (targetSub?: Submission | null) => {
-    const activeSubmissions =
-      submissions.length > 0 ? submissions : mockSubmissions;
     const subToExport =
       targetSub ||
-      activeSubmissions.find((s) => s.id === exportSingleSubmissionId) ||
       selectedSubmission ||
-      activeSubmissions[0];
+      submissions[0];
     if (!subToExport) {
       addToast("error", "No submission selected for single file export.");
       return;
     }
-    const targetExam =
-      exams.find((e) => e.id === subToExport.exam_id) ||
-      mockExams.find((e) => e.id === subToExport.exam_id);
+    const targetExam = exams.find((e) => e.id === subToExport.exam_id);
     exportSingleSubmissionExcel(subToExport, targetExam, roster);
     const matchedStudent = roster.find(
       (r) =>
@@ -526,43 +787,8 @@ export default function App() {
     );
   };
 
-  const handleExportExamBatch = () => {
-    const activeExams = exams.length > 0 ? exams : mockExams;
-    const activeSubmissions =
-      submissions.length > 0 ? submissions : mockSubmissions;
-    const targetExamId =
-      exportBatchExamId || selectedExamId || activeExams[0]?.id || "";
-    const targetExam =
-      activeExams.find((e) => e.id === targetExamId) || activeExams[0];
-    if (!targetExam) {
-      addToast("error", "No examination selected for batch export.");
-      return;
-    }
-    const examSubs = activeSubmissions.filter(
-      (s) => s.exam_id === targetExam.id,
-    );
-    const finalSubs = examSubs.length > 0 ? examSubs : activeSubmissions;
-
-    exportExamBatchExcel(targetExam, finalSubs, roster, exportExamType);
-    addToast(
-      "success",
-      `Exam-Based Batch Export: Compiled ${finalSubs.length} submissions for "${targetExam.name}" (${exportExamType}) with complete metadata into Excel (.xlsx)`,
-    );
-  };
-
-  const handleExportCompleteDatabase = () => {
-    const activeSubmissions =
-      submissions.length > 0 ? submissions : mockSubmissions;
-    const activeExams = exams.length > 0 ? exams : mockExams;
-    exportCompleteDatabaseExcel(activeExams, activeSubmissions, roster, {
-      examTypeFilter: exportDbExamTypeFilter,
-      semesterFilter: exportDbSemesterFilter,
-      groupBy: exportDbGroupBy,
-    });
-    addToast(
-      "success",
-      `Teacher Database Export: Exported filtered master database report (.xlsx)`,
-    );
+  const handleDeleteGradingRecord = (examId: string) => {
+    setSubmissions((prev) => prev.filter((s) => s.exam_id !== examId));
   };
 
   const formatDate = (isoString: string) => {
@@ -579,8 +805,17 @@ export default function App() {
     const selectedUser = mockUsers.find((user) => user.id === userId);
     if (!selectedUser) return;
 
+    const initialTab: AppTab =
+      selectedUser.role === "admin"
+        ? "quick-scan"
+        : selectedUser.role === "programme-head"
+          ? "academic-management"
+          : "dashboard";
+
+    storeAuthUser(selectedUser);
+    storeActiveTab(initialTab);
     setCurrentUser(selectedUser);
-    setActiveTab("dashboard");
+    setActiveTab(initialTab);
     setAuthMessage(
       `Welcome back, ${selectedUser.name}. Your ${selectedUser.role.replace("-", " ")} workspace is ready.`,
     );
@@ -606,43 +841,73 @@ export default function App() {
         role: (backendUser.role as AuthUser["role"]) ?? "student",
         name: backendUser.name,
         email: backendUser.email,
+        studentId: backendUser.student_id || backendUser.studentId || undefined,
+        student_id: backendUser.student_id || backendUser.studentId || undefined,
         programme: backendUser.programme ?? undefined,
         department: backendUser.department ?? undefined,
         scope:
-          backendUser.role === "dean"
-            ? "Institution-wide access across all departments and programmes"
-            : backendUser.role === "programme-head"
-              ? `Restricted to ${backendUser.programme ?? "assigned programme"}`
-              : backendUser.role === "teacher"
-                ? `Teaching access for ${backendUser.department ?? "assigned department"}`
-                : `Student access for ${backendUser.programme ?? "assigned programme"}`,
+          backendUser.role === "admin"
+            ? "Quick OMR Scanner & Account Provisioning"
+            : backendUser.role === "dean"
+              ? "Institution-wide access across all departments and programmes"
+              : backendUser.role === "programme-head"
+                ? `Restricted to ${backendUser.programme ?? "assigned programme"}`
+                : backendUser.role === "teacher"
+                  ? `Teaching access for ${backendUser.department ?? "assigned department"}`
+                  : `Student access for ${backendUser.programme ?? "assigned programme"}`,
         permissions:
-          backendUser.role === "dean"
+          backendUser.role === "admin"
             ? [
-                "Manage students",
-                "Manage teachers",
-                "Monitor examinations",
-                "View reports",
+                "Quick OMR Sheet Scanner",
+                "Create and Manage Teacher & Student Accounts",
+                "Optical Mark Recognition Realtime Processing",
               ]
-            : backendUser.role === "programme-head"
+            : backendUser.role === "dean"
               ? [
-                  "View programme analytics",
-                  "Monitor students",
-                  "Review examinations",
+                  "Monitor examination results across all Higher Education programs",
+                  "View student examination scores and academic performance",
+                  "Monitor examinations handled by teachers",
+                  "View overall examination progress and records",
+                  "Manage and oversee user access within the system",
                 ]
-              : backendUser.role === "teacher"
+              : backendUser.role === "programme-head"
                 ? [
-                    "Create examinations",
-                    "Upload answer keys",
-                    "Grade sheets",
-                    "Publish results",
+                    "Monitor examination results within their assigned academic program only",
+                    "View student scores and examination records for their program",
+                    "Monitor examinations handled by teachers under their program",
+                    "Access examination records and reports within their assigned program",
                   ]
-                : ["View exams", "Review results", "See feedback"],
+                : backendUser.role === "teacher"
+                  ? [
+                      "Manage courses and subjects",
+                      "Create and manage examinations",
+                      "Create and maintain answer keys",
+                      "Upload and automatically process student test papers",
+                      "Automatically check and grade student test papers",
+                      "Record student submissions and examination scores",
+                      "Release and publish grading results for students to view",
+                      "Review processed test papers and grading results",
+                      "Manage examination records",
+                    ]
+                  : [
+                      "View their own examination scores",
+                      "View which exam questions were answered correctly or incorrectly",
+                      "Access only their personal examination records",
+                    ],
       };
 
+      const initialTab: AppTab =
+        mappedUser.role === "admin"
+          ? "dashboard"
+          : mappedUser.role === "programme-head"
+            ? "academic-management"
+            : "dashboard";
+
+      storeAuthUser(mappedUser);
+      storeActiveTab(initialTab);
       setSelectedAuthUserId(mappedUser.id);
       setCurrentUser(mappedUser);
-      setActiveTab("dashboard");
+      setActiveTab(initialTab);
       setAuthMessage(
         `Welcome back, ${mappedUser.name}. Your ${mappedUser.role.replace("-", " ")} workspace is ready.`,
       );
@@ -657,9 +922,18 @@ export default function App() {
           err.message?.includes("NetworkError") ||
           err.name === "TypeError")
       ) {
+        const initialTab: AppTab =
+          foundMock.role === "admin"
+            ? "dashboard"
+            : foundMock.role === "programme-head"
+              ? "academic-management"
+              : "dashboard";
+
+        storeAuthUser(foundMock);
+        storeActiveTab(initialTab);
         setSelectedAuthUserId(foundMock.id);
         setCurrentUser(foundMock);
-        setActiveTab("dashboard");
+        setActiveTab(initialTab);
         setAuthMessage(
           `Welcome back, ${foundMock.name}. Your ${foundMock.role.replace("-", " ")} workspace is ready.`,
         );
@@ -671,6 +945,7 @@ export default function App() {
   };
 
   const resetAuthView = (message: string) => {
+    clearAuthSession();
     setCurrentUser(null);
     setLoginEmail("");
     setLoginPassword("");
@@ -685,7 +960,9 @@ export default function App() {
     );
   };
 
-  const activeExam = exams.find((e) => e.id === selectedExamId);
+  const activeExam =
+    exams.find((e) => e.id === selectedExamId) ||
+    (exams.length > 0 ? exams[0] : null);
 
   const navigationItems = (() => {
     if (!currentUser) {
@@ -694,36 +971,57 @@ export default function App() {
       ];
     }
 
+    if (currentUser.role === "admin") {
+      return [
+        { key: "dashboard" as AppTab, label: "Overview & Progress", icon: BarChart3 },
+        { key: "quick-scan" as AppTab, label: "Quick Scanner", icon: Sparkles },
+        {
+          key: "user-management" as AppTab,
+          label: "Create Account",
+          icon: UserPlus,
+        },
+        {
+          key: "user-directory" as AppTab,
+          label: "User Accounts Directory",
+          icon: Users,
+        },
+      ];
+    }
+
     if (currentUser.role === "dean") {
       return [
-        { key: "dashboard" as AppTab, label: "Dashboard", icon: BarChart3 },
+        { key: "dashboard" as AppTab, label: "Overview & Progress", icon: BarChart3 },
+        {
+          key: "examinations" as AppTab,
+          label: "Teacher Examinations",
+          icon: BookOpen,
+        },
         {
           key: "academic-management" as AppTab,
-          label: "Academic Management",
+          label: "Higher Ed Programs",
           icon: GraduationCap,
         },
         {
-          key: "examinations" as AppTab,
-          label: "Examinations",
-          icon: BookOpen,
+          key: "user-directory" as AppTab,
+          label: "User Access",
+          icon: Users,
+        },
+        {
+          key: "progress-records" as AppTab,
+          label: "Progress & Records",
+          icon: Activity,
         },
         {
           key: "reports" as AppTab,
-          label: "Reports & Analytics",
-          icon: BarChart3,
+          label: "Program Results & OBE",
+          icon: Award,
         },
-        {
-          key: "user-guide" as AppTab,
-          label: "User Guide",
-          icon: BookOpen,
-        },
-        { key: "settings" as AppTab, label: "Settings", icon: ShieldCheck },
+        { key: "settings" as AppTab, label: "Settings", icon: Sliders },
       ];
     }
 
     if (currentUser.role === "programme-head") {
       return [
-        { key: "dashboard" as AppTab, label: "Dashboard", icon: BarChart3 },
         {
           key: "academic-management" as AppTab,
           label: "Programme Overview",
@@ -736,9 +1034,9 @@ export default function App() {
         },
         { key: "reports" as AppTab, label: "Reports", icon: BarChart3 },
         {
-          key: "user-guide" as AppTab,
-          label: "User Guide",
-          icon: BookOpen,
+          key: "user-directory" as AppTab,
+          label: "Student Access",
+          icon: Users,
         },
       ];
     }
@@ -746,53 +1044,96 @@ export default function App() {
     if (currentUser.role === "teacher") {
       return [
         { key: "dashboard" as AppTab, label: "Dashboard", icon: BarChart3 },
-        { key: "quick-scan" as AppTab, label: "Quick Scanner", icon: Sparkles },
         { key: "exams" as AppTab, label: "Exams & Grading", icon: BookOpen },
+        {
+          key: "results-management" as AppTab,
+          label: "Examination Results Management",
+          icon: Award,
+        },
         { key: "history" as AppTab, label: "Grading History", icon: History },
         {
           key: "item-analysis" as AppTab,
           label: "OBE Analysis",
           icon: BarChart2,
         },
-        {
-          key: "user-guide" as AppTab,
-          label: "User Guide",
-          icon: BookOpen,
-        },
+      ];
+    }
+
+    if (currentUser.role === "student") {
+      return [
+        { key: "dashboard" as AppTab, label: "My Progress", icon: BarChart3 },
+        { key: "examinations" as AppTab, label: "My Exam Records", icon: BookOpen },
       ];
     }
 
     return [
       { key: "dashboard" as AppTab, label: "Dashboard", icon: BarChart3 },
-      { key: "examinations" as AppTab, label: "My Exams", icon: BookOpen },
-      { key: "reports" as AppTab, label: "Results", icon: BarChart3 },
-      { key: "user-guide" as AppTab, label: "User Guide", icon: BookOpen },
+      { key: "examinations" as AppTab, label: "Examinations", icon: BookOpen },
     ];
   })();
 
   const handleTabSelect = (tab: AppTab) => {
-    if (navigationItems.some((item) => item.key === tab)) {
-      setActiveTab(tab);
-    } else {
-      setActiveTab("dashboard");
-    }
+    const target = navigationItems.some((item) => item.key === tab)
+      ? tab
+      : (navigationItems[0]?.key || "dashboard");
+    setActiveTab(target);
+    storeActiveTab(target);
+    setIsMobileSidebarOpen(false);
   };
 
-  const studentResults = submissions.filter(
-    (submission) => submission.student_id === currentUser?.studentId,
-  );
-  const studentName = currentUser?.name ?? "Student";
+  const getUserInitials = (name?: string) => {
+    if (!name) return "AD";
+    const cleaned = name.replace(/^(Dr\.|Prof\.|Ms\.|Mr\.)\s+/i, "").trim();
+    const parts = cleaned.split(/\s+/);
+    if (parts.length >= 2) {
+      return `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase();
+    }
+    return (cleaned || name).slice(0, 2).toUpperCase();
+  };
 
-  const getMetricIcon = (color?: string) => {
-    switch (color) {
-      case "success":
-        return Award;
-      case "warning":
-        return AlertTriangle;
-      case "info":
-        return BookOpen;
+  const getDashboardDisplayName = (user: AuthUser | null) => {
+    if (!user) return "Dashboard";
+    if (user.role === "admin") return "System Administrator Dashboard";
+    const name = user.name.trim();
+    return name.endsWith("s") || name.endsWith("S")
+      ? `${name}' Dashboard`
+      : `${name}'s Dashboard`;
+  };
+
+  const getActiveTabTitle = (tab: AppTab) => {
+    switch (tab) {
+      case "dashboard":
+        return getDashboardDisplayName(currentUser);
+      case "examinations":
+      case "exams":
+        return "Examinations";
+      case "results-management":
+      case "compiler":
+        return "Examination Results Management";
+      case "quick-scan":
+        return "Quick OMR Scanner";
+      case "history":
+        return "Grading History";
+      case "academic-management":
+        return currentUser?.role === "dean"
+          ? "Academic Management"
+          : "Programme Overview";
+      case "reports":
+        return "Institutional Reports";
+      case "item-analysis":
+        return "OBE Item Analysis";
+      case "user-management":
+        return "User Account Management";
+      case "user-directory":
+        return currentUser?.role === "programme-head"
+          ? `${currentUser.programme || "BSIT"} Student Access`
+          : currentUser?.role === "dean"
+            ? "User Access"
+            : "User Directory";
+      case "settings":
+        return "System Settings";
       default:
-        return GraduationCap;
+        return "Dashboard";
     }
   };
 
@@ -809,7 +1150,8 @@ export default function App() {
           setSelectedAuthUserId(userId);
           const found = mockUsers.find((u) => u.id === userId);
           if (found) {
-            let pass = "Dean@2025";
+            let pass = "Admin@2025";
+            if (found.role === "dean") pass = "Dean@2025";
             if (found.role === "programme-head") pass = "Ph@2025";
             if (found.role === "teacher") pass = "Teacher@2025";
             if (found.role === "student") pass = "Student@2025";
@@ -826,900 +1168,562 @@ export default function App() {
   }
 
   return (
-    <div className="app-container">
-      {/* Toast Notification Container Component */}
-      <ToastNotification toasts={toasts} onDismiss={removeToast} />
+    <div className="app-outer-wrapper">
+      <div className="app-main-window">
+        {/* Toast Notification Container Component */}
+        <ToastNotification toasts={toasts} onDismiss={removeToast} />
 
-      {/* Roster Import Modal */}
-      <RosterImportModal
-        isOpen={isRosterModalOpen}
-        onClose={() => setIsRosterModalOpen(false)}
-        onImportSuccess={(newRoster) => {
-          setRoster(newRoster);
-          addToast(
-            "success",
-            `Successfully imported class roster with ${newRoster.length} students.`,
-          );
-        }}
-      />
-
-      {/* Comprehensive Exam Creation Modal */}
-      <ExamCreationModal
-        isOpen={isExamModalOpen}
-        onClose={() => {
-          setIsExamModalOpen(false);
-          setEditingExam(null);
-          setInspectExam(null);
-        }}
-        onSave={handleSaveExamModal}
-        currentUser={currentUser}
-        addToast={addToast}
-        editingExam={editingExam}
-      />
-
-      {/* Exam Details / Inspect Modal */}
-      <ExamDetailsModal
-        exam={inspectExam}
-        isOpen={inspectExam !== null}
-        onClose={() => setInspectExam(null)}
-        onDelete={(id) => {
-          handleDeleteExam(id);
-          setInspectExam(null);
-        }}
-        onEdit={(exam) => {
-          setInspectExam(null);
-          setEditingExam(exam);
-          setIsExamModalOpen(true);
-        }}
-        formatDate={formatDate}
-      />
-
-      <UserGuideModal
-        isOpen={isUserGuideOpen}
-        onClose={() => setIsUserGuideOpen(false)}
-        initialRole={currentUser?.role ?? "teacher"}
-        onNavigateTab={(tab) => {
-          setIsUserGuideOpen(false);
-          handleTabSelect(tab as AppTab);
-        }}
-      />
-
-      {/* Sidebar Navigation */}
-      <aside className="sidebar">
-        <div
-          className="sidebar-logo"
-          style={{ display: "flex", alignItems: "center", gap: "8px" }}
-        >
-          <img
-            src="/srcb-logo.png"
-            alt="SRCB Logo"
-            style={{
-              height: "32px",
-              width: "auto",
-              background: "#ffffff",
-              padding: "2px 6px",
-              borderRadius: "6px",
-              border: "1px solid var(--srcb-gold-accent)",
-            }}
-          />
-          <span>AeroOMR</span>
-        </div>
-
-        <div
-          className="card"
-          style={{
-            padding: "0.9rem",
-            marginBottom: "1rem",
-            background: "rgba(8, 17, 32, 0.9)",
-          }}
-        >
-          <div
-            style={{
-              fontSize: "0.75rem",
-              color: "var(--text-muted)",
-              marginBottom: "0.4rem",
-            }}
-          >
-            Current access
-          </div>
-          <div style={{ fontWeight: 700, fontSize: "0.95rem" }}>
-            {currentUser ? currentUser.name : "Guest access"}
-          </div>
-          <div
-            style={{
-              fontSize: "0.8rem",
-              color: "var(--text-secondary)",
-              marginTop: "0.25rem",
-            }}
-          >
-            {currentUser
-              ? currentUser.role.replace("-", " ")
-              : "Choose a role to preview the dashboard"}
-          </div>
-        </div>
-
-        <ul className="sidebar-menu">
-          {navigationItems.map((item) => {
-            const Icon = item.icon;
-            return (
-              <li
-                key={item.key}
-                className={`sidebar-item ${activeTab === item.key ? "active" : ""}`}
-                onClick={() => {
-                  if (item.key === "user-guide") {
-                    setIsUserGuideOpen(true);
-                    return;
-                  }
-                  handleTabSelect(item.key);
-                  if (
-                    item.key === "exams" &&
-                    exams.length > 0 &&
-                    !selectedExamId
-                  ) {
-                    setSelectedExamId(exams[0].id);
-                  }
-                }}
-              >
-                <Icon size={18} />
-                {item.label}
-              </li>
+        {/* Roster Import Modal */}
+        <RosterImportModal
+          isOpen={isRosterModalOpen}
+          onClose={() => setIsRosterModalOpen(false)}
+          onImportSuccess={(newRoster) => {
+            setRoster(newRoster);
+            cacheManager.set("roster", newRoster);
+            addToast(
+              "success",
+              `Successfully imported class roster with ${newRoster.length} students.`,
             );
-          })}
-        </ul>
+          }}
+        />
 
-        {currentUser && (
-          <div style={{ display: "grid", gap: "0.6rem", marginTop: "1rem" }}>
-            <button
-              className="btn btn-outline"
-              style={{ width: "100%", justifyContent: "center" }}
-              onClick={() => setIsUserGuideOpen(true)}
-            >
-              <BookOpen size={16} style={{ marginRight: "0.4rem" }} />
-              Open User Guide
-            </button>
+        {/* Comprehensive Exam Creation Modal */}
+        <ExamCreationModal
+          isOpen={isExamModalOpen}
+          onClose={() => {
+            setIsExamModalOpen(false);
+            setEditingExam(null);
+            setInspectExam(null);
+          }}
+          onSave={handleSaveExamModal}
+          currentUser={currentUser}
+          addToast={addToast}
+          editingExam={editingExam}
+        />
 
-            <button
-              className="btn btn-danger"
-              style={{ width: "100%", justifyContent: "center" }}
-              onClick={handleSignOut}
-            >
-              <LogOut size={16} style={{ marginRight: "0.4rem" }} />
-              Log Out
-            </button>
-          </div>
+        {/* Exam Details / Inspect Modal */}
+        <ExamDetailsModal
+          exam={inspectExam}
+          isOpen={inspectExam !== null}
+          onClose={() => setInspectExam(null)}
+          onDelete={(id) => {
+            handleDeleteExam(id);
+            setInspectExam(null);
+          }}
+          onEdit={(exam) => {
+            setInspectExam(null);
+            setEditingExam(exam);
+            setIsExamModalOpen(true);
+          }}
+          formatDate={formatDate}
+        />
+
+        <UserGuideModal
+          isOpen={isUserGuideOpen}
+          onClose={() => setIsUserGuideOpen(false)}
+          initialRole={currentUser?.role ?? "teacher"}
+          onNavigateTab={(tab) => {
+            setIsUserGuideOpen(false);
+            handleTabSelect(tab as AppTab);
+          }}
+        />
+
+        {/* Mobile Hamburger Button */}
+        <button
+          type="button"
+          className="mobile-menu-btn"
+          onClick={() => setIsMobileSidebarOpen(true)}
+          aria-label="Open navigation menu"
+        >
+          <Menu size={24} />
+        </button>
+
+        {/* Mobile Sidebar Backdrop */}
+        {isMobileSidebarOpen && (
+          <div
+            className="sidebar-mobile-backdrop"
+            onClick={() => setIsMobileSidebarOpen(false)}
+          />
         )}
 
-        <div className="sidebar-footer">
-          St. Rita's College of Balingasag
-          <br />
-          Higher Ed • IT Program
-        </div>
-      </aside>
+        {/* Reference Electric Blue Sidebar with Curved Cutout Active Tab */}
+        <aside className={`sidebar-curved ${isMobileSidebarOpen ? "sidebar-mobile-open" : ""}`}>
+          <div className="sidebar-brand-header">
+            <div className="sidebar-brand-logo-frame">
+              <img
+                src="/srcb-logo.png"
+                alt="SRCB Logo"
+                className="sidebar-brand-logo-img"
+              />
+            </div>
+            <span className="sidebar-brand-title">SRCB EduAssess</span>
+            <button
+              type="button"
+              className="mobile-sidebar-close-btn"
+              onClick={() => setIsMobileSidebarOpen(false)}
+              aria-label="Close navigation menu"
+            >
+              <X size={20} />
+            </button>
+          </div>
 
-      {/* Main Content View */}
-      <main className="main-content">
-        {/* SRCB Institutional Header Banner (Displayed across all pages) */}
-        <HeaderBanner onOpenGuide={() => setIsUserGuideOpen(true)} />
+          <ul className="sidebar-curved-menu">
+            {navigationItems.map((item) => {
+              const Icon = item.icon;
+              const isActive = activeTab === item.key;
+              return (
+                <li key={item.key} style={{ display: "flex", flexDirection: "column", width: "100%", boxSizing: "border-box" }}>
+                  <div
+                    className={`sidebar-curved-item ${isActive ? "active" : ""}`}
+                    onClick={() => {
+                      if (item.key === "user-guide") {
+                        setIsUserGuideOpen(true);
+                        return;
+                      }
+                      handleTabSelect(item.key);
+                      if (
+                        item.key === "exams" &&
+                        exams.length > 0 &&
+                        !selectedExamId
+                      ) {
+                        setSelectedExamId(exams[0].id);
+                      }
+                    }}
+                    style={{ 
+                      display: "flex", 
+                      alignItems: "center", 
+                      justifyContent: "space-between",
+                      width: "100%",
+                      boxSizing: "border-box"
+                    }}
+                  >
+                    <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", minWidth: 0, flex: 1, overflow: "hidden" }}>
+                      <Icon size={19} className="nav-icon" style={{ flexShrink: 0 }} />
+                      <span style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{item.label}</span>
+                    </div>
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        </aside>
 
-        {/* DASHBOARD TAB */}
-        {activeTab === "dashboard" && (
+        {/* Main Content Area */}
+        <main className="main-content-reference" style={{ position: "relative" }}>
+          {/* Ambient Background Revalidation Shimmer Bar (Zero-Flash SWR) */}
+          {(loadingExams || loadingSubmissions) && (
+            <div
+              className="swr-top-indicator"
+              title="Updating records in background..."
+              style={{ top: "0" }}
+            >
+              <div className="swr-top-indicator-bar" />
+            </div>
+          )}
+
+          {/* Top Header matching reference */}
+          <div className="reference-top-header">
+            <div className="reference-header-left">
+              <nav
+                className="header-breadcrumbs"
+                aria-label="Breadcrumb"
+              >
+                <button
+                  type="button"
+                  className="breadcrumb-btn"
+                  onClick={() => {
+                    if (inspectExam) setInspectExam(null);
+                    const homeTab: AppTab =
+                      currentUser.role === "programme-head"
+                        ? "academic-management"
+                        : "dashboard";
+                    handleTabSelect(homeTab);
+                    const container = document.querySelector(".main-content-reference");
+                    if (container) container.scrollTo({ top: 0, behavior: "smooth" });
+                    window.scrollTo({ top: 0, behavior: "smooth" });
+                  }}
+                  title="Go to Home Dashboard"
+                >
+                  <Home size={14} style={{ color: "var(--primary, #28166f)", flexShrink: 0 }} />
+                  <span>SRCB EduAssess</span>
+                </button>
+
+                <ChevronRight size={14} style={{ color: "#94a3b8", flexShrink: 0 }} />
+
+                <button
+                  type="button"
+                  className="breadcrumb-role-btn"
+                  onClick={() => {
+                    if (inspectExam) setInspectExam(null);
+                    const homeTab: AppTab =
+                      currentUser.role === "programme-head"
+                        ? "academic-management"
+                        : "dashboard";
+                    handleTabSelect(homeTab);
+                    const container = document.querySelector(".main-content-reference");
+                    if (container) container.scrollTo({ top: 0, behavior: "smooth" });
+                    window.scrollTo({ top: 0, behavior: "smooth" });
+                  }}
+                  title={`Go to ${currentUser.role.replace("-", " ")} Home Overview`}
+                >
+                  {currentUser.role.replace("-", " ")}
+                </button>
+
+                <ChevronRight size={14} style={{ color: "#94a3b8", flexShrink: 0 }} />
+
+                <button
+                  type="button"
+                  className="breadcrumb-current-btn"
+                  onClick={() => {
+                    if (inspectExam) setInspectExam(null);
+                    if (activeTab === "exams" && teacherExamsSubTab !== "grading") {
+                      setTeacherExamsSubTab("grading");
+                    }
+                    handleTabSelect(activeTab);
+                    const container = document.querySelector(".main-content-reference");
+                    if (container) container.scrollTo({ top: 0, behavior: "smooth" });
+                    window.scrollTo({ top: 0, behavior: "smooth" });
+                  }}
+                  title={`Current Section: ${getActiveTabTitle(activeTab)} (click to view or scroll to top)`}
+                >
+                  {getActiveTabTitle(activeTab)}
+                </button>
+
+                {activeTab === "exams" && teacherExamsSubTab === "quick-scan" && (
+                  <>
+                    <ChevronRight size={14} style={{ color: "#94a3b8", flexShrink: 0 }} />
+                    <button
+                      type="button"
+                      className="breadcrumb-sub-badge"
+                      title="Quick OMR Scanner Mode"
+                      onClick={() => {
+                        const container = document.querySelector(".main-content-reference");
+                        if (container) container.scrollTo({ top: 0, behavior: "smooth" });
+                        window.scrollTo({ top: 0, behavior: "smooth" });
+                      }}
+                    >
+                      <Sparkles size={13} style={{ color: "var(--primary, #28166f)", flexShrink: 0 }} />
+                      <span>Quick Scanner</span>
+                    </button>
+                  </>
+                )}
+
+                {inspectExam && (
+                  <>
+                    <ChevronRight size={14} style={{ color: "#94a3b8", flexShrink: 0 }} />
+                    <button
+                      type="button"
+                      className="breadcrumb-sub-badge"
+                      title={`Inspecting: ${inspectExam.name}`}
+                      onClick={() => {
+                        const container = document.querySelector(".main-content-reference");
+                        if (container) container.scrollTo({ top: 0, behavior: "smooth" });
+                        window.scrollTo({ top: 0, behavior: "smooth" });
+                      }}
+                    >
+                      <Eye size={13} style={{ color: "var(--primary, #28166f)", flexShrink: 0 }} />
+                      <span>{inspectExam.course_code ? `${inspectExam.course_code} Details` : inspectExam.name}</span>
+                    </button>
+                  </>
+                )}
+              </nav>
+            </div>
+
+            <div className="reference-header-right">
+              {/* Notifications Dropdown Container */}
+              <div
+                className="header-notification-container"
+                ref={notificationMenuRef}
+                style={{ position: "relative" }}
+              >
+                <button
+                  type="button"
+                  className={`header-icon-btn ${isNotificationMenuOpen ? "active" : ""}`}
+                  title="Notifications & System Alerts"
+                  onClick={() => setIsNotificationMenuOpen((prev) => !prev)}
+                  style={{ position: "relative" }}
+                >
+                  <Bell size={18} />
+                  {notifications.some((n) => !n.read) && (
+                    <span
+                      className="header-notif-dot"
+                      style={{
+                        position: "absolute",
+                        top: "7px",
+                        right: "7px",
+                        width: "8px",
+                        height: "8px",
+                        borderRadius: "50%",
+                        background: "var(--primary, #28166f)",
+                        border: "2px solid #ffffff",
+                        boxShadow: "0 0 6px rgba(0, 98, 255, 0.6)",
+                      }}
+                    />
+                  )}
+                </button>
+
+                <NotificationDropdown
+                  isOpen={isNotificationMenuOpen}
+                  onClose={() => setIsNotificationMenuOpen(false)}
+                  notifications={notifications}
+                  onMarkAsRead={handleMarkAsRead}
+                  onMarkAllAsRead={handleMarkAllAsRead}
+                  onClearAll={handleClearAll}
+                  onDeleteNotification={handleDeleteNotification}
+                  onSelectNotification={handleSelectNotification}
+                />
+              </div>
+
+              <div className="header-profile-container" ref={profileMenuRef}>
+                <div
+                  className={`header-user-profile ${isProfileMenuOpen ? "active" : ""}`}
+                  onClick={() => setIsProfileMenuOpen((prev) => !prev)}
+                  title="Account Profile & Sign Out"
+                >
+                  <div className="header-user-avatar">
+                    {getUserInitials(currentUser?.name)}
+                  </div>
+                  <div>
+                    <div className="header-user-name">
+                      {currentUser?.name ?? "Admin"}
+                    </div>
+                    <div className="header-user-role">
+                      {currentUser?.role.replace("-", " ") ?? "Administrator"}
+                    </div>
+                  </div>
+                  <ChevronDown
+                    size={14}
+                    style={{
+                      color: "#94a3b8",
+                      marginLeft: "2px",
+                      transform: isProfileMenuOpen ? "rotate(180deg)" : "rotate(0deg)",
+                      transition: "transform 0.2s ease",
+                    }}
+                  />
+                </div>
+
+                {isProfileMenuOpen && (
+                  <div className="header-profile-dropdown">
+                    <div className="profile-dropdown-header">
+                      <div className="profile-dropdown-avatar">
+                        {getUserInitials(currentUser?.name)}
+                      </div>
+                      <div className="profile-dropdown-info">
+                        <div className="profile-dropdown-name">{currentUser?.name}</div>
+                        <div className="profile-dropdown-email">{currentUser?.email}</div>
+                        <span className="profile-dropdown-role-badge">
+                          {currentUser?.role.replace("-", " ").toUpperCase()}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="profile-dropdown-actions" style={{ padding: "0.5rem" }}>
+                      <button
+                        type="button"
+                        className="profile-dropdown-btn logout"
+                        onClick={() => {
+                          setIsProfileMenuOpen(false);
+                          setIsSignOutModalOpen(true);
+                        }}
+                      >
+                        <LogOut size={16} />
+                        <span>Sign Out</span>
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* DASHBOARD TAB - AUTHENTIC ACADEMIC ROLE DASHBOARD */}
+          {activeTab === "dashboard" && currentUser && (
+            <RoleDashboard
+              user={currentUser}
+              summary={dashboardSummary}
+              exams={exams}
+              submissions={submissions}
+              roster={roster}
+              onSelectSubmission={viewSubmissionDetails}
+              onInspectExam={(exam) => setInspectExam(exam)}
+              addToast={addToast}
+              formatDate={formatDate}
+            />
+          )}
+
+        {/* PROGRAMME-SCOPED OR INSTITUTION-WIDE WORKSPACE */}
+        {(() => {
+          const isPh = currentUser?.role === "programme-head";
+          const phProgram = (currentUser?.programme || "BSIT").toLowerCase();
+          const currentExams = isPh
+            ? exams.filter((e) => !e.program || e.program.toLowerCase() === phProgram)
+            : exams;
+          const currentExamIds = new Set(currentExams.map((e) => e.id));
+          const currentSubmissions = isPh
+            ? submissions.filter((s) => currentExamIds.has(s.exam_id))
+            : submissions;
+          const currentStudentIds = new Set(currentSubmissions.map((s) => s.student_id));
+          const currentRoster = isPh
+            ? roster.filter((r) =>
+                currentStudentIds.has(r.student_id) ||
+                (r.course_section && r.course_section.toLowerCase().includes(phProgram))
+              )
+            : roster;
+
+          return (
+            <>
+              {activeTab === "academic-management" && currentUser && (
+                <DeanAcademicManagement
+                  currentUser={currentUser}
+                  summary={dashboardSummary}
+                  exams={currentExams}
+                  submissions={currentSubmissions}
+                  roster={currentRoster}
+                  onInspectExam={(exam) => setInspectExam(exam)}
+                  addToast={addToast}
+                />
+              )}
+
+              {activeTab === "examinations" && currentUser && (
+                currentUser.role === "student" ? (
+                  <StudentPortalView
+                    currentUser={currentUser}
+                    exams={exams}
+                    submissions={submissions}
+                    roster={roster}
+                    formatDate={formatDate}
+                  />
+                ) : (
+                  <DeanExaminations
+                    currentUser={currentUser}
+                    exams={currentExams}
+                    submissions={currentSubmissions}
+                    roster={currentRoster}
+                    onInspectExam={(exam) => setInspectExam(exam)}
+                    addToast={addToast}
+                    formatDate={formatDate}
+                  />
+                )
+              )}
+
+              {activeTab === "reports" && currentUser && (
+                currentUser.role === "student" ? (
+                  <StudentPortalView
+                    currentUser={currentUser}
+                    exams={exams}
+                    submissions={submissions}
+                    roster={roster}
+                    formatDate={formatDate}
+                  />
+                ) : (
+                  <DeanReportsAnalytics
+                    currentUser={currentUser}
+                    exams={currentExams}
+                    submissions={currentSubmissions}
+                    roster={currentRoster}
+                    summary={dashboardSummary}
+                    addToast={addToast}
+                  />
+                )
+              )}
+            </>
+          );
+        })()}
+
+        {activeTab === "progress-records" && currentUser && (
+          <DeanProgressRecords
+            exams={exams}
+            submissions={submissions}
+            onInspectExam={(exam) => setInspectExam(exam)}
+            formatDate={formatDate}
+            programFilter="all"
+          />
+        )}
+
+        {activeTab === "settings" && currentUser && (
+          <DeanSettings
+            currentUser={currentUser}
+            addToast={addToast}
+          />
+        )}
+
+        {/* CREATE ACCOUNT TAB (ADMIN) */}
+        {activeTab === "user-management" && currentUser && (
           <div>
             <div
-              className="header-container"
               style={{
-                marginBottom: "1.5rem",
                 display: "flex",
                 justifyContent: "space-between",
                 alignItems: "center",
-                gap: "1rem",
                 flexWrap: "wrap",
+                gap: "1rem",
+                padding: "1.25rem 1.5rem",
+                background: "#ffffff",
+                border: "1px solid #e2e8f0",
+                borderRadius: "12px",
+                marginBottom: "1.25rem",
               }}
             >
               <div>
-                <h2 style={{ fontSize: "1.4rem", fontWeight: 800, margin: 0 }}>
-                  {currentUser
-                    ? `${currentUser.name.split(" ")[0]}'s Role Workspace`
-                    : "OMR Academic Grading Dashboard"}
+                <h2 style={{ fontSize: "1.4rem", fontWeight: 800, margin: 0, color: "#0f172a" }}>
+                  Create Account
                 </h2>
-                <p
-                  style={{
-                    fontSize: "0.85rem",
-                    color: "var(--text-secondary)",
-                    margin: "0.2rem 0 0 0",
-                  }}
-                >
-                  {currentUser
-                    ? authMessage
-                    : "Secure role-based dashboards, auth flow, and analytics for deans, programme heads, teachers, and students."}
+                <p style={{ fontSize: "0.82rem", color: "#64748b", margin: "0.2rem 0 0 0" }}>
+                  Register new teacher and student accounts
                 </p>
-              </div>
-
-              <div
-                style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap" }}
-              >
-                {!currentUser ? (
-                  <>
-                    <select
-                      className="form-input"
-                      style={{ minWidth: "220px" }}
-                      value={selectedAuthUserId}
-                      onChange={(e) => setSelectedAuthUserId(e.target.value)}
-                    >
-                      {mockUsers.map((user) => (
-                        <option key={user.id} value={user.id}>
-                          {user.name} · {user.role.replace("-", " ")}
-                        </option>
-                      ))}
-                    </select>
-                    <button
-                      className="btn btn-primary"
-                      onClick={() => handleSignIn(selectedAuthUserId)}
-                    >
-                      <UserCheck size={16} /> Sign in as selected role
-                    </button>
-                  </>
-                ) : (
-                  <>
-                    {currentUser?.role !== "student" && (
-                      <>
-                        <button
-                          className="btn btn-secondary"
-                          onClick={() => setIsRosterModalOpen(true)}
-                        >
-                          <FileSpreadsheet size={16} /> Import Roster (
-                          {roster.length})
-                        </button>
-                        <button
-                          className="btn btn-primary"
-                          onClick={handleExportGradeSheet}
-                        >
-                          <Download size={16} /> Export CHED Grade Sheet (.xlsx)
-                        </button>
-                      </>
-                    )}
-                  </>
-                )}
               </div>
             </div>
 
-            {!currentUser && (
-              <div
-                className="card"
-                style={{
-                  marginBottom: "1.5rem",
-                  border: "1px solid var(--srcb-gold-accent)",
-                }}
-              >
-                <h3 style={{ marginBottom: "0.5rem" }}>
-                  Live Role-Based Authentication
-                </h3>
-                <p
-                  style={{
-                    color: "var(--text-secondary)",
-                    marginBottom: "1rem",
-                  }}
-                >
-                  Sign in with the seeded university accounts to unlock the real
-                  role-based dashboard and examination workflow.
-                </p>
-                <div className="stats-grid">
-                  {mockUsers.map((user) => (
-                    <div key={user.id} className="metric-card">
-                      <div className="metric-header">
-                        <span className="metric-title">
-                          {user.role.replace("-", " ")}
-                        </span>
-                        <div className="metric-icon-wrapper">
-                          <ShieldCheck
-                            size={18}
-                            color="var(--srcb-gold-accent)"
-                          />
-                        </div>
-                      </div>
-                      <div
-                        className="metric-value"
-                        style={{ fontSize: "1.1rem" }}
-                      >
-                        {user.name}
-                      </div>
-                      <div className="metric-subtitle">{user.scope}</div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
+            <AdminUserManagement
+              currentUser={currentUser}
+              addToast={addToast}
+              formatDate={formatDate}
+              viewMode="create"
+            />
+          </div>
+        )}
 
-            {currentUser && (
-              <div style={{ marginBottom: "2rem" }}>
-                <RoleDashboard
-                  user={currentUser}
-                  summary={dashboardSummary}
-                  exams={exams.length > 0 ? exams : mockExams}
-                  submissions={
-                    submissions.length > 0 ? submissions : mockSubmissions
-                  }
-                  roster={roster}
-                  onSelectSubmission={(sub) => setSelectedSubmission(sub)}
-                  onInspectExam={(exam) => setInspectExam(exam)}
-                  addToast={addToast}
-                  formatDate={formatDate}
-                />
-              </div>
-            )}
-
-            {/* Decomposed KPI Metric Cards Grid */}
-            <div className="stats-grid" style={{ marginBottom: "2rem" }}>
-              <MetricTile
-                title="Live Students"
-                value={dashboardSummary.total_students.toString()}
-                subtitle="Registered in the system"
-                color="info"
-                trend="up"
-                icon={getMetricIcon("info")}
-              />
-              <MetricTile
-                title="Live Exams"
-                value={dashboardSummary.total_exams.toString()}
-                subtitle="Stored in the backend"
-                color="success"
-                trend="up"
-                icon={getMetricIcon("success")}
-              />
-              <MetricTile
-                title="Average Score"
-                value={
-                  dashboardSummary.average_score > 0
-                    ? `${dashboardSummary.average_score}%`
-                    : "—"
-                }
-                subtitle="Across graded submissions"
-                color="warning"
-                trend="up"
-                icon={getMetricIcon("warning")}
-              />
-              <MetricTile
-                title="Submissions"
-                value={dashboardSummary.total_submissions.toString()}
-                subtitle="Processed and stored"
-                color="info"
-                trend="up"
-                icon={getMetricIcon("info")}
-              />
-              {mockSystemMetrics.slice(0, 1).map((metric) => (
-                <MetricTile
-                  key={metric.id}
-                  title={metric.title}
-                  value={metric.value}
-                  subtitle={metric.subtitle}
-                  color={metric.color}
-                  trend={metric.trend}
-                  icon={getMetricIcon(metric.color)}
-                />
-              ))}
-            </div>
-
-            {currentUser?.role === "student" && (
-              <div className="card" style={{ marginBottom: "2rem" }}>
-                <h2 style={{ fontSize: "1.2rem", marginBottom: "0.75rem" }}>
-                  My Examination Record
-                </h2>
-                <p
-                  style={{
-                    color: "var(--text-secondary)",
-                    marginBottom: "1rem",
-                  }}
-                >
-                  {studentName} can review personal results, feedback, and
-                  progress through their own secure exam history.
-                </p>
-                {studentResults.length === 0 ? (
-                  <div style={{ color: "var(--text-muted)" }}>
-                    No personal examination results yet.
-                  </div>
-                ) : (
-                  <div style={{ display: "grid", gap: "0.7rem" }}>
-                    {studentResults.slice(0, 3).map((result) => (
-                      <div
-                        key={result.id}
-                        style={{
-                          padding: "0.9rem",
-                          borderRadius: "var(--radius-md)",
-                          background: "rgba(255,255,255,0.03)",
-                          border: "1px solid var(--border)",
-                        }}
-                      >
-                        <div
-                          style={{
-                            display: "flex",
-                            justifyContent: "space-between",
-                            alignItems: "center",
-                            gap: "1rem",
-                            flexWrap: "wrap",
-                          }}
-                        >
-                          <strong>
-                            {exams.find((exam) => exam.id === result.exam_id)
-                              ?.name || "Exam"}
-                          </strong>
-                          <span className="badge badge-success">
-                            {result.score}/{result.total_questions}
-                          </span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* Dashboard Submissions and Quick Actions */}
+        {/* USER ACCOUNTS DIRECTORY TAB (ADMIN) */}
+        {activeTab === "user-directory" && currentUser && (
+          <div>
             <div
               style={{
-                display: "grid",
-                gridTemplateColumns: "1.8fr 1fr",
-                gap: "2rem",
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                flexWrap: "wrap",
+                gap: "1rem",
+                padding: "1.25rem 1.5rem",
+                background: "#ffffff",
+                border: "1px solid #e2e8f0",
+                borderRadius: "12px",
+                marginBottom: "1.25rem",
               }}
             >
-              {/* Recent Submissions Component with Roster matching */}
-              <div className="card">
-                <h2
-                  style={{
-                    fontSize: "1.2rem",
-                    marginBottom: "1rem",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "0.5rem",
-                  }}
-                >
-                  <History size={18} className="text-secondary" /> Recent Graded
-                  Submissions
+              <div>
+                <h2 style={{ fontSize: "1.4rem", fontWeight: 800, margin: 0, color: "#0f172a" }}>
+                  {currentUser.role === "programme-head"
+                    ? `${currentUser.programme || "BSIT"} Student Access`
+                    : currentUser.role === "dean"
+                      ? "User Access"
+                      : "User Directory"}
                 </h2>
-                {loadingSubmissions ? (
-                  <div className="spinner-container">
-                    <div className="spinner"></div>
-                  </div>
-                ) : (
-                  <SubmissionTable
-                    submissions={submissions.slice(0, 5)}
-                    exams={exams}
-                    roster={roster}
-                    onSelectSubmission={viewSubmissionDetails}
-                    formatDate={formatDate}
-                  />
-                )}
-              </div>
-
-              {/* Quick Action Panel */}
-              {currentUser?.role !== "student" && (
-                <div
-                  className="card"
-                  style={{
-                    display: "flex",
-                    flexDirection: "column",
-                    gap: "1rem",
-                  }}
-                >
-                  <h2 style={{ fontSize: "1.2rem" }}>Academic Tools</h2>
-                  <button
-                    className="btn btn-primary"
-                    style={{ width: "100%", justifyContent: "flex-start" }}
-                    onClick={() => setActiveTab("quick-scan")}
-                  >
-                    <Sparkles size={18} /> Quick Bubble Reader
-                  </button>
-                  <button
-                    className="btn btn-secondary"
-                    style={{ width: "100%", justifyContent: "flex-start" }}
-                    onClick={() => setIsRosterModalOpen(true)}
-                  >
-                    <UserCheck size={18} /> Match Student Roster
-                  </button>
-                  <button
-                    className="btn btn-secondary"
-                    style={{ width: "100%", justifyContent: "flex-start" }}
-                    onClick={() => setActiveTab("item-analysis")}
-                  >
-                    <BarChart2 size={18} /> Run OBE Item Analysis
-                  </button>
-
-                  <div
-                    style={{
-                      marginTop: "auto",
-                      background: "rgba(255, 255, 255, 0.02)",
-                      padding: "1rem",
-                      borderRadius: "var(--radius-md)",
-                      border: "1px solid var(--border)",
-                    }}
-                  >
-                    <h4
-                      style={{
-                        fontSize: "0.85rem",
-                        color: "var(--text-secondary)",
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "0.25rem",
-                        marginBottom: "0.5rem",
-                      }}
-                    >
-                      <Info size={14} /> Philippine HEI Grading Standard
-                    </h4>
-                    <p
-                      style={{
-                        fontSize: "0.75rem",
-                        color: "var(--text-muted)",
-                        lineHeight: "1.4",
-                      }}
-                    >
-                      Calculates 50-Base Transmutations automatically:{" "}
-                      <code>Grade = 50 + (Raw / Total * 50)</code> mapped to
-                      official 1.00 - 5.00 numeric scales.
-                    </p>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-
-        {activeTab === "academic-management" && (
-          <div>
-            <div
-              className="header-container"
-              style={{ marginBottom: "1.5rem" }}
-            >
-              <h2 style={{ fontSize: "1.4rem", fontWeight: 800, margin: 0 }}>
-                Academic Management
-              </h2>
-              <p
-                style={{
-                  fontSize: "0.85rem",
-                  color: "var(--text-secondary)",
-                  margin: "0.2rem 0 0 0",
-                }}
-              >
-                Students, teachers, departments, and programmes are managed from
-                this module.
-              </p>
-            </div>
-
-            <div className="stats-grid" style={{ marginBottom: "1.5rem" }}>
-              {[
-                {
-                  title: "Students",
-                  subtitle: "Institution-wide enrolment records",
-                  value: "2,184",
-                },
-                {
-                  title: "Teachers",
-                  subtitle: "Faculty activity and assignments",
-                  value: "96",
-                },
-                {
-                  title: "Departments",
-                  subtitle: "Academic units under review",
-                  value: "8",
-                },
-                {
-                  title: "Programmes",
-                  subtitle: "Curricula under monitoring",
-                  value: "12",
-                },
-              ].map((item) => (
-                <div key={item.title} className="metric-card">
-                  <div className="metric-header">
-                    <span className="metric-title">{item.title}</span>
-                  </div>
-                  <div className="metric-value">{item.value}</div>
-                  <div className="metric-subtitle">{item.subtitle}</div>
-                </div>
-              ))}
-            </div>
-
-            <div className="card" style={{ marginBottom: "1rem" }}>
-              <h3 style={{ marginBottom: "0.75rem" }}>
-                Current Academic Records
-              </h3>
-              <div style={{ display: "grid", gap: "0.7rem" }}>
-                {[
-                  {
-                    name: "BSIT - First Year",
-                    status: "Active",
-                    owner: "Programme Head",
-                  },
-                  {
-                    name: "BSBA - Second Year",
-                    status: "Monitoring",
-                    owner: "Department Chair",
-                  },
-                  {
-                    name: "BSEd - Third Year",
-                    status: "Review",
-                    owner: "Dean Office",
-                  },
-                ].map((entry) => (
-                  <div
-                    key={entry.name}
-                    style={{
-                      border: "1px solid var(--border)",
-                      borderRadius: "var(--radius-md)",
-                      padding: "0.8rem",
-                      display: "flex",
-                      justifyContent: "space-between",
-                      alignItems: "center",
-                      flexWrap: "wrap",
-                      gap: "0.5rem",
-                    }}
-                  >
-                    <div>
-                      <div style={{ fontWeight: 700 }}>{entry.name}</div>
-                      <div
-                        style={{
-                          color: "var(--text-secondary)",
-                          fontSize: "0.82rem",
-                        }}
-                      >
-                        {entry.owner}
-                      </div>
-                    </div>
-                    <span className="badge badge-success">{entry.status}</span>
-                  </div>
-                ))}
+                <p style={{ fontSize: "0.82rem", color: "#64748b", margin: "0.2rem 0 0 0" }}>
+                  {currentUser.role === "programme-head"
+                    ? `Enrolled student accounts under ${currentUser.programme || "BSIT"} academic program`
+                    : currentUser.role === "dean"
+                      ? "Manage and oversee user access across Higher Education programs"
+                      : "Manage registered faculty and student accounts"}
+                </p>
               </div>
             </div>
-          </div>
-        )}
 
-        {activeTab === "examinations" && (
-          <div>
-            <div
-              className="header-container"
-              style={{ marginBottom: "1.5rem" }}
-            >
-              <h2 style={{ fontSize: "1.4rem", fontWeight: 800, margin: 0 }}>
-                Examinations
-              </h2>
-              <p
-                style={{
-                  fontSize: "0.85rem",
-                  color: "var(--text-secondary)",
-                  margin: "0.2rem 0 0 0",
-                }}
-              >
-                Overview of exams, scoring, item analysis, and published
-                results.
-              </p>
-            </div>
-
-            <div className="stats-grid" style={{ marginBottom: "1.5rem" }}>
-              {[
-                {
-                  title: "Active Exams",
-                  subtitle: "Published this term",
-                  value: "128",
-                },
-                {
-                  title: "Results Posted",
-                  subtitle: "Ready for student review",
-                  value: "74",
-                },
-                {
-                  title: "Pending Review",
-                  subtitle: "Awaiting publishing",
-                  value: "12",
-                },
-              ].map((item) => (
-                <div key={item.title} className="metric-card">
-                  <div className="metric-header">
-                    <span className="metric-title">{item.title}</span>
-                  </div>
-                  <div className="metric-value">{item.value}</div>
-                  <div className="metric-subtitle">{item.subtitle}</div>
-                </div>
-              ))}
-            </div>
-
-            <div className="card">
-              <h3 style={{ marginBottom: "0.75rem" }}>Examination Queue</h3>
-              <div style={{ display: "grid", gap: "0.7rem" }}>
-                {[
-                  {
-                    name: "Midterm Examination",
-                    status: "Published",
-                    date: "Jul 24",
-                  },
-                  { name: "Final Quiz", status: "Review", date: "Aug 02" },
-                  {
-                    name: "Practical Assessment",
-                    status: "Pending",
-                    date: "Aug 09",
-                  },
-                ].map((entry) => (
-                  <div
-                    key={entry.name}
-                    style={{
-                      border: "1px solid var(--border)",
-                      borderRadius: "var(--radius-md)",
-                      padding: "0.8rem",
-                      display: "flex",
-                      justifyContent: "space-between",
-                      alignItems: "center",
-                      flexWrap: "wrap",
-                      gap: "0.5rem",
-                    }}
-                  >
-                    <div>
-                      <div style={{ fontWeight: 700 }}>{entry.name}</div>
-                      <div
-                        style={{
-                          color: "var(--text-secondary)",
-                          fontSize: "0.82rem",
-                        }}
-                      >
-                        {entry.date}
-                      </div>
-                    </div>
-                    <span className="badge badge-success">{entry.status}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {activeTab === "reports" && (
-          <div>
-            <div
-              className="header-container"
-              style={{ marginBottom: "1.5rem" }}
-            >
-              <h2 style={{ fontSize: "1.4rem", fontWeight: 800, margin: 0 }}>
-                Reports & Analytics
-              </h2>
-              <p
-                style={{
-                  fontSize: "0.85rem",
-                  color: "var(--text-secondary)",
-                  margin: "0.2rem 0 0 0",
-                }}
-              >
-                Performance trends, department comparisons, and programme
-                analytics.
-              </p>
-            </div>
-
-            <div className="stats-grid" style={{ marginBottom: "1.5rem" }}>
-              {[
-                {
-                  title: "Institution Performance",
-                  subtitle: "Average score and pass rate",
-                  value: "84.6%",
-                },
-                {
-                  title: "Department Comparison",
-                  subtitle: "Cross-unit benchmarking",
-                  value: "8 Units",
-                },
-                {
-                  title: "Programme Comparison",
-                  subtitle: "Curricular outcomes",
-                  value: "12 Programmes",
-                },
-              ].map((item) => (
-                <div key={item.title} className="metric-card">
-                  <div className="metric-header">
-                    <span className="metric-title">{item.title}</span>
-                  </div>
-                  <div className="metric-value">{item.value}</div>
-                  <div className="metric-subtitle">{item.subtitle}</div>
-                </div>
-              ))}
-            </div>
-
-            <div className="card">
-              <h3 style={{ marginBottom: "0.75rem" }}>
-                Recent Institutional Reports
-              </h3>
-              <div style={{ display: "grid", gap: "0.7rem" }}>
-                {[
-                  {
-                    title: "Dean Review Summary",
-                    detail: "Institution-wide performance overview",
-                  },
-                  {
-                    title: "Programme Outcome Report",
-                    detail: "Curriculum quality and pass rate trends",
-                  },
-                  {
-                    title: "Department Benchmark Report",
-                    detail: "Cross-department performance comparison",
-                  },
-                ].map((entry) => (
-                  <div
-                    key={entry.title}
-                    style={{
-                      border: "1px solid var(--border)",
-                      borderRadius: "var(--radius-md)",
-                      padding: "0.8rem",
-                    }}
-                  >
-                    <div style={{ fontWeight: 700 }}>{entry.title}</div>
-                    <div
-                      style={{
-                        color: "var(--text-secondary)",
-                        fontSize: "0.82rem",
-                        marginTop: "0.2rem",
-                      }}
-                    >
-                      {entry.detail}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {activeTab === "settings" && (
-          <div>
-            <div
-              className="header-container"
-              style={{ marginBottom: "1.5rem" }}
-            >
-              <h2 style={{ fontSize: "1.4rem", fontWeight: 800, margin: 0 }}>
-                Settings
-              </h2>
-              <p
-                style={{
-                  fontSize: "0.85rem",
-                  color: "var(--text-secondary)",
-                  margin: "0.2rem 0 0 0",
-                }}
-              >
-                Institution preferences, access controls, and policy
-                configuration.
-              </p>
-            </div>
-
-            <div className="card">
-              <h3 style={{ marginBottom: "0.75rem" }}>Platform Controls</h3>
-              <div style={{ display: "grid", gap: "0.7rem" }}>
-                {[
-                  {
-                    title: "Role Access",
-                    detail:
-                      "Dean, Programme Head, Teacher, and Student permissions",
-                  },
-                  {
-                    title: "Grading Policy",
-                    detail: "HEI transmutation and mark conversion rules",
-                  },
-                  {
-                    title: "Notification Preferences",
-                    detail: "Alerts for reminders and result publication",
-                  },
-                ].map((entry) => (
-                  <div
-                    key={entry.title}
-                    style={{
-                      border: "1px solid var(--border)",
-                      borderRadius: "var(--radius-md)",
-                      padding: "0.8rem",
-                    }}
-                  >
-                    <div style={{ fontWeight: 700 }}>{entry.title}</div>
-                    <div
-                      style={{
-                        color: "var(--text-secondary)",
-                        fontSize: "0.82rem",
-                        marginTop: "0.2rem",
-                      }}
-                    >
-                      {entry.detail}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
+            <AdminUserManagement
+              currentUser={currentUser}
+              addToast={addToast}
+              formatDate={formatDate}
+              viewMode="directory"
+            />
           </div>
         )}
 
@@ -1727,22 +1731,27 @@ export default function App() {
         {activeTab === "quick-scan" && (
           <div>
             <div
-              className="header-container"
-              style={{ marginBottom: "1.5rem" }}
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                flexWrap: "wrap",
+                gap: "1rem",
+                padding: "1.25rem 1.5rem",
+                background: "#ffffff",
+                border: "1px solid #e2e8f0",
+                borderRadius: "12px",
+                marginBottom: "1.25rem",
+              }}
             >
-              <h2 style={{ fontSize: "1.4rem", fontWeight: 800, margin: 0 }}>
-                Quick Bubble Reader
-              </h2>
-              <p
-                style={{
-                  fontSize: "0.85rem",
-                  color: "var(--text-secondary)",
-                  margin: "0.2rem 0 0 0",
-                }}
-              >
-                Upload any completed ZipGrade sheet to read raw student marks
-                instantly.
-              </p>
+              <div>
+                <h2 style={{ fontSize: "1.4rem", fontWeight: 800, margin: 0, color: "#0f172a" }}>
+                  Quick Scanner
+                </h2>
+                <p style={{ fontSize: "0.82rem", color: "#64748b", margin: "0.2rem 0 0 0" }}>
+                  Scan ZipGrade bubble sheets via camera or file upload
+                </p>
+              </div>
             </div>
 
             <div className="scan-mode-tabs">
@@ -1991,249 +2000,816 @@ export default function App() {
         {activeTab === "exams" && (
           <div>
             <div
-              className="header-container"
               style={{
-                marginBottom: "1.5rem",
                 display: "flex",
                 justifyContent: "space-between",
                 alignItems: "center",
                 flexWrap: "wrap",
                 gap: "1rem",
+                padding: "1.25rem 1.5rem",
+                background: "#ffffff",
+                border: "1px solid #e2e8f0",
+                borderRadius: "12px",
+                marginBottom: "1.25rem",
               }}
             >
               <div>
-                <h2 style={{ fontSize: "1.4rem", fontWeight: 800, margin: 0 }}>
-                  Exams & Grading Management
+                <h2
+                  style={{
+                    fontSize: "1.4rem",
+                    fontWeight: 800,
+                    margin: 0,
+                    color: "#0f172a",
+                  }}
+                >
+                  Exams & Grading
                 </h2>
                 <p
                   style={{
-                    fontSize: "0.85rem",
-                    color: "var(--text-secondary)",
+                    fontSize: "0.82rem",
+                    color: "#64748b",
                     margin: "0.2rem 0 0 0",
                   }}
                 >
-                  Manage complete examination details, answer keys, and grade
-                  student sheets.
+                  Manage answer keys, score student OMR sheets, and compile results
                 </p>
               </div>
+
               <div
-                style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap" }}
+                style={{
+                  display: "flex",
+                  gap: "0.75rem",
+                  flexWrap: "wrap",
+                  alignItems: "center",
+                }}
               >
+                {/* Mode Switcher */}
+                <div
+                  style={{
+                    display: "flex",
+                    background: "#f1f5f9",
+                    padding: "3px",
+                    borderRadius: "10px",
+                    border: "1px solid #e2e8f0",
+                    gap: "2px",
+                  }}
+                >
+                  <button
+                    type="button"
+                    onClick={() => setTeacherExamsSubTab("grading")}
+                    style={{
+                      padding: "0.45rem 0.85rem",
+                      fontSize: "0.8rem",
+                      fontWeight: 700,
+                      borderRadius: "8px",
+                      border: "none",
+                      cursor: "pointer",
+                      transition: "all 0.2s ease",
+                      background:
+                        teacherExamsSubTab === "grading"
+                          ? "#ffffff"
+                          : "transparent",
+                      color:
+                        teacherExamsSubTab === "grading"
+                          ? "var(--primary, #28166f)"
+                          : "#64748b",
+                      boxShadow:
+                        teacherExamsSubTab === "grading"
+                          ? "0 1px 3px rgba(0,0,0,0.08)"
+                          : "none",
+                    }}
+                  >
+                    Exam Grading
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setTeacherExamsSubTab("quick-scan")}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "4px",
+                      padding: "0.45rem 0.85rem",
+                      fontSize: "0.8rem",
+                      fontWeight: 700,
+                      borderRadius: "8px",
+                      border: "none",
+                      cursor: "pointer",
+                      transition: "all 0.2s ease",
+                      background:
+                        teacherExamsSubTab === "quick-scan"
+                          ? "#ffffff"
+                          : "transparent",
+                      color:
+                        teacherExamsSubTab === "quick-scan"
+                          ? "var(--primary, #28166f)"
+                          : "#64748b",
+                      boxShadow:
+                        teacherExamsSubTab === "quick-scan"
+                          ? "0 1px 3px rgba(0,0,0,0.08)"
+                          : "none",
+                    }}
+                  >
+                    <Sparkles size={14} /> Quick Scanner
+                  </button>
+                </div>
+
                 <button
                   className="btn btn-secondary"
                   onClick={handleExportGradeSheet}
+                  style={{
+                    background: "#ffffff",
+                    border: "1px solid #cbd5e1",
+                    color: "#0f172a",
+                    fontWeight: 600,
+                    borderRadius: "8px",
+                    fontSize: "0.82rem",
+                  }}
                 >
-                  <Download size={16} /> Export CHED Grade Sheet (.xlsx)
+                  <Download size={15} /> Export CHED Grade Sheet (.xlsx)
                 </button>
                 <button
                   className="btn btn-primary"
                   onClick={() => setIsExamModalOpen(true)}
-                  style={{ fontWeight: 700 }}
+                  style={{
+                    fontWeight: 700,
+                    borderRadius: "8px",
+                    fontSize: "0.82rem",
+                  }}
                 >
-                  <Plus size={18} /> Create Examination
+                  <Plus size={16} /> Create Examination
                 </button>
               </div>
             </div>
 
-            {/* Exam List and Grading Section */}
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "1fr 2fr",
-                gap: "2rem",
-              }}
-            >
-              {/* Searchable & Filterable Exams Feed */}
-              <div
-                className="card"
-                style={{ display: "flex", flexDirection: "column" }}
-              >
-                <div style={{ marginBottom: "1rem" }}>
+            {teacherExamsSubTab === "quick-scan" ? (
+              /* Integrated Quick Sheet Scanner in Blue and White */
+              <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
+                {/* Header Sub-Card */}
+                <div
+                  className="card"
+                  style={{
+                    background: "#ffffff",
+                    border: "1px solid #e2e8f0",
+                    borderRadius: "16px",
+                    padding: "1.25rem 1.5rem",
+                    boxShadow: "0 2px 8px rgba(0, 0, 0, 0.02)",
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    flexWrap: "wrap",
+                    gap: "1rem",
+                  }}
+                >
+                  <div style={{ display: "flex", alignItems: "center", gap: "0.85rem" }}>
+                    <div
+                      style={{
+                        width: "42px",
+                        height: "42px",
+                        borderRadius: "10px",
+                        background: "var(--primary-light-surface, #f5f3ff)",
+                        color: "var(--primary, #28166f)",
+                        border: "1px solid var(--primary-light-border, #ddd6fe)",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        flexShrink: 0,
+                      }}
+                    >
+                      <Sparkles size={20} />
+                    </div>
+                    <div>
+                      <h3 style={{ fontSize: "1.1rem", fontWeight: 800, margin: 0, color: "#0f172a" }}>
+                        Instant Raw Sheet Scanner
+                      </h3>
+                      <p style={{ fontSize: "0.82rem", color: "#64748b", margin: "0.15rem 0 0 0" }}>
+                        Directly read any standard 50-item ZipGrade answer sheet to extract raw student marks & ID without linking to an exam.
+                      </p>
+                    </div>
+                  </div>
+
                   <div
                     style={{
                       display: "flex",
-                      justifyContent: "space-between",
-                      alignItems: "center",
-                      marginBottom: "0.75rem",
+                      background: "#f1f5f9",
+                      padding: "4px",
+                      borderRadius: "10px",
+                      border: "1px solid #e2e8f0",
+                      gap: "4px",
                     }}
                   >
-                    <h3 style={{ fontSize: "1.1rem", margin: 0 }}>
-                      Examinations Directory
-                    </h3>
-                    <span
-                      className="badge badge-info"
-                      style={{ fontSize: "0.75rem" }}
-                    >
-                      {exams.length} Total
-                    </span>
-                  </div>
-
-                  {/* Search Bar */}
-                  <div style={{ position: "relative", marginBottom: "0.6rem" }}>
-                    <Search
-                      size={15}
+                    <button
+                      type="button"
+                      onClick={() => setQuickScanMode("upload")}
                       style={{
-                        position: "absolute",
-                        left: "0.6rem",
-                        top: "50%",
-                        transform: "translateY(-50%)",
-                        color: "var(--text-muted)",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "6px",
+                        padding: "0.45rem 0.95rem",
+                        fontSize: "0.82rem",
+                        fontWeight: 700,
+                        borderRadius: "8px",
+                        border: "none",
+                        cursor: "pointer",
+                        transition: "all 0.2s ease",
+                        background:
+                          quickScanMode === "upload"
+                            ? "var(--primary, #28166f)"
+                            : "transparent",
+                        color:
+                          quickScanMode === "upload"
+                            ? "#ffffff"
+                            : "#64748b",
+                        boxShadow:
+                          quickScanMode === "upload"
+                            ? "0 2px 6px rgba(0, 98, 255, 0.2)"
+                            : "none",
                       }}
-                    />
-                    <input
-                      type="text"
-                      className="form-input"
-                      placeholder="Search title, subject, code, section..."
-                      style={{ paddingLeft: "2rem", fontSize: "0.8rem" }}
-                      value={examListSearch}
-                      onChange={(e) => setExamListSearch(e.target.value)}
-                    />
-                  </div>
-
-                  {/* Filter Selectors */}
-                  <div
-                    style={{
-                      display: "grid",
-                      gridTemplateColumns: "1fr 1fr",
-                      gap: "0.5rem",
-                    }}
-                  >
-                    <div>
-                      <label
-                        style={{
-                          fontSize: "0.7rem",
-                          color: "var(--text-muted)",
-                          display: "block",
-                          marginBottom: "2px",
-                        }}
-                      >
-                        Exam Type:
-                      </label>
-                      <select
-                        className="form-input"
-                        style={{
-                          fontSize: "0.78rem",
-                          padding: "0.3rem 0.5rem",
-                        }}
-                        value={examTypeFilter}
-                        onChange={(e) => setExamTypeFilter(e.target.value)}
-                      >
-                        <option value="All">All Types</option>
-                        <option value="Preliminary">Preliminary</option>
-                        <option value="Midterm">Midterm</option>
-                        <option value="Pre-Final">Pre-Final</option>
-                        <option value="Final">Final</option>
-                      </select>
-                    </div>
-
-                    <div>
-                      <label
-                        style={{
-                          fontSize: "0.7rem",
-                          color: "var(--text-muted)",
-                          display: "block",
-                          marginBottom: "2px",
-                        }}
-                      >
-                        Semester:
-                      </label>
-                      <select
-                        className="form-input"
-                        style={{
-                          fontSize: "0.78rem",
-                          padding: "0.3rem 0.5rem",
-                        }}
-                        value={examSemesterFilter}
-                        onChange={(e) => setExamSemesterFilter(e.target.value)}
-                      >
-                        <option value="All">All Semesters</option>
-                        <option value="1st Semester">1st Semester</option>
-                        <option value="2nd Semester">2nd Semester</option>
-                        <option value="Summer">Summer</option>
-                      </select>
-                    </div>
+                    >
+                      <UploadCloud size={15} /> Upload File
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setQuickScanMode("camera")}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "6px",
+                        padding: "0.45rem 0.95rem",
+                        fontSize: "0.82rem",
+                        fontWeight: 700,
+                        borderRadius: "8px",
+                        border: "none",
+                        cursor: "pointer",
+                        transition: "all 0.2s ease",
+                        background:
+                          quickScanMode === "camera"
+                            ? "var(--primary, #28166f)"
+                            : "transparent",
+                        color:
+                          quickScanMode === "camera"
+                            ? "#ffffff"
+                            : "#64748b",
+                        boxShadow:
+                          quickScanMode === "camera"
+                            ? "0 2px 6px rgba(0, 98, 255, 0.2)"
+                            : "none",
+                      }}
+                    >
+                      <Camera size={15} /> Live Camera
+                    </button>
                   </div>
                 </div>
 
-                {loadingExams ? (
-                  <div className="spinner-container">
-                    <div className="spinner"></div>
-                  </div>
+                {quickScanMode === "camera" ? (
+                  <CameraScanner
+                    onCapture={handleQuickScanUpload}
+                    onSwitchToUpload={() => setQuickScanMode("upload")}
+                    title="Quick Bubble Camera Scanner"
+                    subtitle="Point camera at the ZipGrade answer sheet. Align corners and hold steady to auto-capture."
+                  />
                 ) : (
-                  (() => {
-                    const filtered = exams.filter((ex) => {
-                      const q = examListSearch.toLowerCase().trim();
-                      const matchesSearch =
-                        !q ||
-                        ex.name.toLowerCase().includes(q) ||
-                        (ex.subject && ex.subject.toLowerCase().includes(q)) ||
-                        (ex.course_code &&
-                          ex.course_code.toLowerCase().includes(q)) ||
-                        (ex.section && ex.section.toLowerCase().includes(q)) ||
-                        (ex.instructor_name &&
-                          ex.instructor_name.toLowerCase().includes(q));
+                  <div
+                    className="card"
+                    style={{
+                      background: "#ffffff",
+                      border: "1px solid #e2e8f0",
+                      borderRadius: "16px",
+                      padding: "1.5rem",
+                      boxShadow: "0 2px 8px rgba(0, 0, 0, 0.02)",
+                    }}
+                  >
+                    <input
+                      type="file"
+                      ref={quickScanInputRef}
+                      style={{ display: "none" }}
+                      accept="image/*"
+                      onChange={(e) => {
+                        if (e.target.files && e.target.files[0]) {
+                          handleQuickScanUpload(e.target.files[0]);
+                        }
+                        e.target.value = "";
+                      }}
+                    />
+                    <div
+                      className="dropzone"
+                      onClick={() => quickScanInputRef.current?.click()}
+                      onDragOver={(e) => e.preventDefault()}
+                      onDrop={(e) => {
+                        e.preventDefault();
+                        if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+                          handleQuickScanUpload(e.dataTransfer.files[0]);
+                        }
+                      }}
+                      style={{
+                        padding: "3rem 1.5rem",
+                        background: "#f8fafc",
+                        border: "2px dashed #cbd5e1",
+                        borderRadius: "12px",
+                        textAlign: "center",
+                        cursor: "pointer",
+                      }}
+                    >
+                      <UploadCloud
+                        size={48}
+                        style={{ color: "var(--primary, #28166f)", marginBottom: "0.5rem" }}
+                      />
+                      <h3 style={{ fontSize: "1.05rem", fontWeight: 800, color: "#0f172a", margin: "0 0 0.25rem 0" }}>
+                        Drag & drop a ZipGrade sheet image here
+                      </h3>
+                      <p
+                        style={{
+                          color: "#64748b",
+                          fontSize: "0.85rem",
+                          margin: 0,
+                        }}
+                      >
+                        or click to browse from local computer files (Supports JPG, PNG up to 10MB)
+                      </p>
+                    </div>
+                  </div>
+                )}
 
-                      const matchesType =
-                        examTypeFilter === "All" ||
-                        (ex.exam_type || "").toLowerCase() ===
-                          examTypeFilter.toLowerCase();
+                {quickScanLoading && (
+                  <div
+                    className="card spinner-container"
+                    style={{
+                      background: "#ffffff",
+                      border: "1px solid #e2e8f0",
+                      borderRadius: "16px",
+                      padding: "2rem",
+                      textAlign: "center",
+                    }}
+                  >
+                    <div className="spinner"></div>
+                    <p style={{ fontWeight: 700, color: "var(--primary, #28166f)", marginTop: "1rem" }}>
+                      OMR engine calibrating markers and extracting marks...
+                    </p>
+                  </div>
+                )}
 
-                      const matchesSem =
-                        examSemesterFilter === "All" ||
-                        (ex.semester || "1st Semester").toLowerCase() ===
-                          examSemesterFilter.toLowerCase();
-
-                      return matchesSearch && matchesType && matchesSem;
-                    });
-
-                    if (filtered.length === 0) {
-                      return (
-                        <div
-                          style={{
-                            color: "var(--text-muted)",
-                            fontSize: "0.85rem",
-                            padding: "1.5rem 0",
-                            textAlign: "center",
-                          }}
-                        >
-                          No matching examinations found. Try adjusting your
-                          filters or click "Create Examination".
-                        </div>
-                      );
-                    }
-
-                    return (
+                {quickScanResult && (
+                  <div className="grade-layout">
+                    {/* Visual Image Overlay */}
+                    <div
+                      className="card"
+                      style={{
+                        background: "#ffffff",
+                        border: "1px solid #e2e8f0",
+                        borderRadius: "16px",
+                        padding: "1.25rem",
+                      }}
+                    >
+                      <h3
+                        style={{
+                          fontSize: "1rem",
+                          fontWeight: 800,
+                          marginBottom: "1rem",
+                          color: "#0f172a",
+                        }}
+                      >
+                        Annotated Scan Image
+                      </h3>
+                      <div
+                        className="image-preview-container"
+                        style={{
+                          borderRadius: "10px",
+                          overflow: "hidden",
+                          border: "1px solid #e2e8f0",
+                        }}
+                      >
+                        <img
+                          src={`data:image/png;base64,${quickScanResult.overlay_image}`}
+                          alt="OMR Scan Overlay"
+                          style={{ width: "100%", height: "auto" }}
+                        />
+                      </div>
                       <div
                         style={{
                           display: "flex",
-                          flexDirection: "column",
-                          gap: "0.75rem",
-                          maxHeight: "520px",
-                          overflowY: "auto",
+                          gap: "1rem",
+                          marginTop: "1rem",
+                          fontSize: "0.75rem",
+                          justifyContent: "center",
                         }}
                       >
-                        {filtered.map((exam) => (
-                          <ExamCard
-                            key={exam.id}
-                            exam={exam}
-                            isSelected={selectedExamId === exam.id}
-                            onSelect={(id) => {
-                              setSelectedExamId(id);
-                              setLatestGradeResult(null);
+                        <div
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "0.35rem",
+                            color: "#059669",
+                            fontWeight: 700,
+                          }}
+                        >
+                          <span
+                            style={{
+                              width: "10px",
+                              height: "10px",
+                              backgroundColor: "#10b981",
+                              borderRadius: "50%",
                             }}
-                            onInspect={(e) => setInspectExam(e)}
-                            onDelete={handleDeleteExam}
-                            formatDate={formatDate}
-                          />
-                        ))}
+                          ></span>{" "}
+                          Green: Detected Mark
+                        </div>
+                        <div
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "0.35rem",
+                            color: "#d97706",
+                            fontWeight: 700,
+                          }}
+                        >
+                          <span
+                            style={{
+                              width: "10px",
+                              height: "10px",
+                              backgroundColor: "#f59e0b",
+                              borderRadius: "50%",
+                            }}
+                          ></span>{" "}
+                          Yellow: Ambiguity (Multi-filled)
+                        </div>
                       </div>
-                    );
-                  })()
+                    </div>
+
+                    {/* Parsed Sheet Data */}
+                    <div
+                      className="card"
+                      style={{
+                        background: "#ffffff",
+                        border: "1px solid #e2e8f0",
+                        borderRadius: "16px",
+                        padding: "1.25rem",
+                      }}
+                    >
+                      <div
+                        style={{
+                          display: "flex",
+                          justifyContent: "space-between",
+                          alignItems: "center",
+                          marginBottom: "1rem",
+                        }}
+                      >
+                        <h3 style={{ fontSize: "1rem", fontWeight: 800, margin: 0, color: "#0f172a" }}>
+                          Parsed Sheet Data
+                        </h3>
+                        <StatusBadge
+                          customText={`StudentID: ${quickScanResult.student_id || "Empty"}`}
+                          variant="info"
+                        />
+                      </div>
+
+                      <div
+                        className="results-scrollable bubble-sheet-card"
+                        style={{
+                          background: "#f8fafc",
+                          border: "1px solid #e2e8f0",
+                          borderRadius: "10px",
+                          padding: "1rem",
+                        }}
+                      >
+                        <div
+                          style={{
+                            display: "grid",
+                            gridTemplateColumns: "1fr 1fr",
+                            gap: "1rem",
+                          }}
+                        >
+                          <div>
+                            {Array.from({ length: 25 }, (_, i) => i + 1).map(
+                              (qNum) => {
+                                const qStr = qNum.toString();
+                                const detectedVal = quickScanResult.answers[qStr];
+                                return (
+                                  <div
+                                    key={qStr}
+                                    className="bubble-row"
+                                    style={{ padding: "0.35rem 0.5rem" }}
+                                  >
+                                    <span className="bubble-num" style={{ color: "#0f172a", fontWeight: 700 }}>
+                                      {qNum}.
+                                    </span>
+                                    <div className="bubble-options">
+                                      {["A", "B", "C", "D", "E"].map((opt) => (
+                                        <span
+                                          key={opt}
+                                          className={`bubble-btn ${
+                                            detectedVal === null
+                                              ? "empty"
+                                              : detectedVal === opt
+                                                ? "active"
+                                                : ""
+                                          }`}
+                                          style={{ pointerEvents: "none" }}
+                                        >
+                                          {opt}
+                                        </span>
+                                      ))}
+                                    </div>
+                                  </div>
+                                );
+                              },
+                            )}
+                          </div>
+                          <div>
+                            {Array.from({ length: 25 }, (_, i) => i + 26).map(
+                              (qNum) => {
+                                const qStr = qNum.toString();
+                                const detectedVal = quickScanResult.answers[qStr];
+                                return (
+                                  <div
+                                    key={qStr}
+                                    className="bubble-row"
+                                    style={{ padding: "0.35rem 0.5rem" }}
+                                  >
+                                    <span className="bubble-num" style={{ color: "#0f172a", fontWeight: 700 }}>
+                                      {qNum}.
+                                    </span>
+                                    <div className="bubble-options">
+                                      {["A", "B", "C", "D", "E"].map((opt) => (
+                                        <span
+                                          key={opt}
+                                          className={`bubble-btn ${
+                                            detectedVal === null
+                                              ? "empty"
+                                              : detectedVal === opt
+                                                ? "active"
+                                                : ""
+                                          }`}
+                                          style={{ pointerEvents: "none" }}
+                                        >
+                                          {opt}
+                                        </span>
+                                      ))}
+                                    </div>
+                                  </div>
+                                );
+                              },
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                 )}
               </div>
+            ) : (
+              /* Exam List and Grading Section */
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "1fr 2fr",
+                  gap: "1.5rem",
+                  alignItems: "start",
+                }}
+              >
+                {/* Searchable & Filterable Exams Feed */}
+                <div
+                  className="card"
+                  style={{
+                    background: "#ffffff",
+                    border: "1px solid #e2e8f0",
+                    borderRadius: "16px",
+                    padding: "1.25rem",
+                    boxShadow: "0 2px 8px rgba(0, 0, 0, 0.02)",
+                    display: "flex",
+                    flexDirection: "column",
+                  }}
+                >
+                  <div style={{ marginBottom: "1rem" }}>
+                    <div
+                      style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                        marginBottom: "0.75rem",
+                      }}
+                    >
+                      <h3
+                        style={{
+                          fontSize: "1.05rem",
+                          fontWeight: 800,
+                          margin: 0,
+                          color: "#0f172a",
+                        }}
+                      >
+                        Examinations Directory
+                      </h3>
+                      <span
+                        className="badge"
+                        style={{
+                          background: "var(--primary-light-surface, #f5f3ff)",
+                          color: "var(--primary, #28166f)",
+                          border: "1px solid var(--primary-light-border, #ddd6fe)",
+                          fontSize: "0.75rem",
+                          fontWeight: 700,
+                        }}
+                      >
+                        {exams.length} Total
+                      </span>
+                    </div>
+
+                    {/* Search Bar */}
+                    <div style={{ position: "relative", marginBottom: "0.6rem" }}>
+                      <Search
+                        size={15}
+                        style={{
+                          position: "absolute",
+                          left: "0.75rem",
+                          top: "50%",
+                          transform: "translateY(-50%)",
+                          color: "#94a3b8",
+                        }}
+                      />
+                      <input
+                        type="text"
+                        className="form-input"
+                        placeholder="Search title, subject, code, section..."
+                        style={{
+                          paddingLeft: "2.2rem",
+                          fontSize: "0.82rem",
+                          height: "36px",
+                          background: "#f8fafc",
+                          border: "1px solid #cbd5e1",
+                          borderRadius: "8px",
+                          color: "#0f172a",
+                        }}
+                        value={examListSearch}
+                        onChange={(e) => setExamListSearch(e.target.value)}
+                      />
+                    </div>
+
+                    {/* Filter Selectors */}
+                    <div
+                      style={{
+                        display: "grid",
+                        gridTemplateColumns: "1fr 1fr",
+                        gap: "0.5rem",
+                      }}
+                    >
+                      <div>
+                        <label
+                          style={{
+                            fontSize: "0.7rem",
+                            color: "#64748b",
+                            fontWeight: 600,
+                            display: "block",
+                            marginBottom: "2px",
+                          }}
+                        >
+                          Exam Type:
+                        </label>
+                        <select
+                          className="form-input"
+                          style={{
+                            fontSize: "0.78rem",
+                            height: "34px",
+                            padding: "0.2rem 0.5rem",
+                            background: "#f8fafc",
+                            border: "1px solid #cbd5e1",
+                            borderRadius: "8px",
+                            color: "#0f172a",
+                          }}
+                          value={examTypeFilter}
+                          onChange={(e) => setExamTypeFilter(e.target.value)}
+                        >
+                          <option value="All">All Types</option>
+                          <option value="Preliminary">Preliminary</option>
+                          <option value="Midterm">Midterm</option>
+                          <option value="Pre-Final">Pre-Final</option>
+                          <option value="Final">Final</option>
+                        </select>
+                      </div>
+
+                      <div>
+                        <label
+                          style={{
+                            fontSize: "0.7rem",
+                            color: "#64748b",
+                            fontWeight: 600,
+                            display: "block",
+                            marginBottom: "2px",
+                          }}
+                        >
+                          Semester:
+                        </label>
+                        <select
+                          className="form-input"
+                          style={{
+                            fontSize: "0.78rem",
+                            height: "34px",
+                            padding: "0.2rem 0.5rem",
+                            background: "#f8fafc",
+                            border: "1px solid #cbd5e1",
+                            borderRadius: "8px",
+                            color: "#0f172a",
+                          }}
+                          value={examSemesterFilter}
+                          onChange={(e) => setExamSemesterFilter(e.target.value)}
+                        >
+                          <option value="All">All Semesters</option>
+                          <option value="1st Semester">1st Semester</option>
+                          <option value="2nd Semester">2nd Semester</option>
+                          <option value="Summer">Summer</option>
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+
+                  <SmoothContentTransition
+                    isLoading={loadingExams}
+                    hasExistingData={exams.length > 0}
+                    skeleton={<SkeletonExamList count={4} />}
+                  >
+                    {(() => {
+                      const filtered = exams.filter((ex) => {
+                        const q = examListSearch.toLowerCase().trim();
+                        const matchesSearch =
+                          !q ||
+                          ex.name.toLowerCase().includes(q) ||
+                          (ex.subject &&
+                            ex.subject.toLowerCase().includes(q)) ||
+                          (ex.course_code &&
+                            ex.course_code.toLowerCase().includes(q)) ||
+                          (ex.section &&
+                            ex.section.toLowerCase().includes(q)) ||
+                          (ex.instructor_name &&
+                            ex.instructor_name.toLowerCase().includes(q));
+
+                        const matchesType =
+                          examTypeFilter === "All" ||
+                          (ex.exam_type || "").toLowerCase() ===
+                            examTypeFilter.toLowerCase();
+
+                        const matchesSem =
+                          examSemesterFilter === "All" ||
+                          (ex.semester || "1st Semester").toLowerCase() ===
+                            examSemesterFilter.toLowerCase();
+
+                        return matchesSearch && matchesType && matchesSem;
+                      });
+
+                      if (filtered.length === 0) {
+                        return (
+                          <div
+                            style={{
+                              color: "#64748b",
+                              fontSize: "0.85rem",
+                              padding: "2rem",
+                              textAlign: "center",
+                              background: "#ffffff",
+                              borderRadius: "12px",
+                              border: "1px dashed #cbd5e1",
+                            }}
+                          >
+                            No examinations found matching your filter criteria.
+                          </div>
+                        );
+                      }
+
+                      return (
+                        <div
+                          style={{
+                            display: "flex",
+                            flexDirection: "column",
+                            gap: "0.85rem",
+                            maxHeight: "560px",
+                            overflowY: "auto",
+                            paddingRight: "4px",
+                          }}
+                        >
+                          {filtered.map((exam) => (
+                            <ExamCard
+                              key={exam.id}
+                              exam={exam}
+                              isSelected={selectedExamId === exam.id}
+                              onSelect={(id) => {
+                                setSelectedExamId(id);
+                                setLatestGradeResult(null);
+                              }}
+                              onInspect={(e) => setInspectExam(e)}
+                              onDelete={handleDeleteExam}
+                              formatDate={formatDate}
+                            />
+                          ))}
+                        </div>
+                      );
+                    })()}
+                  </SmoothContentTransition>
+                </div>
 
               {/* Active Exam Grading Controls */}
-              <div className="card">
+              <div
+                className="card"
+                style={{
+                  background: "#ffffff",
+                  border: "1px solid #e2e8f0",
+                  borderRadius: "16px",
+                  padding: "1.5rem",
+                  boxShadow: "0 2px 8px rgba(0, 0, 0, 0.02)",
+                }}
+              >
                 {activeExam ? (
                   <div>
                     <div
@@ -2243,33 +2819,42 @@ export default function App() {
                         alignItems: "flex-start",
                         gap: "1rem",
                         marginBottom: "1.5rem",
+                        borderBottom: "1px solid #f1f5f9",
+                        paddingBottom: "1rem",
                       }}
                     >
                       <div>
-                        <h2 style={{ margin: 0 }}>{activeExam.name}</h2>
+                        <h2 style={{ margin: 0, fontSize: "1.3rem", fontWeight: 800, color: "#0f172a" }}>
+                          {activeExam.name}
+                        </h2>
                         <p
                           style={{
-                            fontSize: "0.8rem",
-                            color: "var(--text-muted)",
+                            fontSize: "0.82rem",
+                            color: "#64748b",
                             marginTop: "0.25rem",
                             marginBottom: 0,
                           }}
                         >
-                          Created at {formatDate(activeExam.created_at)}
+                          Created at {formatDate(activeExam.created_at)} • {activeExam.course_code ? `[${activeExam.course_code}]` : ""} {activeExam.section || ""}
                         </p>
                       </div>
                       <button
-                        className="btn btn-danger"
+                        className="btn"
                         style={{
-                          padding: "0.5rem 1rem",
+                          padding: "0.5rem 0.9rem",
                           display: "flex",
                           alignItems: "center",
-                          gap: "0.5rem",
-                          fontSize: "0.85rem",
+                          gap: "0.4rem",
+                          fontSize: "0.82rem",
+                          fontWeight: 700,
+                          background: "#fef2f2",
+                          border: "1px solid #fecaca",
+                          color: "#ef4444",
+                          borderRadius: "8px",
                         }}
                         onClick={() => handleDeleteExam(activeExam.id)}
                       >
-                        <Trash2 size={16} /> Delete Exam
+                        <Trash2 size={15} /> Delete Exam
                       </button>
                     </div>
 
@@ -2284,23 +2869,78 @@ export default function App() {
                           gap: "0.75rem",
                         }}
                       >
-                        <h4 style={{ margin: 0, fontSize: "0.95rem" }}>
+                        <h4 style={{ margin: 0, fontSize: "0.98rem", fontWeight: 800, color: "#0f172a" }}>
                           Grade Student OMR Sheets
                         </h4>
-                        <div className="scan-mode-tabs" style={{ margin: 0 }}>
+                        <div
+                          style={{
+                            display: "flex",
+                            background: "#f1f5f9",
+                            padding: "4px",
+                            borderRadius: "10px",
+                            border: "1px solid #e2e8f0",
+                            gap: "4px",
+                          }}
+                        >
                           <button
                             type="button"
-                            className={`scan-mode-tab-btn ${studentScanMode === "upload" ? "active" : ""}`}
                             onClick={() => setStudentScanMode("upload")}
+                            style={{
+                              display: "flex",
+                              alignItems: "center",
+                              gap: "6px",
+                              padding: "0.45rem 0.95rem",
+                              fontSize: "0.82rem",
+                              fontWeight: 700,
+                              borderRadius: "8px",
+                              border: "none",
+                              cursor: "pointer",
+                              transition: "all 0.2s ease",
+                              background:
+                                studentScanMode === "upload"
+                                  ? "var(--primary, #28166f)"
+                                  : "transparent",
+                              color:
+                                studentScanMode === "upload"
+                                  ? "#ffffff"
+                                  : "#64748b",
+                              boxShadow:
+                                studentScanMode === "upload"
+                                  ? "0 2px 6px rgba(0, 98, 255, 0.2)"
+                                  : "none",
+                            }}
                           >
-                            <UploadCloud size={15} /> Upload Files
+                            <UploadCloud size={15} /> Upload OMR Files
                           </button>
                           <button
                             type="button"
-                            className={`scan-mode-tab-btn ${studentScanMode === "camera" ? "active" : ""}`}
                             onClick={() => setStudentScanMode("camera")}
+                            style={{
+                              display: "flex",
+                              alignItems: "center",
+                              gap: "6px",
+                              padding: "0.45rem 0.95rem",
+                              fontSize: "0.82rem",
+                              fontWeight: 700,
+                              borderRadius: "8px",
+                              border: "none",
+                              cursor: "pointer",
+                              transition: "all 0.2s ease",
+                              background:
+                                studentScanMode === "camera"
+                                  ? "var(--primary, #28166f)"
+                                  : "transparent",
+                              color:
+                                studentScanMode === "camera"
+                                  ? "#ffffff"
+                                  : "#64748b",
+                              boxShadow:
+                                studentScanMode === "camera"
+                                  ? "0 2px 6px rgba(0, 98, 255, 0.2)"
+                                  : "none",
+                            }}
                           >
-                            <Camera size={15} /> Scan with Camera
+                            <Camera size={15} /> Live Camera Scanner
                           </button>
                         </div>
                       </div>
@@ -2325,6 +2965,8 @@ export default function App() {
                                   justifyContent: "space-between",
                                   fontSize: "0.75rem",
                                   marginBottom: "0.25rem",
+                                  color: "#475569",
+                                  fontWeight: 600,
                                 }}
                               >
                                 <span>Grading captured student sheet...</span>
@@ -2337,7 +2979,7 @@ export default function App() {
                                 style={{
                                   width: "100%",
                                   height: "6px",
-                                  background: "var(--bg-base)",
+                                  background: "#f1f5f9",
                                   borderRadius: "3px",
                                   overflow: "hidden",
                                 }}
@@ -2345,7 +2987,7 @@ export default function App() {
                                 <div
                                   style={{
                                     height: "100%",
-                                    background: "var(--primary)",
+                                    background: "var(--primary, #28166f)",
                                     width: `${(gradingProgress.current / gradingProgress.total) * 100}%`,
                                     transition: "width 0.2s",
                                   }}
@@ -2357,18 +2999,18 @@ export default function App() {
                           <details
                             style={{
                               marginTop: "1rem",
-                              background: "rgba(15, 23, 42, 0.5)",
-                              border: "1px solid var(--border)",
-                              borderRadius: "var(--radius-md)",
+                              background: "#f8fafc",
+                              border: "1px solid #e2e8f0",
+                              borderRadius: "10px",
                               padding: "0.75rem 1rem",
                             }}
                           >
                             <summary
                               style={{
                                 fontSize: "0.85rem",
-                                fontWeight: 600,
+                                fontWeight: 700,
                                 cursor: "pointer",
-                                color: "var(--text-secondary)",
+                                color: "#0f172a",
                               }}
                             >
                               View Configured Answer Key ({Object.keys(activeExam.answer_key || {}).length} Questions)
@@ -2378,7 +3020,7 @@ export default function App() {
                                 maxHeight: "160px",
                                 overflowY: "auto",
                                 marginTop: "0.75rem",
-                                borderTop: "1px solid var(--border)",
+                                borderTop: "1px solid #e2e8f0",
                                 paddingTop: "0.5rem",
                               }}
                             >
@@ -2396,14 +3038,13 @@ export default function App() {
                                       <tr
                                         key={q}
                                         style={{
-                                          borderBottom:
-                                            "1px solid rgba(255,255,255,0.02)",
+                                          borderBottom: "1px solid #f1f5f9",
                                         }}
                                       >
                                         <td
                                           style={{
-                                            padding: "0.25rem",
-                                            color: "var(--text-muted)",
+                                            padding: "0.3rem",
+                                            color: "#64748b",
                                             fontWeight: 600,
                                           }}
                                         >
@@ -2411,9 +3052,9 @@ export default function App() {
                                         </td>
                                         <td
                                           style={{
-                                            padding: "0.25rem",
+                                            padding: "0.3rem",
                                             fontWeight: 800,
-                                            color: "var(--primary)",
+                                            color: "var(--primary, #28166f)",
                                           }}
                                         >
                                           {ans}
@@ -2436,7 +3077,7 @@ export default function App() {
                         >
                           <div
                             style={{
-                              borderRight: "1px solid var(--border)",
+                              borderRight: "1px solid #e2e8f0",
                               paddingRight: "1.5rem",
                             }}
                           >
@@ -2457,7 +3098,14 @@ export default function App() {
 
                             <div
                               className="dropzone"
-                              style={{ padding: "2rem 1rem" }}
+                              style={{
+                                padding: "2rem 1rem",
+                                background: "#f8fafc",
+                                border: "2px dashed #cbd5e1",
+                                borderRadius: "12px",
+                                textAlign: "center",
+                                cursor: "pointer",
+                              }}
                               onClick={() => studentScanInputRef.current?.click()}
                               onDragOver={(e) => e.preventDefault()}
                               onDrop={(e) => {
@@ -2470,20 +3118,19 @@ export default function App() {
                             >
                               <FileUp
                                 size={36}
-                                className="text-secondary"
-                                style={{ marginBottom: "0.5rem" }}
+                                style={{ color: "var(--primary, #28166f)", marginBottom: "0.5rem" }}
                               />
-                              <h4 style={{ fontSize: "0.85rem" }}>
+                              <h4 style={{ fontSize: "0.9rem", fontWeight: 700, color: "#0f172a", margin: "0 0 0.2rem 0" }}>
                                 Upload Student OMR Sheets
                               </h4>
                               <p
                                 style={{
-                                  fontSize: "0.7rem",
-                                  color: "var(--text-muted)",
-                                  marginTop: "0.25rem",
+                                  fontSize: "0.75rem",
+                                  color: "#64748b",
+                                  margin: 0,
                                 }}
                               >
-                                (Select one or multiple images at once)
+                                Select one or multiple images at once (PNG, JPG)
                               </p>
                             </div>
 
@@ -2495,6 +3142,8 @@ export default function App() {
                                     justifyContent: "space-between",
                                     fontSize: "0.75rem",
                                     marginBottom: "0.25rem",
+                                    color: "#475569",
+                                    fontWeight: 600,
                                   }}
                                 >
                                   <span>Grading student sheets...</span>
@@ -2507,7 +3156,7 @@ export default function App() {
                                   style={{
                                     width: "100%",
                                     height: "6px",
-                                    background: "var(--bg-base)",
+                                    background: "#f1f5f9",
                                     borderRadius: "3px",
                                     overflow: "hidden",
                                   }}
@@ -2515,7 +3164,7 @@ export default function App() {
                                   <div
                                     style={{
                                       height: "100%",
-                                      background: "var(--primary)",
+                                      background: "var(--primary, #28166f)",
                                       width: `${(gradingProgress.current / gradingProgress.total) * 100}%`,
                                       transition: "width 0.2s",
                                     }}
@@ -2527,7 +3176,7 @@ export default function App() {
 
                           <div>
                             <h4
-                              style={{ marginBottom: "1rem", fontSize: "0.95rem" }}
+                              style={{ marginBottom: "0.75rem", fontSize: "0.92rem", fontWeight: 700, color: "#0f172a" }}
                             >
                               Configured Answer Key
                             </h4>
@@ -2535,8 +3184,9 @@ export default function App() {
                               style={{
                                 maxHeight: "180px",
                                 overflowY: "auto",
-                                border: "1px solid var(--border)",
-                                borderRadius: "var(--radius-sm)",
+                                border: "1px solid #e2e8f0",
+                                borderRadius: "8px",
+                                background: "#f8fafc",
                                 padding: "0.5rem",
                               }}
                             >
@@ -2554,14 +3204,13 @@ export default function App() {
                                       <tr
                                         key={q}
                                         style={{
-                                          borderBottom:
-                                            "1px solid rgba(255,255,255,0.02)",
+                                          borderBottom: "1px solid #e2e8f0",
                                         }}
                                       >
                                         <td
                                           style={{
-                                            padding: "0.25rem",
-                                            color: "var(--text-muted)",
+                                            padding: "0.3rem 0.5rem",
+                                            color: "#64748b",
                                             fontWeight: 600,
                                           }}
                                         >
@@ -2569,9 +3218,9 @@ export default function App() {
                                         </td>
                                         <td
                                           style={{
-                                            padding: "0.25rem",
+                                            padding: "0.3rem 0.5rem",
                                             fontWeight: 800,
-                                            color: "var(--primary)",
+                                            color: "var(--primary, #28166f)",
                                           }}
                                         >
                                           {ans}
@@ -2589,7 +3238,13 @@ export default function App() {
                     {latestGradeResult && (
                       <div
                         className="card"
-                        style={{ border: "1px solid var(--border)" }}
+                        style={{
+                          border: "1px solid #e2e8f0",
+                          borderRadius: "14px",
+                          background: "#ffffff",
+                          padding: "1.25rem",
+                          boxShadow: "0 2px 8px rgba(0, 0, 0, 0.02)",
+                        }}
                       >
                         <div
                           style={{
@@ -2602,13 +3257,13 @@ export default function App() {
                           }}
                         >
                           <div>
-                            <h4 style={{ marginBottom: "0.3rem" }}>
+                            <h4 style={{ margin: "0 0 0.3rem 0", fontSize: "1.05rem", fontWeight: 800, color: "#0f172a" }}>
                               Latest Grade Result
                             </h4>
                             <div
                               style={{
-                                fontSize: "0.82rem",
-                                color: "var(--text-muted)",
+                                fontSize: "0.85rem",
+                                color: "#64748b",
                                 display: "flex",
                                 alignItems: "center",
                                 gap: "0.4rem",
@@ -2617,9 +3272,8 @@ export default function App() {
                               <span>Student ID:</span>
                               <strong
                                 style={{
-                                  color: "var(--srcb-gold-light)",
-                                  fontWeight: 700,
-                                  letterSpacing: "0.03em",
+                                  color: "var(--primary, #28166f)",
+                                  fontWeight: 800,
                                 }}
                               >
                                 {latestGradeResult.student_id || "—"}
@@ -2635,23 +3289,37 @@ export default function App() {
                         <div className="grade-layout">
                           <div
                             className="image-preview-container"
-                            style={{ maxHeight: "400px" }}
+                            style={{
+                              maxHeight: "400px",
+                              borderRadius: "10px",
+                              overflow: "hidden",
+                              border: "1px solid #e2e8f0",
+                            }}
                           >
                             <img
                               src={`data:image/png;base64,${latestGradeResult.overlay_image}`}
                               alt="Graded OMR Sheet"
+                              style={{ width: "100%", height: "auto" }}
                             />
                           </div>
 
                           <div
                             className="bubble-sheet-card"
-                            style={{ maxHeight: "400px" }}
+                            style={{
+                              maxHeight: "400px",
+                              background: "#f8fafc",
+                              border: "1px solid #e2e8f0",
+                              borderRadius: "10px",
+                              padding: "1rem",
+                              overflowY: "auto",
+                            }}
                           >
                             <h4
                               style={{
-                                fontSize: "0.85rem",
-                                color: "var(--text-secondary)",
-                                marginBottom: "0.5rem",
+                                fontSize: "0.88rem",
+                                fontWeight: 700,
+                                color: "#0f172a",
+                                margin: "0 0 0.5rem 0",
                               }}
                             >
                               Answers Check
@@ -2677,12 +3345,11 @@ export default function App() {
                                     className="bubble-row"
                                     style={{ padding: "0.25rem 0.5rem" }}
                                   >
-                                    <span className="bubble-num">{qStr}.</span>
+                                    <span className="bubble-num" style={{ color: "#0f172a", fontWeight: 700 }}>{qStr}.</span>
                                     <div className="bubble-options">
                                       {["A", "B", "C", "D", "E"].map((opt) => {
                                         let btnClass = "";
                                         if (isAmbiguous) {
-                                          // Amber on the student's filled bubble
                                           if (selected === opt)
                                             btnClass = "ambiguous";
                                         } else if (isEmpty) {
@@ -2706,14 +3373,14 @@ export default function App() {
                                         style={{
                                           fontSize: "0.75rem",
                                           color: isAmbiguous
-                                            ? "var(--srcb-gold-light)"
+                                            ? "#b45309"
                                             : isEmpty
-                                              ? "var(--text-muted)"
+                                              ? "#94a3b8"
                                               : selected === correctAns
-                                                ? "var(--success)"
-                                                : "var(--error)",
+                                                ? "#059669"
+                                                : "#dc2626",
                                           marginLeft: "0.5rem",
-                                          fontWeight: 600,
+                                          fontWeight: 700,
                                         }}
                                       >
                                         {isEmpty
@@ -2737,713 +3404,96 @@ export default function App() {
                   <div
                     style={{
                       textAlign: "center",
-                      padding: "3rem",
-                      color: "var(--text-muted)",
+                      padding: "3rem 1.5rem",
+                      color: "#64748b",
                     }}
                   >
-                    No exam selected. Select an exam from the left or create
-                    one.
+                    <BookOpen size={40} style={{ color: "#94a3b8", marginBottom: "0.75rem" }} />
+                    <h3 style={{ fontSize: "1.1rem", fontWeight: 800, color: "#0f172a", marginBottom: "0.4rem" }}>
+                      No Examination Configured
+                    </h3>
+                    <p style={{ fontSize: "0.85rem", color: "#64748b", maxWidth: "420px", margin: "0 auto 1.25rem auto" }}>
+                      Create an examination with an answer key to start grading student answer sheets with Live Camera Scanner or File Upload.
+                    </p>
+                    <button
+                      type="button"
+                      className="btn btn-primary"
+                      onClick={() => setIsExamModalOpen(true)}
+                      style={{ fontWeight: 700 }}
+                    >
+                      <Plus size={16} /> Create Examination
+                    </button>
                   </div>
                 )}
               </div>
             </div>
+            )}
           </div>
         )}
 
-        {/* SUBMISSIONS HISTORY TAB / TEACHER DATABASE */}
+        {/* GRADING HISTORY TAB (HISTORICAL AUDIT & MANAGEMENT) */}
         {activeTab === "history" && (
-          <div>
-            <div
-              className="header-container"
-              style={{
-                marginBottom: "1.5rem",
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-              }}
-            >
-              <div>
-                <h2 style={{ fontSize: "1.4rem", fontWeight: 800, margin: 0 }}>
-                  Teacher Database & Grading Records
-                </h2>
-                <p
-                  style={{
-                    fontSize: "0.85rem",
-                    color: "var(--text-secondary)",
-                    margin: "0.2rem 0 0 0",
-                  }}
-                >
-                  Review, audit, and export scanned student submissions using
-                  multiple flexible export methods.
-                </p>
-              </div>
-              <div style={{ display: "flex", gap: "0.75rem" }}>
-                <button
-                  className="btn btn-secondary"
-                  onClick={() => setIsRosterModalOpen(true)}
-                >
-                  <FileSpreadsheet size={16} /> Import Roster
-                </button>
-              </div>
-            </div>
+          <GradingHistoryView
+            exams={exams}
+            submissions={submissions}
+            roster={roster}
+            currentUser={currentUser}
+            onSelectSubmission={viewSubmissionDetails}
+            onDeleteGradingRecord={handleDeleteGradingRecord}
+            formatDate={formatDate}
+            addToast={addToast}
+          />
+        )}
 
-            {/* Flexible Multi-Method Export Center */}
-            <div
-              className="card"
-              style={{
-                marginBottom: "1.5rem",
-                background:
-                  "linear-gradient(180deg, rgba(15, 23, 42, 0.95) 0%, rgba(8, 17, 32, 0.95) 100%)",
-                border: "1px solid var(--srcb-gold-accent)",
-              }}
-            >
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                  marginBottom: "1rem",
-                  flexWrap: "wrap",
-                  gap: "0.75rem",
-                }}
-              >
-                <div>
-                  <div
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "0.5rem",
-                    }}
-                  >
-                    <FileSpreadsheet
-                      size={20}
-                      color="var(--srcb-gold-accent)"
-                    />
-                    <h3
-                      style={{
-                        fontSize: "1.15rem",
-                        fontWeight: 800,
-                        margin: 0,
-                      }}
-                    >
-                      Teacher Database Export System
-                    </h3>
-                    <span
-                      className="badge"
-                      style={{
-                        background: "rgba(245, 158, 11, 0.2)",
-                        color: "var(--srcb-gold-light)",
-                      }}
-                    >
-                      3 Export Methods
-                    </span>
-                  </div>
-                  <p
-                    style={{
-                      fontSize: "0.82rem",
-                      color: "var(--text-secondary)",
-                      margin: "0.25rem 0 0 0",
-                    }}
-                  >
-                    Select an export option below to download formatted Excel
-                    (.xlsx) reports with organized columns and examination
-                    details.
-                  </p>
-                </div>
-              </div>
-
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "repeat(auto-fit, minmax(290px, 1fr))",
-                  gap: "1.25rem",
-                }}
-              >
-                {/* Method 1: Single File Export */}
-                <div
-                  style={{
-                    background: "rgba(30, 41, 59, 0.7)",
-                    borderRadius: "var(--radius-md)",
-                    padding: "1.25rem",
-                    border: "1px solid var(--border)",
-                    display: "flex",
-                    flexDirection: "column",
-                    justifyContent: "space-between",
-                  }}
-                >
-                  <div>
-                    <div
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "space-between",
-                        marginBottom: "0.75rem",
-                      }}
-                    >
-                      <span
-                        className="badge"
-                        style={{
-                          background: "rgba(59, 130, 246, 0.15)",
-                          color: "#60a5fa",
-                          display: "inline-flex",
-                          alignItems: "center",
-                          gap: "4px",
-                        }}
-                      >
-                        <FileText size={12} /> Method 1
-                      </span>
-                      <span
-                        style={{
-                          fontSize: "0.75rem",
-                          color: "var(--text-muted)",
-                        }}
-                      >
-                        Individual File
-                      </span>
-                    </div>
-                    <h4
-                      style={{
-                        fontSize: "0.98rem",
-                        fontWeight: 700,
-                        marginBottom: "0.35rem",
-                      }}
-                    >
-                      Single File Export
-                    </h4>
-                    <p
-                      style={{
-                        fontSize: "0.8rem",
-                        color: "var(--text-secondary)",
-                        marginBottom: "1rem",
-                        lineHeight: 1.4,
-                      }}
-                    >
-                      Export an individual scanned submission directly with
-                      score, CHED transmuted grade, and bubble breakdown.
-                    </p>
-
-                    <div style={{ marginBottom: "1rem" }}>
-                      <label
-                        style={{
-                          fontSize: "0.75rem",
-                          color: "var(--text-muted)",
-                          display: "block",
-                          marginBottom: "4px",
-                        }}
-                      >
-                        Select Submission:
-                      </label>
-                      <select
-                        className="form-input"
-                        style={{ fontSize: "0.8rem", padding: "0.4rem 0.6rem" }}
-                        value={
-                          exportSingleSubmissionId ||
-                          (submissions.length > 0
-                            ? submissions[0].id
-                            : mockSubmissions[0].id)
-                        }
-                        onChange={(e) =>
-                          setExportSingleSubmissionId(e.target.value)
-                        }
-                      >
-                        {(submissions.length > 0
-                          ? submissions
-                          : mockSubmissions
-                        ).map((sub) => {
-                          const matchedStudent = roster.find(
-                            (r) =>
-                              r.student_id.toLowerCase() ===
-                              (sub.student_id || "").toLowerCase(),
-                          );
-                          const matchedExam = (
-                            exams.length > 0 ? exams : mockExams
-                          ).find((e) => e.id === sub.exam_id);
-                          const nameLabel = matchedStudent
-                            ? matchedStudent.name
-                            : sub.student_id;
-                          const examLabel = matchedExam
-                            ? matchedExam.name
-                            : "Exam";
-                          return (
-                            <option key={sub.id} value={sub.id}>
-                              {nameLabel} - {examLabel} ({sub.score}/50)
-                            </option>
-                          );
-                        })}
-                      </select>
-                    </div>
-                  </div>
-
-                  <div>
-                    <button
-                      className="btn btn-secondary"
-                      style={{
-                        width: "100%",
-                        justifyContent: "center",
-                        fontSize: "0.82rem",
-                      }}
-                      onClick={() => {
-                        const activeSubs =
-                          submissions.length > 0
-                            ? submissions
-                            : mockSubmissions;
-                        const targetId =
-                          exportSingleSubmissionId || activeSubs[0].id;
-                        const targetSub =
-                          activeSubs.find((s) => s.id === targetId) ||
-                          activeSubs[0];
-                        if (targetSub) handleExportSingleSubmission(targetSub);
-                      }}
-                    >
-                      <Download size={14} /> Export Single File (.xlsx)
-                    </button>
-                    <div
-                      style={{
-                        fontSize: "0.72rem",
-                        color: "var(--text-muted)",
-                        marginTop: "6px",
-                        textAlign: "center",
-                      }}
-                    >
-                      💡 Available on any submission inspect page
-                    </div>
-                  </div>
-                </div>
-
-                {/* Method 2: Exam-Based Batch Export */}
-                <div
-                  style={{
-                    background: "rgba(30, 41, 59, 0.7)",
-                    borderRadius: "var(--radius-md)",
-                    padding: "1.25rem",
-                    border: "1px solid var(--border)",
-                    display: "flex",
-                    flexDirection: "column",
-                    justifyContent: "space-between",
-                  }}
-                >
-                  <div>
-                    <div
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "space-between",
-                        marginBottom: "0.75rem",
-                      }}
-                    >
-                      <span
-                        className="badge"
-                        style={{
-                          background: "rgba(16, 185, 129, 0.15)",
-                          color: "#34d399",
-                          display: "inline-flex",
-                          alignItems: "center",
-                          gap: "4px",
-                        }}
-                      >
-                        <Layers size={12} /> Method 2
-                      </span>
-                      <span
-                        style={{
-                          fontSize: "0.75rem",
-                          color: "var(--text-muted)",
-                        }}
-                      >
-                        Exam Title & Type
-                      </span>
-                    </div>
-                    <h4
-                      style={{
-                        fontSize: "0.98rem",
-                        fontWeight: 700,
-                        marginBottom: "0.35rem",
-                      }}
-                    >
-                      Exam-Based Batch Export
-                    </h4>
-                    <p
-                      style={{
-                        fontSize: "0.8rem",
-                        color: "var(--text-secondary)",
-                        marginBottom: "1rem",
-                        lineHeight: 1.4,
-                      }}
-                    >
-                      Compiles all student submissions belonging to the same
-                      examination (Title & Type) into a single report.
-                    </p>
-
-                    <div
-                      style={{
-                        display: "grid",
-                        gap: "0.6rem",
-                        marginBottom: "1rem",
-                      }}
-                    >
-                      <div>
-                        <label
-                          style={{
-                            fontSize: "0.75rem",
-                            color: "var(--text-muted)",
-                            display: "block",
-                            marginBottom: "4px",
-                          }}
-                        >
-                          Select Examination Title:
-                        </label>
-                        <select
-                          className="form-input"
-                          style={{
-                            fontSize: "0.8rem",
-                            padding: "0.4rem 0.6rem",
-                          }}
-                          value={
-                            exportBatchExamId ||
-                            selectedExamId ||
-                            (exams.length > 0 ? exams[0].id : mockExams[0].id)
-                          }
-                          onChange={(e) => setExportBatchExamId(e.target.value)}
-                        >
-                          {(exams.length > 0 ? exams : mockExams).map((ex) => (
-                            <option key={ex.id} value={ex.id}>
-                              {ex.name}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-
-                      <div>
-                        <label
-                          style={{
-                            fontSize: "0.75rem",
-                            color: "var(--text-muted)",
-                            display: "block",
-                            marginBottom: "4px",
-                          }}
-                        >
-                          Specify Exam Type / Category:
-                        </label>
-                        <select
-                          className="form-input"
-                          style={{
-                            fontSize: "0.8rem",
-                            padding: "0.4rem 0.6rem",
-                          }}
-                          value={exportExamType}
-                          onChange={(e) => setExportExamType(e.target.value)}
-                        >
-                          <option value="Midterm Examination">
-                            Midterm Examination
-                          </option>
-                          <option value="Final Examination">
-                            Final Examination
-                          </option>
-                          <option value="Quiz">Quiz / Long Quiz</option>
-                          <option value="Diagnostic Test">
-                            Diagnostic Test
-                          </option>
-                          <option value="Unit Test">Unit / Chapter Test</option>
-                          <option value="Major Examination">
-                            Major Examination
-                          </option>
-                        </select>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div>
-                    <button
-                      className="btn btn-primary"
-                      style={{
-                        width: "100%",
-                        justifyContent: "center",
-                        fontSize: "0.82rem",
-                      }}
-                      onClick={handleExportExamBatch}
-                    >
-                      <Layers size={14} /> Export Exam Batch Report (.xlsx)
-                    </button>
-                    <div
-                      style={{
-                        fontSize: "0.72rem",
-                        color: "var(--text-muted)",
-                        marginTop: "6px",
-                        textAlign: "center",
-                      }}
-                    >
-                      📊 Multi-sheet: Batch Roster, Answer Matrix & OBE Analysis
-                    </div>
-                  </div>
-                </div>
-
-                {/* Method 3: Complete Database Export */}
-                <div
-                  style={{
-                    background: "rgba(30, 41, 59, 0.7)",
-                    borderRadius: "var(--radius-md)",
-                    padding: "1.25rem",
-                    border: "1px solid var(--srcb-gold-accent)",
-                    display: "flex",
-                    flexDirection: "column",
-                    justifyContent: "space-between",
-                  }}
-                >
-                  <div>
-                    <div
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "space-between",
-                        marginBottom: "0.75rem",
-                      }}
-                    >
-                      <span
-                        className="badge"
-                        style={{
-                          background: "rgba(245, 158, 11, 0.2)",
-                          color: "var(--srcb-gold-light)",
-                          display: "inline-flex",
-                          alignItems: "center",
-                          gap: "4px",
-                        }}
-                      >
-                        <Database size={12} /> Method 3
-                      </span>
-                      <span
-                        style={{
-                          fontSize: "0.75rem",
-                          color: "var(--text-muted)",
-                        }}
-                      >
-                        All Examinations
-                      </span>
-                    </div>
-                    <h4
-                      style={{
-                        fontSize: "0.98rem",
-                        fontWeight: 700,
-                        marginBottom: "0.35rem",
-                      }}
-                    >
-                      Complete Database Export
-                    </h4>
-                    <p
-                      style={{
-                        fontSize: "0.8rem",
-                        color: "var(--text-secondary)",
-                        marginBottom: "0.75rem",
-                        lineHeight: 1.4,
-                      }}
-                    >
-                      Exports filtered or grouped master database reports with
-                      full institutional headers and complete examination
-                      details.
-                    </p>
-
-                    <div
-                      style={{
-                        display: "grid",
-                        gap: "0.5rem",
-                        marginBottom: "1rem",
-                        background: "rgba(8, 17, 32, 0.8)",
-                        padding: "0.75rem",
-                        borderRadius: "var(--radius-sm)",
-                        border: "1px solid var(--border)",
-                      }}
-                    >
-                      <div>
-                        <label
-                          style={{
-                            fontSize: "0.72rem",
-                            color: "var(--text-muted)",
-                            display: "block",
-                            marginBottom: "2px",
-                          }}
-                        >
-                          Filter by Exam Type:
-                        </label>
-                        <select
-                          className="form-input"
-                          style={{
-                            fontSize: "0.78rem",
-                            padding: "0.3rem 0.5rem",
-                          }}
-                          value={exportDbExamTypeFilter}
-                          onChange={(e) =>
-                            setExportDbExamTypeFilter(e.target.value)
-                          }
-                        >
-                          <option value="All">All Exam Types</option>
-                          <option value="Preliminary">Preliminary Only</option>
-                          <option value="Midterm">Midterm Only</option>
-                          <option value="Pre-Final">Pre-Final Only</option>
-                          <option value="Final">Final Only</option>
-                        </select>
-                      </div>
-
-                      <div>
-                        <label
-                          style={{
-                            fontSize: "0.72rem",
-                            color: "var(--text-muted)",
-                            display: "block",
-                            marginBottom: "2px",
-                          }}
-                        >
-                          Filter by Semester:
-                        </label>
-                        <select
-                          className="form-input"
-                          style={{
-                            fontSize: "0.78rem",
-                            padding: "0.3rem 0.5rem",
-                          }}
-                          value={exportDbSemesterFilter}
-                          onChange={(e) =>
-                            setExportDbSemesterFilter(e.target.value)
-                          }
-                        >
-                          <option value="All">All Semesters</option>
-                          <option value="1st Semester">1st Semester</option>
-                          <option value="2nd Semester">2nd Semester</option>
-                          <option value="Summer">Summer Term</option>
-                        </select>
-                      </div>
-
-                      <div>
-                        <label
-                          style={{
-                            fontSize: "0.72rem",
-                            color: "var(--text-muted)",
-                            display: "block",
-                            marginBottom: "2px",
-                          }}
-                        >
-                          Multi-Sheet Grouping:
-                        </label>
-                        <select
-                          className="form-input"
-                          style={{
-                            fontSize: "0.78rem",
-                            padding: "0.3rem 0.5rem",
-                          }}
-                          value={exportDbGroupBy}
-                          onChange={(e) =>
-                            setExportDbGroupBy(
-                              e.target.value as "none" | "exam_type",
-                            )
-                          }
-                        >
-                          <option value="none">Standard Master Sheets</option>
-                          <option value="exam_type">
-                            Group Sheets by Exam Type
-                          </option>
-                        </select>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div>
-                    <button
-                      className="btn"
-                      style={{
-                        width: "100%",
-                        justifyContent: "center",
-                        fontSize: "0.82rem",
-                        background: "var(--srcb-gold-accent)",
-                        color: "#000",
-                        fontWeight: 700,
-                      }}
-                      onClick={handleExportCompleteDatabase}
-                    >
-                      <Database size={14} /> Export Master Database (.xlsx)
-                    </button>
-                    <div
-                      style={{
-                        fontSize: "0.72rem",
-                        color: "var(--text-muted)",
-                        marginTop: "6px",
-                        textAlign: "center",
-                      }}
-                    >
-                      🗄️ Filtered Workbook: Full Metadata, Metrics & Grouped
-                      Sheets
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="card">
-              <div
-                style={{ display: "flex", gap: "1rem", marginBottom: "1.5rem" }}
-              >
-                <div style={{ position: "relative", flex: 1 }}>
-                  <Search
-                    size={16}
-                    style={{
-                      position: "absolute",
-                      left: "0.75rem",
-                      top: "50%",
-                      transform: "translateY(-50%)",
-                      color: "var(--text-muted)",
-                    }}
-                  />
-                  <input
-                    type="text"
-                    className="form-input"
-                    placeholder="Search by Student ID, Student Name, or Exam..."
-                    style={{ paddingLeft: "2.25rem" }}
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                  />
-                </div>
-              </div>
-
-              {loadingSubmissions ? (
-                <div className="spinner-container">
-                  <div className="spinner"></div>
-                </div>
-              ) : (
-                <SubmissionTable
-                  submissions={submissions}
-                  exams={exams}
-                  roster={roster}
-                  searchQuery={searchQuery}
-                  onSelectSubmission={viewSubmissionDetails}
-                  formatDate={formatDate}
-                />
-              )}
-            </div>
-
-          </div>
+        {/* EXAMINATION RESULTS MANAGEMENT TAB (TEACHER) */}
+        {(activeTab === "results-management" || activeTab === "compiler") && currentUser && (
+          <TeacherExamCompiler
+            exams={exams}
+            submissions={submissions}
+            roster={roster}
+            currentUser={currentUser}
+            onSelectSubmission={viewSubmissionDetails}
+            onInspectExam={(exam) => setInspectExam(exam)}
+            addToast={addToast}
+            formatDate={formatDate}
+          />
         )}
 
         {/* OBE ITEM ANALYSIS TAB */}
         {activeTab === "item-analysis" && (
-          <div>
+          <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
             <div
-              className="header-container"
               style={{
-                marginBottom: "1.5rem",
                 display: "flex",
                 justifyContent: "space-between",
                 alignItems: "center",
+                flexWrap: "wrap",
+                gap: "1rem",
+                padding: "1.25rem 1.5rem",
+                background: "#ffffff",
+                border: "1px solid #e2e8f0",
+                borderRadius: "12px",
               }}
             >
               <div>
-                <h2 style={{ fontSize: "1.4rem", fontWeight: 800, margin: 0 }}>
-                  Outcome-Based Education (OBE) Item Analysis
+                <h2
+                  style={{
+                    fontSize: "1.4rem",
+                    fontWeight: 800,
+                    margin: 0,
+                    color: "#0f172a",
+                  }}
+                >
+                  OBE Analysis
                 </h2>
                 <p
                   style={{
-                    fontSize: "0.85rem",
-                    color: "var(--text-secondary)",
+                    fontSize: "0.82rem",
+                    color: "#64748b",
                     margin: "0.2rem 0 0 0",
                   }}
                 >
-                  Evaluate test validity, question difficulty index (P), and
-                  discrimination power (D).
+                  Item difficulty, discrimination index, and learning outcomes attainment
                 </p>
               </div>
 
@@ -3451,72 +3501,217 @@ export default function App() {
                 <button
                   className="btn btn-primary"
                   onClick={handleExportItemAnalysis}
+                  style={{
+                    fontWeight: 700,
+                    borderRadius: "8px",
+                    fontSize: "0.82rem",
+                  }}
                 >
-                  <Download size={16} /> Export Item Analysis (.xlsx)
+                  <Download size={15} /> Export Item Analysis (.xlsx)
                 </button>
               </div>
             </div>
 
-            <div className="card" style={{ marginBottom: "1.5rem" }}>
+            {/* Exam Selector Card */}
+            <div
+              className="card"
+              style={{
+                background: "#ffffff",
+                border: "1px solid #e2e8f0",
+                borderRadius: "16px",
+                padding: "1.25rem 1.5rem",
+                boxShadow: "0 2px 8px rgba(0, 0, 0, 0.02)",
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                flexWrap: "wrap",
+                gap: "1rem",
+              }}
+            >
               <div
-                style={{ display: "flex", gap: "1rem", alignItems: "center" }}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "1rem",
+                  flex: "1 1 320px",
+                }}
               >
-                <label style={{ fontWeight: 600, fontSize: "0.9rem" }}>
-                  Select Exam to Analyze:
-                </label>
-                <select
-                  className="form-input"
-                  style={{ width: "auto", minWidth: "250px" }}
-                  value={selectedExamId}
-                  onChange={(e) => setSelectedExamId(e.target.value)}
+                <div
+                  style={{
+                    width: "42px",
+                    height: "42px",
+                    borderRadius: "10px",
+                    background: "var(--primary-light-surface, #f5f3ff)",
+                    color: "var(--primary, #28166f)",
+                    border: "1px solid var(--primary-light-border, #ddd6fe)",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    flexShrink: 0,
+                  }}
                 >
-                  {exams.map((exam) => (
-                    <option key={exam.id} value={exam.id}>
-                      {exam.name}
-                    </option>
-                  ))}
-                </select>
+                  <BookOpen size={20} />
+                </div>
+                <div style={{ flex: 1 }}>
+                  <label
+                    style={{
+                      fontWeight: 700,
+                      fontSize: "0.82rem",
+                      color: "#475569",
+                      display: "block",
+                      marginBottom: "4px",
+                    }}
+                  >
+                    Select Examination to Evaluate:
+                  </label>
+                  <select
+                    className="form-input"
+                    style={{
+                      width: "100%",
+                      maxWidth: "420px",
+                      height: "38px",
+                      fontSize: "0.85rem",
+                      background: "#f8fafc",
+                      border: "1px solid #cbd5e1",
+                      borderRadius: "8px",
+                      color: "#0f172a",
+                      fontWeight: 600,
+                    }}
+                    value={selectedExamId}
+                    onChange={(e) => setSelectedExamId(e.target.value)}
+                  >
+                    {exams.map((exam) => (
+                      <option key={exam.id} value={exam.id}>
+                        {exam.name} {exam.course_code ? `[${exam.course_code}]` : ""} {exam.section ? `• Sec ${exam.section}` : ""}
+                      </option>
+                    ))}
+                  </select>
+                </div>
               </div>
+
+              {activeExam && (
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "0.6rem",
+                    flexWrap: "wrap",
+                  }}
+                >
+                  {activeExam.course_code && (
+                    <span
+                      style={{
+                        background: "var(--primary-light-surface, #f5f3ff)",
+                        color: "var(--primary, #28166f)",
+                        border: "1px solid var(--primary-light-border, #ddd6fe)",
+                        padding: "0.3rem 0.6rem",
+                        borderRadius: "6px",
+                        fontSize: "0.75rem",
+                        fontWeight: 800,
+                      }}
+                    >
+                      {activeExam.course_code}
+                    </span>
+                  )}
+                  {activeExam.section && (
+                    <span
+                      style={{
+                        background: "#ecfdf5",
+                        color: "#059669",
+                        border: "1px solid #a7f3d0",
+                        padding: "0.3rem 0.6rem",
+                        borderRadius: "6px",
+                        fontSize: "0.75rem",
+                        fontWeight: 700,
+                      }}
+                    >
+                      Sec: {activeExam.section}
+                    </span>
+                  )}
+                  <span
+                    style={{
+                      background: "#f8fafc",
+                      color: "#475569",
+                      border: "1px solid #e2e8f0",
+                      padding: "0.3rem 0.6rem",
+                      borderRadius: "6px",
+                      fontSize: "0.75rem",
+                      fontWeight: 600,
+                    }}
+                  >
+                    {Object.keys(activeExam.answer_key || {}).length} Items
+                  </span>
+                  <span
+                    style={{
+                      background: "#f8fafc",
+                      color: "var(--primary, #28166f)",
+                      border: "1px solid var(--primary-light-border, #ddd6fe)",
+                      padding: "0.3rem 0.6rem",
+                      borderRadius: "6px",
+                      fontSize: "0.75rem",
+                      fontWeight: 700,
+                    }}
+                  >
+                    {submissions.filter((s) => s.exam_id === activeExam.id).length} Scanned
+                  </span>
+                </div>
+              )}
             </div>
 
-            <div className="card">
+            {/* Item Analysis Results Card */}
+            <div
+              className="card"
+              style={{
+                background: "#ffffff",
+                border: "1px solid #e2e8f0",
+                borderRadius: "16px",
+                padding: "1.5rem",
+                boxShadow: "0 2px 8px rgba(0, 0, 0, 0.02)",
+              }}
+            >
               {activeExam ? (
                 <>
                   {submissions.filter((s) => s.exam_id === activeExam.id)
                     .length === 0 && (
                     <div
-                      className="alert-banner warning"
-                      style={{ marginBottom: "1.25rem" }}
+                      style={{
+                        marginBottom: "1.25rem",
+                        padding: "0.85rem 1.1rem",
+                        background: "#fffbeb",
+                        border: "1px solid #fde68a",
+                        borderRadius: "10px",
+                        color: "#92400e",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "0.6rem",
+                        fontSize: "0.82rem",
+                      }}
                     >
                       <AlertTriangle
-                        size={16}
-                        style={{ flexShrink: 0, marginTop: "2px" }}
+                        size={18}
+                        style={{ flexShrink: 0, color: "#d97706" }}
                       />
                       <span>
                         <strong>No real submissions found</strong> for this exam
-                        — the table below uses <strong>sample demo data</strong>{" "}
-                        for illustration purposes. Grade actual student OMR
-                        sheets first to generate a real Item Analysis report.
+                        — the table below displays <strong>sample demo psychometrics</strong>{" "}
+                        for illustration purposes. Grade student OMR sheets under <strong>Exams & Grading</strong> to generate live data.
                       </span>
                     </div>
                   )}
                   <ItemAnalysisTable
                     examName={activeExam.name}
                     answerKey={activeExam.answer_key}
-                    submissions={
-                      submissions.filter((s) => s.exam_id === activeExam.id)
-                        .length > 0
-                        ? submissions.filter((s) => s.exam_id === activeExam.id)
-                        : mockSubmissions
-                    }
+                    submissions={submissions.filter(
+                      (s) => s.exam_id === activeExam.id,
+                    )}
                   />
                 </>
               ) : (
                 <div
                   style={{
                     textAlign: "center",
-                    padding: "2rem",
-                    color: "var(--text-muted)",
+                    padding: "3rem",
+                    color: "#64748b",
                   }}
                 >
                   Please select an exam above to view Item Analysis metrics.
@@ -3542,7 +3737,7 @@ export default function App() {
             >
               <div>
                 <h2 style={{ fontSize: "1.4rem", fontWeight: 800, margin: 0 }}>
-                  AeroOMR User Guide & System Manual
+                  SRCB EduAssess User Guide & System Manual
                 </h2>
                 <p
                   style={{
@@ -3751,123 +3946,279 @@ export default function App() {
                   padding: "1rem",
                 }}
               >
-                <div
-                  style={{
-                    display: "grid",
-                    gridTemplateColumns: "1fr 1fr",
-                    gap: "1rem",
-                  }}
-                >
-                  <div>
-                    {Object.entries(selectedSubmission.answers)
-                      .sort((a, b) => parseInt(a[0]) - parseInt(b[0]))
-                      .slice(0, 25)
-                      .map(([qStr, ansObj]) => {
-                        const exam = exams.find(
-                          (e) => e.id === selectedSubmission.exam_id,
-                        );
-                        const correctAns = exam?.answer_key[qStr];
-                        const selected = ansObj.selected;
-                        const isCorrect = selected === correctAns;
+                {(() => {
+                  const sortedAnswers = Object.entries(selectedSubmission.answers || {})
+                    .sort((a, b) => parseInt(a[0]) - parseInt(b[0]));
+                  const midIndex = Math.ceil(sortedAnswers.length / 2);
+                  const firstCol = sortedAnswers.slice(0, midIndex);
+                  const secondCol = sortedAnswers.slice(midIndex);
+                  const exam = exams.find((e) => e.id === selectedSubmission.exam_id);
 
-                        return (
-                          <div
-                            key={qStr}
-                            className="bubble-row"
-                            style={{
-                              padding: "0.2rem 0.5rem",
-                              justifyContent: "space-between",
-                            }}
-                          >
-                            <span
-                              className="bubble-num"
-                              style={{ width: "20px" }}
-                            >
-                              {qStr}.
-                            </span>
-                            <span
-                              style={{
-                                fontSize: "0.8rem",
-                                color: isCorrect
-                                  ? "var(--success)"
-                                  : "var(--error)",
-                                fontWeight: 600,
-                              }}
-                            >
-                              {ansObj.is_empty
-                                ? "No Mark"
-                                : `Marked "${selected}"`}
-                            </span>
-                            <span
-                              style={{
-                                fontSize: "0.8rem",
-                                color: "var(--text-muted)",
-                              }}
-                            >
-                              (Key: {correctAns})
-                            </span>
-                          </div>
-                        );
-                      })}
-                  </div>
-                  <div>
-                    {Object.entries(selectedSubmission.answers)
-                      .sort((a, b) => parseInt(a[0]) - parseInt(b[0]))
-                      .slice(25)
-                      .map(([qStr, ansObj]) => {
-                        const exam = exams.find(
-                          (e) => e.id === selectedSubmission.exam_id,
-                        );
-                        const correctAns = exam?.answer_key[qStr];
-                        const selected = ansObj.selected;
-                        const isCorrect = selected === correctAns;
+                  return (
+                    <div
+                      style={{
+                        display: "grid",
+                        gridTemplateColumns: "1fr 1fr",
+                        gap: "1rem",
+                      }}
+                    >
+                      <div>
+                        {firstCol.map(([qStr, ansObj]) => {
+                          const correctAns = exam?.answer_key[qStr];
+                          const selected = ansObj.selected;
+                          const isCorrect = selected === correctAns;
 
-                        return (
-                          <div
-                            key={qStr}
-                            className="bubble-row"
-                            style={{
-                              padding: "0.2rem 0.5rem",
-                              justifyContent: "space-between",
-                            }}
-                          >
-                            <span
-                              className="bubble-num"
-                              style={{ width: "20px" }}
-                            >
-                              {qStr}.
-                            </span>
-                            <span
+                          return (
+                            <div
+                              key={qStr}
+                              className="bubble-row"
                               style={{
-                                fontSize: "0.8rem",
-                                color: isCorrect
-                                  ? "var(--success)"
-                                  : "var(--error)",
-                                fontWeight: 600,
+                                padding: "0.2rem 0.5rem",
+                                justifyContent: "space-between",
                               }}
                             >
-                              {ansObj.is_empty
-                                ? "No Mark"
-                                : `Marked "${selected}"`}
-                            </span>
-                            <span
+                              <span
+                                className="bubble-num"
+                                style={{ width: "20px" }}
+                              >
+                                {qStr}.
+                              </span>
+                              <span
+                                style={{
+                                  fontSize: "0.8rem",
+                                  color: isCorrect
+                                    ? "var(--success)"
+                                    : "var(--error)",
+                                  fontWeight: 600,
+                                }}
+                              >
+                                {ansObj.is_empty
+                                  ? "No Mark"
+                                  : `Marked "${selected}"`}
+                              </span>
+                              <span
+                                style={{
+                                  fontSize: "0.8rem",
+                                  color: "var(--text-muted)",
+                                }}
+                              >
+                                (Key: {correctAns})
+                              </span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                      <div>
+                        {secondCol.map(([qStr, ansObj]) => {
+                          const correctAns = exam?.answer_key[qStr];
+                          const selected = ansObj.selected;
+                          const isCorrect = selected === correctAns;
+
+                          return (
+                            <div
+                              key={qStr}
+                              className="bubble-row"
                               style={{
-                                fontSize: "0.8rem",
-                                color: "var(--text-muted)",
+                                padding: "0.2rem 0.5rem",
+                                justifyContent: "space-between",
                               }}
                             >
-                              (Key: {correctAns})
-                            </span>
-                          </div>
-                        );
-                      })}
-                  </div>
-                </div>
+                              <span
+                                className="bubble-num"
+                                style={{ width: "20px" }}
+                              >
+                                {qStr}.
+                              </span>
+                              <span
+                                style={{
+                                  fontSize: "0.8rem",
+                                  color: isCorrect
+                                    ? "var(--success)"
+                                    : "var(--error)",
+                                  fontWeight: 600,
+                                }}
+                              >
+                                {ansObj.is_empty
+                                  ? "No Mark"
+                                  : `Marked "${selected}"`}
+                              </span>
+                              <span
+                                style={{
+                                  fontSize: "0.8rem",
+                                  color: "var(--text-muted)",
+                                }}
+                              >
+                                (Key: {correctAns})
+                              </span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })()}
               </div>
             </div>
           </div>
         )}
       </main>
+
+      {/* Sign Out Confirmation Modal */}
+      {isSignOutModalOpen && (
+        <div
+          className="modal-overlay"
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(15, 23, 42, 0.6)",
+            backdropFilter: "blur(6px)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 999999,
+            padding: "1rem",
+          }}
+          onClick={() => setIsSignOutModalOpen(false)}
+        >
+          <div
+            className="card"
+            style={{
+              background: "#ffffff",
+              borderRadius: "16px",
+              padding: "1.75rem",
+              maxWidth: "420px",
+              width: "100%",
+              boxShadow: "0 20px 40px rgba(0, 0, 0, 0.15)",
+              border: "1px solid #e2e8f0",
+              animation: "modalScaleIn 0.2s ease-out",
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "0.85rem",
+                marginBottom: "1rem",
+              }}
+            >
+              <div
+                style={{
+                  width: "44px",
+                  height: "44px",
+                  borderRadius: "12px",
+                  background: "#fee2e2",
+                  color: "#ef4444",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  flexShrink: 0,
+                }}
+              >
+                <LogOut size={22} />
+              </div>
+              <div>
+                <h3
+                  style={{
+                    margin: 0,
+                    fontSize: "1.2rem",
+                    fontWeight: 800,
+                    color: "#0f172a",
+                  }}
+                >
+                  Confirm Sign Out
+                </h3>
+                <p
+                  style={{
+                    margin: "0.2rem 0 0 0",
+                    fontSize: "0.85rem",
+                    color: "#64748b",
+                  }}
+                >
+                  End active institutional session
+                </p>
+              </div>
+            </div>
+
+            <p
+              style={{
+                fontSize: "0.92rem",
+                color: "#475569",
+                lineHeight: 1.5,
+                margin: "0 0 1.5rem 0",
+              }}
+            >
+              Are you sure you want to sign out of{" "}
+              <strong style={{ color: "#0f172a" }}>
+                {currentUser?.name || "your account"}
+              </strong>
+              ? You will need to sign in again to access your institutional workspace.
+            </p>
+
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "flex-end",
+                gap: "0.75rem",
+              }}
+            >
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={() => setIsSignOutModalOpen(false)}
+                style={{
+                  padding: "0.6rem 1.1rem",
+                  fontSize: "0.88rem",
+                  fontWeight: 600,
+                  borderRadius: "8px",
+                  background: "#f1f5f9",
+                  color: "#334155",
+                  border: "1px solid #cbd5e1",
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="btn"
+                onClick={() => {
+                  setIsSignOutModalOpen(false);
+                  handleSignOut();
+                }}
+                style={{
+                  padding: "0.6rem 1.25rem",
+                  fontSize: "0.88rem",
+                  fontWeight: 700,
+                  borderRadius: "8px",
+                  background: "#ef4444",
+                  color: "#ffffff",
+                  border: "none",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "0.4rem",
+                  boxShadow: "0 4px 12px rgba(239, 68, 68, 0.25)",
+                }}
+              >
+                <LogOut size={16} />
+                <span>Yes, Sign Out</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Floating User Guide Question Mark Button (Bottom-Right) */}
+      <button
+        type="button"
+        onClick={() => setIsUserGuideOpen(true)}
+        className="floating-help-btn"
+        title="Open User Guide & Documentation"
+        aria-label="Open User Guide"
+      >
+        <HelpCircle size={24} />
+        <span className="floating-help-tooltip">Open User Guide</span>
+      </button>
     </div>
+  </div>
   );
 }

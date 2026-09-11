@@ -29,13 +29,28 @@ from database import (
     list_pending_users,
     update_user_status,
     authenticate_user,
+    create_user_account,
+    list_all_users,
+    delete_user,
 )
 from omr import OMREngine, OMRCornerDetectionError
 
 # Lifespan events handler
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    init_db()
+    try:
+        init_db()
+    except Exception as e:
+        import os
+        db_host = os.getenv("DB_HOST", "localhost")
+        db_port = os.getenv("DB_PORT", "3306")
+        print("\n" + "=" * 60)
+        print("❌ DATABASE CONNECTION ERROR:")
+        print(f"   Could not connect to MySQL server at {db_host}:{db_port}")
+        print("   👉 Make sure Laragon / XAMPP / MySQL is running (click 'Start All' in Laragon)")
+        print(f"   Details: {e}")
+        print("=" * 60 + "\n")
+        raise e
     yield
 
 # Initialize FastAPI App
@@ -115,6 +130,16 @@ class RegisterRequest(BaseModel):
     student_id: str = Field(default="", description="Student ID number if student")
 
 
+class AdminCreateUserRequest(BaseModel):
+    name: str = Field(..., min_length=2, description="Full Name")
+    email: str = Field(..., min_length=5, description="Institutional School Email")
+    password: str = Field(..., min_length=6, description="Password")
+    role: str = Field(..., description="Role: teacher or student")
+    programme: Optional[str] = Field(default="BSIT", description="Academic Programme")
+    department: Optional[str] = Field(default="Computing Studies", description="Academic Department")
+    student_id: Optional[str] = Field(default=None, description="Student ID if student")
+
+
 # Max file size: 10MB
 MAX_FILE_SIZE = 10 * 1024 * 1024
 
@@ -150,6 +175,7 @@ def register_new_user(payload: RegisterRequest):
         role=role_normalized,
         programme=payload.programme,
         department=payload.department,
+        student_id=payload.student_id,
     )
 
     return {
@@ -201,6 +227,56 @@ def reject_pending_user(user_id: str):
     if not success:
         raise HTTPException(status_code=404, detail="Pending user not found or already processed.")
     return {"status": "success", "message": "User registration request has been rejected."}
+
+
+@app.get("/api/users")
+def get_all_registered_users():
+    return list_all_users()
+
+
+@app.post("/api/admin/users", status_code=status.HTTP_201_CREATED)
+def admin_create_user(payload: AdminCreateUserRequest):
+    existing_user = get_user_by_email(payload.email)
+    if existing_user:
+        raise HTTPException(
+            status_code=400,
+            detail="An account with this school email is already registered.",
+        )
+
+    role_norm = payload.role.strip().lower()
+    if role_norm not in ["teacher", "student", "dean", "programme-head", "faculty"]:
+        role_norm = "teacher"
+    if role_norm == "faculty":
+        role_norm = "teacher"
+
+    created = create_user_account(
+        name=payload.name,
+        email=payload.email,
+        password=payload.password,
+        role=role_norm,
+        programme=payload.programme,
+        department=payload.department,
+        status="active",
+        student_id=payload.student_id,
+    )
+    return {
+        "status": "success",
+        "message": f"Successfully created {role_norm.capitalize()} account for {payload.name}.",
+        "user": created,
+    }
+
+
+@app.delete("/api/users/{user_id}")
+def remove_user(user_id: str):
+    if user_id.startswith("admin-"):
+        raise HTTPException(
+            status_code=400,
+            detail="Cannot delete primary system administrator account.",
+        )
+    deleted = delete_user(user_id)
+    if not deleted:
+        raise HTTPException(status_code=404, detail="User account not found.")
+    return {"status": "success", "message": "User account successfully deleted."}
 
 
 @app.get("/api/dashboard/summary")
