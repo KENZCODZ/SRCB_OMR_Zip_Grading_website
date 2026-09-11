@@ -1,4 +1,17 @@
-import type { Exam, Submission, QuickScanResult, GradeResult, PendingUser, RegisterPayload } from './types';
+import type {
+  Exam,
+  Submission,
+  QuickScanResult,
+  GradeResult,
+  PendingUser,
+  RegisterPayload,
+  Program,
+  Instructor,
+  Subject,
+  Section,
+  Enrollment,
+  RosterImportResponse,
+} from './types';
 import { cacheManager } from './utils/cacheManager';
 
 // Detect whether we are running in local Vite development server
@@ -210,6 +223,8 @@ export interface ExamPayload {
   section?: string;
   program?: string;
   instructor_name?: string;
+  subject_id?: string;
+  instructor_id?: string;
   num_items?: number;
   passing_score?: number;
   instructions?: string;
@@ -234,6 +249,8 @@ export async function createExam(payload: ExamPayload): Promise<Exam> {
         section: payload.section ?? null,
         program: payload.program ?? null,
         instructor_name: payload.instructor_name ?? null,
+        subject_id: payload.subject_id ?? null,
+        instructor_id: payload.instructor_id ?? null,
         num_items: payload.num_items ?? 50,
         passing_score: payload.passing_score ?? null,
         instructions: payload.instructions ?? null,
@@ -267,6 +284,8 @@ export async function updateExam(examId: string, payload: ExamPayload): Promise<
         section: payload.section ?? null,
         program: payload.program ?? null,
         instructor_name: payload.instructor_name ?? null,
+        subject_id: payload.subject_id ?? null,
+        instructor_id: payload.instructor_id ?? null,
         num_items: payload.num_items ?? 50,
         passing_score: payload.passing_score ?? null,
         instructions: payload.instructions ?? null,
@@ -346,5 +365,182 @@ export async function deleteExam(examId: string): Promise<{ status: string, mess
     catchNetworkError(err, 'Failed to delete exam');
   }
 }
+
+// ── Academic Management Services (Conceptual ERD Alignment) ─────────────────
+
+export async function fetchPrograms(options?: { forceRefresh?: boolean }): Promise<Program[]> {
+  return cacheManager.fetchWithCache(
+    'programs_all',
+    async () => {
+      try {
+        const response = await fetch(`${API_BASE}/api/programs`);
+        return await handleResponse<Program[]>(response, 'Failed to fetch academic programs');
+      } catch (err) {
+        catchNetworkError(err, 'Failed to fetch academic programs');
+      }
+    },
+    options
+  );
+}
+
+export async function fetchInstructors(programId?: string, options?: { forceRefresh?: boolean }): Promise<Instructor[]> {
+  const cacheKey = programId ? `instructors_${programId}` : 'instructors_all';
+  return cacheManager.fetchWithCache(
+    cacheKey,
+    async () => {
+      try {
+        const query = programId ? `?program_id=${encodeURIComponent(programId)}` : '';
+        const response = await fetch(`${API_BASE}/api/instructors${query}`);
+        return await handleResponse<Instructor[]>(response, 'Failed to fetch faculty instructors');
+      } catch (err) {
+        catchNetworkError(err, 'Failed to fetch faculty instructors');
+      }
+    },
+    options
+  );
+}
+
+export async function createProgram(payload: {
+  program_code: string;
+  program_name: string;
+  department_name?: string;
+}): Promise<Program> {
+  try {
+    const response = await fetch(`${API_BASE}/api/programs`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    const result = await handleResponse<Program>(response, 'Failed to create program');
+    cacheManager.invalidate(/^programs/);
+    return result;
+  } catch (err) {
+    catchNetworkError(err, 'Failed to create program');
+  }
+}
+
+export async function fetchSubjects(programId?: string, options?: { forceRefresh?: boolean }): Promise<Subject[]> {
+  const cacheKey = programId ? `subjects_${programId}` : 'subjects_all';
+  return cacheManager.fetchWithCache(
+    cacheKey,
+    async () => {
+      try {
+        const query = programId ? `?program_id=${encodeURIComponent(programId)}` : '';
+        const response = await fetch(`${API_BASE}/api/subjects${query}`);
+        return await handleResponse<Subject[]>(response, 'Failed to fetch subjects');
+      } catch (err) {
+        catchNetworkError(err, 'Failed to fetch subjects');
+      }
+    },
+    options
+  );
+}
+
+export async function createSubject(payload: {
+  subject_code: string;
+  subject_name: string;
+  program_id: string;
+  description?: string;
+  units?: number;
+  is_major?: number;
+}): Promise<Subject> {
+  try {
+    const response = await fetch(`${API_BASE}/api/subjects`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    const result = await handleResponse<Subject>(response, 'Failed to create subject');
+    cacheManager.invalidate(/^subjects/);
+    return result;
+  } catch (err) {
+    catchNetworkError(err, 'Failed to create subject');
+  }
+}
+
+export async function fetchSections(programId?: string, options?: { forceRefresh?: boolean }): Promise<Section[]> {
+  const cacheKey = programId ? `sections_${programId}` : 'sections_all';
+  return cacheManager.fetchWithCache(
+    cacheKey,
+    async () => {
+      try {
+        const query = programId ? `?program_id=${encodeURIComponent(programId)}` : '';
+        const response = await fetch(`${API_BASE}/api/sections${query}`);
+        return await handleResponse<Section[]>(response, 'Failed to fetch sections');
+      } catch (err) {
+        catchNetworkError(err, 'Failed to fetch sections');
+      }
+    },
+    options
+  );
+}
+
+export async function createSection(payload: {
+  section_name: string;
+  year_level: number;
+  program_id: string;
+}): Promise<Section> {
+  try {
+    const response = await fetch(`${API_BASE}/api/sections`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    const result = await handleResponse<Section>(response, 'Failed to create section');
+    cacheManager.invalidate(/^sections/);
+    return result;
+  } catch (err) {
+    catchNetworkError(err, 'Failed to create section');
+  }
+}
+
+export async function fetchEnrollments(
+  filter?: { section_id?: string; academic_year?: string; semester?: string },
+  options?: { forceRefresh?: boolean }
+): Promise<Enrollment[]> {
+  const queryParams = new URLSearchParams();
+  if (filter?.section_id) queryParams.set('section_id', filter.section_id);
+  if (filter?.academic_year) queryParams.set('academic_year', filter.academic_year);
+  if (filter?.semester) queryParams.set('semester', filter.semester);
+
+  const qs = queryParams.toString();
+  const cacheKey = qs ? `enrollments_${qs}` : 'enrollments_all';
+
+  return cacheManager.fetchWithCache(
+    cacheKey,
+    async () => {
+      try {
+        const response = await fetch(`${API_BASE}/api/enrollments${qs ? `?${qs}` : ''}`);
+        return await handleResponse<Enrollment[]>(response, 'Failed to fetch enrollments');
+      } catch (err) {
+        catchNetworkError(err, 'Failed to fetch enrollments');
+      }
+    },
+    options
+  );
+}
+
+export async function importSectionRoster(
+  sectionId: string,
+  payload: {
+    academic_year: string;
+    semester: string;
+    students: Array<{ student_id: string; name: string; email?: string }>;
+  }
+): Promise<RosterImportResponse> {
+  try {
+    const response = await fetch(`${API_BASE}/api/sections/${sectionId}/enrollments/import`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    const result = await handleResponse<RosterImportResponse>(response, 'Failed to import class roster');
+    cacheManager.invalidate(/^enrollments/);
+    return result;
+  } catch (err) {
+    catchNetworkError(err, 'Failed to import class roster');
+  }
+}
+
 
 

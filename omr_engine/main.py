@@ -32,6 +32,15 @@ from database import (
     create_user_account,
     list_all_users,
     delete_user,
+    list_programs,
+    create_program,
+    list_instructors,
+    list_subjects,
+    create_subject,
+    list_sections,
+    create_section,
+    list_enrollments,
+    bulk_import_enrollments,
 )
 from omr import OMREngine, OMRCornerDetectionError
 
@@ -94,6 +103,8 @@ class ExamCreate(BaseModel):
     passing_score: Optional[int] = Field(None, ge=0, description="Optional raw score threshold")
     instructions: Optional[str] = Field(None, description="Optional instructions for students")
     exam_date: Optional[str] = Field(None, description="Scheduled exam date (YYYY-MM-DD)")
+    subject_id: Optional[str] = Field(None, description="Optional relational FK to subjects")
+    instructor_id: Optional[str] = Field(None, description="Optional relational FK to instructors")
 
 
 class ExamUpdate(BaseModel):
@@ -109,6 +120,8 @@ class ExamUpdate(BaseModel):
     section: Optional[str] = None
     program: Optional[str] = None
     instructor_name: Optional[str] = None
+    subject_id: Optional[str] = None
+    instructor_id: Optional[str] = None
     num_items: Optional[int] = Field(None, ge=1, le=100)
     passing_score: Optional[int] = Field(None, ge=0)
     instructions: Optional[str] = None
@@ -138,6 +151,33 @@ class AdminCreateUserRequest(BaseModel):
     programme: Optional[str] = Field(default="BSIT", description="Academic Programme")
     department: Optional[str] = Field(default="Computing Studies", description="Academic Department")
     student_id: Optional[str] = Field(default=None, description="Student ID if student")
+
+
+class ProgramCreate(BaseModel):
+    program_code: str = Field(..., min_length=2, description="Program Code e.g. BSIT")
+    program_name: str = Field(..., min_length=3, description="Full Program Name")
+    department_name: Optional[str] = Field(default=None, description="Academic Department")
+
+
+class SubjectCreate(BaseModel):
+    subject_code: str = Field(..., min_length=2, description="Course / Subject Code e.g. ITP305")
+    subject_name: str = Field(..., min_length=3, description="Subject Title")
+    program_id: str = Field(..., description="Program ID owning this subject")
+    description: Optional[str] = Field(default=None, description="Course Description")
+    units: Optional[int] = Field(default=3, ge=1, le=12, description="Academic Units")
+    is_major: Optional[int] = Field(default=1, description="1 if Major Subject, 0 if Minor/GE")
+
+
+class SectionCreate(BaseModel):
+    section_name: str = Field(..., min_length=2, description="Section Name e.g. BSIT 3-A")
+    year_level: int = Field(default=1, ge=1, le=5, description="Year Level 1 to 5")
+    program_id: str = Field(..., description="Program ID owning this section")
+
+
+class RosterImportRequest(BaseModel):
+    academic_year: str = Field(default="2025-2026", description="Academic Year e.g. 2025-2026")
+    semester: str = Field(default="1st Semester", description="1st Semester | 2nd Semester | Summer")
+    students: List[Dict[str, str]] = Field(..., description="List of student entries with student_id, name, email")
 
 
 # Max file size: 10MB
@@ -339,6 +379,8 @@ def create_new_exam(exam: ExamCreate):
         passing_score=exam.passing_score,
         instructions=exam.instructions,
         exam_date=exam.exam_date,
+        subject_id=exam.subject_id,
+        instructor_id=exam.instructor_id,
     )
     return res
 
@@ -396,6 +438,8 @@ def edit_exam_key(exam_id: str, exam: ExamUpdate):
         passing_score=exam.passing_score,
         instructions=exam.instructions,
         exam_date=exam.exam_date,
+        subject_id=exam.subject_id,
+        instructor_id=exam.instructor_id,
     )
     if success:
         return {"status": "success", "message": "Exam updated successfully."}
@@ -414,6 +458,114 @@ def delete_existing_exam(exam_id: str):
     if not success:
         raise HTTPException(status_code=404, detail="Exam not found.")
     return {"status": "success", "message": "Exam and all its submissions deleted successfully."}
+
+
+# ==========================================
+# Academic Management Routes (Conceptual ERD Alignment)
+# ==========================================
+
+@app.get("/api/programs")
+def get_programs():
+    """List all academic programs (BSIT, BSCS, etc.)"""
+    return list_programs()
+
+
+@app.get("/api/instructors")
+def get_instructors(program_id: Optional[str] = None):
+    """List all faculty instructors, optionally filtered by program_id"""
+    return list_instructors(program_id=program_id)
+
+
+@app.post("/api/programs", status_code=status.HTTP_201_CREATED)
+def add_program(req: ProgramCreate):
+    """Create a new academic program"""
+    try:
+        prog = create_program(
+            program_code=req.program_code,
+            program_name=req.program_name,
+            department_name=req.department_name,
+        )
+        return prog
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Failed to create program: {str(e)}")
+
+
+@app.get("/api/subjects")
+def get_subjects(program_id: Optional[str] = None):
+    """List all subjects, optionally filtered by program_id"""
+    return list_subjects(program_id=program_id)
+
+
+@app.post("/api/subjects", status_code=status.HTTP_201_CREATED)
+def add_subject(req: SubjectCreate):
+    """Create a new subject / course under a program"""
+    try:
+        sub = create_subject(
+            subject_code=req.subject_code,
+            subject_name=req.subject_name,
+            program_id=req.program_id,
+            description=req.description,
+            units=req.units or 3,
+            is_major=req.is_major if req.is_major is not None else 1,
+        )
+        return sub
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Failed to create subject: {str(e)}")
+
+
+@app.get("/api/sections")
+def get_sections(program_id: Optional[str] = None):
+    """List all sections, optionally filtered by program_id"""
+    return list_sections(program_id=program_id)
+
+
+@app.post("/api/sections", status_code=status.HTTP_201_CREATED)
+def add_section(req: SectionCreate):
+    """Create a new section under a program"""
+    try:
+        sec = create_section(
+            section_name=req.section_name,
+            year_level=req.year_level,
+            program_id=req.program_id,
+        )
+        return sec
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Failed to create section: {str(e)}")
+
+
+@app.get("/api/enrollments")
+def get_enrollments(
+    section_id: Optional[str] = None,
+    academic_year: Optional[str] = None,
+    semester: Optional[str] = None,
+):
+    """List student enrollments for sections and academic terms"""
+    return list_enrollments(
+        section_id=section_id,
+        academic_year=academic_year,
+        semester=semester,
+    )
+
+
+@app.post("/api/sections/{section_id}/enrollments/import")
+def import_section_roster(section_id: str, req: RosterImportRequest):
+    """Bulk import / enroll students into a section for a specific academic year and semester"""
+    try:
+        results = bulk_import_enrollments(
+            section_id=section_id,
+            students=req.students,
+            academic_year=req.academic_year,
+            semester=req.semester,
+        )
+        return {
+            "status": "success",
+            "section_id": section_id,
+            "academic_year": req.academic_year,
+            "semester": req.semester,
+            "results": results,
+        }
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Failed to import roster: {str(e)}")
 
 
 # ==========================================
@@ -475,6 +627,7 @@ async def grade_exam_sheet(
         score=results["score"],
         total_questions=results["total_questions"],
         answers=results["answers"],
+        student_id_extracted=results["student_id"],
     )
 
     # 7. Return graded results
