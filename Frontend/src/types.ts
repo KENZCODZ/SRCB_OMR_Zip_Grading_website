@@ -19,6 +19,8 @@ export interface Exam {
   passing_score?: number;    // Optional raw score threshold
   instructions?: string;     // Optional instructions text
   exam_date?: string;        // Scheduled date "YYYY-MM-DD"
+  subject_id?: string;       // Optional relational link to subjects table
+  instructor_id?: string;    // Optional relational link to instructors table
 }
 
 export interface SubmissionAnswerDetail {
@@ -163,3 +165,79 @@ export interface AppNotification {
   read: boolean;
   targetTab?: string;
 }
+
+// ── Conceptual ERD Academic Models ──────────────────────────────────────────
+export interface Program {
+  id: string;
+  program_code: string;
+  program_name: string;
+  department_name?: string;
+  created_at: string;
+}
+
+export interface Instructor {
+  id: string;
+  instructor_id: string;
+  user_id: string;
+  name: string;
+  email: string;
+  role: string;
+  department?: string;
+  program_id?: string;
+  program_code?: string;
+  program_name?: string;
+  faculty_id_number?: string;
+  created_at: string;
+}
+
+export interface Subject {
+  id: string;
+  subject_code: string;
+  subject_name: string;
+  program_id: string;
+  description?: string;
+  units: number;
+  is_major: number; // 1 = major, 0 = minor/GE
+  created_at: string;
+  program_code?: string;
+  program_name?: string;
+}
+
+export interface Section {
+  id: string;
+  section_name: string;
+  year_level: number;
+  program_id: string;
+  created_at: string;
+  program_code?: string;
+  program_name?: string;
+}
+
+export interface Enrollment {
+  id: string;
+  student_id: string;
+  section_id: string;
+  academic_year: string;
+  semester: string;
+  created_at: string;
+  student_number?: string;
+  full_name?: string;
+  email?: string;
+  section_name?: string;
+  year_level?: number;
+  program_code?: string;
+}
+
+export interface RosterImportResponse {
+  status: string;
+  section_id: string;
+  academic_year: string;
+  semester: string;
+  results: {
+    total: number;
+    enrolled: number;
+    created_students: number;
+    errors: string[];
+  };
+}
+

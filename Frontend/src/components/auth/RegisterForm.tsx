@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Mail,
   Lock,
@@ -13,7 +13,8 @@ import {
   ArrowRight,
   BookOpen,
 } from "lucide-react";
-import { registerUser } from "../../api";
+import { registerUser, fetchPrograms } from "../../api";
+import type { Program } from "../../types";
 
 interface RegisterFormProps {
   onSwitchToLogin: () => void;
@@ -34,12 +35,28 @@ export default function RegisterForm({ onSwitchToLogin, onRegisteredSuccess }: R
   const [programme, setProgramme] = useState("BSIT");
   const [department, setDepartment] = useState("Computing Studies");
   const [idSuffix, setIdSuffix] = useState("");
+  const [programsList, setProgramsList] = useState<Program[]>([]);
 
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
+
+  useEffect(() => {
+    fetchPrograms()
+      .then((progs) => {
+        if (progs && progs.length > 0) {
+          setProgramsList(progs);
+          const firstProg = progs[0];
+          setProgramme(firstProg.program_code);
+          if (firstProg.department_name) {
+            setDepartment(firstProg.department_name);
+          }
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   const getFullName = () => {
     const parts: string[] = [];
@@ -410,15 +427,32 @@ export default function RegisterForm({ onSwitchToLogin, onRegisteredSuccess }: R
                 <select
                   className="form-input input-with-icon"
                   value={programme}
-                  onChange={(e) => setProgramme(e.target.value)}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setProgramme(val);
+                    const matched = programsList.find((p) => p.program_code === val);
+                    if (matched && matched.department_name) {
+                      setDepartment(matched.department_name);
+                    }
+                  }}
                   style={{ appearance: "auto" }}
                 >
-                  <option value="BSIT">BSIT</option>
-                  <option value="BSCS">BSCS</option>
-                  <option value="BSED">BSED</option>
-                  <option value="BEED">BEED</option>
-                  <option value="BSBA">BSBA</option>
-                  <option value="BSCRIM">BSCRIM</option>
+                  {programsList.length > 0 ? (
+                    programsList.map((p) => (
+                      <option key={p.id} value={p.program_code}>
+                        {p.program_code} — {p.program_name}
+                      </option>
+                    ))
+                  ) : (
+                    <>
+                      <option value="BSIT">BSIT</option>
+                      <option value="BSCS">BSCS</option>
+                      <option value="BSED">BSED</option>
+                      <option value="BEED">BEED</option>
+                      <option value="BSBA">BSBA</option>
+                      <option value="BSCRIM">BSCRIM</option>
+                    </>
+                  )}
                 </select>
                 <BookOpen size={17} className="input-icon-left" />
               </div>
