@@ -15,7 +15,7 @@ DB_HOST = os.getenv("DB_HOST", "localhost")
 DB_PORT = int(os.getenv("DB_PORT", "3306"))
 DB_USER = os.getenv("DB_USER", "root")
 DB_PASSWORD = os.getenv("DB_PASSWORD", "")
-DB_NAME = os.getenv("DB_NAME", "aeroomr")
+DB_NAME = os.getenv("DB_NAME", "aeroomr_db")
 
 SEED_USERS = [
     {
@@ -86,6 +86,7 @@ SEED_USERS = [
         "role": "student",
         "programme": "BSIT",
         "department": "Computing Studies",
+        "student_id": "2023-0001",
         "status": "active",
     },
     {
@@ -96,12 +97,73 @@ SEED_USERS = [
         "role": "student",
         "programme": "BSIT",
         "department": "Computer Studies",
+        "student_id": "2023-0002",
         "status": "active",
     },
 ]
 
+SEED_PROGRAMS = [
+    {
+        "program_id": "prog-bsit-001",
+        "program_code": "BSIT",
+        "program_name": "Bachelor of Science in Information Technology",
+        "department_name": "College of Computing Studies",
+    },
+    {
+        "program_id": "prog-bscs-001",
+        "program_code": "BSCS",
+        "program_name": "Bachelor of Science in Computer Science",
+        "department_name": "College of Computing Studies",
+    },
+]
 
-def get_db_connection() -> pymysql.connections.Connection[pymysql.cursors.DictCursor]:
+SEED_SUBJECTS = [
+    {
+        "subject_id": "subj-itp305-001",
+        "subject_code": "ITP305",
+        "subject_name": "Event-Driven Programming",
+        "description": "Desktop & GUI application development using event-driven architectures.",
+        "units": 3,
+        "is_major": 1,
+        "program_id": "prog-bsit-001",
+    },
+    {
+        "subject_id": "subj-itp306-001",
+        "subject_code": "ITP306",
+        "subject_name": "Mobile Application Development",
+        "description": "Native and cross-platform mobile application engineering.",
+        "units": 3,
+        "is_major": 1,
+        "program_id": "prog-bsit-001",
+    },
+    {
+        "subject_id": "subj-itp307-001",
+        "subject_code": "ITP307",
+        "subject_name": "Data Mining and Analytics",
+        "description": "Knowledge discovery, predictive modeling, and statistical data warehousing.",
+        "units": 3,
+        "is_major": 1,
+        "program_id": "prog-bsit-001",
+    },
+]
+
+SEED_SECTIONS = [
+    {
+        "section_id": "sec-bsit-3a-001",
+        "section_name": "BSIT 3-A",
+        "year_level": 3,
+        "program_id": "prog-bsit-001",
+    },
+    {
+        "section_id": "sec-bsit-3b-001",
+        "section_name": "BSIT 3-B",
+        "year_level": 3,
+        "program_id": "prog-bsit-001",
+    },
+]
+
+
+def get_db_connection() -> Any:
     """Returns a new MySQL connection with dict-like row access."""
     return pymysql.connect(
         host=DB_HOST,
@@ -115,7 +177,7 @@ def get_db_connection() -> pymysql.connections.Connection[pymysql.cursors.DictCu
 
 
 def init_db():
-    """Initializes the MySQL schema and seeds default users."""
+    """Initializes the MySQL schema and seeds default data non-destructively."""
     # Ensure database exists
     server_conn = pymysql.connect(
         host=DB_HOST,
@@ -132,10 +194,10 @@ def init_db():
     conn = get_db_connection()
     cursor = conn.cursor()
 
-    # 1. Users Table with Registration Status
+    # 1. Users Table
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS users (
-            id VARCHAR(36) PRIMARY KEY,
+            id VARCHAR(64) PRIMARY KEY,
             name VARCHAR(255) NOT NULL,
             email VARCHAR(255) NOT NULL UNIQUE,
             password VARCHAR(255) NOT NULL,
@@ -146,32 +208,98 @@ def init_db():
             status VARCHAR(20) NOT NULL DEFAULT 'active',
             created_at VARCHAR(64) NOT NULL,
             updated_at VARCHAR(64) NOT NULL
-        )
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
     """)
 
-    # Ensure student_id column exists for existing tables
+    # Ensure student_id column exists
     try:
         cursor.execute("ALTER TABLE users ADD COLUMN student_id VARCHAR(64) DEFAULT NULL")
         conn.commit()
     except Exception:
         pass
 
-    # Check for legacy schema (exam_id instead of id) and upgrade cleanly
-    try:
-        cursor.execute("DESCRIBE exams")
-        cols = [r["Field"] for r in cursor.fetchall()]
-        if "exam_id" in cols and "id" not in cols:
-            cursor.execute("DROP TABLE IF EXISTS submission_answers")
-            cursor.execute("DROP TABLE IF EXISTS submissions")
-            cursor.execute("DROP TABLE IF EXISTS answer_keys")
-            cursor.execute("DROP TABLE IF EXISTS exams")
-    except Exception:
-        pass
+    # 2. Programs Table
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS programs (
+            program_id VARCHAR(64) PRIMARY KEY,
+            program_code VARCHAR(30) NOT NULL UNIQUE,
+            program_name VARCHAR(255) NOT NULL,
+            department_name VARCHAR(255) DEFAULT NULL,
+            created_at VARCHAR(64) NOT NULL
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    """)
 
-    # 2. Exams Table with Comprehensive Metadata
+    # 3. Instructors Table (1:1 specialization with users)
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS instructors (
+            instructor_id VARCHAR(64) PRIMARY KEY,
+            user_id VARCHAR(64) NOT NULL UNIQUE,
+            program_id VARCHAR(64) DEFAULT NULL,
+            faculty_id_number VARCHAR(50) DEFAULT NULL,
+            created_at VARCHAR(64) NOT NULL,
+            CONSTRAINT fk_instructors_user FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
+            CONSTRAINT fk_instructors_program FOREIGN KEY (program_id) REFERENCES programs (program_id) ON DELETE SET NULL
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    """)
+
+    # 4. Students Table (1:1 specialization with users)
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS students (
+            student_id VARCHAR(64) PRIMARY KEY,
+            user_id VARCHAR(64) NOT NULL UNIQUE,
+            institutional_id_number VARCHAR(64) NOT NULL UNIQUE,
+            created_at VARCHAR(64) NOT NULL,
+            CONSTRAINT fk_students_user FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    """)
+
+    # 5. Subjects Table (Master Course Catalog)
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS subjects (
+            subject_id VARCHAR(64) PRIMARY KEY,
+            subject_code VARCHAR(50) NOT NULL,
+            subject_name VARCHAR(255) NOT NULL,
+            description TEXT DEFAULT NULL,
+            units TINYINT UNSIGNED NOT NULL DEFAULT 3,
+            is_major TINYINT(1) NOT NULL DEFAULT 1,
+            program_id VARCHAR(64) NOT NULL,
+            created_at VARCHAR(64) NOT NULL,
+            CONSTRAINT fk_subjects_program FOREIGN KEY (program_id) REFERENCES programs (program_id) ON DELETE RESTRICT
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    """)
+
+    # 6. Sections Table (Class Cohorts)
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS sections (
+            section_id VARCHAR(64) PRIMARY KEY,
+            section_name VARCHAR(100) NOT NULL,
+            year_level TINYINT UNSIGNED NOT NULL DEFAULT 1,
+            program_id VARCHAR(64) NOT NULL,
+            created_at VARCHAR(64) NOT NULL,
+            CONSTRAINT fk_sections_program FOREIGN KEY (program_id) REFERENCES programs (program_id) ON DELETE CASCADE
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    """)
+
+    # 7. Enrollments Table (Student Term Membership)
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS enrollments (
+            enrollment_id VARCHAR(64) PRIMARY KEY,
+            student_id VARCHAR(64) NOT NULL,
+            section_id VARCHAR(64) NOT NULL,
+            academic_year VARCHAR(20) NOT NULL,
+            semester VARCHAR(30) NOT NULL,
+            enrollment_status VARCHAR(20) NOT NULL DEFAULT 'enrolled',
+            enrolled_at VARCHAR(64) NOT NULL,
+            UNIQUE KEY uq_enrollments_term (student_id, section_id, academic_year, semester),
+            CONSTRAINT fk_enrollments_student FOREIGN KEY (student_id) REFERENCES students (student_id) ON DELETE CASCADE,
+            CONSTRAINT fk_enrollments_section FOREIGN KEY (section_id) REFERENCES sections (section_id) ON DELETE CASCADE
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    """)
+
+    # 8. Exams Table with Comprehensive Metadata
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS exams (
-            id VARCHAR(36) PRIMARY KEY,
+            id VARCHAR(64) PRIMARY KEY,
             name VARCHAR(255) NOT NULL,
             answer_key LONGTEXT NOT NULL,
             exam_type VARCHAR(100),
@@ -186,32 +314,53 @@ def init_db():
             passing_score INT,
             instructions TEXT,
             exam_date VARCHAR(64),
+            subject_id VARCHAR(64) DEFAULT NULL,
+            instructor_id VARCHAR(64) DEFAULT NULL,
             created_at VARCHAR(64) NOT NULL
-        )
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
     """)
 
-    # 3. Submissions Table
+    # Safe additive column upgrades to exams
+    for col_def in [
+        ("subject_id", "VARCHAR(64) DEFAULT NULL"),
+        ("instructor_id", "VARCHAR(64) DEFAULT NULL"),
+    ]:
+        try:
+            cursor.execute(f"ALTER TABLE exams ADD COLUMN {col_def[0]} {col_def[1]}")
+            conn.commit()
+        except Exception:
+            pass
+
+    # 9. Submissions Table
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS submissions (
-            id VARCHAR(36) PRIMARY KEY,
-            exam_id VARCHAR(36) NOT NULL,
-            student_id VARCHAR(36),
+            id VARCHAR(64) PRIMARY KEY,
+            exam_id VARCHAR(64) NOT NULL,
+            student_id VARCHAR(64),
+            student_id_extracted VARCHAR(64) DEFAULT NULL,
             score INT NOT NULL,
             total_questions INT NOT NULL,
             answers LONGTEXT NOT NULL,
             created_at VARCHAR(64) NOT NULL,
             FOREIGN KEY (exam_id) REFERENCES exams (id) ON DELETE CASCADE
-        )
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
     """)
 
-    # 4. Seed initial default users (skip any that already exist)
+    # Safe additive column upgrades to submissions
+    try:
+        cursor.execute("ALTER TABLE submissions ADD COLUMN student_id_extracted VARCHAR(64) DEFAULT NULL")
+        conn.commit()
+    except Exception:
+        pass
+
+    # Seed initial default users
     now_iso = datetime.now(timezone.utc).isoformat()
     for user in SEED_USERS:
         cursor.execute(
             """
             INSERT IGNORE INTO users
-                (id, name, email, password, role, programme, department, status, created_at, updated_at)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                (id, name, email, password, role, programme, department, student_id, status, created_at, updated_at)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             """,
             (
                 user["id"],
@@ -219,13 +368,75 @@ def init_db():
                 (user.get("email") or "").strip().lower(),
                 user["password"],
                 user["role"],
-                user["programme"],
-                user["department"],
+                user.get("programme"),
+                user.get("department"),
+                user.get("student_id"),
                 user.get("status", "active"),
                 now_iso,
                 now_iso,
             ),
         )
+
+    # Seed Programs
+    for prog in SEED_PROGRAMS:
+        cursor.execute(
+            """
+            INSERT IGNORE INTO programs (program_id, program_code, program_name, department_name, created_at)
+            VALUES (%s, %s, %s, %s, %s)
+            """,
+            (prog["program_id"], prog["program_code"], prog["program_name"], prog["department_name"], now_iso),
+        )
+
+    # Seed Subjects
+    for subj in SEED_SUBJECTS:
+        cursor.execute(
+            """
+            INSERT IGNORE INTO subjects (subject_id, subject_code, subject_name, description, units, is_major, program_id, created_at)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+            """,
+            (
+                subj["subject_id"],
+                subj["subject_code"],
+                subj["subject_name"],
+                subj["description"],
+                subj["units"],
+                subj["is_major"],
+                subj["program_id"],
+                now_iso,
+            ),
+        )
+
+    # Seed Sections
+    for sec in SEED_SECTIONS:
+        cursor.execute(
+            """
+            INSERT IGNORE INTO sections (section_id, section_name, year_level, program_id, created_at)
+            VALUES (%s, %s, %s, %s, %s)
+            """,
+            (sec["section_id"], sec["section_name"], sec["year_level"], sec["program_id"], now_iso),
+        )
+
+    # Auto-provision Instructor Profiles for Teacher Users
+    for user in SEED_USERS:
+        if user["role"] in ["teacher", "programme-head"]:
+            instructor_id = f"inst-{user['id']}"
+            cursor.execute(
+                """
+                INSERT IGNORE INTO instructors (instructor_id, user_id, program_id, faculty_id_number, created_at)
+                VALUES (%s, %s, %s, %s, %s)
+                """,
+                (instructor_id, user["id"], "prog-bsit-001", f"FAC-{user['id'][-3:]}", now_iso),
+            )
+        elif user["role"] == "student":
+            student_id = f"stud-{user['id']}"
+            inst_id = user.get("student_id") or f"2023-000{user['id'][-1]}"
+            cursor.execute(
+                """
+                INSERT IGNORE INTO students (student_id, user_id, institutional_id_number, created_at)
+                VALUES (%s, %s, %s, %s)
+                """,
+                (student_id, user["id"], inst_id, now_iso),
+            )
 
     conn.commit()
     cursor.close()
@@ -243,19 +454,21 @@ def _row_to_exam(row: Dict[str, Any]) -> Dict[str, Any]:
         "id": row["id"],
         "name": row["name"],
         "answer_key": answer_key,
-        "exam_type": row["exam_type"],
-        "academic_year": row["academic_year"],
-        "semester": row["semester"],
-        "subject": row["subject"],
-        "course_code": row["course_code"],
-        "section": row["section"],
-        "program": row["program"],
-        "instructor_name": row["instructor_name"],
-        "num_items": row["num_items"] if row["num_items"] is not None else 50,
-        "passing_score": row["passing_score"],
-        "instructions": row["instructions"],
-        "exam_date": row["exam_date"],
-        "created_at": row["created_at"],
+        "exam_type": row.get("exam_type"),
+        "academic_year": row.get("academic_year"),
+        "semester": row.get("semester"),
+        "subject": row.get("subject"),
+        "course_code": row.get("course_code"),
+        "section": row.get("section"),
+        "program": row.get("program"),
+        "instructor_name": row.get("instructor_name"),
+        "subject_id": row.get("subject_id"),
+        "instructor_id": row.get("instructor_id"),
+        "num_items": row["num_items"] if row.get("num_items") is not None else 50,
+        "passing_score": row.get("passing_score"),
+        "instructions": row.get("instructions"),
+        "exam_date": row.get("exam_date"),
+        "created_at": row.get("created_at"),
     }
 
 
@@ -313,6 +526,21 @@ def register_user(
             now_iso,
         ),
     )
+
+    # If student, link student profile
+    if role.strip().lower() == "student" and student_id:
+        stud_profile_id = str(uuid.uuid4())
+        try:
+            cursor.execute(
+                """
+                INSERT IGNORE INTO students (student_id, user_id, institutional_id_number, created_at)
+                VALUES (%s, %s, %s, %s)
+                """,
+                (stud_profile_id, user_id, student_id.strip(), now_iso),
+            )
+        except Exception:
+            pass
+
     conn.commit()
     cursor.close()
     conn.close()
@@ -360,6 +588,29 @@ def update_user_status(user_id: str, new_status: str) -> bool:
         (new_status, now_iso, user_id),
     )
     updated = cursor.rowcount > 0
+    if updated and new_status == "active":
+        cursor.execute("SELECT id, role, programme, student_id FROM users WHERE id = %s", (user_id,))
+        u = cursor.fetchone()
+        if u:
+            if u["role"] in ["teacher", "programme-head"]:
+                inst_id = f"inst-{uuid.uuid4().hex[:8]}"
+                cursor.execute(
+                    """
+                    INSERT IGNORE INTO instructors (instructor_id, user_id, program_id, faculty_id_number, created_at)
+                    VALUES (%s, %s, (SELECT program_id FROM programs WHERE program_code = %s LIMIT 1), %s, %s)
+                    """,
+                    (inst_id, user_id, u.get("programme") or "BSIT", f"FAC-{user_id[:6].upper()}", now_iso),
+                )
+            elif u["role"] == "student":
+                st_id = f"stud-{uuid.uuid4().hex[:8]}"
+                num = u.get("student_id") or f"STU-{user_id[:6].upper()}"
+                cursor.execute(
+                    """
+                    INSERT IGNORE INTO students (student_id, user_id, institutional_id_number, created_at)
+                    VALUES (%s, %s, %s, %s)
+                    """,
+                    (st_id, user_id, num, now_iso),
+                )
     conn.commit()
     cursor.close()
     conn.close()
@@ -400,6 +651,20 @@ def create_user_account(
             now_iso,
         ),
     )
+
+    # Link profile if student
+    if role.strip().lower() == "student" and student_id:
+        try:
+            cursor.execute(
+                """
+                INSERT IGNORE INTO students (student_id, user_id, institutional_id_number, created_at)
+                VALUES (%s, %s, %s, %s)
+                """,
+                (str(uuid.uuid4()), user_id, student_id.strip(), now_iso),
+            )
+        except Exception:
+            pass
+
     conn.commit()
     cursor.close()
     conn.close()
@@ -478,6 +743,269 @@ def authenticate_user(email: str, password: str) -> Dict[str, Any]:
 
 
 # ==========================================
+# Academic Master Operations (Programs, Subjects, Sections, Enrollments)
+# ==========================================
+
+def list_programs() -> List[Dict[str, Any]]:
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT program_id, program_code, program_name, department_name, created_at FROM programs ORDER BY program_code ASC")
+    rows = cursor.fetchall()
+    cursor.close()
+    conn.close()
+    return list(rows)
+
+
+def create_program(program_code: str, program_name: str, department_name: Optional[str] = None) -> Dict[str, Any]:
+    program_id = f"prog-{program_code.strip().lower()}-{uuid.uuid4().hex[:6]}"
+    now_iso = datetime.now(timezone.utc).isoformat()
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute(
+        """
+        INSERT INTO programs (program_id, program_code, program_name, department_name, created_at)
+        VALUES (%s, %s, %s, %s, %s)
+        """,
+        (program_id, program_code.strip().upper(), program_name.strip(), department_name.strip() if department_name else None, now_iso),
+    )
+    conn.commit()
+    cursor.close()
+    conn.close()
+    return {
+        "program_id": program_id,
+        "program_code": program_code.strip().upper(),
+        "program_name": program_name.strip(),
+        "department_name": department_name,
+        "created_at": now_iso,
+    }
+
+
+def list_subjects(program_id: Optional[str] = None) -> List[Dict[str, Any]]:
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    if program_id:
+        cursor.execute(
+            """
+            SELECT s.subject_id, s.subject_code, s.subject_name, s.description, s.units, s.is_major, s.program_id, p.program_code, s.created_at
+            FROM subjects s
+            LEFT JOIN programs p ON s.program_id = p.program_id
+            WHERE s.program_id = %s
+            ORDER BY s.subject_code ASC
+            """,
+            (program_id,),
+        )
+    else:
+        cursor.execute(
+            """
+            SELECT s.subject_id, s.subject_code, s.subject_name, s.description, s.units, s.is_major, s.program_id, p.program_code, s.created_at
+            FROM subjects s
+            LEFT JOIN programs p ON s.program_id = p.program_id
+            ORDER BY s.subject_code ASC
+            """
+        )
+    rows = cursor.fetchall()
+    cursor.close()
+    conn.close()
+    return list(rows)
+
+
+def create_subject(
+    subject_code: str,
+    subject_name: str,
+    program_id: str,
+    description: Optional[str] = None,
+    units: int = 3,
+    is_major: int = 1,
+) -> Dict[str, Any]:
+    subject_id = f"subj-{subject_code.strip().lower()}-{uuid.uuid4().hex[:6]}"
+    now_iso = datetime.now(timezone.utc).isoformat()
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute(
+        """
+        INSERT INTO subjects (subject_id, subject_code, subject_name, description, units, is_major, program_id, created_at)
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+        """,
+        (subject_id, subject_code.strip().upper(), subject_name.strip(), description, units, is_major, program_id, now_iso),
+    )
+    conn.commit()
+    cursor.close()
+    conn.close()
+    return {
+        "subject_id": subject_id,
+        "subject_code": subject_code.strip().upper(),
+        "subject_name": subject_name.strip(),
+        "description": description,
+        "units": units,
+        "is_major": is_major,
+        "program_id": program_id,
+        "created_at": now_iso,
+    }
+
+
+def list_sections(program_id: Optional[str] = None) -> List[Dict[str, Any]]:
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    if program_id:
+        cursor.execute(
+            """
+            SELECT s.section_id, s.section_name, s.year_level, s.program_id, p.program_code, s.created_at
+            FROM sections s
+            LEFT JOIN programs p ON s.program_id = p.program_id
+            WHERE s.program_id = %s
+            ORDER BY s.year_level ASC, s.section_name ASC
+            """,
+            (program_id,),
+        )
+    else:
+        cursor.execute(
+            """
+            SELECT s.section_id, s.section_name, s.year_level, s.program_id, p.program_code, s.created_at
+            FROM sections s
+            LEFT JOIN programs p ON s.program_id = p.program_id
+            ORDER BY s.year_level ASC, s.section_name ASC
+            """
+        )
+    rows = cursor.fetchall()
+    cursor.close()
+    conn.close()
+    return list(rows)
+
+
+def create_section(section_name: str, year_level: int, program_id: str) -> Dict[str, Any]:
+    section_id = f"sec-{section_name.strip().lower().replace(' ', '-')}-{uuid.uuid4().hex[:6]}"
+    now_iso = datetime.now(timezone.utc).isoformat()
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute(
+        """
+        INSERT INTO sections (section_id, section_name, year_level, program_id, created_at)
+        VALUES (%s, %s, %s, %s, %s)
+        """,
+        (section_id, section_name.strip(), year_level, program_id, now_iso),
+    )
+    conn.commit()
+    cursor.close()
+    conn.close()
+    return {
+        "section_id": section_id,
+        "section_name": section_name.strip(),
+        "year_level": year_level,
+        "program_id": program_id,
+        "created_at": now_iso,
+    }
+
+
+def list_enrollments(
+    section_id: Optional[str] = None,
+    academic_year: Optional[str] = None,
+    semester: Optional[str] = None,
+) -> List[Dict[str, Any]]:
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    query = """
+        SELECT e.enrollment_id, e.student_id, e.section_id, e.academic_year, e.semester, e.enrollment_status, e.enrolled_at,
+               st.institutional_id_number, u.name AS student_name, u.email AS student_email,
+               sec.section_name, p.program_code
+        FROM enrollments e
+        JOIN students st ON e.student_id = st.student_id
+        JOIN users u ON st.user_id = u.id
+        JOIN sections sec ON e.section_id = sec.section_id
+        JOIN programs p ON sec.program_id = p.program_id
+        WHERE 1=1
+    """
+    params = []
+    if section_id:
+        query += " AND e.section_id = %s"
+        params.append(section_id)
+    if academic_year:
+        query += " AND e.academic_year = %s"
+        params.append(academic_year)
+    if semester:
+        query += " AND e.semester = %s"
+        params.append(semester)
+
+    query += " ORDER BY u.name ASC"
+    cursor.execute(query, tuple(params))
+    rows = cursor.fetchall()
+    cursor.close()
+    conn.close()
+    return list(rows)
+
+
+def bulk_import_enrollments(
+    section_id: str,
+    academic_year: str,
+    semester: str,
+    students_list: List[Dict[str, str]],
+) -> Dict[str, Any]:
+    """
+    Imports a class roster into the enrollments table.
+    Auto-provisions placeholder Student/User accounts if the student is not yet registered.
+    """
+    now_iso = datetime.now(timezone.utc).isoformat()
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    enrolled_count = 0
+    for s in students_list:
+        inst_id = (s.get("student_id") or "").strip()
+        name = (s.get("name") or "").strip()
+        email = (s.get("email") or f"{inst_id.lower().replace('-', '')}@srcb.edu.ph").strip().lower()
+
+        if not inst_id:
+            continue
+
+        # 1. Find or create student
+        cursor.execute("SELECT student_id FROM students WHERE institutional_id_number = %s", (inst_id,))
+        stud_row = cursor.fetchone()
+
+        if stud_row:
+            student_db_id = stud_row["student_id"]
+        else:
+            # Check user by email or create placeholder
+            cursor.execute("SELECT id FROM users WHERE email = %s", (email,))
+            user_row = cursor.fetchone()
+            if user_row:
+                user_id = user_row["id"]
+            else:
+                user_id = str(uuid.uuid4())
+                cursor.execute(
+                    """
+                    INSERT INTO users (id, name, email, password, role, student_id, status, created_at, updated_at)
+                    VALUES (%s, %s, %s, %s, 'student', %s, 'active', %s, %s)
+                    """,
+                    (user_id, name or f"Student {inst_id}", email, "Student@2025", inst_id, now_iso, now_iso),
+                )
+
+            student_db_id = str(uuid.uuid4())
+            cursor.execute(
+                """
+                INSERT INTO students (student_id, user_id, institutional_id_number, created_at)
+                VALUES (%s, %s, %s, %s)
+                """,
+                (student_db_id, user_id, inst_id, now_iso),
+            )
+
+        # 2. Insert enrollment record
+        enrollment_id = str(uuid.uuid4())
+        cursor.execute(
+            """
+            INSERT INTO enrollments (enrollment_id, student_id, section_id, academic_year, semester, enrollment_status, enrolled_at)
+            VALUES (%s, %s, %s, %s, %s, 'enrolled', %s)
+            ON DUPLICATE KEY UPDATE enrollment_status = 'enrolled'
+            """,
+            (enrollment_id, student_db_id, section_id, academic_year, semester, now_iso),
+        )
+        enrolled_count += 1
+
+    conn.commit()
+    cursor.close()
+    conn.close()
+    return {"status": "success", "enrolled_count": enrolled_count}
+
+
+# ==========================================
 # Exam Operations
 # ==========================================
 
@@ -497,6 +1025,8 @@ def save_exam(
     passing_score: Optional[int] = None,
     instructions: Optional[str] = None,
     exam_date: Optional[str] = None,
+    subject_id: Optional[str] = None,
+    instructor_id: Optional[str] = None,
 ) -> Dict[str, Any]:
     created_at = datetime.now(timezone.utc).isoformat()
     answer_key_str = json.dumps(answer_key)
@@ -510,8 +1040,9 @@ def save_exam(
             exam_type, academic_year, semester, subject, course_code,
             section, program, instructor_name,
             num_items, passing_score, instructions, exam_date,
+            subject_id, instructor_id,
             created_at
-        ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+        ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
         ON DUPLICATE KEY UPDATE
             name = VALUES(name),
             answer_key = VALUES(answer_key),
@@ -526,7 +1057,9 @@ def save_exam(
             num_items = VALUES(num_items),
             passing_score = VALUES(passing_score),
             instructions = VALUES(instructions),
-            exam_date = VALUES(exam_date)
+            exam_date = VALUES(exam_date),
+            subject_id = VALUES(subject_id),
+            instructor_id = VALUES(instructor_id)
         """,
         (
             exam_id,
@@ -544,6 +1077,8 @@ def save_exam(
             passing_score,
             instructions,
             exam_date,
+            subject_id,
+            instructor_id,
             created_at,
         ),
     )
@@ -563,6 +1098,8 @@ def save_exam(
         "section": section,
         "program": program,
         "instructor_name": instructor_name,
+        "subject_id": subject_id,
+        "instructor_id": instructor_id,
         "num_items": num_items,
         "passing_score": passing_score,
         "instructions": instructions,
@@ -587,6 +1124,8 @@ def update_exam(
     passing_score: Optional[int] = None,
     instructions: Optional[str] = None,
     exam_date: Optional[str] = None,
+    subject_id: Optional[str] = None,
+    instructor_id: Optional[str] = None,
 ) -> bool:
     conn = get_db_connection()
     cursor = conn.cursor()
@@ -608,7 +1147,9 @@ def update_exam(
             num_items = COALESCE(%s, num_items),
             passing_score = COALESCE(%s, passing_score),
             instructions = COALESCE(%s, instructions),
-            exam_date = COALESCE(%s, exam_date)
+            exam_date = COALESCE(%s, exam_date),
+            subject_id = COALESCE(%s, subject_id),
+            instructor_id = COALESCE(%s, instructor_id)
         WHERE id = %s
         """,
         (
@@ -626,6 +1167,8 @@ def update_exam(
             passing_score,
             instructions,
             exam_date,
+            subject_id,
+            instructor_id,
             exam_id,
         ),
     )
@@ -643,7 +1186,7 @@ def get_exam(exam_id: str) -> Optional[Dict[str, Any]]:
         """
         SELECT id, name, answer_key,
                exam_type, academic_year, semester, subject, course_code,
-               section, program, instructor_name,
+               section, program, instructor_name, subject_id, instructor_id,
                num_items, passing_score, instructions, exam_date,
                created_at
         FROM exams WHERE id = %s
@@ -663,7 +1206,7 @@ def list_exams() -> List[Dict[str, Any]]:
         """
         SELECT id, name, answer_key,
                exam_type, academic_year, semester, subject, course_code,
-               section, program, instructor_name,
+               section, program, instructor_name, subject_id, instructor_id,
                num_items, passing_score, instructions, exam_date,
                created_at
         FROM exams ORDER BY created_at DESC
@@ -698,6 +1241,7 @@ def save_submission(
     score: int,
     total_questions: int,
     answers: Dict[str, Any],
+    student_id_extracted: Optional[str] = None,
 ) -> Dict[str, Any]:
     created_at = datetime.now(timezone.utc).isoformat()
     answers_str = json.dumps(answers)
@@ -706,10 +1250,10 @@ def save_submission(
     cursor = conn.cursor()
     cursor.execute(
         """
-        INSERT INTO submissions (id, exam_id, student_id, score, total_questions, answers, created_at)
-        VALUES (%s, %s, %s, %s, %s, %s, %s)
+        INSERT INTO submissions (id, exam_id, student_id, student_id_extracted, score, total_questions, answers, created_at)
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
         """,
-        (submission_id, exam_id, student_id, score, total_questions, answers_str, created_at),
+        (submission_id, exam_id, student_id, student_id_extracted or student_id, score, total_questions, answers_str, created_at),
     )
     conn.commit()
     cursor.close()
@@ -719,6 +1263,7 @@ def save_submission(
         "id": submission_id,
         "exam_id": exam_id,
         "student_id": student_id,
+        "student_id_extracted": student_id_extracted or student_id,
         "score": score,
         "total_questions": total_questions,
         "answers": answers,
@@ -731,13 +1276,13 @@ def list_submissions(exam_id: Optional[str] = None) -> List[Dict[str, Any]]:
     cursor = conn.cursor()
     if exam_id:
         cursor.execute(
-            "SELECT id, exam_id, student_id, score, total_questions, answers, created_at "
+            "SELECT id, exam_id, student_id, student_id_extracted, score, total_questions, answers, created_at "
             "FROM submissions WHERE exam_id = %s ORDER BY created_at DESC",
             (exam_id,),
         )
     else:
         cursor.execute(
-            "SELECT id, exam_id, student_id, score, total_questions, answers, created_at "
+            "SELECT id, exam_id, student_id, student_id_extracted, score, total_questions, answers, created_at "
             "FROM submissions ORDER BY created_at DESC"
         )
     rows = cursor.fetchall()
@@ -755,6 +1300,7 @@ def list_submissions(exam_id: Optional[str] = None) -> List[Dict[str, Any]]:
                 "id": r["id"],
                 "exam_id": r["exam_id"],
                 "student_id": r["student_id"],
+                "student_id_extracted": r.get("student_id_extracted") or r["student_id"],
                 "score": r["score"],
                 "total_questions": r["total_questions"],
                 "answers": parsed_answers,
@@ -801,11 +1347,450 @@ def get_dashboard_summary() -> Dict[str, Any]:
         "total_students": int(total_students),
         "total_teachers": int(total_teachers),
         "total_exams": int(total_exams),
-        "average_score": avg_score,
+        "average_score": float(avg_score),
         "total_submissions": int(total_submissions),
     }
 
 
-if __name__ == "__main__":
-    init_db()
-    print("Database tables initialized successfully.")
+# ==========================================
+# Academic Management (Conceptual ERD Alignment)
+# ==========================================
+
+def list_programs() -> List[Dict[str, Any]]:
+    """List all academic programs."""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM programs ORDER BY program_code ASC")
+    rows = cursor.fetchall()
+    cursor.close()
+    conn.close()
+    return [
+        {
+            "id": r["program_id"],
+            "program_id": r["program_id"],
+            "program_code": r["program_code"],
+            "program_name": r["program_name"],
+            "department_name": r.get("department_name"),
+            "created_at": r["created_at"],
+        }
+        for r in rows
+    ]
+
+
+def list_instructors(program_id: Optional[str] = None) -> List[Dict[str, Any]]:
+    """List all instructors with profile and assigned program information."""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    query = """
+        SELECT i.instructor_id, i.user_id, i.faculty_id_number, i.created_at,
+               u.name, u.email, u.role, u.department,
+               p.program_id, p.program_code, p.program_name
+        FROM instructors i
+        JOIN users u ON i.user_id = u.id
+        LEFT JOIN programs p ON i.program_id = p.program_id
+        WHERE u.status = 'active'
+    """
+    params = []
+    if program_id:
+        query += " AND (i.program_id = %s OR i.program_id IS NULL)"
+        params.append(program_id)
+    query += " ORDER BY u.name ASC"
+    cursor.execute(query, tuple(params))
+    rows = cursor.fetchall()
+    cursor.close()
+    conn.close()
+    return [
+        {
+            "id": r["instructor_id"],
+            "instructor_id": r["instructor_id"],
+            "user_id": r["user_id"],
+            "name": r["name"],
+            "email": r["email"],
+            "role": r["role"],
+            "department": r["department"],
+            "program_id": r["program_id"],
+            "program_code": r["program_code"],
+            "program_name": r["program_name"],
+            "faculty_id_number": r["faculty_id_number"],
+            "created_at": r["created_at"],
+        }
+        for r in rows
+    ]
+
+
+def create_program(
+    program_code: str,
+    program_name: str,
+    department_name: Optional[str] = None,
+) -> Dict[str, Any]:
+    """Create a new academic program."""
+    program_id = f"prog-{uuid.uuid4().hex[:8]}"
+    now_iso = datetime.now(timezone.utc).isoformat()
+
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute(
+        """
+        INSERT INTO programs (program_id, program_code, program_name, department_name, created_at)
+        VALUES (%s, %s, %s, %s, %s)
+        """,
+        (program_id, program_code.strip().upper(), program_name.strip(), department_name.strip() if department_name else None, now_iso),
+    )
+    conn.commit()
+    cursor.close()
+    conn.close()
+
+    return {
+        "id": program_id,
+        "program_id": program_id,
+        "program_code": program_code.strip().upper(),
+        "program_name": program_name.strip(),
+        "department_name": department_name.strip() if department_name else None,
+        "created_at": now_iso,
+    }
+
+
+def list_subjects(program_id: Optional[str] = None) -> List[Dict[str, Any]]:
+    """List all subjects, optionally filtered by program_id."""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    if program_id:
+        cursor.execute(
+            """
+            SELECT s.*, p.program_code, p.program_name
+            FROM subjects s
+            LEFT JOIN programs p ON s.program_id = p.program_id
+            WHERE s.program_id = %s
+            ORDER BY s.subject_code ASC
+            """,
+            (program_id,),
+        )
+    else:
+        cursor.execute(
+            """
+            SELECT s.*, p.program_code, p.program_name
+            FROM subjects s
+            LEFT JOIN programs p ON s.program_id = p.program_id
+            ORDER BY s.subject_code ASC
+            """
+        )
+    rows = cursor.fetchall()
+    cursor.close()
+    conn.close()
+
+    return [
+        {
+            "id": r["subject_id"],
+            "subject_id": r["subject_id"],
+            "subject_code": r["subject_code"],
+            "subject_name": r["subject_name"],
+            "description": r.get("description"),
+            "units": r["units"],
+            "is_major": r["is_major"],
+            "program_id": r["program_id"],
+            "program_code": r.get("program_code"),
+            "program_name": r.get("program_name"),
+            "created_at": r["created_at"],
+        }
+        for r in rows
+    ]
+
+
+def create_subject(
+    subject_code: str,
+    subject_name: str,
+    program_id: str,
+    description: Optional[str] = None,
+    units: int = 3,
+    is_major: int = 1,
+) -> Dict[str, Any]:
+    """Create a new subject in the course catalog."""
+    subject_id = f"subj-{uuid.uuid4().hex[:8]}"
+    now_iso = datetime.now(timezone.utc).isoformat()
+
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute(
+        """
+        INSERT INTO subjects (subject_id, subject_code, subject_name, description, units, is_major, program_id, created_at)
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+        """,
+        (
+            subject_id,
+            subject_code.strip().upper(),
+            subject_name.strip(),
+            description.strip() if description else None,
+            units,
+            is_major,
+            program_id,
+            now_iso,
+        ),
+    )
+    conn.commit()
+    cursor.close()
+    conn.close()
+
+    return {
+        "id": subject_id,
+        "subject_id": subject_id,
+        "subject_code": subject_code.strip().upper(),
+        "subject_name": subject_name.strip(),
+        "description": description.strip() if description else None,
+        "units": units,
+        "is_major": is_major,
+        "program_id": program_id,
+        "created_at": now_iso,
+    }
+
+
+def list_sections(program_id: Optional[str] = None) -> List[Dict[str, Any]]:
+    """List all class sections, optionally filtered by program_id."""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    if program_id:
+        cursor.execute(
+            """
+            SELECT sec.*, p.program_code, p.program_name
+            FROM sections sec
+            LEFT JOIN programs p ON sec.program_id = p.program_id
+            WHERE sec.program_id = %s
+            ORDER BY sec.year_level ASC, sec.section_name ASC
+            """,
+            (program_id,),
+        )
+    else:
+        cursor.execute(
+            """
+            SELECT sec.*, p.program_code, p.program_name
+            FROM sections sec
+            LEFT JOIN programs p ON sec.program_id = p.program_id
+            ORDER BY sec.year_level ASC, sec.section_name ASC
+            """
+        )
+    rows = cursor.fetchall()
+    cursor.close()
+    conn.close()
+
+    return [
+        {
+            "id": r["section_id"],
+            "section_id": r["section_id"],
+            "section_name": r["section_name"],
+            "year_level": r["year_level"],
+            "program_id": r["program_id"],
+            "program_code": r.get("program_code"),
+            "program_name": r.get("program_name"),
+            "created_at": r["created_at"],
+        }
+        for r in rows
+    ]
+
+
+def create_section(
+    section_name: str,
+    year_level: int,
+    program_id: str,
+) -> Dict[str, Any]:
+    """Create a new section under a program."""
+    section_id = f"sec-{uuid.uuid4().hex[:8]}"
+    now_iso = datetime.now(timezone.utc).isoformat()
+
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute(
+        """
+        INSERT INTO sections (section_id, section_name, year_level, program_id, created_at)
+        VALUES (%s, %s, %s, %s, %s)
+        """,
+        (section_id, section_name.strip(), year_level, program_id, now_iso),
+    )
+    conn.commit()
+    cursor.close()
+    conn.close()
+
+    return {
+        "id": section_id,
+        "section_id": section_id,
+        "section_name": section_name.strip(),
+        "year_level": year_level,
+        "program_id": program_id,
+        "created_at": now_iso,
+    }
+
+
+def list_enrollments(
+    section_id: Optional[str] = None,
+    academic_year: Optional[str] = None,
+    semester: Optional[str] = None,
+) -> List[Dict[str, Any]]:
+    """List student enrollments with student profile and section details."""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    query = """
+        SELECT e.*, s.institutional_id_number, u.name AS student_name, u.email AS student_email,
+               sec.section_name, sec.year_level, p.program_code, p.program_name
+        FROM enrollments e
+        JOIN students s ON e.student_id = s.student_id
+        JOIN users u ON s.user_id = u.id
+        JOIN sections sec ON e.section_id = sec.section_id
+        JOIN programs p ON sec.program_id = p.program_id
+        WHERE 1=1
+    """
+    params = []
+    if section_id:
+        query += " AND e.section_id = %s"
+        params.append(section_id)
+    if academic_year:
+        query += " AND e.academic_year = %s"
+        params.append(academic_year)
+    if semester:
+        query += " AND e.semester = %s"
+        params.append(semester)
+
+    query += " ORDER BY u.name ASC"
+
+    cursor.execute(query, tuple(params))
+    rows = cursor.fetchall()
+    cursor.close()
+    conn.close()
+
+    return [
+        {
+            "id": r["enrollment_id"],
+            "enrollment_id": r["enrollment_id"],
+            "student_id": r["student_id"],
+            "section_id": r["section_id"],
+            "academic_year": r["academic_year"],
+            "semester": r["semester"],
+            "enrollment_status": r["enrollment_status"],
+            "created_at": r["enrolled_at"],
+            "enrolled_at": r["enrolled_at"],
+            "student_number": r["institutional_id_number"],
+            "institutional_id_number": r["institutional_id_number"],
+            "full_name": r["student_name"],
+            "student_name": r["student_name"],
+            "email": r["student_email"],
+            "student_email": r["student_email"],
+            "section_name": r["section_name"],
+            "year_level": r["year_level"],
+            "program_code": r["program_code"],
+            "program_name": r["program_name"],
+        }
+        for r in rows
+    ]
+
+
+def bulk_import_enrollments(
+    section_id: str,
+    *args,
+    **kwargs,
+) -> Dict[str, Any]:
+    """
+    Bulk enrolls students into a section.
+    Supports signatures:
+      bulk_import_enrollments(section_id, students, academic_year, semester)
+      bulk_import_enrollments(section_id, academic_year, semester, students)
+    """
+    students = kwargs.get("students")
+    academic_year = kwargs.get("academic_year", "2025-2026")
+    semester = kwargs.get("semester", "1st Semester")
+
+    if args:
+        if len(args) == 1 and isinstance(args[0], list):
+            students = args[0]
+        elif len(args) == 3 and isinstance(args[0], str) and isinstance(args[2], list):
+            academic_year, semester, students = args[0], args[1], args[2]
+        elif len(args) == 3 and isinstance(args[0], list):
+            students, academic_year, semester = args[0], args[1], args[2]
+        elif len(args) == 2 and isinstance(args[0], list):
+            students, academic_year = args[0], args[1]
+        elif len(args) == 2 and isinstance(args[1], list):
+            academic_year, students = args[0], args[1]
+
+    if students is None:
+        students = []
+
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    # Validate section exists
+    cursor.execute("SELECT section_id, program_id FROM sections WHERE section_id = %s", (section_id,))
+    sec_row = cursor.fetchone()
+    if not sec_row:
+        cursor.close()
+        conn.close()
+        raise ValueError(f"Section {section_id} does not exist.")
+
+    enrolled_count = 0
+    created_students = 0
+    errors = []
+    now_iso = datetime.now(timezone.utc).isoformat()
+
+    for idx, item in enumerate(students):
+        student_id_num = (item.get("student_id") or item.get("student_number") or "").strip()
+        name = (item.get("name") or item.get("full_name") or "").strip()
+        email = (item.get("email") or f"{student_id_num.lower().replace('-', '')}@school.edu.ph").strip().lower()
+
+        if not student_id_num or not name:
+            errors.append(f"Row {idx+1}: Missing student_id or name.")
+            continue
+
+        try:
+            # 1. Find existing student record
+            cursor.execute("SELECT student_id, user_id FROM students WHERE institutional_id_number = %s", (student_id_num,))
+            st_row = cursor.fetchone()
+
+            if not st_row:
+                # Check if user with this email or student_id exists
+                cursor.execute("SELECT id FROM users WHERE email = %s OR student_id = %s", (email, student_id_num))
+                u_row = cursor.fetchone()
+
+                if u_row:
+                    user_id = u_row["id"]
+                else:
+                    user_id = str(uuid.uuid4())
+                    cursor.execute(
+                        """
+                        INSERT INTO users (id, name, email, password, role, programme, student_id, status, created_at, updated_at)
+                        VALUES (%s, %s, %s, %s, 'student', 'BSIT', %s, 'active', %s, %s)
+                        """,
+                        (user_id, name, email, "Student@2025", student_id_num, now_iso, now_iso),
+                    )
+
+                student_pk = f"stud-{uuid.uuid4().hex[:8]}"
+                cursor.execute(
+                    """
+                    INSERT INTO students (student_id, user_id, institutional_id_number, created_at)
+                    VALUES (%s, %s, %s, %s)
+                    """,
+                    (student_pk, user_id, student_id_num, now_iso),
+                )
+                created_students += 1
+            else:
+                student_pk = st_row["student_id"]
+
+            # 2. Insert enrollment record (ignoring duplicate)
+            enrollment_id = f"enr-{uuid.uuid4().hex[:8]}"
+            cursor.execute(
+                """
+                INSERT INTO enrollments (enrollment_id, student_id, section_id, academic_year, semester, enrollment_status, enrolled_at)
+                VALUES (%s, %s, %s, %s, %s, 'enrolled', %s)
+                ON DUPLICATE KEY UPDATE enrollment_status = 'enrolled'
+                """,
+                (enrollment_id, student_pk, section_id, academic_year, semester, now_iso),
+            )
+            enrolled_count += 1
+        except Exception as e:
+            errors.append(f"Row {idx+1} ({student_id_num}): {str(e)}")
+
+    conn.commit()
+    cursor.close()
+    conn.close()
+
+    return {
+        "total": len(students),
+        "enrolled": enrolled_count,
+        "created_students": created_students,
+        "errors": errors,
+    }

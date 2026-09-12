@@ -11,8 +11,8 @@ import {
   RotateCcw,
   CheckSquare,
 } from "lucide-react";
-import type { Exam, AuthUser } from "../../types";
-import { extractSheet } from "../../api";
+import type { Exam, AuthUser, Program, Subject, Section, Instructor } from "../../types";
+import { extractSheet, fetchPrograms, fetchSubjects, fetchSections, fetchInstructors } from "../../api";
 
 interface ExamCreationModalProps {
   isOpen: boolean;
@@ -49,6 +49,14 @@ export const ExamCreationModal: React.FC<ExamCreationModalProps> = ({
   const [instructions, setInstructions] = useState("");
   const [examDate, setExamDate] = useState("");
 
+  // Relational Foreign Keys & Catalog Lists
+  const [programsList, setProgramsList] = useState<Program[]>([]);
+  const [subjectsList, setSubjectsList] = useState<Subject[]>([]);
+  const [sectionsList, setSectionsList] = useState<Section[]>([]);
+  const [instructorsList, setInstructorsList] = useState<Instructor[]>([]);
+  const [subjectId, setSubjectId] = useState<string>("");
+  const [instructorId, setInstructorId] = useState<string>("");
+
   // Answer Key State
   const [answerKey, setAnswerKey] = useState<Record<string, string>>({});
   const [keyUploadLoading, setKeyUploadLoading] = useState(false);
@@ -58,6 +66,44 @@ export const ExamCreationModal: React.FC<ExamCreationModalProps> = ({
   const keyScanInputRef = useRef<HTMLInputElement>(null);
 
   const isEditMode = Boolean(editingExam);
+
+  // Load master catalog lists when modal opens
+  useEffect(() => {
+    if (!isOpen) return;
+    fetchPrograms()
+      .then((progs) => setProgramsList(progs || []))
+      .catch(() => {});
+    fetchInstructors()
+      .then((insts) => setInstructorsList(insts || []))
+      .catch(() => {});
+  }, [isOpen]);
+
+  // Load subjects and sections filtered by the active program
+  useEffect(() => {
+    if (!isOpen) return;
+    const matchProg = programsList.find(
+      (p) =>
+        p.program_code.toUpperCase() === program.trim().toUpperCase() ||
+        p.id === program ||
+        p.program_name.toLowerCase() === program.trim().toLowerCase(),
+    );
+    const progId = matchProg?.id;
+    if (progId) {
+      fetchSubjects(progId)
+        .then((subs) => setSubjectsList(subs || []))
+        .catch(() => {});
+      fetchSections(progId)
+        .then((secs) => setSectionsList(secs || []))
+        .catch(() => {});
+    } else {
+      fetchSubjects()
+        .then((subs) => setSubjectsList(subs || []))
+        .catch(() => {});
+      fetchSections()
+        .then((secs) => setSectionsList(secs || []))
+        .catch(() => {});
+    }
+  }, [isOpen, program, programsList]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -71,6 +117,8 @@ export const ExamCreationModal: React.FC<ExamCreationModalProps> = ({
       setCourseCode(editingExam.course_code ?? "");
       setSection(editingExam.section ?? "");
       setProgram(editingExam.program ?? "BSIT");
+      setSubjectId(editingExam.subject_id ?? "");
+      setInstructorId(editingExam.instructor_id ?? "");
       setInstructorName(
         editingExam.instructor_name ??
           currentUser?.name ??
@@ -93,6 +141,8 @@ export const ExamCreationModal: React.FC<ExamCreationModalProps> = ({
     setCourseCode("");
     setSection("");
     setProgram("BSIT");
+    setSubjectId("");
+    setInstructorId("");
     setInstructorName(currentUser?.name ?? "Prof. Faculty Member");
     setNumItems(50);
     setPassingScore("");
@@ -218,6 +268,8 @@ export const ExamCreationModal: React.FC<ExamCreationModalProps> = ({
         section: section.trim(),
         program: program.trim(),
         instructor_name: instructorName.trim(),
+        subject_id: subjectId || undefined,
+        instructor_id: instructorId || undefined,
         num_items: Number(numItems),
         passing_score: passingScore ? Number(passingScore) : undefined,
         instructions: instructions.trim() || undefined,
@@ -470,13 +522,44 @@ export const ExamCreationModal: React.FC<ExamCreationModalProps> = ({
                     Course / Subject Title{" "}
                     <span style={{ color: "#ef4444" }}>*</span>
                   </label>
+                  {subjectsList.length > 0 && (
+                    <select
+                      className="form-input"
+                      style={{ background: "#ffffff", border: "1px solid #cbd5e1", color: "#0f172a", marginBottom: "6px" }}
+                      value={subjectId || (subjectsList.some((s) => s.subject_name === subject) ? subjectsList.find((s) => s.subject_name === subject)?.id : "__custom__")}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        if (val === "__custom__") {
+                          setSubjectId("");
+                        } else {
+                          const subObj = subjectsList.find((s) => s.id === val);
+                          if (subObj) {
+                            setSubjectId(subObj.id);
+                            setSubject(subObj.subject_name);
+                            setCourseCode(subObj.subject_code);
+                          }
+                        }
+                      }}
+                    >
+                      <option value="__custom__">-- Select Subject from Catalog or Type Below --</option>
+                      {subjectsList.map((s) => (
+                        <option key={s.id} value={s.id}>
+                          [{s.subject_code}] {s.subject_name} ({s.units} units)
+                        </option>
+                      ))}
+                    </select>
+                  )}
                   <input
                     type="text"
                     className="form-input"
                     placeholder="e.g. Web Systems and Technologies 1"
                     style={{ background: "#ffffff", border: "1px solid #cbd5e1", color: "#0f172a" }}
                     value={subject}
-                    onChange={(e) => setSubject(e.target.value)}
+                    onChange={(e) => {
+                      setSubject(e.target.value);
+                      const match = subjectsList.find((s) => s.subject_name.toLowerCase() === e.target.value.trim().toLowerCase());
+                      setSubjectId(match?.id || "");
+                    }}
                   />
                   {errors.subject && (
                     <span
@@ -503,7 +586,14 @@ export const ExamCreationModal: React.FC<ExamCreationModalProps> = ({
                     placeholder="e.g. ITP 305"
                     style={{ background: "#ffffff", border: "1px solid #cbd5e1", color: "#0f172a" }}
                     value={courseCode}
-                    onChange={(e) => setCourseCode(e.target.value)}
+                    onChange={(e) => {
+                      setCourseCode(e.target.value);
+                      const match = subjectsList.find((s) => s.subject_code.toLowerCase() === e.target.value.trim().toLowerCase());
+                      if (match) {
+                        setSubjectId(match.id);
+                        if (!subject) setSubject(match.subject_name);
+                      }
+                    }}
                   />
                   {errors.courseCode && (
                     <span
@@ -524,6 +614,25 @@ export const ExamCreationModal: React.FC<ExamCreationModalProps> = ({
                   <label className="form-label" style={{ fontWeight: 700, color: "#0f172a" }}>
                     Section <span style={{ color: "#ef4444" }}>*</span>
                   </label>
+                  {sectionsList.length > 0 && (
+                    <select
+                      className="form-input"
+                      style={{ background: "#ffffff", border: "1px solid #cbd5e1", color: "#0f172a", marginBottom: "6px" }}
+                      value={sectionsList.some((sec) => sec.section_name === section) ? section : "__custom__"}
+                      onChange={(e) => {
+                        if (e.target.value !== "__custom__") {
+                          setSection(e.target.value);
+                        }
+                      }}
+                    >
+                      <option value="__custom__">-- Select Registered Section or Type Below --</option>
+                      {sectionsList.map((sec) => (
+                        <option key={sec.id} value={sec.section_name}>
+                          {sec.section_name} (Year {sec.year_level})
+                        </option>
+                      ))}
+                    </select>
+                  )}
                   <input
                     type="text"
                     className="form-input"
@@ -597,6 +706,33 @@ export const ExamCreationModal: React.FC<ExamCreationModalProps> = ({
                     Program / Department{" "}
                     <span style={{ color: "#ef4444" }}>*</span>
                   </label>
+                  {programsList.length > 0 && (
+                    <select
+                      className="form-input"
+                      style={{ background: "#ffffff", border: "1px solid #cbd5e1", color: "#0f172a", marginBottom: "6px" }}
+                      value={programsList.some((p) => p.program_code === program) ? program : "__custom__"}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        if (val !== "__custom__") {
+                          setProgram(val);
+                          const matched = programsList.find((p) => p.program_code === val);
+                          if (matched) {
+                            setSubjectId("");
+                            setSubject("");
+                            setCourseCode("");
+                            setSection("");
+                          }
+                        }
+                      }}
+                    >
+                      <option value="__custom__">-- Select Program Catalog or Type Below --</option>
+                      {programsList.map((p) => (
+                        <option key={p.id} value={p.program_code}>
+                          {p.program_code} — {p.program_name}
+                        </option>
+                      ))}
+                    </select>
+                  )}
                   <input
                     type="text"
                     className="form-input"
@@ -625,13 +761,43 @@ export const ExamCreationModal: React.FC<ExamCreationModalProps> = ({
                     Instructor Name{" "}
                     <span style={{ color: "#ef4444" }}>*</span>
                   </label>
+                  {instructorsList.length > 0 && (
+                    <select
+                      className="form-input"
+                      style={{ background: "#ffffff", border: "1px solid #cbd5e1", color: "#0f172a", marginBottom: "6px" }}
+                      value={instructorId || (instructorsList.some((i) => i.name === instructorName) ? instructorsList.find((i) => i.name === instructorName)?.instructor_id : "__custom__")}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        if (val === "__custom__") {
+                          setInstructorId("");
+                        } else {
+                          const inst = instructorsList.find((i) => i.instructor_id === val || i.id === val);
+                          if (inst) {
+                            setInstructorId(inst.instructor_id);
+                            setInstructorName(inst.name);
+                          }
+                        }
+                      }}
+                    >
+                      <option value="__custom__">-- Select Faculty Instructor or Type Below --</option>
+                      {instructorsList.map((inst) => (
+                        <option key={inst.id} value={inst.instructor_id}>
+                          {inst.name} ({inst.program_code || inst.department || "Faculty"})
+                        </option>
+                      ))}
+                    </select>
+                  )}
                   <input
                     type="text"
                     className="form-input"
                     placeholder="e.g. Prof. Jenny Garcia"
                     style={{ background: "#ffffff", border: "1px solid #cbd5e1", color: "#0f172a" }}
                     value={instructorName}
-                    onChange={(e) => setInstructorName(e.target.value)}
+                    onChange={(e) => {
+                      setInstructorName(e.target.value);
+                      const match = instructorsList.find((i) => i.name.toLowerCase() === e.target.value.trim().toLowerCase());
+                      setInstructorId(match?.instructor_id || "");
+                    }}
                   />
                   {errors.instructorName && (
                     <span
