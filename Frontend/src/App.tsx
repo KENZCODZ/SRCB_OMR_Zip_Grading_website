@@ -1,14 +1,14 @@
-import React, { useState, useEffect, useRef, useCallback } from "react";
+import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import {
   BarChart3,
   UploadCloud,
   History,
+  ArrowLeft,
   Plus,
   BookOpen,
   GraduationCap,
   Search,
   Sparkles,
-  FileUp,
   Trash2,
   AlertTriangle,
   Download,
@@ -29,7 +29,6 @@ import {
   Home,
   Eye,
   CheckCircle2,
-  FileSpreadsheet,
   Key,
   Maximize2,
   Check,
@@ -394,10 +393,30 @@ export default function App() {
   const [examListSearch, setExamListSearch] = useState("");
   const [examTypeFilter, setExamTypeFilter] = useState("All");
   const [examSemesterFilter, setExamSemesterFilter] = useState("All");
+  const [examAcademicYearFilter, setExamAcademicYearFilter] = useState("All");
+  const [examProgramFilter, setExamProgramFilter] = useState("All");
+
+  const examAcademicYears = useMemo(() => {
+    const set = new Set<string>();
+    exams.forEach((e) => {
+      if (e.academic_year) set.add(e.academic_year);
+    });
+    return ["All", ...Array.from(set).sort().reverse()];
+  }, [exams]);
+
+  const examPrograms = useMemo(() => {
+    const set = new Set<string>();
+    exams.forEach((e) => {
+      if (e.program) set.add(e.program);
+      else if (e.course_code) set.add(e.course_code);
+    });
+    return ["All", ...Array.from(set).sort()];
+  }, [exams]);
 
   // Active Exam Inspection & Grading State
   const [selectedExamId, setSelectedExamId] = useState<string>("");
-  const [studentScanMode, setStudentScanMode] = useState<"upload" | "camera">("upload");
+  const [isCameraActive, setIsCameraActive] = useState(false);
+
   const [gradingProgress, setGradingProgress] = useState<{
     current: number;
     total: number;
@@ -409,12 +428,9 @@ export default function App() {
   const [selectedSubmission, setSelectedSubmission] =
     useState<Submission | null>(null);
 
-  // Teacher Exams View Mode State
-  const [teacherExamsSubTab, setTeacherExamsSubTab] = useState<
-    "grading" | "quick-scan"
-  >("grading");
+
   const [activeExamStudioTab, setActiveExamStudioTab] = useState<
-    "grading" | "submissions" | "answer-key"
+    "grading" | "answer-key"
   >("grading");
   const [gradeResultFilter, setGradeResultFilter] = useState<
     "all" | "correct" | "incorrect" | "ambiguous"
@@ -871,42 +887,42 @@ export default function App() {
         permissions:
           backendUser.role === "admin"
             ? [
-                "Quick OMR Sheet Scanner",
-                "Create and Manage Teacher & Student Accounts",
-                "Optical Mark Recognition Realtime Processing",
-              ]
+              "Quick OMR Sheet Scanner",
+              "Create and Manage Teacher & Student Accounts",
+              "Optical Mark Recognition Realtime Processing",
+            ]
             : backendUser.role === "dean"
               ? [
-                  "Monitor examination results across all Higher Education programs",
-                  "View student examination scores and academic performance",
-                  "Monitor examinations handled by teachers",
-                  "View overall examination progress and records",
-                  "Manage and oversee user access within the system",
-                ]
+                "Monitor examination results across all Higher Education programs",
+                "View student examination scores and academic performance",
+                "Monitor examinations handled by teachers",
+                "View overall examination progress and records",
+                "Manage and oversee user access within the system",
+              ]
               : backendUser.role === "programme-head"
                 ? [
-                    "Monitor examination results within their assigned academic program only",
-                    "View student scores and examination records for their program",
-                    "Monitor examinations handled by teachers under their program",
-                    "Access examination records and reports within their assigned program",
-                  ]
+                  "Monitor examination results within their assigned academic program only",
+                  "View student scores and examination records for their program",
+                  "Monitor examinations handled by teachers under their program",
+                  "Access examination records and reports within their assigned program",
+                ]
                 : backendUser.role === "teacher"
                   ? [
-                      "Manage courses and subjects",
-                      "Create and manage examinations",
-                      "Create and maintain answer keys",
-                      "Upload and automatically process student test papers",
-                      "Automatically check and grade student test papers",
-                      "Record student submissions and examination scores",
-                      "Release and publish grading results for students to view",
-                      "Review processed test papers and grading results",
-                      "Manage examination records",
-                    ]
+                    "Manage courses and subjects",
+                    "Create and manage examinations",
+                    "Create and maintain answer keys",
+                    "Upload and automatically process student test papers",
+                    "Automatically check and grade student test papers",
+                    "Record student submissions and examination scores",
+                    "Release and publish grading results for students to view",
+                    "Review processed test papers and grading results",
+                    "Manage examination records",
+                  ]
                   : [
-                      "View their own examination scores",
-                      "View which exam questions were answered correctly or incorrectly",
-                      "Access only their personal examination records",
-                    ],
+                    "View their own examination scores",
+                    "View which exam questions were answered correctly or incorrectly",
+                    "Access only their personal examination records",
+                  ],
       };
 
       const initialTab: AppTab =
@@ -974,8 +990,7 @@ export default function App() {
   };
 
   const activeExam =
-    exams.find((e) => e.id === selectedExamId) ||
-    (exams.length > 0 ? exams[0] : null);
+    selectedExamId ? (exams.find((e) => e.id === selectedExamId) || null) : null;
 
   const navigationItems = (() => {
     if (!currentUser) {
@@ -1057,16 +1072,16 @@ export default function App() {
     if (currentUser.role === "teacher") {
       return [
         { key: "dashboard" as AppTab, label: "Dashboard", icon: BarChart3 },
-        { key: "exams" as AppTab, label: "Exams & Grading", icon: BookOpen },
+        { key: "exams" as AppTab, label: "Examinations", icon: BookOpen },
         {
           key: "results-management" as AppTab,
-          label: "Examination Results Management",
+          label: "Gradebook",
           icon: Award,
         },
-        { key: "history" as AppTab, label: "Grading History", icon: History },
+        { key: "history" as AppTab, label: "Exam Records", icon: History },
         {
           key: "item-analysis" as AppTab,
-          label: "OBE Analysis",
+          label: "Item Analysis",
           icon: BarChart2,
         },
       ];
@@ -1119,14 +1134,20 @@ export default function App() {
         return getDashboardDisplayName(currentUser);
       case "examinations":
       case "exams":
-        return "Examinations";
+        return currentUser?.role === "teacher"
+          ? "Examinations & Grading Studio"
+          : "Examinations";
       case "results-management":
       case "compiler":
-        return "Examination Results Management";
+        return currentUser?.role === "teacher"
+          ? "Official Gradebook & Results"
+          : "Examination Results Management";
       case "quick-scan":
         return "Quick OMR Scanner";
       case "history":
-        return "Grading History";
+        return currentUser?.role === "teacher"
+          ? "Exam Records & Grading History"
+          : "Grading History";
       case "academic-management":
         return currentUser?.role === "dean"
           ? "Academic Management"
@@ -1134,7 +1155,7 @@ export default function App() {
       case "reports":
         return "Institutional Reports";
       case "item-analysis":
-        return "OBE Item Analysis";
+        return "Item Analysis";
       case "user-management":
         return "User Account Management";
       case "user-directory":
@@ -1293,18 +1314,15 @@ export default function App() {
                         setIsUserGuideOpen(true);
                         return;
                       }
-                      handleTabSelect(item.key);
-                      if (
-                        item.key === "exams" &&
-                        exams.length > 0 &&
-                        !selectedExamId
-                      ) {
-                        setSelectedExamId(exams[0].id);
+                      if (item.key === "exams") {
+                        setSelectedExamId("");
+                        setLatestGradeResult(null);
                       }
+                      handleTabSelect(item.key);
                     }}
-                    style={{ 
-                      display: "flex", 
-                      alignItems: "center", 
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
                       justifyContent: "space-between",
                       width: "100%",
                       boxSizing: "border-box"
@@ -1389,8 +1407,9 @@ export default function App() {
                   className="breadcrumb-current-btn"
                   onClick={() => {
                     if (inspectExam) setInspectExam(null);
-                    if (activeTab === "exams" && teacherExamsSubTab !== "grading") {
-                      setTeacherExamsSubTab("grading");
+                    if (selectedExamId) {
+                      setSelectedExamId("");
+                      setLatestGradeResult(null);
                     }
                     handleTabSelect(activeTab);
                     const container = document.querySelector(".main-content-reference");
@@ -1402,21 +1421,21 @@ export default function App() {
                   {getActiveTabTitle(activeTab)}
                 </button>
 
-                {activeTab === "exams" && teacherExamsSubTab === "quick-scan" && (
+                {activeTab === "exams" && activeExam && !inspectExam && (
                   <>
                     <ChevronRight size={14} style={{ color: "#94a3b8", flexShrink: 0 }} />
                     <button
                       type="button"
                       className="breadcrumb-sub-badge"
-                      title="Quick OMR Scanner Mode"
+                      title={`Active Exam Grading Studio: ${activeExam.name}`}
                       onClick={() => {
                         const container = document.querySelector(".main-content-reference");
                         if (container) container.scrollTo({ top: 0, behavior: "smooth" });
                         window.scrollTo({ top: 0, behavior: "smooth" });
                       }}
                     >
-                      <Sparkles size={13} style={{ color: "var(--primary, #28166f)", flexShrink: 0 }} />
-                      <span>Quick Scanner</span>
+                      <BookOpen size={13} style={{ color: "var(--primary, #28166f)", flexShrink: 0 }} />
+                      <span>{activeExam.name}</span>
                     </button>
                   </>
                 )}
@@ -1561,1155 +1580,744 @@ export default function App() {
               onInspectExam={(exam) => setInspectExam(exam)}
               addToast={addToast}
               formatDate={formatDate}
+              onNavigateTab={(tab) => handleTabSelect(tab as AppTab)}
             />
           )}
 
-        {/* PROGRAMME-SCOPED OR INSTITUTION-WIDE WORKSPACE */}
-        {(() => {
-          const isPh = currentUser?.role === "programme-head";
-          const phProgram = (currentUser?.programme || "BSIT").toLowerCase();
-          const currentExams = isPh
-            ? exams.filter((e) => !e.program || e.program.toLowerCase() === phProgram)
-            : exams;
-          const currentExamIds = new Set(currentExams.map((e) => e.id));
-          const currentSubmissions = isPh
-            ? submissions.filter((s) => currentExamIds.has(s.exam_id))
-            : submissions;
-          const currentStudentIds = new Set(currentSubmissions.map((s) => s.student_id));
-          const currentRoster = isPh
-            ? roster.filter((r) =>
+          {/* PROGRAMME-SCOPED OR INSTITUTION-WIDE WORKSPACE */}
+          {(() => {
+            const isPh = currentUser?.role === "programme-head";
+            const phProgram = (currentUser?.programme || "BSIT").toLowerCase();
+            const currentExams = isPh
+              ? exams.filter((e) => !e.program || e.program.toLowerCase() === phProgram)
+              : exams;
+            const currentExamIds = new Set(currentExams.map((e) => e.id));
+            const currentSubmissions = isPh
+              ? submissions.filter((s) => currentExamIds.has(s.exam_id))
+              : submissions;
+            const currentStudentIds = new Set(currentSubmissions.map((s) => s.student_id));
+            const currentRoster = isPh
+              ? roster.filter((r) =>
                 currentStudentIds.has(r.student_id) ||
                 (r.course_section && r.course_section.toLowerCase().includes(phProgram))
               )
-            : roster;
+              : roster;
 
-          return (
-            <>
-              {activeTab === "academic-management" && currentUser && (
-                <DeanAcademicManagement
-                  currentUser={currentUser}
-                  summary={dashboardSummary}
-                  exams={currentExams}
-                  submissions={currentSubmissions}
-                  roster={currentRoster}
-                  onInspectExam={(exam) => setInspectExam(exam)}
-                  addToast={addToast}
-                />
-              )}
-
-              {activeTab === "examinations" && currentUser && (
-                currentUser.role === "student" ? (
-                  <StudentPortalView
+            return (
+              <>
+                {activeTab === "academic-management" && currentUser && (
+                  <DeanAcademicManagement
                     currentUser={currentUser}
-                    exams={exams}
-                    submissions={submissions}
-                    roster={roster}
-                    formatDate={formatDate}
-                  />
-                ) : (
-                  <DeanExaminations
-                    currentUser={currentUser}
+                    summary={dashboardSummary}
                     exams={currentExams}
                     submissions={currentSubmissions}
                     roster={currentRoster}
                     onInspectExam={(exam) => setInspectExam(exam)}
                     addToast={addToast}
-                    formatDate={formatDate}
                   />
-                )
-              )}
+                )}
 
-              {activeTab === "reports" && currentUser && (
-                currentUser.role === "student" ? (
-                  <StudentPortalView
-                    currentUser={currentUser}
-                    exams={exams}
-                    submissions={submissions}
-                    roster={roster}
-                    formatDate={formatDate}
-                  />
-                ) : (
-                  <DeanReportsAnalytics
-                    currentUser={currentUser}
-                    exams={currentExams}
-                    submissions={currentSubmissions}
-                    roster={currentRoster}
-                    summary={dashboardSummary}
-                    addToast={addToast}
-                  />
-                )
-              )}
-            </>
-          );
-        })()}
+                {activeTab === "examinations" && currentUser && (
+                  currentUser.role === "student" ? (
+                    <StudentPortalView
+                      currentUser={currentUser}
+                      exams={exams}
+                      submissions={submissions}
+                      roster={roster}
+                      formatDate={formatDate}
+                    />
+                  ) : (
+                    <DeanExaminations
+                      currentUser={currentUser}
+                      exams={currentExams}
+                      submissions={currentSubmissions}
+                      roster={currentRoster}
+                      onInspectExam={(exam) => setInspectExam(exam)}
+                      addToast={addToast}
+                      formatDate={formatDate}
+                    />
+                  )
+                )}
 
-        {activeTab === "progress-records" && currentUser && (
-          <DeanProgressRecords
-            exams={exams}
-            submissions={submissions}
-            onInspectExam={(exam) => setInspectExam(exam)}
-            formatDate={formatDate}
-            programFilter="all"
-          />
-        )}
+                {activeTab === "reports" && currentUser && (
+                  currentUser.role === "student" ? (
+                    <StudentPortalView
+                      currentUser={currentUser}
+                      exams={exams}
+                      submissions={submissions}
+                      roster={roster}
+                      formatDate={formatDate}
+                    />
+                  ) : (
+                    <DeanReportsAnalytics
+                      currentUser={currentUser}
+                      exams={currentExams}
+                      submissions={currentSubmissions}
+                      roster={currentRoster}
+                      summary={dashboardSummary}
+                      addToast={addToast}
+                    />
+                  )
+                )}
+              </>
+            );
+          })()}
 
-        {activeTab === "settings" && currentUser && (
-          <DeanSettings
-            currentUser={currentUser}
-            addToast={addToast}
-          />
-        )}
+          {activeTab === "progress-records" && currentUser && (
+            <DeanProgressRecords
+              exams={exams}
+              submissions={submissions}
+              onInspectExam={(exam) => setInspectExam(exam)}
+              formatDate={formatDate}
+              programFilter="all"
+            />
+          )}
 
-        {/* CREATE ACCOUNT TAB (ADMIN) */}
-        {activeTab === "user-management" && currentUser && (
-          <div>
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-                flexWrap: "wrap",
-                gap: "1rem",
-                padding: "1.25rem 1.5rem",
-                background: "#ffffff",
-                border: "1px solid #e2e8f0",
-                borderRadius: "12px",
-                marginBottom: "1.25rem",
-              }}
-            >
-              <div>
-                <h2 style={{ fontSize: "1.4rem", fontWeight: 800, margin: 0, color: "#0f172a" }}>
-                  Create Account
-                </h2>
-                <p style={{ fontSize: "0.82rem", color: "#64748b", margin: "0.2rem 0 0 0" }}>
-                  Register new teacher and student accounts
-                </p>
-              </div>
-            </div>
-
-            <AdminUserManagement
+          {activeTab === "settings" && currentUser && (
+            <DeanSettings
               currentUser={currentUser}
               addToast={addToast}
-              formatDate={formatDate}
-              viewMode="create"
             />
-          </div>
-        )}
+          )}
 
-        {/* USER ACCOUNTS DIRECTORY TAB (ADMIN) */}
-        {activeTab === "user-directory" && currentUser && (
-          <div>
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-                flexWrap: "wrap",
-                gap: "1rem",
-                padding: "1.25rem 1.5rem",
-                background: "#ffffff",
-                border: "1px solid #e2e8f0",
-                borderRadius: "12px",
-                marginBottom: "1.25rem",
-              }}
-            >
-              <div>
-                <h2 style={{ fontSize: "1.4rem", fontWeight: 800, margin: 0, color: "#0f172a" }}>
-                  {currentUser.role === "programme-head"
-                    ? `${currentUser.programme || "BSIT"} Student Access`
-                    : currentUser.role === "dean"
-                      ? "User Access"
-                      : "User Directory"}
-                </h2>
-                <p style={{ fontSize: "0.82rem", color: "#64748b", margin: "0.2rem 0 0 0" }}>
-                  {currentUser.role === "programme-head"
-                    ? `Enrolled student accounts under ${currentUser.programme || "BSIT"} academic program`
-                    : currentUser.role === "dean"
-                      ? "Manage and oversee user access across Higher Education programs"
-                      : "Manage registered faculty and student accounts"}
-                </p>
-              </div>
-            </div>
-
-            <AdminUserManagement
-              currentUser={currentUser}
-              addToast={addToast}
-              formatDate={formatDate}
-              viewMode="directory"
-            />
-          </div>
-        )}
-
-        {/* QUICK SCANNER TAB */}
-        {activeTab === "quick-scan" && (
-          <div>
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-                flexWrap: "wrap",
-                gap: "1rem",
-                padding: "1.25rem 1.5rem",
-                background: "#ffffff",
-                border: "1px solid #e2e8f0",
-                borderRadius: "12px",
-                marginBottom: "1.25rem",
-              }}
-            >
-              <div>
-                <h2 style={{ fontSize: "1.4rem", fontWeight: 800, margin: 0, color: "#0f172a" }}>
-                  Quick Scanner
-                </h2>
-                <p style={{ fontSize: "0.82rem", color: "#64748b", margin: "0.2rem 0 0 0" }}>
-                  Scan ZipGrade bubble sheets via camera or file upload
-                </p>
-              </div>
-            </div>
-
-            <div className="scan-mode-tabs">
-              <button
-                type="button"
-                className={`scan-mode-tab-btn ${quickScanMode === "upload" ? "active" : ""}`}
-                onClick={() => setQuickScanMode("upload")}
-              >
-                <UploadCloud size={16} /> Upload File
-              </button>
-              <button
-                type="button"
-                className={`scan-mode-tab-btn ${quickScanMode === "camera" ? "active" : ""}`}
-                onClick={() => setQuickScanMode("camera")}
-              >
-                <Camera size={16} /> Scan with Camera
-              </button>
-            </div>
-
-            {quickScanMode === "camera" ? (
-              <CameraScanner
-                onCapture={handleQuickScanUpload}
-                onSwitchToUpload={() => setQuickScanMode("upload")}
-                title="Quick Bubble Camera Scanner"
-                subtitle="Point camera at the ZipGrade answer sheet. Align corners and hold steady to auto-capture."
-              />
-            ) : (
-              <div className="card" style={{ marginBottom: "2rem" }}>
-                <input
-                  type="file"
-                  ref={quickScanInputRef}
-                  style={{ display: "none" }}
-                  accept="image/*"
-                  onChange={(e) => {
-                    if (e.target.files && e.target.files[0]) {
-                      handleQuickScanUpload(e.target.files[0]);
-                    }
-                    e.target.value = "";
-                  }}
-                />
-                <div
-                  className="dropzone"
-                  onClick={() => quickScanInputRef.current?.click()}
-                  onDragOver={(e) => e.preventDefault()}
-                  onDrop={(e) => {
-                    e.preventDefault();
-                    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-                      handleQuickScanUpload(e.dataTransfer.files[0]);
-                    }
-                  }}
-                >
-                  <UploadCloud size={48} className="dropzone-icon" />
-                  <h3>Drag & drop a ZipGrade sheet image here</h3>
-                  <p
-                    style={{
-                      color: "var(--text-secondary)",
-                      fontSize: "0.85rem",
-                      marginTop: "0.5rem",
-                    }}
-                  >
-                    or click to browse from local computer files (Supports JPG,
-                    PNG up to 10MB)
-                  </p>
-                </div>
-              </div>
-            )}
-
-            {quickScanLoading && (
-              <div className="card spinner-container">
-                <div className="spinner"></div>
-                <p style={{ fontWeight: 600, color: "var(--primary)" }}>
-                  OMR engine calibrating markers and extracting marks...
-                </p>
-              </div>
-            )}
-
-            {quickScanResult && (
-              <div className="grade-layout">
-                {/* Visual Image Overlay */}
-                <div className="card">
-                  <h3
-                    style={{
-                      marginBottom: "1rem",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyItems: "center",
-                      gap: "0.5rem",
-                    }}
-                  >
-                    Annotated Scan Image
-                  </h3>
-                  <div className="image-preview-container">
-                    <img
-                      src={`data:image/png;base64,${quickScanResult.overlay_image}`}
-                      alt="OMR Scan Overlay"
-                    />
-                  </div>
-                  <div
-                    style={{
-                      display: "flex",
-                      gap: "1rem",
-                      marginTop: "1rem",
-                      fontSize: "0.75rem",
-                      justifyContent: "center",
-                    }}
-                  >
-                    <div
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "0.25rem",
-                      }}
-                    >
-                      <span
-                        style={{
-                          width: "10px",
-                          height: "10px",
-                          backgroundColor: "#10b981",
-                          borderRadius: "50%",
-                        }}
-                      ></span>{" "}
-                      Green: Detected Mark
-                    </div>
-                    <div
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "0.25rem",
-                      }}
-                    >
-                      <span
-                        style={{
-                          width: "10px",
-                          height: "10px",
-                          backgroundColor: "#f59e0b",
-                          borderRadius: "50%",
-                        }}
-                      ></span>{" "}
-                      Yellow: Ambiguity (Multi-filled)
-                    </div>
-                  </div>
-                </div>
-
-                {/* Parsed Sheet Data */}
-                <div className="card">
-                  <div
-                    style={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      alignItems: "center",
-                      marginBottom: "1rem",
-                    }}
-                  >
-                    <h3>Parsed Sheet Data</h3>
-                    <StatusBadge
-                      customText={`StudentID: ${quickScanResult.student_id || "Empty"}`}
-                      variant="info"
-                    />
-                  </div>
-
-                  <div className="results-scrollable bubble-sheet-card">
-                    <div
-                      style={{
-                        display: "grid",
-                        gridTemplateColumns: "1fr 1fr",
-                        gap: "1rem",
-                      }}
-                    >
-                      <div>
-                        {Array.from({ length: 25 }, (_, i) => i + 1).map(
-                          (qNum) => {
-                            const qStr = qNum.toString();
-                            const detectedVal = quickScanResult.answers[qStr];
-                            return (
-                              <div
-                                key={qStr}
-                                className="bubble-row"
-                                style={{ padding: "0.35rem 0.5rem" }}
-                              >
-                                <span className="bubble-num">{qNum}.</span>
-                                <div className="bubble-options">
-                                  {["A", "B", "C", "D", "E"].map((opt) => (
-                                    <span
-                                      key={opt}
-                                      className={`bubble-btn ${
-                                        detectedVal === null
-                                          ? "empty"
-                                          : detectedVal === opt
-                                            ? "active"
-                                            : ""
-                                      }`}
-                                      style={{ pointerEvents: "none" }}
-                                    >
-                                      {opt}
-                                    </span>
-                                  ))}
-                                </div>
-                              </div>
-                            );
-                          },
-                        )}
-                      </div>
-                      <div>
-                        {Array.from({ length: 25 }, (_, i) => i + 26).map(
-                          (qNum) => {
-                            const qStr = qNum.toString();
-                            const detectedVal = quickScanResult.answers[qStr];
-                            return (
-                              <div
-                                key={qStr}
-                                className="bubble-row"
-                                style={{ padding: "0.35rem 0.5rem" }}
-                              >
-                                <span className="bubble-num">{qNum}.</span>
-                                <div className="bubble-options">
-                                  {["A", "B", "C", "D", "E"].map((opt) => (
-                                    <span
-                                      key={opt}
-                                      className={`bubble-btn ${
-                                        detectedVal === null
-                                          ? "empty"
-                                          : detectedVal === opt
-                                            ? "active"
-                                            : ""
-                                      }`}
-                                      style={{ pointerEvents: "none" }}
-                                    >
-                                      {opt}
-                                    </span>
-                                  ))}
-                                </div>
-                              </div>
-                            );
-                          },
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* EXAMS & GRADING TAB */}
-        {activeTab === "exams" && (
-          <div>
-            <div className="exam-studio-header">
-              <div style={{ display: "flex", alignItems: "center", gap: "0.85rem" }}>
-                <div
-                  style={{
-                    width: "46px",
-                    height: "46px",
-                    borderRadius: "12px",
-                    background: "linear-gradient(135deg, var(--srcb-navy-dark, #120a3a) 0%, var(--primary, #28166f) 100%)",
-                    color: "#ffffff",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    boxShadow: "0 4px 14px rgba(40, 22, 111, 0.25)",
-                    flexShrink: 0,
-                  }}
-                >
-                  <BookOpen size={22} color="#f59e0b" />
-                </div>
-                <div>
-                  <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                    <h2
-                      style={{
-                        fontSize: "1.35rem",
-                        fontWeight: 800,
-                        margin: 0,
-                        color: "#0f172a",
-                        letterSpacing: "-0.01em",
-                      }}
-                    >
-                      Exams & Grading Studio
-                    </h2>
-                    <span
-                      className="badge"
-                      style={{
-                        background: "var(--primary-light-surface, #f5f3ff)",
-                        color: "var(--primary, #28166f)",
-                        border: "1px solid var(--primary-light-border, #ddd6fe)",
-                        fontSize: "0.72rem",
-                        fontWeight: 700,
-                        padding: "0.15rem 0.5rem",
-                        borderRadius: "6px",
-                      }}
-                    >
-                      Teacher Portal
-                    </span>
-                  </div>
-                  <p
-                    style={{
-                      fontSize: "0.82rem",
-                      color: "#64748b",
-                      margin: "0.2rem 0 0 0",
-                    }}
-                  >
-                    Manage answer keys, score student OMR bubble sheets in realtime, and compile OBE metrics
-                  </p>
-                </div>
-              </div>
-
+          {/* CREATE ACCOUNT TAB (ADMIN) */}
+          {activeTab === "user-management" && currentUser && (
+            <div>
               <div
                 style={{
                   display: "flex",
-                  gap: "0.75rem",
-                  flexWrap: "wrap",
+                  justifyContent: "space-between",
                   alignItems: "center",
+                  flexWrap: "wrap",
+                  gap: "1rem",
+                  padding: "1.25rem 1.5rem",
+                  background: "#ffffff",
+                  border: "1px solid #e2e8f0",
+                  borderRadius: "12px",
+                  marginBottom: "1.25rem",
                 }}
               >
-                {/* Mode Switcher */}
-                <div className="exam-mode-pill-container">
-                  <button
-                    type="button"
-                    onClick={() => setTeacherExamsSubTab("grading")}
-                    className={`exam-mode-pill-btn ${
-                      teacherExamsSubTab === "grading" ? "active" : ""
-                    }`}
-                  >
-                    <BookOpen size={14} /> Exam Grading
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setTeacherExamsSubTab("quick-scan")}
-                    className={`exam-mode-pill-btn ${
-                      teacherExamsSubTab === "quick-scan" ? "active" : ""
-                    }`}
-                  >
-                    <Sparkles size={14} /> Quick Scanner
-                  </button>
+                <div>
+                  <h2 style={{ fontSize: "1.4rem", fontWeight: 800, margin: 0, color: "#0f172a" }}>
+                    Create Account
+                  </h2>
+                  <p style={{ fontSize: "0.82rem", color: "#64748b", margin: "0.2rem 0 0 0" }}>
+                    Register new teacher and student accounts
+                  </p>
                 </div>
-
-                <button
-                  className="btn btn-secondary"
-                  onClick={handleExportGradeSheet}
-                  style={{
-                    background: "#ffffff",
-                    border: "1px solid #cbd5e1",
-                    color: "#0f172a",
-                    fontWeight: 600,
-                    borderRadius: "10px",
-                    fontSize: "0.82rem",
-                    boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
-                  }}
-                >
-                  <Download size={15} /> Export CHED Grade Sheet (.xlsx)
-                </button>
-                <button
-                  className="btn btn-primary"
-                  onClick={() => setIsExamModalOpen(true)}
-                  style={{
-                    fontWeight: 700,
-                    borderRadius: "10px",
-                    fontSize: "0.82rem",
-                    boxShadow: "0 4px 14px rgba(40, 22, 111, 0.25)",
-                  }}
-                >
-                  <Plus size={16} /> Create Examination
-                </button>
               </div>
+
+              <AdminUserManagement
+                currentUser={currentUser}
+                addToast={addToast}
+                formatDate={formatDate}
+                viewMode="create"
+              />
             </div>
+          )}
 
-            {teacherExamsSubTab === "quick-scan" ? (
-              /* Integrated Quick Sheet Scanner in Blue and White */
-              <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
-                {/* Header Sub-Card */}
-                <div
-                  className="card"
-                  style={{
-                    background: "#ffffff",
-                    border: "1px solid #e2e8f0",
-                    borderRadius: "16px",
-                    padding: "1.25rem 1.5rem",
-                    boxShadow: "0 2px 8px rgba(0, 0, 0, 0.02)",
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                    flexWrap: "wrap",
-                    gap: "1rem",
-                  }}
-                >
-                  <div style={{ display: "flex", alignItems: "center", gap: "0.85rem" }}>
-                    <div
-                      style={{
-                        width: "42px",
-                        height: "42px",
-                        borderRadius: "10px",
-                        background: "var(--primary-light-surface, #f5f3ff)",
-                        color: "var(--primary, #28166f)",
-                        border: "1px solid var(--primary-light-border, #ddd6fe)",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        flexShrink: 0,
-                      }}
-                    >
-                      <Sparkles size={20} />
-                    </div>
-                    <div>
-                      <h3 style={{ fontSize: "1.1rem", fontWeight: 800, margin: 0, color: "#0f172a" }}>
-                        Instant Raw Sheet Scanner
-                      </h3>
-                      <p style={{ fontSize: "0.82rem", color: "#64748b", margin: "0.15rem 0 0 0" }}>
-                        Directly read any standard 50-item ZipGrade answer sheet to extract raw student marks & ID without linking to an exam.
-                      </p>
-                    </div>
-                  </div>
-
-                  <div
-                    style={{
-                      display: "flex",
-                      background: "#f1f5f9",
-                      padding: "4px",
-                      borderRadius: "10px",
-                      border: "1px solid #e2e8f0",
-                      gap: "4px",
-                    }}
-                  >
-                    <button
-                      type="button"
-                      onClick={() => setQuickScanMode("upload")}
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "6px",
-                        padding: "0.45rem 0.95rem",
-                        fontSize: "0.82rem",
-                        fontWeight: 700,
-                        borderRadius: "8px",
-                        border: "none",
-                        cursor: "pointer",
-                        transition: "all 0.2s ease",
-                        background:
-                          quickScanMode === "upload"
-                            ? "var(--primary, #28166f)"
-                            : "transparent",
-                        color:
-                          quickScanMode === "upload"
-                            ? "#ffffff"
-                            : "#64748b",
-                        boxShadow:
-                          quickScanMode === "upload"
-                            ? "0 2px 6px rgba(0, 98, 255, 0.2)"
-                            : "none",
-                      }}
-                    >
-                      <UploadCloud size={15} /> Upload File
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setQuickScanMode("camera")}
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "6px",
-                        padding: "0.45rem 0.95rem",
-                        fontSize: "0.82rem",
-                        fontWeight: 700,
-                        borderRadius: "8px",
-                        border: "none",
-                        cursor: "pointer",
-                        transition: "all 0.2s ease",
-                        background:
-                          quickScanMode === "camera"
-                            ? "var(--primary, #28166f)"
-                            : "transparent",
-                        color:
-                          quickScanMode === "camera"
-                            ? "#ffffff"
-                            : "#64748b",
-                        boxShadow:
-                          quickScanMode === "camera"
-                            ? "0 2px 6px rgba(0, 98, 255, 0.2)"
-                            : "none",
-                      }}
-                    >
-                      <Camera size={15} /> Live Camera
-                    </button>
-                  </div>
-                </div>
-
-                {quickScanMode === "camera" ? (
-                  <CameraScanner
-                    onCapture={handleQuickScanUpload}
-                    onSwitchToUpload={() => setQuickScanMode("upload")}
-                    title="Quick Bubble Camera Scanner"
-                    subtitle="Point camera at the ZipGrade answer sheet. Align corners and hold steady to auto-capture."
-                  />
-                ) : (
-                  <div
-                    className="card"
-                    style={{
-                      background: "#ffffff",
-                      border: "1px solid #e2e8f0",
-                      borderRadius: "16px",
-                      padding: "1.5rem",
-                      boxShadow: "0 2px 8px rgba(0, 0, 0, 0.02)",
-                    }}
-                  >
-                    <input
-                      type="file"
-                      ref={quickScanInputRef}
-                      style={{ display: "none" }}
-                      accept="image/*"
-                      onChange={(e) => {
-                        if (e.target.files && e.target.files[0]) {
-                          handleQuickScanUpload(e.target.files[0]);
-                        }
-                        e.target.value = "";
-                      }}
-                    />
-                    <div
-                      className="dropzone"
-                      onClick={() => quickScanInputRef.current?.click()}
-                      onDragOver={(e) => e.preventDefault()}
-                      onDrop={(e) => {
-                        e.preventDefault();
-                        if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-                          handleQuickScanUpload(e.dataTransfer.files[0]);
-                        }
-                      }}
-                      style={{
-                        padding: "3rem 1.5rem",
-                        background: "#f8fafc",
-                        border: "2px dashed #cbd5e1",
-                        borderRadius: "12px",
-                        textAlign: "center",
-                        cursor: "pointer",
-                      }}
-                    >
-                      <UploadCloud
-                        size={48}
-                        style={{ color: "var(--primary, #28166f)", marginBottom: "0.5rem" }}
-                      />
-                      <h3 style={{ fontSize: "1.05rem", fontWeight: 800, color: "#0f172a", margin: "0 0 0.25rem 0" }}>
-                        Drag & drop a ZipGrade sheet image here
-                      </h3>
-                      <p
-                        style={{
-                          color: "#64748b",
-                          fontSize: "0.85rem",
-                          margin: 0,
-                        }}
-                      >
-                        or click to browse from local computer files (Supports JPG, PNG up to 10MB)
-                      </p>
-                    </div>
-                  </div>
-                )}
-
-                {quickScanLoading && (
-                  <div
-                    className="card spinner-container"
-                    style={{
-                      background: "#ffffff",
-                      border: "1px solid #e2e8f0",
-                      borderRadius: "16px",
-                      padding: "2rem",
-                      textAlign: "center",
-                    }}
-                  >
-                    <div className="spinner"></div>
-                    <p style={{ fontWeight: 700, color: "var(--primary, #28166f)", marginTop: "1rem" }}>
-                      OMR engine calibrating markers and extracting marks...
-                    </p>
-                  </div>
-                )}
-
-                {quickScanResult && (
-                  <div className="grade-layout">
-                    {/* Visual Image Overlay */}
-                    <div
-                      className="card"
-                      style={{
-                        background: "#ffffff",
-                        border: "1px solid #e2e8f0",
-                        borderRadius: "16px",
-                        padding: "1.25rem",
-                      }}
-                    >
-                      <h3
-                        style={{
-                          fontSize: "1rem",
-                          fontWeight: 800,
-                          marginBottom: "1rem",
-                          color: "#0f172a",
-                        }}
-                      >
-                        Annotated Scan Image
-                      </h3>
-                      <div
-                        className="image-preview-container"
-                        style={{
-                          borderRadius: "10px",
-                          overflow: "hidden",
-                          border: "1px solid #e2e8f0",
-                        }}
-                      >
-                        <img
-                          src={`data:image/png;base64,${quickScanResult.overlay_image}`}
-                          alt="OMR Scan Overlay"
-                          style={{ width: "100%", height: "auto" }}
-                        />
-                      </div>
-                      <div
-                        style={{
-                          display: "flex",
-                          gap: "1rem",
-                          marginTop: "1rem",
-                          fontSize: "0.75rem",
-                          justifyContent: "center",
-                        }}
-                      >
-                        <div
-                          style={{
-                            display: "flex",
-                            alignItems: "center",
-                            gap: "0.35rem",
-                            color: "#059669",
-                            fontWeight: 700,
-                          }}
-                        >
-                          <span
-                            style={{
-                              width: "10px",
-                              height: "10px",
-                              backgroundColor: "#10b981",
-                              borderRadius: "50%",
-                            }}
-                          ></span>{" "}
-                          Green: Detected Mark
-                        </div>
-                        <div
-                          style={{
-                            display: "flex",
-                            alignItems: "center",
-                            gap: "0.35rem",
-                            color: "#d97706",
-                            fontWeight: 700,
-                          }}
-                        >
-                          <span
-                            style={{
-                              width: "10px",
-                              height: "10px",
-                              backgroundColor: "#f59e0b",
-                              borderRadius: "50%",
-                            }}
-                          ></span>{" "}
-                          Yellow: Ambiguity (Multi-filled)
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Parsed Sheet Data */}
-                    <div
-                      className="card"
-                      style={{
-                        background: "#ffffff",
-                        border: "1px solid #e2e8f0",
-                        borderRadius: "16px",
-                        padding: "1.25rem",
-                      }}
-                    >
-                      <div
-                        style={{
-                          display: "flex",
-                          justifyContent: "space-between",
-                          alignItems: "center",
-                          marginBottom: "1rem",
-                        }}
-                      >
-                        <h3 style={{ fontSize: "1rem", fontWeight: 800, margin: 0, color: "#0f172a" }}>
-                          Parsed Sheet Data
-                        </h3>
-                        <StatusBadge
-                          customText={`StudentID: ${quickScanResult.student_id || "Empty"}`}
-                          variant="info"
-                        />
-                      </div>
-
-                      <div
-                        className="results-scrollable bubble-sheet-card"
-                        style={{
-                          background: "#f8fafc",
-                          border: "1px solid #e2e8f0",
-                          borderRadius: "10px",
-                          padding: "1rem",
-                        }}
-                      >
-                        <div
-                          style={{
-                            display: "grid",
-                            gridTemplateColumns: "1fr 1fr",
-                            gap: "1rem",
-                          }}
-                        >
-                          <div>
-                            {Array.from({ length: 25 }, (_, i) => i + 1).map(
-                              (qNum) => {
-                                const qStr = qNum.toString();
-                                const detectedVal = quickScanResult.answers[qStr];
-                                return (
-                                  <div
-                                    key={qStr}
-                                    className="bubble-row"
-                                    style={{ padding: "0.35rem 0.5rem" }}
-                                  >
-                                    <span className="bubble-num" style={{ color: "#0f172a", fontWeight: 700 }}>
-                                      {qNum}.
-                                    </span>
-                                    <div className="bubble-options">
-                                      {["A", "B", "C", "D", "E"].map((opt) => (
-                                        <span
-                                          key={opt}
-                                          className={`bubble-btn ${
-                                            detectedVal === null
-                                              ? "empty"
-                                              : detectedVal === opt
-                                                ? "active"
-                                                : ""
-                                          }`}
-                                          style={{ pointerEvents: "none" }}
-                                        >
-                                          {opt}
-                                        </span>
-                                      ))}
-                                    </div>
-                                  </div>
-                                );
-                              },
-                            )}
-                          </div>
-                          <div>
-                            {Array.from({ length: 25 }, (_, i) => i + 26).map(
-                              (qNum) => {
-                                const qStr = qNum.toString();
-                                const detectedVal = quickScanResult.answers[qStr];
-                                return (
-                                  <div
-                                    key={qStr}
-                                    className="bubble-row"
-                                    style={{ padding: "0.35rem 0.5rem" }}
-                                  >
-                                    <span className="bubble-num" style={{ color: "#0f172a", fontWeight: 700 }}>
-                                      {qNum}.
-                                    </span>
-                                    <div className="bubble-options">
-                                      {["A", "B", "C", "D", "E"].map((opt) => (
-                                        <span
-                                          key={opt}
-                                          className={`bubble-btn ${
-                                            detectedVal === null
-                                              ? "empty"
-                                              : detectedVal === opt
-                                                ? "active"
-                                                : ""
-                                          }`}
-                                          style={{ pointerEvents: "none" }}
-                                        >
-                                          {opt}
-                                        </span>
-                                      ))}
-                                    </div>
-                                  </div>
-                                );
-                              },
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
-            ) : (
-              /* Exam List and Grading Section */
+          {/* USER ACCOUNTS DIRECTORY TAB (ADMIN) */}
+          {activeTab === "user-directory" && currentUser && (
+            <div>
               <div
                 style={{
-                  display: "grid",
-                  gridTemplateColumns: "minmax(350px, 1.1fr) 2fr",
-                  gap: "1.5rem",
-                  alignItems: "start",
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  flexWrap: "wrap",
+                  gap: "1rem",
+                  padding: "1.25rem 1.5rem",
+                  background: "#ffffff",
+                  border: "1px solid #e2e8f0",
+                  borderRadius: "12px",
+                  marginBottom: "1.25rem",
                 }}
               >
-                {/* Searchable & Filterable Exams Feed */}
-                <div
-                  className="card"
-                  style={{
-                    background: "#ffffff",
-                    border: "1px solid #e2e8f0",
-                    borderRadius: "16px",
-                    padding: "1.25rem",
-                    boxShadow: "0 2px 8px rgba(0, 0, 0, 0.02)",
-                    display: "flex",
-                    flexDirection: "column",
-                  }}
+                <div>
+                  <h2 style={{ fontSize: "1.4rem", fontWeight: 800, margin: 0, color: "#0f172a" }}>
+                    {currentUser.role === "programme-head"
+                      ? `${currentUser.programme || "BSIT"} Student Access`
+                      : currentUser.role === "dean"
+                        ? "User Access"
+                        : "User Directory"}
+                  </h2>
+                  <p style={{ fontSize: "0.82rem", color: "#64748b", margin: "0.2rem 0 0 0" }}>
+                    {currentUser.role === "programme-head"
+                      ? `Enrolled student accounts under ${currentUser.programme || "BSIT"} academic program`
+                      : currentUser.role === "dean"
+                        ? "Manage and oversee user access across Higher Education programs"
+                        : "Manage registered faculty and student accounts"}
+                  </p>
+                </div>
+              </div>
+
+              <AdminUserManagement
+                currentUser={currentUser}
+                addToast={addToast}
+                formatDate={formatDate}
+                viewMode="directory"
+              />
+            </div>
+          )}
+
+          {/* QUICK SCANNER TAB */}
+          {activeTab === "quick-scan" && (
+            <div>
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  flexWrap: "wrap",
+                  gap: "1rem",
+                  padding: "1.25rem 1.5rem",
+                  background: "#ffffff",
+                  border: "1px solid #e2e8f0",
+                  borderRadius: "12px",
+                  marginBottom: "1.25rem",
+                }}
+              >
+                <div>
+                  <h2 style={{ fontSize: "1.4rem", fontWeight: 800, margin: 0, color: "#0f172a" }}>
+                    Quick Scanner
+                  </h2>
+                  <p style={{ fontSize: "0.82rem", color: "#64748b", margin: "0.2rem 0 0 0" }}>
+                    Scan ZipGrade bubble sheets via camera or file upload
+                  </p>
+                </div>
+              </div>
+
+              <div className="scan-mode-tabs">
+                <button
+                  type="button"
+                  className={`scan-mode-tab-btn ${quickScanMode === "upload" ? "active" : ""}`}
+                  onClick={() => setQuickScanMode("upload")}
                 >
-                  <div style={{ marginBottom: "1rem" }}>
+                  <UploadCloud size={16} /> Upload File
+                </button>
+                <button
+                  type="button"
+                  className={`scan-mode-tab-btn ${quickScanMode === "camera" ? "active" : ""}`}
+                  onClick={() => setQuickScanMode("camera")}
+                >
+                  <Camera size={16} /> Scan with Camera
+                </button>
+              </div>
+
+              {quickScanMode === "camera" ? (
+                <CameraScanner
+                  onCapture={handleQuickScanUpload}
+                  onSwitchToUpload={() => setQuickScanMode("upload")}
+                  title="Quick Bubble Camera Scanner"
+                  subtitle="Point camera at the ZipGrade answer sheet. Align corners and hold steady to auto-capture."
+                />
+              ) : (
+                <div className="card" style={{ marginBottom: "2rem" }}>
+                  <input
+                    type="file"
+                    ref={quickScanInputRef}
+                    style={{ display: "none" }}
+                    accept="image/*"
+                    onChange={(e) => {
+                      if (e.target.files && e.target.files[0]) {
+                        handleQuickScanUpload(e.target.files[0]);
+                      }
+                      e.target.value = "";
+                    }}
+                  />
+                  <div
+                    className="dropzone"
+                    onClick={() => quickScanInputRef.current?.click()}
+                    onDragOver={(e) => e.preventDefault()}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+                        handleQuickScanUpload(e.dataTransfer.files[0]);
+                      }
+                    }}
+                  >
+                    <UploadCloud size={48} className="dropzone-icon" />
+                    <h3>Drag & drop a ZipGrade sheet image here</h3>
+                    <p
+                      style={{
+                        color: "var(--text-secondary)",
+                        fontSize: "0.85rem",
+                        marginTop: "0.5rem",
+                      }}
+                    >
+                      or click to browse from local computer files (Supports JPG,
+                      PNG up to 10MB)
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {quickScanLoading && (
+                <div className="card spinner-container">
+                  <div className="spinner"></div>
+                  <p style={{ fontWeight: 600, color: "var(--primary)" }}>
+                    OMR engine calibrating markers and extracting marks...
+                  </p>
+                </div>
+              )}
+
+              {quickScanResult && (
+                <div className="grade-layout">
+                  {/* Visual Image Overlay */}
+                  <div className="card">
+                    <h3
+                      style={{
+                        marginBottom: "1rem",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyItems: "center",
+                        gap: "0.5rem",
+                      }}
+                    >
+                      Annotated Scan Image
+                    </h3>
+                    <div className="image-preview-container">
+                      <img
+                        src={`data:image/png;base64,${quickScanResult.overlay_image}`}
+                        alt="OMR Scan Overlay"
+                      />
+                    </div>
+                    <div
+                      style={{
+                        display: "flex",
+                        gap: "1rem",
+                        marginTop: "1rem",
+                        fontSize: "0.75rem",
+                        justifyContent: "center",
+                      }}
+                    >
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "0.25rem",
+                        }}
+                      >
+                        <span
+                          style={{
+                            width: "10px",
+                            height: "10px",
+                            backgroundColor: "#10b981",
+                            borderRadius: "50%",
+                          }}
+                        ></span>{" "}
+                        Green: Detected Mark
+                      </div>
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "0.25rem",
+                        }}
+                      >
+                        <span
+                          style={{
+                            width: "10px",
+                            height: "10px",
+                            backgroundColor: "#f59e0b",
+                            borderRadius: "50%",
+                          }}
+                        ></span>{" "}
+                        Yellow: Ambiguity (Multi-filled)
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Parsed Sheet Data */}
+                  <div className="card">
                     <div
                       style={{
                         display: "flex",
                         justifyContent: "space-between",
                         alignItems: "center",
-                        marginBottom: "0.75rem",
+                        marginBottom: "1rem",
                       }}
                     >
-                      <h3
-                        style={{
-                          fontSize: "1.05rem",
-                          fontWeight: 800,
-                          margin: 0,
-                          color: "#0f172a",
-                        }}
-                      >
-                        Examinations Directory
-                      </h3>
-                      <span
-                        className="badge"
-                        style={{
-                          background: "var(--primary-light-surface, #f5f3ff)",
-                          color: "var(--primary, #28166f)",
-                          border: "1px solid var(--primary-light-border, #ddd6fe)",
-                          fontSize: "0.75rem",
-                          fontWeight: 700,
-                        }}
-                      >
-                        {exams.length} Total
-                      </span>
-                    </div>
-
-                    {/* Search Bar */}
-                    <div style={{ position: "relative", marginBottom: "0.6rem" }}>
-                      <Search
-                        size={15}
-                        style={{
-                          position: "absolute",
-                          left: "0.75rem",
-                          top: "50%",
-                          transform: "translateY(-50%)",
-                          color: "#94a3b8",
-                        }}
-                      />
-                      <input
-                        type="text"
-                        className="form-input"
-                        placeholder="Search title, subject, code, section..."
-                        style={{
-                          paddingLeft: "2.2rem",
-                          fontSize: "0.82rem",
-                          height: "36px",
-                          background: "#f8fafc",
-                          border: "1px solid #cbd5e1",
-                          borderRadius: "8px",
-                          color: "#0f172a",
-                        }}
-                        value={examListSearch}
-                        onChange={(e) => setExamListSearch(e.target.value)}
+                      <h3>Parsed Sheet Data</h3>
+                      <StatusBadge
+                        customText={`StudentID: ${quickScanResult.student_id || "Empty"}`}
+                        variant="info"
                       />
                     </div>
 
-                    {/* Filter Selectors */}
+                    <div className="results-scrollable bubble-sheet-card">
+                      <div
+                        style={{
+                          display: "grid",
+                          gridTemplateColumns: "1fr 1fr",
+                          gap: "1rem",
+                        }}
+                      >
+                        <div>
+                          {Array.from({ length: 25 }, (_, i) => i + 1).map(
+                            (qNum) => {
+                              const qStr = qNum.toString();
+                              const detectedVal = quickScanResult.answers[qStr];
+                              return (
+                                <div
+                                  key={qStr}
+                                  className="bubble-row"
+                                  style={{ padding: "0.35rem 0.5rem" }}
+                                >
+                                  <span className="bubble-num">{qNum}.</span>
+                                  <div className="bubble-options">
+                                    {["A", "B", "C", "D", "E"].map((opt) => (
+                                      <span
+                                        key={opt}
+                                        className={`bubble-btn ${detectedVal === null
+                                          ? "empty"
+                                          : detectedVal === opt
+                                            ? "active"
+                                            : ""
+                                          }`}
+                                        style={{ pointerEvents: "none" }}
+                                      >
+                                        {opt}
+                                      </span>
+                                    ))}
+                                  </div>
+                                </div>
+                              );
+                            },
+                          )}
+                        </div>
+                        <div>
+                          {Array.from({ length: 25 }, (_, i) => i + 26).map(
+                            (qNum) => {
+                              const qStr = qNum.toString();
+                              const detectedVal = quickScanResult.answers[qStr];
+                              return (
+                                <div
+                                  key={qStr}
+                                  className="bubble-row"
+                                  style={{ padding: "0.35rem 0.5rem" }}
+                                >
+                                  <span className="bubble-num">{qNum}.</span>
+                                  <div className="bubble-options">
+                                    {["A", "B", "C", "D", "E"].map((opt) => (
+                                      <span
+                                        key={opt}
+                                        className={`bubble-btn ${detectedVal === null
+                                          ? "empty"
+                                          : detectedVal === opt
+                                            ? "active"
+                                            : ""
+                                          }`}
+                                        style={{ pointerEvents: "none" }}
+                                      >
+                                        {opt}
+                                      </span>
+                                    ))}
+                                  </div>
+                                </div>
+                              );
+                            },
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* EXAMS & GRADING TAB */}
+          {activeTab === "exams" && (
+            <div>
+              {!activeExam ? (
+                /* ========================================================================= */
+                /* ALL CREATED EXAMINATION CONTAINERS DIRECTORY VIEW                         */
+                /* ========================================================================= */
+                <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
+                  {/* Search, Filter & Quick Stats Toolbar */}
+                  <div
+                    style={{
+                      background: "#ffffff",
+                      borderRadius: "16px",
+                      border: "1px solid #e2e8f0",
+                      padding: "1.25rem 1.5rem",
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: "1.1rem",
+                      boxShadow: "0 2px 8px rgba(0, 0, 0, 0.02)",
+                    }}
+                  >
+                    {/* Header Row: Title & Subtitle + Search & Action Buttons */}
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        flexWrap: "wrap",
+                        gap: "1rem",
+                      }}
+                    >
+                      <div style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
+                        <div
+                          style={{
+                            width: "36px",
+                            height: "36px",
+                            borderRadius: "10px",
+                            background: "var(--primary-light-surface, #f5f3ff)",
+                            color: "var(--primary, #28166f)",
+                            border: "1px solid var(--primary-light-border, #ddd6fe)",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            flexShrink: 0,
+                          }}
+                        >
+                          <BookOpen size={17} />
+                        </div>
+                        <div>
+                          <h3
+                            style={{
+                              fontSize: "1.05rem",
+                              fontWeight: 800,
+                              color: "#0f172a",
+                              margin: 0,
+                              letterSpacing: "-0.01em",
+                            }}
+                          >
+                            Created Examinations Directory
+                          </h3>
+                          <p
+                            style={{
+                              margin: 0,
+                              fontSize: "0.78rem",
+                              color: "#64748b",
+                              fontWeight: 500,
+                            }}
+                          >
+                            Filter and manage test specifications, question answer keys, and grading rubrics
+                          </p>
+                        </div>
+                      </div>
+
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "0.75rem",
+                          flexWrap: "wrap",
+                          flex: "1 1 360px",
+                          justifyContent: "flex-end",
+                        }}
+                      >
+                        <div style={{ position: "relative", minWidth: "250px", flex: "1 1 250px" }}>
+                          <Search
+                            size={16}
+                            style={{
+                              position: "absolute",
+                              left: "12px",
+                              top: "50%",
+                              transform: "translateY(-50%)",
+                              color: "#64748b",
+                            }}
+                          />
+                          <input
+                            placeholder="Search by title, subject, course code, section, or instructor..."
+                            type="text"
+                            value={examListSearch}
+                            onChange={(e) => setExamListSearch(e.target.value)}
+                            style={{
+                              width: "100%",
+                              height: "38px",
+                              paddingLeft: "36px",
+                              paddingRight: "12px",
+                              fontSize: "0.82rem",
+                              fontWeight: 600,
+                              background: "#ffffff",
+                              border: "1px solid #e2e8f0",
+                              borderRadius: "8px",
+                              color: "#0f172a",
+                              outline: "none",
+                              boxShadow: "0 1px 2px rgba(0, 0, 0, 0.03)",
+                            }}
+                          />
+                        </div>
+
+                        <span
+                          className="badge"
+                          style={{
+                            background: "var(--primary-light-surface, #f5f3ff)",
+                            color: "var(--primary, #28166f)",
+                            border: "1px solid var(--primary-light-border, #ddd6fe)",
+                            fontSize: "0.78rem",
+                            fontWeight: 700,
+                            padding: "0.45rem 0.75rem",
+                            borderRadius: "8px",
+                            height: "38px",
+                            display: "inline-flex",
+                            alignItems: "center",
+                            flexShrink: 0,
+                          }}
+                        >
+                          {exams.length} Total Assessments
+                        </span>
+
+                        <button
+                          type="button"
+                          className="btn btn-primary btn-sm"
+                          onClick={() => setIsExamModalOpen(true)}
+                          style={{
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: "6px",
+                            fontWeight: 700,
+                            borderRadius: "8px",
+                            padding: "0.45rem 0.95rem",
+                            fontSize: "0.82rem",
+                            height: "38px",
+                            flexShrink: 0,
+                            boxShadow: "0 1px 2px rgba(0, 0, 0, 0.03)",
+                          }}
+                        >
+                          <Plus size={15} /> Create Examination
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Filter Grid */}
                     <div
                       style={{
                         display: "grid",
-                        gridTemplateColumns: "1fr 1fr",
-                        gap: "0.5rem",
+                        gridTemplateColumns: "repeat(auto-fit, minmax(170px, 1fr))",
+                        gap: "0.85rem",
                       }}
                     >
                       <div>
                         <label
                           style={{
-                            fontSize: "0.7rem",
-                            color: "#64748b",
-                            fontWeight: 600,
+                            fontSize: "0.72rem",
+                            color: "#334155",
+                            fontWeight: 700,
                             display: "block",
-                            marginBottom: "2px",
+                            marginBottom: "4px",
+                            textTransform: "uppercase",
+                            letterSpacing: "0.03em",
                           }}
                         >
-                          Exam Type:
+                          Academic Year
                         </label>
-                        <select
-                          className="form-input"
-                          style={{
-                            fontSize: "0.78rem",
-                            height: "34px",
-                            padding: "0.2rem 0.5rem",
-                            background: "#f8fafc",
-                            border: "1px solid #cbd5e1",
-                            borderRadius: "8px",
-                            color: "#0f172a",
-                          }}
-                          value={examTypeFilter}
-                          onChange={(e) => setExamTypeFilter(e.target.value)}
-                        >
-                          <option value="All">All Types</option>
-                          <option value="Preliminary">Preliminary</option>
-                          <option value="Midterm">Midterm</option>
-                          <option value="Pre-Final">Pre-Final</option>
-                          <option value="Final">Final</option>
-                        </select>
+                        <div className="academic-select-wrapper">
+                          <select
+                            className="academic-select"
+                            value={examAcademicYearFilter}
+                            onChange={(e) => setExamAcademicYearFilter(e.target.value)}
+                          >
+                            {examAcademicYears.map((ay) => (
+                              <option key={ay} value={ay}>
+                                {ay === "All" ? "All Academic Years" : `AY ${ay}`}
+                              </option>
+                            ))}
+                          </select>
+                          <ChevronDown size={14} className="academic-select-arrow" />
+                        </div>
                       </div>
 
                       <div>
                         <label
                           style={{
-                            fontSize: "0.7rem",
-                            color: "#64748b",
-                            fontWeight: 600,
+                            fontSize: "0.72rem",
+                            color: "#334155",
+                            fontWeight: 700,
                             display: "block",
-                            marginBottom: "2px",
+                            marginBottom: "4px",
+                            textTransform: "uppercase",
+                            letterSpacing: "0.03em",
                           }}
                         >
-                          Semester:
+                          Semester / Term
                         </label>
-                        <select
-                          className="form-input"
+                        <div className="academic-select-wrapper">
+                          <select
+                            className="academic-select"
+                            value={examSemesterFilter}
+                            onChange={(e) => setExamSemesterFilter(e.target.value)}
+                          >
+                            <option value="All">All Semesters</option>
+                            <option value="1st Semester">1st Semester</option>
+                            <option value="2nd Semester">2nd Semester</option>
+                            <option value="Summer">Summer</option>
+                          </select>
+                          <ChevronDown size={14} className="academic-select-arrow" />
+                        </div>
+                      </div>
+
+                      <div>
+                        <label
                           style={{
-                            fontSize: "0.78rem",
-                            height: "34px",
-                            padding: "0.2rem 0.5rem",
-                            background: "#f8fafc",
-                            border: "1px solid #cbd5e1",
-                            borderRadius: "8px",
-                            color: "#0f172a",
+                            fontSize: "0.72rem",
+                            color: "#334155",
+                            fontWeight: 700,
+                            display: "block",
+                            marginBottom: "4px",
+                            textTransform: "uppercase",
+                            letterSpacing: "0.03em",
                           }}
-                          value={examSemesterFilter}
-                          onChange={(e) => setExamSemesterFilter(e.target.value)}
                         >
-                          <option value="All">All Semesters</option>
-                          <option value="1st Semester">1st Semester</option>
-                          <option value="2nd Semester">2nd Semester</option>
-                          <option value="Summer">Summer</option>
-                        </select>
+                          Exam Period / Type
+                        </label>
+                        <div className="academic-select-wrapper">
+                          <select
+                            className="academic-select"
+                            value={examTypeFilter}
+                            onChange={(e) => setExamTypeFilter(e.target.value)}
+                          >
+                            <option value="All">All Exam Periods</option>
+                            <option value="Preliminary">Preliminary</option>
+                            <option value="Midterm">Midterm</option>
+                            <option value="Pre-Final">Pre-Final</option>
+                            <option value="Final">Final</option>
+                          </select>
+                          <ChevronDown size={14} className="academic-select-arrow" />
+                        </div>
+                      </div>
+
+                      <div>
+                        <label
+                          style={{
+                            fontSize: "0.72rem",
+                            color: "#334155",
+                            fontWeight: 700,
+                            display: "block",
+                            marginBottom: "4px",
+                            textTransform: "uppercase",
+                            letterSpacing: "0.03em",
+                          }}
+                        >
+                          Program / Course
+                        </label>
+                        <div className="academic-select-wrapper">
+                          <select
+                            className="academic-select"
+                            value={examProgramFilter}
+                            onChange={(e) => setExamProgramFilter(e.target.value)}
+                          >
+                            {examPrograms.map((prog) => (
+                              <option key={prog} value={prog}>
+                                {prog === "All" ? "All Programs & Courses" : prog}
+                              </option>
+                            ))}
+                          </select>
+                          <ChevronDown size={14} className="academic-select-arrow" />
+                        </div>
                       </div>
                     </div>
                   </div>
 
+                  {/* Grid of All Created Examination Containers */}
                   <SmoothContentTransition
                     isLoading={loadingExams}
                     hasExistingData={exams.length > 0}
-                    skeleton={<SkeletonExamList count={4} />}
+                    skeleton={<SkeletonExamList count={6} />}
                   >
                     {(() => {
                       const filtered = exams.filter((ex) => {
@@ -2717,42 +2325,79 @@ export default function App() {
                         const matchesSearch =
                           !q ||
                           ex.name.toLowerCase().includes(q) ||
-                          (ex.subject &&
-                            ex.subject.toLowerCase().includes(q)) ||
-                          (ex.course_code &&
-                            ex.course_code.toLowerCase().includes(q)) ||
-                          (ex.section &&
-                            ex.section.toLowerCase().includes(q)) ||
-                          (ex.instructor_name &&
-                            ex.instructor_name.toLowerCase().includes(q));
+                          (ex.subject && ex.subject.toLowerCase().includes(q)) ||
+                          (ex.course_code && ex.course_code.toLowerCase().includes(q)) ||
+                          (ex.section && ex.section.toLowerCase().includes(q)) ||
+                          (ex.instructor_name && ex.instructor_name.toLowerCase().includes(q));
 
                         const matchesType =
                           examTypeFilter === "All" ||
-                          (ex.exam_type || "").toLowerCase() ===
-                            examTypeFilter.toLowerCase();
+                          (ex.exam_type || "").toLowerCase() === examTypeFilter.toLowerCase();
 
                         const matchesSem =
                           examSemesterFilter === "All" ||
-                          (ex.semester || "1st Semester").toLowerCase() ===
-                            examSemesterFilter.toLowerCase();
+                          (ex.semester || "1st Semester").toLowerCase() === examSemesterFilter.toLowerCase();
 
-                        return matchesSearch && matchesType && matchesSem;
+                        const matchesYear =
+                          examAcademicYearFilter === "All" ||
+                          (ex.academic_year || "").toLowerCase() === examAcademicYearFilter.toLowerCase();
+
+                        const matchesProg =
+                          examProgramFilter === "All" ||
+                          (ex.program || "").toLowerCase() === examProgramFilter.toLowerCase() ||
+                          (ex.course_code || "").toLowerCase() === examProgramFilter.toLowerCase();
+
+                        return matchesSearch && matchesType && matchesSem && matchesYear && matchesProg;
                       });
 
                       if (filtered.length === 0) {
                         return (
                           <div
+                            className="card"
                             style={{
-                              color: "#64748b",
-                              fontSize: "0.85rem",
-                              padding: "2rem",
-                              textAlign: "center",
                               background: "#ffffff",
-                              borderRadius: "12px",
                               border: "1px dashed #cbd5e1",
+                              borderRadius: "16px",
+                              padding: "3.5rem 2rem",
+                              textAlign: "center",
+                              display: "flex",
+                              flexDirection: "column",
+                              alignItems: "center",
+                              gap: "0.75rem",
                             }}
                           >
-                            No examinations found matching your filter criteria.
+                            <div
+                              style={{
+                                width: "56px",
+                                height: "56px",
+                                borderRadius: "16px",
+                                background: "var(--primary-light-surface, #f5f3ff)",
+                                color: "var(--primary, #28166f)",
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                              }}
+                            >
+                              <BookOpen size={28} />
+                            </div>
+                            <h3 style={{ fontSize: "1.1rem", fontWeight: 800, margin: 0, color: "#0f172a" }}>
+                              No Examinations Found
+                            </h3>
+                            <p style={{ fontSize: "0.85rem", color: "#64748b", margin: 0, maxWidth: "420px" }}>
+                              {exams.length === 0
+                                ? "You haven't created any examinations yet. Click the button below to create your first assessment."
+                                : "No examinations match your current search or filter criteria. Try clearing your filters."}
+                            </p>
+                            {exams.length === 0 && (
+                              <button
+                                type="button"
+                                className="btn btn-primary"
+                                onClick={() => setIsExamModalOpen(true)}
+                                style={{ marginTop: "0.5rem", fontWeight: 700, borderRadius: "10px" }}
+                              >
+                                <Plus size={16} /> Create Examination
+                              </button>
+                            )}
                           </div>
                         );
                       }
@@ -2760,20 +2405,16 @@ export default function App() {
                       return (
                         <div
                           style={{
-                            display: "flex",
-                            flexDirection: "column",
-                            gap: "0.85rem",
-                            maxHeight: "640px",
-                            overflowY: "auto",
-                            paddingRight: "6px",
-                            paddingBottom: "8px",
+                            display: "grid",
+                            gridTemplateColumns: "repeat(auto-fill, minmax(350px, 1fr))",
+                            gap: "1.25rem",
                           }}
                         >
                           {filtered.map((exam) => (
                             <ExamCard
                               key={exam.id}
                               exam={exam}
-                              isSelected={selectedExamId === exam.id}
+                              isSelected={false}
                               submissionCount={
                                 submissions.filter((s) => s.exam_id === exam.id).length
                               }
@@ -2791,588 +2432,544 @@ export default function App() {
                     })()}
                   </SmoothContentTransition>
                 </div>
+              ) : (
+                /* ========================================================================= */
+                /* DEDICATED GRADING STUDIO FOR THE SELECTED EXAMINATION                     */
+                /* ========================================================================= */
+                <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
+                  {/* Back to All Examinations Navigation Bar */}
+                  <div
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      flexWrap: "wrap",
+                      gap: "0.75rem",
+                      background: "#ffffff",
+                      border: "1px solid #e2e8f0",
+                      borderRadius: "14px",
+                      padding: "0.75rem 1.25rem",
+                      boxShadow: "0 2px 6px rgba(0, 0, 0, 0.02)",
+                    }}
+                  >
+                    <button
+                      type="button"
+                      className="btn btn-secondary"
+                      onClick={() => {
+                        setSelectedExamId("");
+                        setLatestGradeResult(null);
+                        setIsCameraActive(false);
+                      }}
+                      style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: "8px",
+                        fontWeight: 700,
+                        borderRadius: "8px",
+                        background: "#f8fafc",
+                        border: "1px solid #cbd5e1",
+                        color: "#0f172a",
+                        fontSize: "0.85rem",
+                        padding: "0.45rem 0.95rem",
+                      }}
+                    >
+                      <ArrowLeft size={16} /> Back to All Examinations
+                    </button>
 
-              {/* Active Exam Grading Controls */}
-              <div
-                className="card"
-                style={{
-                  background: "#ffffff",
-                  border: "1px solid #e2e8f0",
-                  borderRadius: "16px",
-                  padding: "1.5rem",
-                  boxShadow: "0 2px 8px rgba(0, 0, 0, 0.02)",
-                }}
-              >
-                {activeExam ? (() => {
-                  const activeExamSubmissions = submissions.filter(
-                    (s) => s.exam_id === activeExam.id,
-                  );
-                  const questionCount =
-                    activeExam.num_items ||
-                    Object.keys(activeExam.answer_key || {}).length ||
-                    50;
-                  const avgScore =
-                    activeExamSubmissions.length > 0
-                      ? activeExamSubmissions.reduce((acc, s) => acc + s.score, 0) /
-                        activeExamSubmissions.length
-                      : 0;
-                  const avgPercentage =
-                    questionCount > 0 ? Math.round((avgScore / questionCount) * 100) : 0;
-                  const avgTransmuted = calculateTransmutedGrade(
-                    Math.round(avgScore),
-                    questionCount,
-                  );
-                  const passCount = activeExamSubmissions.filter((s) => {
-                    const t = calculateTransmutedGrade(s.score, questionCount);
-                    return t.status === "Passed";
-                  }).length;
-                  const passRate =
-                    activeExamSubmissions.length > 0
-                      ? Math.round((passCount / activeExamSubmissions.length) * 100)
-                      : 0;
-
-                  // Answer key distribution
-                  const answerDist: Record<string, number> = { A: 0, B: 0, C: 0, D: 0, E: 0 };
-                  Object.values(activeExam.answer_key || {}).forEach((ans) => {
-                    if (ans && answerDist[ans] !== undefined) {
-                      answerDist[ans]++;
-                    }
-                  });
-
-                  // Grade result calculations
-                  const allAnswerEntries = Object.entries(activeExam.answer_key || {}).sort(
-                    (a, b) => parseInt(a[0]) - parseInt(b[0]),
-                  );
-                  const correctCount = latestGradeResult
-                    ? allAnswerEntries.filter(([qStr, correctAns]) => {
-                        const s = latestGradeResult.answers[qStr];
-                        return (
-                          s &&
-                          !s.is_empty &&
-                          !s.is_ambiguous &&
-                          s.selected === correctAns
-                        );
-                      }).length
-                    : 0;
-                  const incorrectCount = latestGradeResult
-                    ? allAnswerEntries.filter(([qStr, correctAns]) => {
-                        const s = latestGradeResult.answers[qStr];
-                        return (
-                          s &&
-                          (!s.selected || s.selected !== correctAns) &&
-                          !s.is_ambiguous
-                        );
-                      }).length
-                    : 0;
-                  const ambiguousCount = latestGradeResult
-                    ? allAnswerEntries.filter(([qStr]) => {
-                        const s = latestGradeResult.answers[qStr];
-                        return s && s.is_ambiguous;
-                      }).length
-                    : 0;
-
-                  const filteredAnswerEntries = allAnswerEntries.filter(
-                    ([qStr, correctAns]) => {
-                      if (!latestGradeResult) return true;
-                      const s = latestGradeResult.answers[qStr];
-                      if (gradeResultFilter === "correct") {
-                        return (
-                          s &&
-                          !s.is_empty &&
-                          !s.is_ambiguous &&
-                          s.selected === correctAns
-                        );
-                      }
-                      if (gradeResultFilter === "incorrect") {
-                        return (
-                          s &&
-                          (!s.selected || s.selected !== correctAns) &&
-                          !s.is_ambiguous
-                        );
-                      }
-                      if (gradeResultFilter === "ambiguous") {
-                        return s && s.is_ambiguous;
-                      }
-                      return true;
-                    },
-                  );
-
-                  const latestTransmuted = latestGradeResult
-                    ? calculateTransmutedGrade(
-                        latestGradeResult.score,
-                        latestGradeResult.total_questions,
-                      )
-                    : null;
-
-                  const getStudentName = (studentId?: string) => {
-                    if (!studentId) return "Anonymous / Unassigned";
-                    const found = roster.find(
-                      (r) =>
-                        r.student_id.toLowerCase() === studentId.toLowerCase(),
-                    );
-                    return found ? found.name : `Student (${studentId})`;
-                  };
-
-                  return (
-                    <div>
-                      {/* Active Exam Hero Header */}
-                      <div
+                    <div style={{ display: "flex", alignItems: "center", gap: "0.6rem", flexWrap: "wrap" }}>
+                      <button
+                        type="button"
+                        className="btn btn-secondary"
+                        onClick={() => setIsCameraActive((prev) => !prev)}
                         style={{
-                          display: "flex",
-                          justifyContent: "space-between",
-                          alignItems: "flex-start",
-                          gap: "1.25rem",
-                          marginBottom: "1.25rem",
-                          borderBottom: "1px solid #f1f5f9",
-                          paddingBottom: "1.25rem",
-                          flexWrap: "wrap",
+                          background: isCameraActive ? "var(--primary-light-surface, #f5f3ff)" : "#ffffff",
+                          border: isCameraActive ? "1px solid var(--primary-light-border, #ddd6fe)" : "1px solid #cbd5e1",
+                          color: isCameraActive ? "var(--primary, #28166f)" : "#0f172a",
+                          fontWeight: 600,
+                          borderRadius: "8px",
+                          fontSize: "0.82rem",
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: "6px",
+                        }}
+                        title="Launch or close the live camera sheet scanner"
+                      >
+                        <Camera size={14} /> {isCameraActive ? "Close Camera" : "Live Camera"}
+                      </button>
+                      <button
+                        type="button"
+                        className="btn btn-secondary"
+                        onClick={() => studentScanInputRef.current?.click()}
+                        style={{
+                          background: "#ffffff",
+                          border: "1px solid #cbd5e1",
+                          color: "#0f172a",
+                          fontWeight: 600,
+                          borderRadius: "8px",
+                          fontSize: "0.82rem",
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: "6px",
+                        }}
+                        title="Upload student answer sheet image files (.png, .jpg)"
+                      >
+                        <UploadCloud size={14} /> Upload Sheet(s)
+                      </button>
+                      <button
+                        type="button"
+                        className="btn btn-secondary"
+                        onClick={handleExportGradeSheet}
+                        style={{
+                          background: "#ffffff",
+                          border: "1px solid #cbd5e1",
+                          color: "#0f172a",
+                          fontWeight: 600,
+                          borderRadius: "8px",
+                          fontSize: "0.82rem",
                         }}
                       >
-                        <div style={{ flex: 1, minWidth: "260px" }}>
-                          <div
-                            style={{
-                              display: "flex",
-                              alignItems: "center",
-                              gap: "8px",
-                              flexWrap: "wrap",
-                              marginBottom: "6px",
-                            }}
-                          >
-                            <span
-                              className="badge"
-                              style={{
-                                background: "var(--primary-light-surface, #f5f3ff)",
-                                color: "var(--primary, #28166f)",
-                                border: "1px solid var(--primary-light-border, #ddd6fe)",
-                                fontSize: "0.72rem",
-                                fontWeight: 800,
-                                padding: "0.2rem 0.55rem",
-                                borderRadius: "6px",
-                              }}
-                            >
-                              {activeExam.exam_type || "Midterm"}
-                            </span>
-                            {activeExam.course_code && (
-                              <span
-                                style={{
-                                  fontSize: "0.8rem",
-                                  fontWeight: 800,
-                                  color: "var(--primary, #28166f)",
-                                  background: "#f0fdf4",
-                                  border: "1px solid #bbf7d0",
-                                  padding: "0.15rem 0.5rem",
-                                  borderRadius: "6px",
-                                }}
-                              >
-                                {activeExam.course_code}
-                              </span>
-                            )}
-                            {activeExam.section && (
-                              <span
-                                style={{
-                                  fontSize: "0.78rem",
-                                  color: "#475569",
-                                  fontWeight: 700,
-                                }}
-                              >
-                                Sec: {activeExam.section}
-                              </span>
-                            )}
-                            {activeExam.academic_year && (
-                              <span
-                                style={{
-                                  fontSize: "0.75rem",
-                                  color: "#64748b",
-                                }}
-                              >
-                                • AY {activeExam.academic_year}{" "}
-                                {activeExam.semester ? `(${activeExam.semester})` : ""}
-                              </span>
-                            )}
-                          </div>
-                          <h2
-                            style={{
-                              margin: 0,
-                              fontSize: "1.35rem",
-                              fontWeight: 800,
-                              color: "#0f172a",
-                              letterSpacing: "-0.01em",
-                            }}
-                          >
-                            {activeExam.name}
-                          </h2>
-                          {activeExam.subject && (
-                            <p
-                              style={{
-                                fontSize: "0.84rem",
-                                color: "#475569",
-                                margin: "0.2rem 0 0 0",
-                              }}
-                            >
-                              {activeExam.subject}{" "}
-                              {activeExam.instructor_name ? `• Instructor: ${activeExam.instructor_name}` : ""}
-                            </p>
-                          )}
-                        </div>
-
-                        <div
-                          style={{
-                            display: "flex",
-                            alignItems: "center",
-                            gap: "0.6rem",
-                            flexWrap: "wrap",
-                          }}
-                        >
-                          <button
-                            className="btn btn-secondary"
-                            style={{
-                              fontSize: "0.78rem",
-                              fontWeight: 700,
-                              padding: "0.45rem 0.8rem",
-                              borderRadius: "8px",
-                              display: "inline-flex",
-                              alignItems: "center",
-                              gap: "5px",
-                            }}
-                            onClick={() => setInspectExam(activeExam)}
-                            title="Inspect Answer Key and Exam Settings"
-                          >
-                            <Eye size={14} /> Inspect Exam
-                          </button>
-                          <button
-                            className="btn btn-secondary"
-                            style={{
-                              fontSize: "0.78rem",
-                              fontWeight: 700,
-                              padding: "0.45rem 0.8rem",
-                              borderRadius: "8px",
-                              display: "inline-flex",
-                              alignItems: "center",
-                              gap: "5px",
-                            }}
-                            onClick={handleExportGradeSheet}
-                            title="Export Class Grade Sheet to Excel"
-                          >
-                            <Download size={14} /> Export Submissions
-                          </button>
-                          <button
-                            className="btn"
-                            style={{
-                              padding: "0.45rem 0.8rem",
-                              display: "inline-flex",
-                              alignItems: "center",
-                              gap: "4px",
-                              fontSize: "0.78rem",
-                              fontWeight: 700,
-                              background: "#fef2f2",
-                              border: "1px solid #fecaca",
-                              color: "#ef4444",
-                              borderRadius: "8px",
-                            }}
-                            onClick={() => handleDeleteExam(activeExam.id)}
-                            title="Delete this Examination"
-                          >
-                            <Trash2 size={14} /> Delete
-                          </button>
-                        </div>
-                      </div>
-
-                      {/* 4 Live Quick Metric Cards */}
-                      <div
+                        <Download size={14} /> Export Grade Sheet (.xlsx)
+                      </button>
+                      <button
+                        type="button"
+                        className="btn btn-primary"
+                        onClick={() => setIsExamModalOpen(true)}
                         style={{
-                          display: "grid",
-                          gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
-                          gap: "0.85rem",
-                          marginBottom: "1.5rem",
+                          fontWeight: 700,
+                          borderRadius: "8px",
+                          fontSize: "0.82rem",
                         }}
                       >
-                        {/* Metric 1: Submissions */}
-                        <div className="exam-studio-metric-card">
-                          <div
-                            className="metric-avatar"
-                            style={{
-                              background: "var(--primary-light-surface, #f5f3ff)",
-                              color: "var(--primary, #28166f)",
-                              border: "1px solid var(--primary-light-border, #ddd6fe)",
-                            }}
-                          >
-                            <Users size={18} />
-                          </div>
-                          <div>
-                            <div style={{ fontSize: "0.72rem", color: "#64748b", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.03em" }}>
-                              Submissions
-                            </div>
-                            <div style={{ fontSize: "1.15rem", fontWeight: 800, color: "#0f172a" }}>
-                              {activeExamSubmissions.length}{" "}
-                              <span style={{ fontSize: "0.78rem", color: "#64748b", fontWeight: 600 }}>
-                                / {roster.length}
-                              </span>
-                            </div>
-                            <div style={{ fontSize: "0.72rem", color: "#059669", fontWeight: 700 }}>
-                              {Math.round((activeExamSubmissions.length / (roster.length || 1)) * 100)}% class turnout
-                            </div>
-                          </div>
-                        </div>
+                        <Plus size={15} /> Create Examination
+                      </button>
+                    </div>
+                  </div>
 
-                        {/* Metric 2: Class Average */}
-                        <div className="exam-studio-metric-card">
-                          <div
-                            className="metric-avatar"
-                            style={{
-                              background: "#fef3c7",
-                              color: "#b45309",
-                              border: "1px solid #fde68a",
-                            }}
-                          >
-                            <Award size={18} />
-                          </div>
-                          <div>
-                            <div style={{ fontSize: "0.72rem", color: "#64748b", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.03em" }}>
-                              Class Average
-                            </div>
-                            <div style={{ fontSize: "1.15rem", fontWeight: 800, color: "#0f172a" }}>
-                              {avgScore > 0 ? avgScore.toFixed(1) : "0.0"}{" "}
-                              <span style={{ fontSize: "0.78rem", color: "#64748b", fontWeight: 600 }}>
-                                / {questionCount}
-                              </span>
-                            </div>
-                            <div style={{ fontSize: "0.72rem", color: "#475569", fontWeight: 700 }}>
-                              {avgPercentage}% raw mean
-                            </div>
-                          </div>
-                        </div>
+                  {/* Active Exam Grading Controls Card */}
+                  <div
+                    className="card"
+                    style={{
+                      background: "#ffffff",
+                      border: "1px solid #e2e8f0",
+                      borderRadius: "16px",
+                      padding: "1.5rem",
+                      boxShadow: "0 2px 8px rgba(0, 0, 0, 0.02)",
+                    }}
+                  >
+                    {(() => {
+                      const activeExamSubmissions = submissions.filter(
+                        (s) => s.exam_id === activeExam.id,
+                      );
+                      const questionCount =
+                        activeExam.num_items ||
+                        Object.keys(activeExam.answer_key || {}).length ||
+                        50;
+                      const avgScore =
+                        activeExamSubmissions.length > 0
+                          ? activeExamSubmissions.reduce((acc, s) => acc + s.score, 0) /
+                          activeExamSubmissions.length
+                          : 0;
+                      const avgPercentage =
+                        questionCount > 0 ? Math.round((avgScore / questionCount) * 100) : 0;
+                      const avgTransmuted = calculateTransmutedGrade(
+                        Math.round(avgScore),
+                        questionCount,
+                      );
+                      const passCount = activeExamSubmissions.filter((s) => {
+                        const t = calculateTransmutedGrade(s.score, questionCount);
+                        return t.status === "Passed";
+                      }).length;
+                      const passRate =
+                        activeExamSubmissions.length > 0
+                          ? Math.round((passCount / activeExamSubmissions.length) * 100)
+                          : 0;
 
-                        {/* Metric 3: Transmuted Grade */}
-                        <div className="exam-studio-metric-card">
-                          <div
-                            className="metric-avatar"
-                            style={{
-                              background: "#f3e8ff",
-                              color: "#7e22ce",
-                              border: "1px solid #e9d5ff",
-                            }}
-                          >
-                            <GraduationCap size={18} />
-                          </div>
-                          <div>
-                            <div style={{ fontSize: "0.72rem", color: "#64748b", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.03em" }}>
-                              Transmuted Grade
-                            </div>
-                            <div style={{ fontSize: "1.15rem", fontWeight: 800, color: "#7e22ce" }}>
-                              {activeExamSubmissions.length > 0 ? avgTransmuted.grade : "—"}
-                            </div>
-                            <div style={{ fontSize: "0.72rem", color: "#475569", fontWeight: 700 }}>
-                              {activeExamSubmissions.length > 0 ? avgTransmuted.remarks : "No submissions"}
-                            </div>
-                          </div>
-                        </div>
+                      // Answer key distribution
+                      const answerDist: Record<string, number> = { A: 0, B: 0, C: 0, D: 0, E: 0 };
+                      Object.values(activeExam.answer_key || {}).forEach((ans) => {
+                        if (ans && answerDist[ans] !== undefined) {
+                          answerDist[ans]++;
+                        }
+                      });
 
-                        {/* Metric 4: Passing Rate */}
-                        <div className="exam-studio-metric-card">
-                          <div
-                            className="metric-avatar"
-                            style={{
-                              background: passRate >= 75 ? "#ecfdf5" : "#fffbeb",
-                              color: passRate >= 75 ? "#047857" : "#b45309",
-                              border: `1px solid ${passRate >= 75 ? "#a7f3d0" : "#fde68a"}`,
-                            }}
-                          >
-                            <CheckCircle2 size={18} />
-                          </div>
-                          <div>
-                            <div style={{ fontSize: "0.72rem", color: "#64748b", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.03em" }}>
-                              Passing Rate
-                            </div>
-                            <div style={{ fontSize: "1.15rem", fontWeight: 800, color: passRate >= 75 ? "#047857" : "#b45309" }}>
-                              {passRate}%
-                            </div>
-                            <div style={{ fontSize: "0.72rem", color: "#475569", fontWeight: 700 }}>
-                              {passCount} passed • {activeExamSubmissions.length - passCount} failed
-                            </div>
-                          </div>
-                        </div>
-                      </div>
+                      // Grade result calculations
+                      const allAnswerEntries = Object.entries(activeExam.answer_key || {}).sort(
+                        (a, b) => parseInt(a[0]) - parseInt(b[0]),
+                      );
+                      const correctCount = latestGradeResult
+                        ? allAnswerEntries.filter(([qStr, correctAns]) => {
+                          const s = latestGradeResult.answers[qStr];
+                          return (
+                            s &&
+                            !s.is_empty &&
+                            !s.is_ambiguous &&
+                            s.selected === correctAns
+                          );
+                        }).length
+                        : 0;
+                      const incorrectCount = latestGradeResult
+                        ? allAnswerEntries.filter(([qStr, correctAns]) => {
+                          const s = latestGradeResult.answers[qStr];
+                          return (
+                            s &&
+                            (!s.selected || s.selected !== correctAns) &&
+                            !s.is_ambiguous
+                          );
+                        }).length
+                        : 0;
+                      const ambiguousCount = latestGradeResult
+                        ? allAnswerEntries.filter(([qStr]) => {
+                          const s = latestGradeResult.answers[qStr];
+                          return s && s.is_ambiguous;
+                        }).length
+                        : 0;
 
-                      {/* Studio Workspace Tabs Bar */}
-                      <div className="exam-subtab-bar">
-                        <button
-                          type="button"
-                          className={`exam-subtab-item ${
-                            activeExamStudioTab === "grading" ? "active" : ""
-                          }`}
-                          onClick={() => setActiveExamStudioTab("grading")}
-                        >
-                          <Sparkles size={15} /> OMR Grading Studio
-                        </button>
-                        <button
-                          type="button"
-                          className={`exam-subtab-item ${
-                            activeExamStudioTab === "submissions" ? "active" : ""
-                          }`}
-                          onClick={() => setActiveExamStudioTab("submissions")}
-                        >
-                          <Users size={15} /> Graded Submissions ({activeExamSubmissions.length})
-                        </button>
-                        <button
-                          type="button"
-                          className={`exam-subtab-item ${
-                            activeExamStudioTab === "answer-key" ? "active" : ""
-                          }`}
-                          onClick={() => setActiveExamStudioTab("answer-key")}
-                        >
-                          <Key size={15} /> Visual Answer Key ({questionCount} Items)
-                        </button>
-                      </div>
+                      const filteredAnswerEntries = allAnswerEntries.filter(
+                        ([qStr, correctAns]) => {
+                          if (!latestGradeResult) return true;
+                          const s = latestGradeResult.answers[qStr];
+                          if (gradeResultFilter === "correct") {
+                            return (
+                              s &&
+                              !s.is_empty &&
+                              !s.is_ambiguous &&
+                              s.selected === correctAns
+                            );
+                          }
+                          if (gradeResultFilter === "incorrect") {
+                            return (
+                              s &&
+                              (!s.selected || s.selected !== correctAns) &&
+                              !s.is_ambiguous
+                            );
+                          }
+                          if (gradeResultFilter === "ambiguous") {
+                            return s && s.is_ambiguous;
+                          }
+                          return true;
+                        },
+                      );
 
-                      {/* TAB 1: OMR GRADING STUDIO */}
-                      {activeExamStudioTab === "grading" && (
+                      const latestTransmuted = latestGradeResult
+                        ? calculateTransmutedGrade(
+                          latestGradeResult.score,
+                          latestGradeResult.total_questions,
+                        )
+                        : null;
+
+                      const getStudentName = (studentId?: string) => {
+                        if (!studentId) return "Anonymous / Unassigned";
+                        const found = roster.find(
+                          (r) =>
+                            r.student_id.toLowerCase() === studentId.toLowerCase(),
+                        );
+                        return found ? found.name : `Student (${studentId})`;
+                      };
+
+                      return (
                         <div>
-                          {/* Input Mode Switcher */}
+                          {/* Active Exam Hero Header */}
                           <div
                             style={{
                               display: "flex",
                               justifyContent: "space-between",
-                              alignItems: "center",
+                              alignItems: "flex-start",
+                              gap: "1.25rem",
                               marginBottom: "1.25rem",
+                              borderBottom: "1px solid #f1f5f9",
+                              paddingBottom: "1.25rem",
                               flexWrap: "wrap",
-                              gap: "0.75rem",
                             }}
                           >
-                            <div>
-                              <h4 style={{ margin: 0, fontSize: "1rem", fontWeight: 800, color: "#0f172a" }}>
-                                Grade Student OMR Answer Sheets
-                              </h4>
-                              <p style={{ margin: "0.15rem 0 0 0", fontSize: "0.78rem", color: "#64748b" }}>
-                                Automatic computer vision bubble recognition scored directly against {activeExam.name}
-                              </p>
+                            <div style={{ flex: 1, minWidth: "260px" }}>
+                              <div
+                                style={{
+                                  display: "flex",
+                                  alignItems: "center",
+                                  gap: "8px",
+                                  flexWrap: "wrap",
+                                  marginBottom: "6px",
+                                }}
+                              >
+                                <span
+                                  className="badge"
+                                  style={{
+                                    background: "var(--primary-light-surface, #f5f3ff)",
+                                    color: "var(--primary, #28166f)",
+                                    border: "1px solid var(--primary-light-border, #ddd6fe)",
+                                    fontSize: "0.72rem",
+                                    fontWeight: 800,
+                                    padding: "0.2rem 0.55rem",
+                                    borderRadius: "6px",
+                                  }}
+                                >
+                                  {activeExam.exam_type || "Midterm"}
+                                </span>
+                                {activeExam.course_code && (
+                                  <span
+                                    style={{
+                                      fontSize: "0.8rem",
+                                      fontWeight: 800,
+                                      color: "var(--primary, #28166f)",
+                                      background: "#f0fdf4",
+                                      border: "1px solid #bbf7d0",
+                                      padding: "0.15rem 0.5rem",
+                                      borderRadius: "6px",
+                                    }}
+                                  >
+                                    {activeExam.course_code}
+                                  </span>
+                                )}
+                                {activeExam.section && (
+                                  <span
+                                    style={{
+                                      fontSize: "0.78rem",
+                                      color: "#475569",
+                                      fontWeight: 700,
+                                    }}
+                                  >
+                                    Sec: {activeExam.section}
+                                  </span>
+                                )}
+                                {activeExam.academic_year && (
+                                  <span
+                                    style={{
+                                      fontSize: "0.75rem",
+                                      color: "#64748b",
+                                    }}
+                                  >
+                                    • AY {activeExam.academic_year}{" "}
+                                    {activeExam.semester ? `(${activeExam.semester})` : ""}
+                                  </span>
+                                )}
+                              </div>
+                              <h2
+                                style={{
+                                  margin: 0,
+                                  fontSize: "1.35rem",
+                                  fontWeight: 800,
+                                  color: "#0f172a",
+                                  letterSpacing: "-0.01em",
+                                }}
+                              >
+                                {activeExam.name}
+                              </h2>
+                              {activeExam.subject && (
+                                <p
+                                  style={{
+                                    fontSize: "0.84rem",
+                                    color: "#475569",
+                                    margin: "0.2rem 0 0 0",
+                                  }}
+                                >
+                                  {activeExam.subject}{" "}
+                                  {activeExam.instructor_name ? `• Instructor: ${activeExam.instructor_name}` : ""}
+                                </p>
+                              )}
                             </div>
+
                             <div
                               style={{
                                 display: "flex",
-                                background: "#f1f5f9",
-                                padding: "3px",
-                                borderRadius: "10px",
-                                border: "1px solid #e2e8f0",
-                                gap: "3px",
+                                alignItems: "center",
+                                gap: "0.6rem",
+                                flexWrap: "wrap",
                               }}
                             >
                               <button
-                                type="button"
-                                onClick={() => setStudentScanMode("upload")}
+                                className="btn btn-secondary"
                                 style={{
-                                  display: "flex",
-                                  alignItems: "center",
-                                  gap: "6px",
-                                  padding: "0.45rem 0.95rem",
-                                  fontSize: "0.8rem",
+                                  fontSize: "0.78rem",
                                   fontWeight: 700,
+                                  padding: "0.45rem 0.8rem",
                                   borderRadius: "8px",
-                                  border: "none",
-                                  cursor: "pointer",
-                                  transition: "all 0.2s ease",
-                                  background:
-                                    studentScanMode === "upload"
-                                      ? "var(--primary, #28166f)"
-                                      : "transparent",
-                                  color:
-                                    studentScanMode === "upload"
-                                      ? "#ffffff"
-                                      : "#64748b",
-                                  boxShadow:
-                                    studentScanMode === "upload"
-                                      ? "0 2px 6px rgba(40, 22, 111, 0.25)"
-                                      : "none",
+                                  display: "inline-flex",
+                                  alignItems: "center",
+                                  gap: "5px",
                                 }}
+                                onClick={() => setInspectExam(activeExam)}
+                                title="Inspect Answer Key and Exam Settings"
                               >
-                                <UploadCloud size={15} /> File Upload
+                                <Eye size={14} /> Inspect Exam
                               </button>
                               <button
-                                type="button"
-                                onClick={() => setStudentScanMode("camera")}
+                                className="btn btn-secondary"
                                 style={{
-                                  display: "flex",
-                                  alignItems: "center",
-                                  gap: "6px",
-                                  padding: "0.45rem 0.95rem",
-                                  fontSize: "0.8rem",
+                                  fontSize: "0.78rem",
                                   fontWeight: 700,
+                                  padding: "0.45rem 0.8rem",
                                   borderRadius: "8px",
-                                  border: "none",
-                                  cursor: "pointer",
-                                  transition: "all 0.2s ease",
-                                  background:
-                                    studentScanMode === "camera"
-                                      ? "var(--primary, #28166f)"
-                                      : "transparent",
-                                  color:
-                                    studentScanMode === "camera"
-                                      ? "#ffffff"
-                                      : "#64748b",
-                                  boxShadow:
-                                    studentScanMode === "camera"
-                                      ? "0 2px 6px rgba(40, 22, 111, 0.25)"
-                                      : "none",
+                                  display: "inline-flex",
+                                  alignItems: "center",
+                                  gap: "5px",
                                 }}
+                                onClick={handleExportGradeSheet}
+                                title="Export Class Grade Sheet to Excel"
                               >
-                                <Camera size={15} /> Live Camera Scanner
+                                <Download size={14} /> Export Submissions
+                              </button>
+                              <button
+                                className="btn"
+                                style={{
+                                  padding: "0.45rem 0.8rem",
+                                  display: "inline-flex",
+                                  alignItems: "center",
+                                  gap: "4px",
+                                  fontSize: "0.78rem",
+                                  fontWeight: 700,
+                                  background: "#fef2f2",
+                                  border: "1px solid #fecaca",
+                                  color: "#ef4444",
+                                  borderRadius: "8px",
+                                }}
+                                onClick={() => handleDeleteExam(activeExam.id)}
+                                title="Delete this Examination"
+                              >
+                                <Trash2 size={14} /> Delete
                               </button>
                             </div>
                           </div>
 
-                          {/* Mode A: Live Camera */}
-                          {studentScanMode === "camera" ? (
-                            <div style={{ marginBottom: "1.5rem" }}>
-                              <CameraScanner
-                                onCapture={async (file) => {
-                                  await handleGradeSheetsSubmit([file]);
+                          {/* 4 Live Quick Metric Cards */}
+                          <div
+                            style={{
+                              display: "grid",
+                              gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+                              gap: "0.85rem",
+                              marginBottom: "1.5rem",
+                            }}
+                          >
+                            {/* Metric 1: Submissions */}
+                            <div className="exam-studio-metric-card">
+                              <div
+                                className="metric-avatar"
+                                style={{
+                                  background: "var(--primary-light-surface, #f5f3ff)",
+                                  color: "var(--primary, #28166f)",
+                                  border: "1px solid var(--primary-light-border, #ddd6fe)",
                                 }}
-                                onSwitchToUpload={() => setStudentScanMode("upload")}
-                                onClose={() => setStudentScanMode("upload")}
-                                title={`Grade Student Sheet — ${activeExam.name}`}
-                                subtitle={`Align the 4 black corner squares within the viewfinder. Scored instantly against ${activeExam.name}.`}
-                              />
-
-                              {gradingProgress && (
-                                <div style={{ marginTop: "1rem" }}>
-                                  <div
-                                    style={{
-                                      display: "flex",
-                                      justifyContent: "space-between",
-                                      fontSize: "0.75rem",
-                                      marginBottom: "0.25rem",
-                                      color: "#475569",
-                                      fontWeight: 600,
-                                    }}
-                                  >
-                                    <span>Grading captured student sheet...</span>
-                                    <span>
-                                      {gradingProgress.current} / {gradingProgress.total}
-                                    </span>
-                                  </div>
-                                  <div
-                                    style={{
-                                      width: "100%",
-                                      height: "6px",
-                                      background: "#f1f5f9",
-                                      borderRadius: "3px",
-                                      overflow: "hidden",
-                                    }}
-                                  >
-                                    <div
-                                      style={{
-                                        height: "100%",
-                                        background: "var(--primary, #28166f)",
-                                        width: `${(gradingProgress.current / gradingProgress.total) * 100}%`,
-                                        transition: "width 0.2s",
-                                      }}
-                                    ></div>
-                                  </div>
+                              >
+                                <Users size={18} />
+                              </div>
+                              <div>
+                                <div style={{ fontSize: "0.72rem", color: "#64748b", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.03em" }}>
+                                  Submissions
                                 </div>
-                              )}
+                                <div style={{ fontSize: "1.15rem", fontWeight: 800, color: "#0f172a" }}>
+                                  {activeExamSubmissions.length}{" "}
+                                  <span style={{ fontSize: "0.78rem", color: "#64748b", fontWeight: 600 }}>
+                                    / {roster.length}
+                                  </span>
+                                </div>
+                                <div style={{ fontSize: "0.72rem", color: "#059669", fontWeight: 700 }}>
+                                  {Math.round((activeExamSubmissions.length / (roster.length || 1)) * 100)}% class turnout
+                                </div>
+                              </div>
                             </div>
-                          ) : (
-                            /* Mode B: Dropzone File Upload */
-                            <div style={{ marginBottom: "1.75rem" }}>
+
+                            {/* Metric 2: Class Average */}
+                            <div className="exam-studio-metric-card">
+                              <div
+                                className="metric-avatar"
+                                style={{
+                                  background: "#fef3c7",
+                                  color: "#b45309",
+                                  border: "1px solid #fde68a",
+                                }}
+                              >
+                                <Award size={18} />
+                              </div>
+                              <div>
+                                <div style={{ fontSize: "0.72rem", color: "#64748b", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.03em" }}>
+                                  Class Average
+                                </div>
+                                <div style={{ fontSize: "1.15rem", fontWeight: 800, color: "#0f172a" }}>
+                                  {avgScore > 0 ? avgScore.toFixed(1) : "0.0"}{" "}
+                                  <span style={{ fontSize: "0.78rem", color: "#64748b", fontWeight: 600 }}>
+                                    / {questionCount}
+                                  </span>
+                                </div>
+                                <div style={{ fontSize: "0.72rem", color: "#475569", fontWeight: 700 }}>
+                                  {avgPercentage}% raw mean
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Metric 3: Transmuted Grade */}
+                            <div className="exam-studio-metric-card">
+                              <div
+                                className="metric-avatar"
+                                style={{
+                                  background: "#f3e8ff",
+                                  color: "#7e22ce",
+                                  border: "1px solid #e9d5ff",
+                                }}
+                              >
+                                <GraduationCap size={18} />
+                              </div>
+                              <div>
+                                <div style={{ fontSize: "0.72rem", color: "#64748b", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.03em" }}>
+                                  Transmuted Grade
+                                </div>
+                                <div style={{ fontSize: "1.15rem", fontWeight: 800, color: "#7e22ce" }}>
+                                  {activeExamSubmissions.length > 0 ? avgTransmuted.grade : "—"}
+                                </div>
+                                <div style={{ fontSize: "0.72rem", color: "#475569", fontWeight: 700 }}>
+                                  {activeExamSubmissions.length > 0 ? avgTransmuted.remarks : "No submissions"}
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Metric 4: Passing Rate */}
+                            <div className="exam-studio-metric-card">
+                              <div
+                                className="metric-avatar"
+                                style={{
+                                  background: passRate >= 75 ? "#ecfdf5" : "#fffbeb",
+                                  color: passRate >= 75 ? "#047857" : "#b45309",
+                                  border: `1px solid ${passRate >= 75 ? "#a7f3d0" : "#fde68a"}`,
+                                }}
+                              >
+                                <CheckCircle2 size={18} />
+                              </div>
+                              <div>
+                                <div style={{ fontSize: "0.72rem", color: "#64748b", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.03em" }}>
+                                  Passing Rate
+                                </div>
+                                <div style={{ fontSize: "1.15rem", fontWeight: 800, color: passRate >= 75 ? "#047857" : "#b45309" }}>
+                                  {passRate}%
+                                </div>
+                                <div style={{ fontSize: "0.72rem", color: "#475569", fontWeight: 700 }}>
+                                  {passCount} passed • {activeExamSubmissions.length - passCount} failed
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Studio Workspace Tabs Bar */}
+                          <div className="exam-subtab-bar">
+                            <button
+                              type="button"
+                              className={`exam-subtab-item ${activeExamStudioTab === "grading" ? "active" : ""
+                                }`}
+                              onClick={() => setActiveExamStudioTab("grading")}
+                            >
+                              <Sparkles size={15} /> OMR Grading Studio
+                            </button>
+                            <button
+                              type="button"
+                              className={`exam-subtab-item ${activeExamStudioTab === "answer-key" ? "active" : ""
+                                }`}
+                              onClick={() => setActiveExamStudioTab("answer-key")}
+                            >
+                              <Key size={15} /> Visual Answer Key ({questionCount} Items)
+                            </button>
+                          </div>
+
+                          {/* TAB 1: OMR GRADING STUDIO */}
+                          {activeExamStudioTab === "grading" && (
+                            <div>
+                              {/* Hidden File Input for Batch Sheet Upload */}
                               <input
                                 type="file"
                                 ref={studentScanInputRef}
@@ -3388,95 +2985,9 @@ export default function App() {
                                 }}
                               />
 
-                              <div
-                                className="dropzone-refined"
-                                onClick={() => studentScanInputRef.current?.click()}
-                                onDragOver={(e) => e.preventDefault()}
-                                onDrop={(e) => {
-                                  e.preventDefault();
-                                  if (e.dataTransfer.files) {
-                                    const filesArr = Array.from(e.dataTransfer.files);
-                                    handleGradeSheetsSubmit(filesArr);
-                                  }
-                                }}
-                              >
-                                <div className="upload-icon-wrapper">
-                                  <FileUp size={28} />
-                                </div>
-                                <h3
-                                  style={{
-                                    fontSize: "1.05rem",
-                                    fontWeight: 800,
-                                    color: "#0f172a",
-                                    margin: "0 0 0.35rem 0",
-                                  }}
-                                >
-                                  Drag & Drop Student Answer Sheets
-                                </h3>
-                                <p
-                                  style={{
-                                    fontSize: "0.82rem",
-                                    color: "#64748b",
-                                    margin: "0 0 1rem 0",
-                                    maxWidth: "480px",
-                                    marginLeft: "auto",
-                                    marginRight: "auto",
-                                  }}
-                                >
-                                  Select one or multiple PNG / JPG student test papers. Optical mark recognition will process each sheet and compute transmutation ratings automatically.
-                                </p>
-                                <div
-                                  style={{
-                                    display: "flex",
-                                    justifyContent: "center",
-                                    gap: "0.5rem",
-                                    flexWrap: "wrap",
-                                  }}
-                                >
-                                  <span
-                                    style={{
-                                      fontSize: "0.72rem",
-                                      fontWeight: 700,
-                                      padding: "0.2rem 0.55rem",
-                                      borderRadius: "6px",
-                                      background: "#ffffff",
-                                      color: "#475569",
-                                      border: "1px solid #cbd5e1",
-                                    }}
-                                  >
-                                    PNG, JPG, JPEG
-                                  </span>
-                                  <span
-                                    style={{
-                                      fontSize: "0.72rem",
-                                      fontWeight: 700,
-                                      padding: "0.2rem 0.55rem",
-                                      borderRadius: "6px",
-                                      background: "#f0fdf4",
-                                      color: "#166534",
-                                      border: "1px solid #bbf7d0",
-                                    }}
-                                  >
-                                    Batch Multi-Sheet Support
-                                  </span>
-                                  <span
-                                    style={{
-                                      fontSize: "0.72rem",
-                                      fontWeight: 700,
-                                      padding: "0.2rem 0.55rem",
-                                      borderRadius: "6px",
-                                      background: "#fef3c7",
-                                      color: "#92400e",
-                                      border: "1px solid #fde68a",
-                                    }}
-                                  >
-                                    ZipGrade 50-Item Standard
-                                  </span>
-                                </div>
-                              </div>
-
+                              {/* Grading Progress Bar (Visible during batch upload or live scan) */}
                               {gradingProgress && (
-                                <div style={{ marginTop: "1rem" }}>
+                                <div style={{ marginBottom: "1.25rem" }}>
                                   <div
                                     style={{
                                       display: "flex",
@@ -3513,21 +3024,479 @@ export default function App() {
                                   </div>
                                 </div>
                               )}
+
+                              {/* Live Camera Scanner (Only rendered on-demand when activated) */}
+                              {isCameraActive && (
+                                <div style={{ marginBottom: "1.5rem" }}>
+                                  <CameraScanner
+                                    onCapture={async (file) => {
+                                      await handleGradeSheetsSubmit([file]);
+                                    }}
+                                    onClose={() => setIsCameraActive(false)}
+                                    onSwitchToUpload={() => {
+                                      setIsCameraActive(false);
+                                      studentScanInputRef.current?.click();
+                                    }}
+                                    title={`Grade Student Sheet — ${activeExam.name}`}
+                                    subtitle={`Align the 4 black corner squares within the viewfinder. Scored instantly against ${activeExam.name}.`}
+                                  />
+                                </div>
+                              )}
+
+                              {/* Latest Grade Result Showcase */}
+                              {latestGradeResult ? (
+                                <div
+                                  className="card"
+                                  style={{
+                                    border: "1px solid #e2e8f0",
+                                    borderRadius: "16px",
+                                    background: "#ffffff",
+                                    padding: "1.5rem",
+                                    boxShadow: "0 4px 20px rgba(40, 22, 111, 0.05)",
+                                  }}
+                                >
+                                  <div
+                                    style={{
+                                      display: "flex",
+                                      justifyContent: "space-between",
+                                      alignItems: "center",
+                                      marginBottom: "1.25rem",
+                                      flexWrap: "wrap",
+                                      gap: "1rem",
+                                      borderBottom: "1px solid #f1f5f9",
+                                      paddingBottom: "1rem",
+                                    }}
+                                  >
+                                    <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+                                      <div
+                                        style={{
+                                          width: "44px",
+                                          height: "44px",
+                                          borderRadius: "12px",
+                                          background: "var(--primary-light-surface, #f5f3ff)",
+                                          color: "var(--primary, #28166f)",
+                                          border: "1px solid var(--primary-light-border, #ddd6fe)",
+                                          display: "flex",
+                                          alignItems: "center",
+                                          justifyContent: "center",
+                                          fontWeight: 800,
+                                          fontSize: "1rem",
+                                        }}
+                                      >
+                                        {latestGradeResult.student_id ? latestGradeResult.student_id.slice(-2) : "ID"}
+                                      </div>
+                                      <div>
+                                        <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                                          <h4
+                                            style={{
+                                              margin: 0,
+                                              fontSize: "1.1rem",
+                                              fontWeight: 800,
+                                              color: "#0f172a",
+                                            }}
+                                          >
+                                            {getStudentName(latestGradeResult.student_id)}
+                                          </h4>
+                                          <span
+                                            className="badge"
+                                            style={{
+                                              background: "#f1f5f9",
+                                              color: "#475569",
+                                              border: "1px solid #cbd5e1",
+                                              fontSize: "0.72rem",
+                                              fontWeight: 700,
+                                            }}
+                                          >
+                                            ID: {latestGradeResult.student_id || "Unrecognized"}
+                                          </span>
+                                        </div>
+                                        <p
+                                          style={{
+                                            margin: "0.15rem 0 0 0",
+                                            fontSize: "0.78rem",
+                                            color: "#64748b",
+                                          }}
+                                        >
+                                          Graded successfully against {activeExam.name}
+                                        </p>
+                                      </div>
+                                    </div>
+
+                                    <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", flexWrap: "wrap" }}>
+                                      {latestTransmuted && (
+                                        <div
+                                          style={{
+                                            display: "flex",
+                                            alignItems: "center",
+                                            gap: "0.6rem",
+                                            background: latestTransmuted.status === "Passed" ? "#f0fdf4" : "#fef2f2",
+                                            border: `1px solid ${latestTransmuted.status === "Passed" ? "#bbf7d0" : "#fecaca"}`,
+                                            padding: "0.4rem 0.85rem",
+                                            borderRadius: "10px",
+                                          }}
+                                        >
+                                          <div>
+                                            <div style={{ fontSize: "0.68rem", color: "#64748b", fontWeight: 700, textTransform: "uppercase" }}>
+                                              Transmuted Grade
+                                            </div>
+                                            <div
+                                              style={{
+                                                fontSize: "1.1rem",
+                                                fontWeight: 800,
+                                                color: latestTransmuted.status === "Passed" ? "#15803d" : "#b91c1c",
+                                              }}
+                                            >
+                                              {latestTransmuted.grade}
+                                            </div>
+                                          </div>
+                                          <span
+                                            className="badge"
+                                            style={{
+                                              fontSize: "0.72rem",
+                                              fontWeight: 800,
+                                              background: latestTransmuted.status === "Passed" ? "#16a34a" : "#dc2626",
+                                              color: "#ffffff",
+                                              padding: "0.2rem 0.5rem",
+                                              borderRadius: "6px",
+                                            }}
+                                          >
+                                            {latestTransmuted.status}
+                                          </span>
+                                        </div>
+                                      )}
+                                      <StatusBadge
+                                        score={latestGradeResult.score}
+                                        totalQuestions={latestGradeResult.total_questions}
+                                      />
+                                    </div>
+                                  </div>
+
+                                  {/* Question Filter Chips Bar */}
+                                  <div
+                                    style={{
+                                      display: "flex",
+                                      justifyContent: "space-between",
+                                      alignItems: "center",
+                                      marginBottom: "1rem",
+                                      flexWrap: "wrap",
+                                      gap: "0.5rem",
+                                    }}
+                                  >
+                                    <div style={{ display: "flex", gap: "0.4rem", flexWrap: "wrap" }}>
+                                      <button
+                                        type="button"
+                                        className={`filter-chip-btn ${gradeResultFilter === "all" ? "active" : ""}`}
+                                        onClick={() => setGradeResultFilter("all")}
+                                      >
+                                        All Items ({allAnswerEntries.length})
+                                      </button>
+                                      <button
+                                        type="button"
+                                        className={`filter-chip-btn ${gradeResultFilter === "correct" ? "active" : ""}`}
+                                        onClick={() => setGradeResultFilter("correct")}
+                                        style={{ color: gradeResultFilter === "correct" ? "#ffffff" : "#16a34a" }}
+                                      >
+                                        <Check size={13} /> Correct ({correctCount})
+                                      </button>
+                                      <button
+                                        type="button"
+                                        className={`filter-chip-btn ${gradeResultFilter === "incorrect" ? "active" : ""}`}
+                                        onClick={() => setGradeResultFilter("incorrect")}
+                                        style={{ color: gradeResultFilter === "incorrect" ? "#ffffff" : "#dc2626" }}
+                                      >
+                                        <X size={13} /> Incorrect ({incorrectCount})
+                                      </button>
+                                      {ambiguousCount > 0 && (
+                                        <button
+                                          type="button"
+                                          className={`filter-chip-btn ${gradeResultFilter === "ambiguous" ? "active" : ""}`}
+                                          onClick={() => setGradeResultFilter("ambiguous")}
+                                          style={{ color: gradeResultFilter === "ambiguous" ? "#ffffff" : "#d97706" }}
+                                        >
+                                          <AlertTriangle size={13} /> Ambiguous ({ambiguousCount})
+                                        </button>
+                                      )}
+                                    </div>
+
+                                    <button
+                                      type="button"
+                                      className="btn btn-secondary"
+                                      style={{
+                                        fontSize: "0.75rem",
+                                        padding: "0.3rem 0.65rem",
+                                        borderRadius: "8px",
+                                        display: "inline-flex",
+                                        alignItems: "center",
+                                        gap: "4px",
+                                      }}
+                                      onClick={() => setIsOverlayZoomOpen(true)}
+                                    >
+                                      <Maximize2 size={13} /> Enlarged Preview
+                                    </button>
+                                  </div>
+
+                                  {/* Split Layout: Annotated Image Preview & Answers Check */}
+                                  <div className="grade-layout">
+                                    <div
+                                      className="image-preview-container"
+                                      style={{
+                                        maxHeight: "420px",
+                                        borderRadius: "12px",
+                                        overflow: "hidden",
+                                        border: "1px solid #e2e8f0",
+                                        position: "relative",
+                                        background: "#f8fafc",
+                                        display: "flex",
+                                        alignItems: "center",
+                                        justifyContent: "center",
+                                        cursor: "pointer",
+                                      }}
+                                      onClick={() => setIsOverlayZoomOpen(true)}
+                                      title="Click to view full resolution sheet overlay"
+                                    >
+                                      <img
+                                        src={`data:image/png;base64,${latestGradeResult.overlay_image}`}
+                                        alt="Graded OMR Sheet"
+                                        style={{ width: "100%", height: "auto", display: "block" }}
+                                      />
+                                      <div
+                                        style={{
+                                          position: "absolute",
+                                          bottom: "8px",
+                                          right: "8px",
+                                          background: "rgba(15, 23, 42, 0.8)",
+                                          color: "#ffffff",
+                                          padding: "0.25rem 0.6rem",
+                                          borderRadius: "6px",
+                                          fontSize: "0.7rem",
+                                          fontWeight: 700,
+                                          display: "flex",
+                                          alignItems: "center",
+                                          gap: "4px",
+                                        }}
+                                      >
+                                        <Maximize2 size={12} /> Click to zoom
+                                      </div>
+                                    </div>
+
+                                    <div
+                                      className="bubble-sheet-card"
+                                      style={{
+                                        maxHeight: "420px",
+                                        background: "#f8fafc",
+                                        border: "1px solid #e2e8f0",
+                                        borderRadius: "12px",
+                                        padding: "1rem",
+                                        overflowY: "auto",
+                                      }}
+                                    >
+                                      <div
+                                        style={{
+                                          display: "flex",
+                                          justifyContent: "space-between",
+                                          alignItems: "center",
+                                          marginBottom: "0.75rem",
+                                        }}
+                                      >
+                                        <h4
+                                          style={{
+                                            fontSize: "0.88rem",
+                                            fontWeight: 800,
+                                            color: "#0f172a",
+                                            margin: 0,
+                                          }}
+                                        >
+                                          Question-by-Question Breakdown
+                                        </h4>
+                                        <span style={{ fontSize: "0.74rem", color: "#64748b" }}>
+                                          Showing {filteredAnswerEntries.length} items
+                                        </span>
+                                      </div>
+
+                                      {filteredAnswerEntries.length === 0 ? (
+                                        <div
+                                          style={{
+                                            textAlign: "center",
+                                            padding: "2rem 1rem",
+                                            color: "#64748b",
+                                            fontSize: "0.82rem",
+                                          }}
+                                        >
+                                          No questions match the "{gradeResultFilter}" filter.
+                                        </div>
+                                      ) : (
+                                        filteredAnswerEntries.map(([qStr, correctAns]) => {
+                                          const studentAnsObj = latestGradeResult.answers[qStr];
+                                          const selected = studentAnsObj ? studentAnsObj.selected : null;
+                                          const isEmpty = studentAnsObj ? studentAnsObj.is_empty : true;
+                                          const isAmbiguous = studentAnsObj ? studentAnsObj.is_ambiguous : false;
+                                          const isCorrect = !isEmpty && !isAmbiguous && selected === correctAns;
+
+                                          return (
+                                            <div
+                                              key={qStr}
+                                              className="bubble-row"
+                                              style={{
+                                                padding: "0.3rem 0.5rem",
+                                                borderRadius: "6px",
+                                                marginBottom: "2px",
+                                                background: isCorrect ? "#f0fdf4" : isEmpty ? "transparent" : "#fef2f2",
+                                              }}
+                                            >
+                                              <span
+                                                className="bubble-num"
+                                                style={{
+                                                  color: "#0f172a",
+                                                  fontWeight: 800,
+                                                  fontSize: "0.8rem",
+                                                  minWidth: "28px",
+                                                }}
+                                              >
+                                                {qStr}.
+                                              </span>
+                                              <div className="bubble-options">
+                                                {["A", "B", "C", "D", "E"].map((opt) => {
+                                                  let btnClass = "";
+                                                  if (isAmbiguous) {
+                                                    if (selected === opt) btnClass = "ambiguous";
+                                                  } else if (isEmpty) {
+                                                    btnClass = "empty";
+                                                  } else if (opt === correctAns) {
+                                                    btnClass = "correct";
+                                                  } else if (selected === opt) {
+                                                    btnClass = "incorrect";
+                                                  }
+                                                  return (
+                                                    <span
+                                                      key={opt}
+                                                      className={`bubble-btn ${btnClass}`}
+                                                      style={{ pointerEvents: "none" }}
+                                                    >
+                                                      {opt}
+                                                    </span>
+                                                  );
+                                                })}
+                                                <span
+                                                  style={{
+                                                    fontSize: "0.74rem",
+                                                    color: isAmbiguous
+                                                      ? "#b45309"
+                                                      : isEmpty
+                                                        ? "#94a3b8"
+                                                        : isCorrect
+                                                          ? "#059669"
+                                                          : "#dc2626",
+                                                    marginLeft: "0.5rem",
+                                                    fontWeight: 700,
+                                                  }}
+                                                >
+                                                  {isEmpty
+                                                    ? "— Blank (Key: " + correctAns + ")"
+                                                    : isAmbiguous
+                                                      ? "⚠ Multiple Marks"
+                                                      : isCorrect
+                                                        ? "✓ Correct"
+                                                        : `✗ Student: ${selected} (Key: ${correctAns})`}
+                                                </span>
+                                              </div>
+                                            </div>
+                                          );
+                                        })
+                                      )}
+                                    </div>
+                                  </div>
+                                </div>
+                              ) : (
+                                /* Guidance Placeholder before first scan */
+                                <div
+                                  style={{
+                                    background: "#ffffff",
+                                    border: "1px solid #e2e8f0",
+                                    borderRadius: "16px",
+                                    padding: "2rem 1.5rem",
+                                    textAlign: "center",
+                                    boxShadow: "0 2px 8px rgba(0, 0, 0, 0.02)",
+                                  }}
+                                >
+                                  <div
+                                    style={{
+                                      width: "56px",
+                                      height: "56px",
+                                      borderRadius: "16px",
+                                      background: "var(--primary-light-surface, #f5f3ff)",
+                                      color: "var(--primary, #28166f)",
+                                      display: "inline-flex",
+                                      alignItems: "center",
+                                      justifyContent: "center",
+                                      marginBottom: "0.85rem",
+                                    }}
+                                  >
+                                    <Sparkles size={28} />
+                                  </div>
+                                  <h3
+                                    style={{
+                                      fontSize: "1.1rem",
+                                      fontWeight: 800,
+                                      color: "#0f172a",
+                                      margin: "0 0 0.35rem 0",
+                                    }}
+                                  >
+                                    Ready to Scan Student Answer Sheets
+                                  </h3>
+                                  <p
+                                    style={{
+                                      fontSize: "0.82rem",
+                                      color: "#64748b",
+                                      maxWidth: "460px",
+                                      margin: "0 auto 1.25rem auto",
+                                    }}
+                                  >
+                                    Drag & drop scanned OMR answer sheets or launch the Live Camera Scanner above to compute student raw scores and transmutation curves in real-time.
+                                  </p>
+                                  <div
+                                    style={{
+                                      display: "flex",
+                                      justifyContent: "center",
+                                      gap: "0.75rem",
+                                      flexWrap: "wrap",
+                                    }}
+                                  >
+                                    <button
+                                      type="button"
+                                      className="btn btn-primary"
+                                      onClick={() => studentScanInputRef.current?.click()}
+                                      style={{
+                                        fontSize: "0.82rem",
+                                        fontWeight: 700,
+                                        borderRadius: "10px",
+                                      }}
+                                    >
+                                      <UploadCloud size={15} /> Upload Sheets
+                                    </button>
+                                    <button
+                                      type="button"
+                                      className="btn btn-secondary"
+                                      onClick={() => {
+                                        setActiveExamStudioTab("grading");
+                                        setIsCameraActive(true);
+                                      }}
+                                      style={{
+                                        fontSize: "0.82rem",
+                                        fontWeight: 700,
+                                        borderRadius: "10px",
+                                      }}
+                                    >
+                                      <Camera size={15} /> Open Camera Viewfinder
+                                    </button>
+                                  </div>
+                                </div>
+                              )}
                             </div>
                           )}
 
-                          {/* Latest Grade Result Showcase */}
-                          {latestGradeResult ? (
-                            <div
-                              className="card"
-                              style={{
-                                border: "1px solid #e2e8f0",
-                                borderRadius: "16px",
-                                background: "#ffffff",
-                                padding: "1.5rem",
-                                boxShadow: "0 4px 20px rgba(40, 22, 111, 0.05)",
-                              }}
-                            >
+                          {/* VISUAL ANSWER KEY PALETTE & DISTRIBUTION */}
+                          {activeExamStudioTab === "answer-key" && (
+                            <div>
                               <div
                                 style={{
                                   display: "flex",
@@ -3535,1725 +3504,1005 @@ export default function App() {
                                   alignItems: "center",
                                   marginBottom: "1.25rem",
                                   flexWrap: "wrap",
-                                  gap: "1rem",
-                                  borderBottom: "1px solid #f1f5f9",
-                                  paddingBottom: "1rem",
+                                  gap: "0.75rem",
                                 }}
                               >
-                                <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
-                                  <div
+                                <div>
+                                  <h4 style={{ margin: 0, fontSize: "1rem", fontWeight: 800, color: "#0f172a" }}>
+                                    Master Answer Key & Distribution Matrix
+                                  </h4>
+                                  <p style={{ margin: "0.15rem 0 0 0", fontSize: "0.78rem", color: "#64748b" }}>
+                                    Configured correct bubble options and question answer balance across {questionCount} questions
+                                  </p>
+                                </div>
+                                <div style={{ display: "flex", gap: "0.5rem" }}>
+                                  <button
+                                    className="btn btn-secondary"
                                     style={{
-                                      width: "44px",
-                                      height: "44px",
-                                      borderRadius: "12px",
-                                      background: "var(--primary-light-surface, #f5f3ff)",
-                                      color: "var(--primary, #28166f)",
-                                      border: "1px solid var(--primary-light-border, #ddd6fe)",
-                                      display: "flex",
-                                      alignItems: "center",
-                                      justifyContent: "center",
-                                      fontWeight: 800,
-                                      fontSize: "1rem",
+                                      fontSize: "0.8rem",
+                                      fontWeight: 700,
+                                      padding: "0.45rem 0.85rem",
+                                      borderRadius: "8px",
+                                    }}
+                                    onClick={() => {
+                                      setEditingExam(activeExam);
+                                      setIsExamModalOpen(true);
                                     }}
                                   >
-                                    {latestGradeResult.student_id ? latestGradeResult.student_id.slice(-2) : "ID"}
-                                  </div>
-                                  <div>
-                                    <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                                      <h4
-                                        style={{
-                                          margin: 0,
-                                          fontSize: "1.1rem",
-                                          fontWeight: 800,
-                                          color: "#0f172a",
-                                        }}
-                                      >
-                                        {getStudentName(latestGradeResult.student_id)}
-                                      </h4>
-                                      <span
-                                        className="badge"
-                                        style={{
-                                          background: "#f1f5f9",
-                                          color: "#475569",
-                                          border: "1px solid #cbd5e1",
-                                          fontSize: "0.72rem",
-                                          fontWeight: 700,
-                                        }}
-                                      >
-                                        ID: {latestGradeResult.student_id || "Unrecognized"}
-                                      </span>
-                                    </div>
-                                    <p
-                                      style={{
-                                        margin: "0.15rem 0 0 0",
-                                        fontSize: "0.78rem",
-                                        color: "#64748b",
-                                      }}
-                                    >
-                                      Graded successfully against {activeExam.name}
-                                    </p>
-                                  </div>
-                                </div>
-
-                                <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", flexWrap: "wrap" }}>
-                                  {latestTransmuted && (
-                                    <div
-                                      style={{
-                                        display: "flex",
-                                        alignItems: "center",
-                                        gap: "0.6rem",
-                                        background: latestTransmuted.status === "Passed" ? "#f0fdf4" : "#fef2f2",
-                                        border: `1px solid ${latestTransmuted.status === "Passed" ? "#bbf7d0" : "#fecaca"}`,
-                                        padding: "0.4rem 0.85rem",
-                                        borderRadius: "10px",
-                                      }}
-                                    >
-                                      <div>
-                                        <div style={{ fontSize: "0.68rem", color: "#64748b", fontWeight: 700, textTransform: "uppercase" }}>
-                                          Transmuted Grade
-                                        </div>
-                                        <div
-                                          style={{
-                                            fontSize: "1.1rem",
-                                            fontWeight: 800,
-                                            color: latestTransmuted.status === "Passed" ? "#15803d" : "#b91c1c",
-                                          }}
-                                        >
-                                          {latestTransmuted.grade}
-                                        </div>
-                                      </div>
-                                      <span
-                                        className="badge"
-                                        style={{
-                                          fontSize: "0.72rem",
-                                          fontWeight: 800,
-                                          background: latestTransmuted.status === "Passed" ? "#16a34a" : "#dc2626",
-                                          color: "#ffffff",
-                                          padding: "0.2rem 0.5rem",
-                                          borderRadius: "6px",
-                                        }}
-                                      >
-                                        {latestTransmuted.status}
-                                      </span>
-                                    </div>
-                                  )}
-                                  <StatusBadge
-                                    score={latestGradeResult.score}
-                                    totalQuestions={latestGradeResult.total_questions}
-                                  />
+                                    Edit Answer Key
+                                  </button>
                                 </div>
                               </div>
 
-                              {/* Question Filter Chips Bar */}
+                              {/* Choice Frequency Bars */}
                               <div
                                 style={{
-                                  display: "flex",
-                                  justifyContent: "space-between",
-                                  alignItems: "center",
-                                  marginBottom: "1rem",
-                                  flexWrap: "wrap",
-                                  gap: "0.5rem",
+                                  background: "#ffffff",
+                                  border: "1px solid #e2e8f0",
+                                  borderRadius: "14px",
+                                  padding: "1.25rem",
+                                  marginBottom: "1.5rem",
+                                  boxShadow: "0 2px 8px rgba(0, 0, 0, 0.02)",
                                 }}
                               >
-                                <div style={{ display: "flex", gap: "0.4rem", flexWrap: "wrap" }}>
-                                  <button
-                                    type="button"
-                                    className={`filter-chip-btn ${gradeResultFilter === "all" ? "active" : ""}`}
-                                    onClick={() => setGradeResultFilter("all")}
-                                  >
-                                    All Items ({allAnswerEntries.length})
-                                  </button>
-                                  <button
-                                    type="button"
-                                    className={`filter-chip-btn ${gradeResultFilter === "correct" ? "active" : ""}`}
-                                    onClick={() => setGradeResultFilter("correct")}
-                                    style={{ color: gradeResultFilter === "correct" ? "#ffffff" : "#16a34a" }}
-                                  >
-                                    <Check size={13} /> Correct ({correctCount})
-                                  </button>
-                                  <button
-                                    type="button"
-                                    className={`filter-chip-btn ${gradeResultFilter === "incorrect" ? "active" : ""}`}
-                                    onClick={() => setGradeResultFilter("incorrect")}
-                                    style={{ color: gradeResultFilter === "incorrect" ? "#ffffff" : "#dc2626" }}
-                                  >
-                                    <X size={13} /> Incorrect ({incorrectCount})
-                                  </button>
-                                  {ambiguousCount > 0 && (
-                                    <button
-                                      type="button"
-                                      className={`filter-chip-btn ${gradeResultFilter === "ambiguous" ? "active" : ""}`}
-                                      onClick={() => setGradeResultFilter("ambiguous")}
-                                      style={{ color: gradeResultFilter === "ambiguous" ? "#ffffff" : "#d97706" }}
-                                    >
-                                      <AlertTriangle size={13} /> Ambiguous ({ambiguousCount})
-                                    </button>
-                                  )}
-                                </div>
-
-                                <button
-                                  type="button"
-                                  className="btn btn-secondary"
+                                <h5
                                   style={{
-                                    fontSize: "0.75rem",
-                                    padding: "0.3rem 0.65rem",
-                                    borderRadius: "8px",
-                                    display: "inline-flex",
-                                    alignItems: "center",
-                                    gap: "4px",
+                                    fontSize: "0.86rem",
+                                    fontWeight: 800,
+                                    color: "#0f172a",
+                                    margin: "0 0 0.85rem 0",
                                   }}
-                                  onClick={() => setIsOverlayZoomOpen(true)}
                                 >
-                                  <Maximize2 size={13} /> Enlarged Preview
-                                </button>
+                                  Option Frequency Distribution
+                                </h5>
+                                <div
+                                  style={{
+                                    display: "grid",
+                                    gridTemplateColumns: "repeat(5, 1fr)",
+                                    gap: "0.75rem",
+                                  }}
+                                >
+                                  {["A", "B", "C", "D", "E"].map((opt) => {
+                                    const count = answerDist[opt] || 0;
+                                    const pct = questionCount > 0 ? Math.round((count / questionCount) * 100) : 0;
+                                    return (
+                                      <div
+                                        key={opt}
+                                        style={{
+                                          background: "#f8fafc",
+                                          border: "1px solid #e2e8f0",
+                                          borderRadius: "10px",
+                                          padding: "0.75rem",
+                                          textAlign: "center",
+                                        }}
+                                      >
+                                        <div
+                                          style={{
+                                            width: "28px",
+                                            height: "28px",
+                                            borderRadius: "50%",
+                                            background: "var(--primary, #28166f)",
+                                            color: "#ffffff",
+                                            fontWeight: 800,
+                                            fontSize: "0.85rem",
+                                            display: "inline-flex",
+                                            alignItems: "center",
+                                            justifyContent: "center",
+                                            marginBottom: "0.35rem",
+                                          }}
+                                        >
+                                          {opt}
+                                        </div>
+                                        <div style={{ fontSize: "1.1rem", fontWeight: 800, color: "#0f172a" }}>
+                                          {count}
+                                        </div>
+                                        <div style={{ fontSize: "0.72rem", color: "#64748b", fontWeight: 600 }}>
+                                          {pct}% of items
+                                        </div>
+                                      </div>
+                                    );
+                                  })}
+                                </div>
                               </div>
 
-                              {/* Split Layout: Annotated Image Preview & Answers Check */}
-                              <div className="grade-layout">
-                                <div
-                                  className="image-preview-container"
+                              {/* 5-Column Compact Bubble Matrix Palette */}
+                              <div
+                                style={{
+                                  background: "#ffffff",
+                                  border: "1px solid #e2e8f0",
+                                  borderRadius: "14px",
+                                  padding: "1.25rem",
+                                  boxShadow: "0 2px 8px rgba(0, 0, 0, 0.02)",
+                                }}
+                              >
+                                <h5
                                   style={{
-                                    maxHeight: "420px",
-                                    borderRadius: "12px",
-                                    overflow: "hidden",
-                                    border: "1px solid #e2e8f0",
-                                    position: "relative",
-                                    background: "#f8fafc",
-                                    display: "flex",
-                                    alignItems: "center",
-                                    justifyContent: "center",
-                                    cursor: "pointer",
+                                    fontSize: "0.86rem",
+                                    fontWeight: 800,
+                                    color: "#0f172a",
+                                    margin: "0 0 1rem 0",
                                   }}
-                                  onClick={() => setIsOverlayZoomOpen(true)}
-                                  title="Click to view full resolution sheet overlay"
+                                >
+                                  Configured Questions Palette (1 - {questionCount})
+                                </h5>
+                                <div
+                                  style={{
+                                    display: "grid",
+                                    gridTemplateColumns: "repeat(auto-fill, minmax(130px, 1fr))",
+                                    gap: "0.6rem",
+                                  }}
+                                >
+                                  {Array.from({ length: questionCount }, (_, idx) => {
+                                    const qNum = idx + 1;
+                                    const qKey = qNum.toString();
+                                    const ans = (activeExam.answer_key || {})[qKey];
+
+                                    return (
+                                      <div
+                                        key={qKey}
+                                        style={{
+                                          display: "flex",
+                                          alignItems: "center",
+                                          justifyContent: "space-between",
+                                          padding: "0.45rem 0.65rem",
+                                          borderRadius: "8px",
+                                          background: ans ? "#f8fafc" : "#fef2f2",
+                                          border: `1px solid ${ans ? "#e2e8f0" : "#fecaca"}`,
+                                        }}
+                                      >
+                                        <span style={{ fontSize: "0.8rem", fontWeight: 700, color: "#475569" }}>
+                                          Q{qNum}
+                                        </span>
+                                        {ans ? (
+                                          <span
+                                            style={{
+                                              width: "24px",
+                                              height: "24px",
+                                              borderRadius: "50%",
+                                              background: "var(--primary, #28166f)",
+                                              color: "#ffffff",
+                                              fontSize: "0.75rem",
+                                              fontWeight: 800,
+                                              display: "inline-flex",
+                                              alignItems: "center",
+                                              justifyContent: "center",
+                                            }}
+                                          >
+                                            {ans}
+                                          </span>
+                                        ) : (
+                                          <span style={{ fontSize: "0.72rem", color: "#ef4444", fontWeight: 700 }}>
+                                            Empty
+                                          </span>
+                                        )}
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Modal for Enlarged Graded Sheet Image */}
+                          {isOverlayZoomOpen && latestGradeResult && (
+                            <div
+                              className="modal-overlay"
+                              onClick={() => setIsOverlayZoomOpen(false)}
+                              style={{ zIndex: 100000 }}
+                            >
+                              <div
+                                className="modal-content"
+                                style={{
+                                  maxWidth: "850px",
+                                  maxHeight: "92vh",
+                                  background: "#ffffff",
+                                  border: "1px solid #cbd5e1",
+                                }}
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                <div
+                                  style={{
+                                    display: "flex",
+                                    justifyContent: "space-between",
+                                    alignItems: "center",
+                                    padding: "1rem 1.5rem",
+                                    borderBottom: "1px solid #e2e8f0",
+                                  }}
+                                >
+                                  <div>
+                                    <h3 style={{ margin: 0, fontSize: "1.1rem", fontWeight: 800, color: "#0f172a" }}>
+                                      Annotated OMR Sheet Viewfinder
+                                    </h3>
+                                    <p style={{ margin: 0, fontSize: "0.78rem", color: "#64748b" }}>
+                                      Student ID: {latestGradeResult.student_id || "Unrecognized"} • Score: {latestGradeResult.score}/{latestGradeResult.total_questions}
+                                    </p>
+                                  </div>
+                                  <button
+                                    className="btn btn-secondary btn-icon-only"
+                                    onClick={() => setIsOverlayZoomOpen(false)}
+                                    style={{ borderRadius: "8px" }}
+                                  >
+                                    <X size={16} />
+                                  </button>
+                                </div>
+                                <div
+                                  style={{
+                                    padding: "1rem",
+                                    overflowY: "auto",
+                                    textAlign: "center",
+                                    background: "#f8fafc",
+                                  }}
                                 >
                                   <img
                                     src={`data:image/png;base64,${latestGradeResult.overlay_image}`}
-                                    alt="Graded OMR Sheet"
-                                    style={{ width: "100%", height: "auto", display: "block" }}
+                                    alt="Enlarged Graded OMR Sheet"
+                                    style={{ maxWidth: "100%", maxHeight: "72vh", objectFit: "contain", borderRadius: "8px", border: "1px solid #e2e8f0" }}
                                   />
-                                  <div
-                                    style={{
-                                      position: "absolute",
-                                      bottom: "8px",
-                                      right: "8px",
-                                      background: "rgba(15, 23, 42, 0.8)",
-                                      color: "#ffffff",
-                                      padding: "0.25rem 0.6rem",
-                                      borderRadius: "6px",
-                                      fontSize: "0.7rem",
-                                      fontWeight: 700,
-                                      display: "flex",
-                                      alignItems: "center",
-                                      gap: "4px",
-                                    }}
-                                  >
-                                    <Maximize2 size={12} /> Click to zoom
-                                  </div>
                                 </div>
-
-                                <div
-                                  className="bubble-sheet-card"
-                                  style={{
-                                    maxHeight: "420px",
-                                    background: "#f8fafc",
-                                    border: "1px solid #e2e8f0",
-                                    borderRadius: "12px",
-                                    padding: "1rem",
-                                    overflowY: "auto",
-                                  }}
-                                >
-                                  <div
-                                    style={{
-                                      display: "flex",
-                                      justifyContent: "space-between",
-                                      alignItems: "center",
-                                      marginBottom: "0.75rem",
-                                    }}
-                                  >
-                                    <h4
-                                      style={{
-                                        fontSize: "0.88rem",
-                                        fontWeight: 800,
-                                        color: "#0f172a",
-                                        margin: 0,
-                                      }}
-                                    >
-                                      Question-by-Question Breakdown
-                                    </h4>
-                                    <span style={{ fontSize: "0.74rem", color: "#64748b" }}>
-                                      Showing {filteredAnswerEntries.length} items
-                                    </span>
-                                  </div>
-
-                                  {filteredAnswerEntries.length === 0 ? (
-                                    <div
-                                      style={{
-                                        textAlign: "center",
-                                        padding: "2rem 1rem",
-                                        color: "#64748b",
-                                        fontSize: "0.82rem",
-                                      }}
-                                    >
-                                      No questions match the "{gradeResultFilter}" filter.
-                                    </div>
-                                  ) : (
-                                    filteredAnswerEntries.map(([qStr, correctAns]) => {
-                                      const studentAnsObj = latestGradeResult.answers[qStr];
-                                      const selected = studentAnsObj ? studentAnsObj.selected : null;
-                                      const isEmpty = studentAnsObj ? studentAnsObj.is_empty : true;
-                                      const isAmbiguous = studentAnsObj ? studentAnsObj.is_ambiguous : false;
-                                      const isCorrect = !isEmpty && !isAmbiguous && selected === correctAns;
-
-                                      return (
-                                        <div
-                                          key={qStr}
-                                          className="bubble-row"
-                                          style={{
-                                            padding: "0.3rem 0.5rem",
-                                            borderRadius: "6px",
-                                            marginBottom: "2px",
-                                            background: isCorrect ? "#f0fdf4" : isEmpty ? "transparent" : "#fef2f2",
-                                          }}
-                                        >
-                                          <span
-                                            className="bubble-num"
-                                            style={{
-                                              color: "#0f172a",
-                                              fontWeight: 800,
-                                              fontSize: "0.8rem",
-                                              minWidth: "28px",
-                                            }}
-                                          >
-                                            {qStr}.
-                                          </span>
-                                          <div className="bubble-options">
-                                            {["A", "B", "C", "D", "E"].map((opt) => {
-                                              let btnClass = "";
-                                              if (isAmbiguous) {
-                                                if (selected === opt) btnClass = "ambiguous";
-                                              } else if (isEmpty) {
-                                                btnClass = "empty";
-                                              } else if (opt === correctAns) {
-                                                btnClass = "correct";
-                                              } else if (selected === opt) {
-                                                btnClass = "incorrect";
-                                              }
-                                              return (
-                                                <span
-                                                  key={opt}
-                                                  className={`bubble-btn ${btnClass}`}
-                                                  style={{ pointerEvents: "none" }}
-                                                >
-                                                  {opt}
-                                                </span>
-                                              );
-                                            })}
-                                            <span
-                                              style={{
-                                                fontSize: "0.74rem",
-                                                color: isAmbiguous
-                                                  ? "#b45309"
-                                                  : isEmpty
-                                                    ? "#94a3b8"
-                                                    : isCorrect
-                                                      ? "#059669"
-                                                      : "#dc2626",
-                                                marginLeft: "0.5rem",
-                                                fontWeight: 700,
-                                              }}
-                                            >
-                                              {isEmpty
-                                                ? "— Blank (Key: " + correctAns + ")"
-                                                : isAmbiguous
-                                                  ? "⚠ Multiple Marks"
-                                                  : isCorrect
-                                                    ? "✓ Correct"
-                                                    : `✗ Student: ${selected} (Key: ${correctAns})`}
-                                            </span>
-                                          </div>
-                                        </div>
-                                      );
-                                    })
-                                  )}
-                                </div>
-                              </div>
-                            </div>
-                          ) : (
-                            /* Guidance Placeholder before first scan */
-                            <div
-                              style={{
-                                background: "#ffffff",
-                                border: "1px solid #e2e8f0",
-                                borderRadius: "16px",
-                                padding: "2rem 1.5rem",
-                                textAlign: "center",
-                                boxShadow: "0 2px 8px rgba(0, 0, 0, 0.02)",
-                              }}
-                            >
-                              <div
-                                style={{
-                                  width: "56px",
-                                  height: "56px",
-                                  borderRadius: "16px",
-                                  background: "var(--primary-light-surface, #f5f3ff)",
-                                  color: "var(--primary, #28166f)",
-                                  display: "inline-flex",
-                                  alignItems: "center",
-                                  justifyContent: "center",
-                                  marginBottom: "0.85rem",
-                                }}
-                              >
-                                <Sparkles size={28} />
-                              </div>
-                              <h3
-                                style={{
-                                  fontSize: "1.1rem",
-                                  fontWeight: 800,
-                                  color: "#0f172a",
-                                  margin: "0 0 0.35rem 0",
-                                }}
-                              >
-                                Ready to Scan Student Answer Sheets
-                              </h3>
-                              <p
-                                style={{
-                                  fontSize: "0.82rem",
-                                  color: "#64748b",
-                                  maxWidth: "460px",
-                                  margin: "0 auto 1.25rem auto",
-                                }}
-                              >
-                                Drag & drop scanned OMR answer sheets or launch the Live Camera Scanner above to compute student raw scores and transmutation curves in real-time.
-                              </p>
-                              <div
-                                style={{
-                                  display: "flex",
-                                  justifyContent: "center",
-                                  gap: "0.75rem",
-                                  flexWrap: "wrap",
-                                }}
-                              >
-                                <button
-                                  type="button"
-                                  className="btn btn-primary"
-                                  onClick={() => studentScanInputRef.current?.click()}
-                                  style={{
-                                    fontSize: "0.82rem",
-                                    fontWeight: 700,
-                                    borderRadius: "10px",
-                                  }}
-                                >
-                                  <UploadCloud size={15} /> Upload Sheets
-                                </button>
-                                <button
-                                  type="button"
-                                  className="btn btn-secondary"
-                                  onClick={() => setStudentScanMode("camera")}
-                                  style={{
-                                    fontSize: "0.82rem",
-                                    fontWeight: 700,
-                                    borderRadius: "10px",
-                                  }}
-                                >
-                                  <Camera size={15} /> Open Camera Viewfinder
-                                </button>
                               </div>
                             </div>
                           )}
                         </div>
-                      )}
-
-                      {/* TAB 2: GRADED SUBMISSIONS ROSTER */}
-                      {activeExamStudioTab === "submissions" && (
-                        <div>
-                          <div
-                            style={{
-                              display: "flex",
-                              justifyContent: "space-between",
-                              alignItems: "center",
-                              marginBottom: "1rem",
-                              flexWrap: "wrap",
-                              gap: "0.75rem",
-                            }}
-                          >
-                            <div>
-                              <h4 style={{ margin: 0, fontSize: "1rem", fontWeight: 800, color: "#0f172a" }}>
-                                Graded Student Answer Sheets ({activeExamSubmissions.length})
-                              </h4>
-                              <p style={{ margin: "0.15rem 0 0 0", fontSize: "0.78rem", color: "#64748b" }}>
-                                Complete list of student submissions recorded for {activeExam.name}
-                              </p>
-                            </div>
-                            <button
-                              className="btn btn-secondary"
-                              style={{
-                                fontSize: "0.8rem",
-                                fontWeight: 700,
-                                padding: "0.45rem 0.85rem",
-                                borderRadius: "8px",
-                                display: "inline-flex",
-                                alignItems: "center",
-                                gap: "6px",
-                              }}
-                              onClick={handleExportGradeSheet}
-                            >
-                              <FileSpreadsheet size={15} color="#16a34a" /> Download Excel Roster
-                            </button>
-                          </div>
-
-                          {activeExamSubmissions.length === 0 ? (
-                            <div
-                              style={{
-                                textAlign: "center",
-                                padding: "3rem 1.5rem",
-                                background: "#f8fafc",
-                                borderRadius: "12px",
-                                border: "1px dashed #cbd5e1",
-                                color: "#64748b",
-                              }}
-                            >
-                              <Users size={36} style={{ color: "#94a3b8", marginBottom: "0.5rem" }} />
-                              <h4 style={{ fontSize: "1rem", fontWeight: 800, color: "#0f172a", margin: "0 0 0.25rem 0" }}>
-                                No Submissions Graded Yet
-                              </h4>
-                              <p style={{ fontSize: "0.82rem", margin: "0 0 1rem 0" }}>
-                                Switch to the "OMR Grading Studio" tab to upload or scan answer sheets for this exam.
-                              </p>
-                              <button
-                                type="button"
-                                className="btn btn-primary"
-                                onClick={() => setActiveExamStudioTab("grading")}
-                                style={{ fontSize: "0.8rem", fontWeight: 700 }}
-                              >
-                                Go to Grading Studio
-                              </button>
-                            </div>
-                          ) : (
-                            <div
-                              style={{
-                                background: "#ffffff",
-                                border: "1px solid #e2e8f0",
-                                borderRadius: "12px",
-                                overflow: "hidden",
-                                boxShadow: "0 2px 8px rgba(0, 0, 0, 0.02)",
-                              }}
-                            >
-                              <div style={{ overflowX: "auto" }}>
-                                <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.82rem" }}>
-                                  <thead>
-                                    <tr style={{ background: "#f8fafc", borderBottom: "1px solid #e2e8f0" }}>
-                                      <th style={{ padding: "0.75rem 1rem", textAlign: "left", color: "#475569", fontWeight: 700 }}>
-                                        Student ID & Name
-                                      </th>
-                                      <th style={{ padding: "0.75rem 1rem", textAlign: "center", color: "#475569", fontWeight: 700 }}>
-                                        Raw Score
-                                      </th>
-                                      <th style={{ padding: "0.75rem 1rem", textAlign: "center", color: "#475569", fontWeight: 700 }}>
-                                        Transmuted
-                                      </th>
-                                      <th style={{ padding: "0.75rem 1rem", textAlign: "center", color: "#475569", fontWeight: 700 }}>
-                                        Status
-                                      </th>
-                                      <th style={{ padding: "0.75rem 1rem", textAlign: "center", color: "#475569", fontWeight: 700 }}>
-                                        Scanned At
-                                      </th>
-                                      <th style={{ padding: "0.75rem 1rem", textAlign: "right", color: "#475569", fontWeight: 700 }}>
-                                        Actions
-                                      </th>
-                                    </tr>
-                                  </thead>
-                                  <tbody>
-                                    {activeExamSubmissions.map((sub) => {
-                                      const transmuted = calculateTransmutedGrade(sub.score, questionCount);
-                                      const isPassed = transmuted.status === "Passed";
-                                      const studentName = getStudentName(sub.student_id);
-
-                                      return (
-                                        <tr
-                                          key={sub.id}
-                                          style={{ borderBottom: "1px solid #f1f5f9", transition: "background 0.15s ease" }}
-                                          className="hover:bg-slate-50"
-                                        >
-                                          <td style={{ padding: "0.75rem 1rem" }}>
-                                            <div style={{ fontWeight: 800, color: "#0f172a" }}>
-                                              {studentName}
-                                            </div>
-                                            <div style={{ fontSize: "0.75rem", color: "#64748b" }}>
-                                              ID: {sub.student_id || "Unassigned"}
-                                            </div>
-                                          </td>
-                                          <td style={{ padding: "0.75rem 1rem", textAlign: "center" }}>
-                                            <strong style={{ color: "#0f172a", fontSize: "0.95rem" }}>{sub.score}</strong>
-                                            <span style={{ color: "#64748b", fontSize: "0.78rem" }}> / {questionCount}</span>
-                                            <div style={{ fontSize: "0.72rem", color: "#64748b" }}>
-                                              {Math.round((sub.score / questionCount) * 100)}%
-                                            </div>
-                                          </td>
-                                          <td style={{ padding: "0.75rem 1rem", textAlign: "center" }}>
-                                            <span
-                                              style={{
-                                                fontWeight: 800,
-                                                fontSize: "0.95rem",
-                                                color: isPassed ? "var(--primary, #28166f)" : "#dc2626",
-                                              }}
-                                            >
-                                              {transmuted.grade}
-                                            </span>
-                                            <div style={{ fontSize: "0.7rem", color: "#64748b" }}>
-                                              {transmuted.remarks}
-                                            </div>
-                                          </td>
-                                          <td style={{ padding: "0.75rem 1rem", textAlign: "center" }}>
-                                            <span
-                                              className="badge"
-                                              style={{
-                                                fontSize: "0.72rem",
-                                                fontWeight: 800,
-                                                padding: "0.2rem 0.55rem",
-                                                borderRadius: "6px",
-                                                background: isPassed ? "#ecfdf5" : "#fef2f2",
-                                                color: isPassed ? "#047857" : "#dc2626",
-                                                border: `1px solid ${isPassed ? "#a7f3d0" : "#fecaca"}`,
-                                              }}
-                                            >
-                                              {transmuted.status}
-                                            </span>
-                                          </td>
-                                          <td style={{ padding: "0.75rem 1rem", textAlign: "center", color: "#64748b", fontSize: "0.76rem" }}>
-                                            {formatDate(sub.created_at)}
-                                          </td>
-                                          <td style={{ padding: "0.75rem 1rem", textAlign: "right" }}>
-                                            <div style={{ display: "flex", justifyContent: "flex-end", gap: "0.35rem" }}>
-                                              <button
-                                                className="btn btn-secondary btn-icon-only"
-                                                title="Inspect Student Sheet"
-                                                onClick={() => viewSubmissionDetails(sub)}
-                                                style={{ width: "30px", height: "30px", padding: 0, borderRadius: "6px" }}
-                                              >
-                                                <Eye size={14} />
-                                              </button>
-                                              <button
-                                                className="btn btn-secondary btn-icon-only"
-                                                title="Export Student Result (.xlsx)"
-                                                onClick={() => {
-                                                  exportSingleSubmissionExcel(sub, activeExam, roster);
-                                                  addToast("success", `Exported result sheet for ${sub.student_id}`);
-                                                }}
-                                                style={{ width: "30px", height: "30px", padding: 0, borderRadius: "6px" }}
-                                              >
-                                                <Download size={14} />
-                                              </button>
-                                            </div>
-                                          </td>
-                                        </tr>
-                                      );
-                                    })}
-                                  </tbody>
-                                </table>
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      )}
-
-                      {/* TAB 3: VISUAL ANSWER KEY PALETTE & DISTRIBUTION */}
-                      {activeExamStudioTab === "answer-key" && (
-                        <div>
-                          <div
-                            style={{
-                              display: "flex",
-                              justifyContent: "space-between",
-                              alignItems: "center",
-                              marginBottom: "1.25rem",
-                              flexWrap: "wrap",
-                              gap: "0.75rem",
-                            }}
-                          >
-                            <div>
-                              <h4 style={{ margin: 0, fontSize: "1rem", fontWeight: 800, color: "#0f172a" }}>
-                                Master Answer Key & Distribution Matrix
-                              </h4>
-                              <p style={{ margin: "0.15rem 0 0 0", fontSize: "0.78rem", color: "#64748b" }}>
-                                Configured correct bubble options and question answer balance across {questionCount} questions
-                              </p>
-                            </div>
-                            <div style={{ display: "flex", gap: "0.5rem" }}>
-                              <button
-                                className="btn btn-secondary"
-                                style={{
-                                  fontSize: "0.8rem",
-                                  fontWeight: 700,
-                                  padding: "0.45rem 0.85rem",
-                                  borderRadius: "8px",
-                                }}
-                                onClick={() => {
-                                  setEditingExam(activeExam);
-                                  setIsExamModalOpen(true);
-                                }}
-                              >
-                                Edit Answer Key
-                              </button>
-                            </div>
-                          </div>
-
-                          {/* Choice Frequency Bars */}
-                          <div
-                            style={{
-                              background: "#ffffff",
-                              border: "1px solid #e2e8f0",
-                              borderRadius: "14px",
-                              padding: "1.25rem",
-                              marginBottom: "1.5rem",
-                              boxShadow: "0 2px 8px rgba(0, 0, 0, 0.02)",
-                            }}
-                          >
-                            <h5
-                              style={{
-                                fontSize: "0.86rem",
-                                fontWeight: 800,
-                                color: "#0f172a",
-                                margin: "0 0 0.85rem 0",
-                              }}
-                            >
-                              Option Frequency Distribution
-                            </h5>
-                            <div
-                              style={{
-                                display: "grid",
-                                gridTemplateColumns: "repeat(5, 1fr)",
-                                gap: "0.75rem",
-                              }}
-                            >
-                              {["A", "B", "C", "D", "E"].map((opt) => {
-                                const count = answerDist[opt] || 0;
-                                const pct = questionCount > 0 ? Math.round((count / questionCount) * 100) : 0;
-                                return (
-                                  <div
-                                    key={opt}
-                                    style={{
-                                      background: "#f8fafc",
-                                      border: "1px solid #e2e8f0",
-                                      borderRadius: "10px",
-                                      padding: "0.75rem",
-                                      textAlign: "center",
-                                    }}
-                                  >
-                                    <div
-                                      style={{
-                                        width: "28px",
-                                        height: "28px",
-                                        borderRadius: "50%",
-                                        background: "var(--primary, #28166f)",
-                                        color: "#ffffff",
-                                        fontWeight: 800,
-                                        fontSize: "0.85rem",
-                                        display: "inline-flex",
-                                        alignItems: "center",
-                                        justifyContent: "center",
-                                        marginBottom: "0.35rem",
-                                      }}
-                                    >
-                                      {opt}
-                                    </div>
-                                    <div style={{ fontSize: "1.1rem", fontWeight: 800, color: "#0f172a" }}>
-                                      {count}
-                                    </div>
-                                    <div style={{ fontSize: "0.72rem", color: "#64748b", fontWeight: 600 }}>
-                                      {pct}% of items
-                                    </div>
-                                  </div>
-                                );
-                              })}
-                            </div>
-                          </div>
-
-                          {/* 5-Column Compact Bubble Matrix Palette */}
-                          <div
-                            style={{
-                              background: "#ffffff",
-                              border: "1px solid #e2e8f0",
-                              borderRadius: "14px",
-                              padding: "1.25rem",
-                              boxShadow: "0 2px 8px rgba(0, 0, 0, 0.02)",
-                            }}
-                          >
-                            <h5
-                              style={{
-                                fontSize: "0.86rem",
-                                fontWeight: 800,
-                                color: "#0f172a",
-                                margin: "0 0 1rem 0",
-                              }}
-                            >
-                              Configured Questions Palette (1 - {questionCount})
-                            </h5>
-                            <div
-                              style={{
-                                display: "grid",
-                                gridTemplateColumns: "repeat(auto-fill, minmax(130px, 1fr))",
-                                gap: "0.6rem",
-                              }}
-                            >
-                              {Array.from({ length: questionCount }, (_, idx) => {
-                                const qNum = idx + 1;
-                                const qKey = qNum.toString();
-                                const ans = (activeExam.answer_key || {})[qKey];
-
-                                return (
-                                  <div
-                                    key={qKey}
-                                    style={{
-                                      display: "flex",
-                                      alignItems: "center",
-                                      justifyContent: "space-between",
-                                      padding: "0.45rem 0.65rem",
-                                      borderRadius: "8px",
-                                      background: ans ? "#f8fafc" : "#fef2f2",
-                                      border: `1px solid ${ans ? "#e2e8f0" : "#fecaca"}`,
-                                    }}
-                                  >
-                                    <span style={{ fontSize: "0.8rem", fontWeight: 700, color: "#475569" }}>
-                                      Q{qNum}
-                                    </span>
-                                    {ans ? (
-                                      <span
-                                        style={{
-                                          width: "24px",
-                                          height: "24px",
-                                          borderRadius: "50%",
-                                          background: "var(--primary, #28166f)",
-                                          color: "#ffffff",
-                                          fontSize: "0.75rem",
-                                          fontWeight: 800,
-                                          display: "inline-flex",
-                                          alignItems: "center",
-                                          justifyContent: "center",
-                                        }}
-                                      >
-                                        {ans}
-                                      </span>
-                                    ) : (
-                                      <span style={{ fontSize: "0.72rem", color: "#ef4444", fontWeight: 700 }}>
-                                        Empty
-                                      </span>
-                                    )}
-                                  </div>
-                                );
-                              })}
-                            </div>
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Modal for Enlarged Graded Sheet Image */}
-                      {isOverlayZoomOpen && latestGradeResult && (
-                        <div
-                          className="modal-overlay"
-                          onClick={() => setIsOverlayZoomOpen(false)}
-                          style={{ zIndex: 100000 }}
-                        >
-                          <div
-                            className="modal-content"
-                            style={{
-                              maxWidth: "850px",
-                              maxHeight: "92vh",
-                              background: "#ffffff",
-                              border: "1px solid #cbd5e1",
-                            }}
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            <div
-                              style={{
-                                display: "flex",
-                                justifyContent: "space-between",
-                                alignItems: "center",
-                                padding: "1rem 1.5rem",
-                                borderBottom: "1px solid #e2e8f0",
-                              }}
-                            >
-                              <div>
-                                <h3 style={{ margin: 0, fontSize: "1.1rem", fontWeight: 800, color: "#0f172a" }}>
-                                  Annotated OMR Sheet Viewfinder
-                                </h3>
-                                <p style={{ margin: 0, fontSize: "0.78rem", color: "#64748b" }}>
-                                  Student ID: {latestGradeResult.student_id || "Unrecognized"} • Score: {latestGradeResult.score}/{latestGradeResult.total_questions}
-                                </p>
-                              </div>
-                              <button
-                                className="btn btn-secondary btn-icon-only"
-                                onClick={() => setIsOverlayZoomOpen(false)}
-                                style={{ borderRadius: "8px" }}
-                              >
-                                <X size={16} />
-                              </button>
-                            </div>
-                            <div
-                              style={{
-                                padding: "1rem",
-                                overflowY: "auto",
-                                textAlign: "center",
-                                background: "#f8fafc",
-                              }}
-                            >
-                              <img
-                                src={`data:image/png;base64,${latestGradeResult.overlay_image}`}
-                                alt="Enlarged Graded OMR Sheet"
-                                style={{ maxWidth: "100%", maxHeight: "72vh", objectFit: "contain", borderRadius: "8px", border: "1px solid #e2e8f0" }}
-                              />
-                            </div>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  );
-                })() : (
-                  <div
-                    style={{
-                      textAlign: "center",
-                      padding: "3.5rem 1.5rem",
-                      color: "#64748b",
-                    }}
-                  >
-                    <div
-                      style={{
-                        width: "60px",
-                        height: "60px",
-                        borderRadius: "16px",
-                        background: "var(--primary-light-surface, #f5f3ff)",
-                        color: "var(--primary, #28166f)",
-                        display: "inline-flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        marginBottom: "1rem",
-                      }}
-                    >
-                      <BookOpen size={30} />
-                    </div>
-                    <h3
-                      style={{
-                        fontSize: "1.15rem",
-                        fontWeight: 800,
-                        color: "#0f172a",
-                        marginBottom: "0.35rem",
-                      }}
-                    >
-                      No Examination Selected
-                    </h3>
-                    <p
-                      style={{
-                        fontSize: "0.84rem",
-                        color: "#64748b",
-                        maxWidth: "420px",
-                        margin: "0 auto 1.5rem auto",
-                      }}
-                    >
-                      Choose an examination from the directory on the left or create a new examination to begin automated ZipGrade OMR grading.
-                    </p>
-                    <button
-                      type="button"
-                      className="btn btn-primary"
-                      onClick={() => setIsExamModalOpen(true)}
-                      style={{ fontWeight: 700, borderRadius: "10px" }}
-                    >
-                      <Plus size={16} /> Create Examination
-                    </button>
+                      );
+                    })()}
                   </div>
-                )}
-              </div>
+                </div>
+              )}
             </div>
-            )}
-          </div>
-        )}
+          )}
 
-        {/* GRADING HISTORY TAB (HISTORICAL AUDIT & MANAGEMENT) */}
-        {activeTab === "history" && (
-          <GradingHistoryView
-            exams={exams}
-            submissions={submissions}
-            roster={roster}
-            currentUser={currentUser}
-            onSelectSubmission={viewSubmissionDetails}
-            onDeleteGradingRecord={handleDeleteGradingRecord}
-            formatDate={formatDate}
-            addToast={addToast}
-          />
-        )}
+          {/* EXAM RECORDS / GRADING AUDIT HISTORY TAB */}
+          {activeTab === "history" && (
+            <GradingHistoryView
+              exams={exams}
+              submissions={submissions}
+              roster={roster}
+              currentUser={currentUser}
+              onSelectSubmission={viewSubmissionDetails}
+              onDeleteGradingRecord={handleDeleteGradingRecord}
+              formatDate={formatDate}
+              addToast={addToast}
+            />
+          )}
 
-        {/* EXAMINATION RESULTS MANAGEMENT TAB (TEACHER) */}
-        {(activeTab === "results-management" || activeTab === "compiler") && currentUser && (
-          <TeacherExamCompiler
-            exams={exams}
-            submissions={submissions}
-            roster={roster}
-            currentUser={currentUser}
-            onSelectSubmission={viewSubmissionDetails}
-            onInspectExam={(exam) => setInspectExam(exam)}
-            addToast={addToast}
-            formatDate={formatDate}
-          />
-        )}
+          {/* OFFICIAL GRADEBOOK & ASSESSMENT RECORDS TAB (TEACHER) */}
+          {(activeTab === "results-management" || activeTab === "compiler") && currentUser && (
+            <TeacherExamCompiler
+              exams={exams}
+              submissions={submissions}
+              roster={roster}
+              currentUser={currentUser}
+              onSelectSubmission={viewSubmissionDetails}
+              onInspectExam={(exam) => setInspectExam(exam)}
+              addToast={addToast}
+              formatDate={formatDate}
+            />
+          )}
 
-        {/* OBE ITEM ANALYSIS TAB */}
-        {activeTab === "item-analysis" && (
-          <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-                flexWrap: "wrap",
-                gap: "1rem",
-                padding: "1.25rem 1.5rem",
-                background: "#ffffff",
-                border: "1px solid #e2e8f0",
-                borderRadius: "12px",
-              }}
-            >
-              <div>
-                <h2
-                  style={{
-                    fontSize: "1.4rem",
-                    fontWeight: 800,
-                    margin: 0,
-                    color: "#0f172a",
-                  }}
-                >
-                  OBE Analysis
-                </h2>
-                <p
-                  style={{
-                    fontSize: "0.82rem",
-                    color: "#64748b",
-                    margin: "0.2rem 0 0 0",
-                  }}
-                >
-                  Item difficulty, discrimination index, and learning outcomes attainment
-                </p>
-              </div>
-
-              <div style={{ display: "flex", gap: "0.75rem" }}>
-                <button
-                  className="btn btn-primary"
-                  onClick={handleExportItemAnalysis}
-                  style={{
-                    fontWeight: 700,
-                    borderRadius: "8px",
-                    fontSize: "0.82rem",
-                  }}
-                >
-                  <Download size={15} /> Export Item Analysis (.xlsx)
-                </button>
-              </div>
-            </div>
-
-            {/* Exam Selector Card */}
-            <div
-              className="card"
-              style={{
-                background: "#ffffff",
-                border: "1px solid #e2e8f0",
-                borderRadius: "16px",
-                padding: "1.25rem 1.5rem",
-                boxShadow: "0 2px 8px rgba(0, 0, 0, 0.02)",
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-                flexWrap: "wrap",
-                gap: "1rem",
-              }}
-            >
+          {/* OBE ITEM ANALYSIS TAB */}
+          {activeTab === "item-analysis" && (
+            <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
+              {/* Exam Selector Card */}
               <div
+                className="card"
                 style={{
+                  background: "#ffffff",
+                  border: "1px solid #e2e8f0",
+                  borderRadius: "16px",
+                  padding: "1.25rem 1.5rem",
+                  boxShadow: "0 2px 8px rgba(0, 0, 0, 0.02)",
                   display: "flex",
+                  justifyContent: "space-between",
                   alignItems: "center",
+                  flexWrap: "wrap",
                   gap: "1rem",
-                  flex: "1 1 320px",
                 }}
               >
                 <div
                   style={{
-                    width: "42px",
-                    height: "42px",
-                    borderRadius: "10px",
-                    background: "var(--primary-light-surface, #f5f3ff)",
-                    color: "var(--primary, #28166f)",
-                    border: "1px solid var(--primary-light-border, #ddd6fe)",
                     display: "flex",
                     alignItems: "center",
-                    justifyContent: "center",
-                    flexShrink: 0,
+                    gap: "1rem",
+                    flex: "1 1 320px",
                   }}
                 >
-                  <BookOpen size={20} />
-                </div>
-                <div style={{ flex: 1 }}>
-                  <label
+                  <div
                     style={{
-                      fontWeight: 700,
-                      fontSize: "0.82rem",
-                      color: "#475569",
-                      display: "block",
-                      marginBottom: "4px",
+                      width: "42px",
+                      height: "42px",
+                      borderRadius: "10px",
+                      background: "var(--primary-light-surface, #f5f3ff)",
+                      color: "var(--primary, #28166f)",
+                      border: "1px solid var(--primary-light-border, #ddd6fe)",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      flexShrink: 0,
                     }}
                   >
-                    Select Examination to Evaluate:
-                  </label>
-                  <select
-                    className="form-input"
-                    style={{
-                      width: "100%",
-                      maxWidth: "420px",
-                      height: "38px",
-                      fontSize: "0.85rem",
-                      background: "#f8fafc",
-                      border: "1px solid #cbd5e1",
-                      borderRadius: "8px",
-                      color: "#0f172a",
-                      fontWeight: 600,
-                    }}
-                    value={selectedExamId}
-                    onChange={(e) => setSelectedExamId(e.target.value)}
-                  >
-                    {exams.map((exam) => (
-                      <option key={exam.id} value={exam.id}>
-                        {exam.name} {exam.course_code ? `[${exam.course_code}]` : ""} {exam.section ? `• Sec ${exam.section}` : ""}
-                      </option>
-                    ))}
-                  </select>
+                    <BookOpen size={20} />
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <label
+                      style={{
+                        fontWeight: 700,
+                        fontSize: "0.82rem",
+                        color: "#475569",
+                        display: "block",
+                        marginBottom: "4px",
+                      }}
+                    >
+                      Select Examination to Evaluate:
+                    </label>
+                    <select
+                      className="form-input"
+                      style={{
+                        width: "100%",
+                        maxWidth: "420px",
+                        height: "38px",
+                        fontSize: "0.85rem",
+                        background: "#f8fafc",
+                        border: "1px solid #cbd5e1",
+                        borderRadius: "8px",
+                        color: "#0f172a",
+                        fontWeight: 600,
+                      }}
+                      value={selectedExamId}
+                      onChange={(e) => setSelectedExamId(e.target.value)}
+                    >
+                      {exams.map((exam) => (
+                        <option key={exam.id} value={exam.id}>
+                          {exam.name} {exam.course_code ? `[${exam.course_code}]` : ""} {exam.section ? `• Sec ${exam.section}` : ""}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
                 </div>
-              </div>
 
-              {activeExam && (
-                <div
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "0.6rem",
-                    flexWrap: "wrap",
-                  }}
-                >
-                  {activeExam.course_code && (
+                {activeExam && (
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "0.6rem",
+                      flexWrap: "wrap",
+                    }}
+                  >
+                    {activeExam.course_code && (
+                      <span
+                        style={{
+                          background: "var(--primary-light-surface, #f5f3ff)",
+                          color: "var(--primary, #28166f)",
+                          border: "1px solid var(--primary-light-border, #ddd6fe)",
+                          padding: "0.3rem 0.6rem",
+                          borderRadius: "6px",
+                          fontSize: "0.75rem",
+                          fontWeight: 800,
+                        }}
+                      >
+                        {activeExam.course_code}
+                      </span>
+                    )}
+                    {activeExam.section && (
+                      <span
+                        style={{
+                          background: "#ecfdf5",
+                          color: "#059669",
+                          border: "1px solid #a7f3d0",
+                          padding: "0.3rem 0.6rem",
+                          borderRadius: "6px",
+                          fontSize: "0.75rem",
+                          fontWeight: 700,
+                        }}
+                      >
+                        Sec: {activeExam.section}
+                      </span>
+                    )}
                     <span
                       style={{
-                        background: "var(--primary-light-surface, #f5f3ff)",
-                        color: "var(--primary, #28166f)",
-                        border: "1px solid var(--primary-light-border, #ddd6fe)",
+                        background: "#f8fafc",
+                        color: "#475569",
+                        border: "1px solid #e2e8f0",
                         padding: "0.3rem 0.6rem",
                         borderRadius: "6px",
                         fontSize: "0.75rem",
-                        fontWeight: 800,
+                        fontWeight: 600,
                       }}
                     >
-                      {activeExam.course_code}
+                      {Object.keys(activeExam.answer_key || {}).length} Items
                     </span>
-                  )}
-                  {activeExam.section && (
                     <span
                       style={{
-                        background: "#ecfdf5",
-                        color: "#059669",
-                        border: "1px solid #a7f3d0",
+                        background: "#f8fafc",
+                        color: "var(--primary, #28166f)",
+                        border: "1px solid var(--primary-light-border, #ddd6fe)",
                         padding: "0.3rem 0.6rem",
                         borderRadius: "6px",
                         fontSize: "0.75rem",
                         fontWeight: 700,
                       }}
                     >
-                      Sec: {activeExam.section}
+                      {submissions.filter((s) => s.exam_id === activeExam.id).length} Scanned
                     </span>
-                  )}
-                  <span
-                    style={{
-                      background: "#f8fafc",
-                      color: "#475569",
-                      border: "1px solid #e2e8f0",
-                      padding: "0.3rem 0.6rem",
-                      borderRadius: "6px",
-                      fontSize: "0.75rem",
-                      fontWeight: 600,
-                    }}
-                  >
-                    {Object.keys(activeExam.answer_key || {}).length} Items
-                  </span>
-                  <span
-                    style={{
-                      background: "#f8fafc",
-                      color: "var(--primary, #28166f)",
-                      border: "1px solid var(--primary-light-border, #ddd6fe)",
-                      padding: "0.3rem 0.6rem",
-                      borderRadius: "6px",
-                      fontSize: "0.75rem",
-                      fontWeight: 700,
-                    }}
-                  >
-                    {submissions.filter((s) => s.exam_id === activeExam.id).length} Scanned
-                  </span>
-                </div>
-              )}
-            </div>
+                    <button
+                      className="btn btn-primary"
+                      onClick={handleExportItemAnalysis}
+                      style={{
+                        fontWeight: 700,
+                        borderRadius: "8px",
+                        fontSize: "0.82rem",
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: "6px",
+                      }}
+                    >
+                      <Download size={15} /> Export Item Analysis (.xlsx)
+                    </button>
+                  </div>
+                )}
+              </div>
 
-            {/* Item Analysis Results Card */}
+              {/* Item Analysis Results Card */}
+              <div
+                className="card"
+                style={{
+                  background: "#ffffff",
+                  border: "1px solid #e2e8f0",
+                  borderRadius: "16px",
+                  padding: "1.5rem",
+                  boxShadow: "0 2px 8px rgba(0, 0, 0, 0.02)",
+                }}
+              >
+                {activeExam ? (
+                  <>
+                    {submissions.filter((s) => s.exam_id === activeExam.id)
+                      .length === 0 && (
+                        <div
+                          style={{
+                            marginBottom: "1.25rem",
+                            padding: "0.85rem 1.1rem",
+                            background: "#fffbeb",
+                            border: "1px solid #fde68a",
+                            borderRadius: "10px",
+                            color: "#92400e",
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "0.6rem",
+                            fontSize: "0.82rem",
+                          }}
+                        >
+                          <AlertTriangle
+                            size={18}
+                            style={{ flexShrink: 0, color: "#d97706" }}
+                          />
+                          <span>
+                            <strong>No real submissions found</strong> for this exam
+                            — the table below displays <strong>sample demo psychometrics</strong>{" "}
+                            for illustration purposes. Grade student OMR sheets under <strong>Exams & Grading</strong> to generate live data.
+                          </span>
+                        </div>
+                      )}
+                    <ItemAnalysisTable
+                      examName={activeExam.name}
+                      answerKey={activeExam.answer_key}
+                      submissions={submissions.filter(
+                        (s) => s.exam_id === activeExam.id,
+                      )}
+                    />
+                  </>
+                ) : (
+                  <div
+                    style={{
+                      textAlign: "center",
+                      padding: "3rem",
+                      color: "#64748b",
+                    }}
+                  >
+                    Please select an exam above to view Item Analysis metrics.
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* USER GUIDE TAB (DEDICATED IN-PAGE CONTAINER CARD) */}
+          {activeTab === "user-guide" && (
+            <div>
+              <div
+                className="header-container"
+                style={{
+                  marginBottom: "1.5rem",
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  gap: "1rem",
+                  flexWrap: "wrap",
+                }}
+              >
+                <div>
+                  <h2 style={{ fontSize: "1.4rem", fontWeight: 800, margin: 0 }}>
+                    SRCB EduAssess User Guide & System Manual
+                  </h2>
+                  <p
+                    style={{
+                      fontSize: "0.85rem",
+                      color: "var(--text-secondary)",
+                      margin: "0.2rem 0 0 0",
+                    }}
+                  >
+                    Role-specific instructions, OMR bubble sheet scanning standards, and OBE item analysis guidelines.
+                  </p>
+                </div>
+              </div>
+
+              <UserGuideCard
+                initialRole={currentUser?.role ?? "teacher"}
+                onNavigateTab={(tab) => handleTabSelect(tab as AppTab)}
+              />
+            </div>
+          )}
+
+          {/* Submission Detail Inspection Modal - Global (works from any tab) */}
+          {selectedSubmission && (
+            <div
+              style={{
+                position: "fixed",
+                top: 0,
+                left: 0,
+                width: "100%",
+                height: "100%",
+                background: "rgba(0,0,0,0.8)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                zIndex: 999,
+                padding: "2rem",
+              }}
+            >
+              <div
+                className="card"
+                style={{
+                  width: "100%",
+                  maxWidth: "650px",
+                  maxHeight: "90vh",
+                  overflowY: "auto",
+                }}
+              >
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    marginBottom: "1rem",
+                    borderBottom: "1px solid var(--border)",
+                    paddingBottom: "0.75rem",
+                  }}
+                >
+                  <h3 style={{ fontSize: "1.2rem" }}>Grading Summary</h3>
+                  <div
+                    style={{
+                      display: "flex",
+                      gap: "0.5rem",
+                      alignItems: "center",
+                    }}
+                  >
+                    <button
+                      className="btn btn-success"
+                      style={{
+                        padding: "0.25rem 0.65rem",
+                        fontSize: "0.8rem",
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: "5px",
+                      }}
+                      onClick={() =>
+                        handleExportSingleSubmission(selectedSubmission)
+                      }
+                    >
+                      <Download size={14} /> Export Single File (.xlsx)
+                    </button>
+                    <button
+                      className="btn btn-danger"
+                      style={{
+                        padding: "0.25rem 0.5rem",
+                        fontSize: "0.8rem",
+                      }}
+                      onClick={() => setSelectedSubmission(null)}
+                    >
+                      Close
+                    </button>
+                  </div>
+                </div>
+
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "1fr 1fr",
+                    gap: "1rem",
+                    marginBottom: "1.5rem",
+                  }}
+                >
+                  <div>
+                    <span
+                      style={{
+                        fontSize: "0.75rem",
+                        color: "var(--text-muted)",
+                      }}
+                    >
+                      Student Roster
+                    </span>
+                    <p
+                      style={{
+                        fontSize: "1rem",
+                        fontWeight: 800,
+                        margin: "2px 0 0 0",
+                      }}
+                    >
+                      {roster.find(
+                        (r) =>
+                          r.student_id.toLowerCase() ===
+                          (selectedSubmission.student_id || "").toLowerCase(),
+                      )?.name ||
+                        selectedSubmission.student_id ||
+                        "N/A"}
+                    </p>
+                    <span
+                      style={{
+                        fontSize: "0.75rem",
+                        color: "var(--text-muted)",
+                      }}
+                    >
+                      ID: {selectedSubmission.student_id}
+                    </span>
+                  </div>
+                  <div>
+                    <span
+                      style={{
+                        fontSize: "0.75rem",
+                        color: "var(--text-muted)",
+                      }}
+                    >
+                      Graded On
+                    </span>
+                    <p
+                      style={{
+                        fontSize: "0.9rem",
+                        fontWeight: 600,
+                        margin: "2px 0 0 0",
+                      }}
+                    >
+                      {formatDate(selectedSubmission.created_at)}
+                    </p>
+                  </div>
+                  <div>
+                    <span
+                      style={{
+                        fontSize: "0.75rem",
+                        color: "var(--text-muted)",
+                      }}
+                    >
+                      Exam Title
+                    </span>
+                    <p
+                      style={{
+                        fontSize: "0.95rem",
+                        fontWeight: 700,
+                        margin: "2px 0 0 0",
+                      }}
+                    >
+                      {exams.find((e) => e.id === selectedSubmission.exam_id)
+                        ?.name || "Unknown Exam"}
+                    </p>
+                  </div>
+                  <div>
+                    <span
+                      style={{
+                        fontSize: "0.75rem",
+                        color: "var(--text-muted)",
+                      }}
+                    >
+                      Score Status
+                    </span>
+                    <div style={{ marginTop: "4px" }}>
+                      <StatusBadge
+                        score={selectedSubmission.score}
+                        totalQuestions={selectedSubmission.total_questions}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <h4
+                  style={{
+                    fontSize: "0.9rem",
+                    color: "var(--text-secondary)",
+                    marginBottom: "0.5rem",
+                  }}
+                >
+                  Bubble Check
+                </h4>
+                <div
+                  className="bubble-sheet-card"
+                  style={{
+                    maxHeight: "350px",
+                    border: "1px solid var(--border)",
+                    borderRadius: "var(--radius-md)",
+                    padding: "1rem",
+                  }}
+                >
+                  {(() => {
+                    const sortedAnswers = Object.entries(selectedSubmission.answers || {})
+                      .sort((a, b) => parseInt(a[0]) - parseInt(b[0]));
+                    const midIndex = Math.ceil(sortedAnswers.length / 2);
+                    const firstCol = sortedAnswers.slice(0, midIndex);
+                    const secondCol = sortedAnswers.slice(midIndex);
+                    const exam = exams.find((e) => e.id === selectedSubmission.exam_id);
+
+                    return (
+                      <div
+                        style={{
+                          display: "grid",
+                          gridTemplateColumns: "1fr 1fr",
+                          gap: "1rem",
+                        }}
+                      >
+                        <div>
+                          {firstCol.map(([qStr, ansObj]) => {
+                            const correctAns = exam?.answer_key[qStr];
+                            const selected = ansObj.selected;
+                            const isCorrect = selected === correctAns;
+
+                            return (
+                              <div
+                                key={qStr}
+                                className="bubble-row"
+                                style={{
+                                  padding: "0.2rem 0.5rem",
+                                  justifyContent: "space-between",
+                                }}
+                              >
+                                <span
+                                  className="bubble-num"
+                                  style={{ width: "20px" }}
+                                >
+                                  {qStr}.
+                                </span>
+                                <span
+                                  style={{
+                                    fontSize: "0.8rem",
+                                    color: isCorrect
+                                      ? "var(--success)"
+                                      : "var(--error)",
+                                    fontWeight: 600,
+                                  }}
+                                >
+                                  {ansObj.is_empty
+                                    ? "No Mark"
+                                    : `Marked "${selected}"`}
+                                </span>
+                                <span
+                                  style={{
+                                    fontSize: "0.8rem",
+                                    color: "var(--text-muted)",
+                                  }}
+                                >
+                                  (Key: {correctAns})
+                                </span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                        <div>
+                          {secondCol.map(([qStr, ansObj]) => {
+                            const correctAns = exam?.answer_key[qStr];
+                            const selected = ansObj.selected;
+                            const isCorrect = selected === correctAns;
+
+                            return (
+                              <div
+                                key={qStr}
+                                className="bubble-row"
+                                style={{
+                                  padding: "0.2rem 0.5rem",
+                                  justifyContent: "space-between",
+                                }}
+                              >
+                                <span
+                                  className="bubble-num"
+                                  style={{ width: "20px" }}
+                                >
+                                  {qStr}.
+                                </span>
+                                <span
+                                  style={{
+                                    fontSize: "0.8rem",
+                                    color: isCorrect
+                                      ? "var(--success)"
+                                      : "var(--error)",
+                                    fontWeight: 600,
+                                  }}
+                                >
+                                  {ansObj.is_empty
+                                    ? "No Mark"
+                                    : `Marked "${selected}"`}
+                                </span>
+                                <span
+                                  style={{
+                                    fontSize: "0.8rem",
+                                    color: "var(--text-muted)",
+                                  }}
+                                >
+                                  (Key: {correctAns})
+                                </span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    );
+                  })()}
+                </div>
+              </div>
+            </div>
+          )}
+        </main>
+
+        {/* Sign Out Confirmation Modal */}
+        {isSignOutModalOpen && (
+          <div
+            className="modal-overlay"
+            style={{
+              position: "fixed",
+              inset: 0,
+              background: "rgba(15, 23, 42, 0.6)",
+              backdropFilter: "blur(6px)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              zIndex: 999999,
+              padding: "1rem",
+            }}
+            onClick={() => setIsSignOutModalOpen(false)}
+          >
             <div
               className="card"
               style={{
                 background: "#ffffff",
-                border: "1px solid #e2e8f0",
                 borderRadius: "16px",
-                padding: "1.5rem",
-                boxShadow: "0 2px 8px rgba(0, 0, 0, 0.02)",
-              }}
-            >
-              {activeExam ? (
-                <>
-                  {submissions.filter((s) => s.exam_id === activeExam.id)
-                    .length === 0 && (
-                    <div
-                      style={{
-                        marginBottom: "1.25rem",
-                        padding: "0.85rem 1.1rem",
-                        background: "#fffbeb",
-                        border: "1px solid #fde68a",
-                        borderRadius: "10px",
-                        color: "#92400e",
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "0.6rem",
-                        fontSize: "0.82rem",
-                      }}
-                    >
-                      <AlertTriangle
-                        size={18}
-                        style={{ flexShrink: 0, color: "#d97706" }}
-                      />
-                      <span>
-                        <strong>No real submissions found</strong> for this exam
-                        — the table below displays <strong>sample demo psychometrics</strong>{" "}
-                        for illustration purposes. Grade student OMR sheets under <strong>Exams & Grading</strong> to generate live data.
-                      </span>
-                    </div>
-                  )}
-                  <ItemAnalysisTable
-                    examName={activeExam.name}
-                    answerKey={activeExam.answer_key}
-                    submissions={submissions.filter(
-                      (s) => s.exam_id === activeExam.id,
-                    )}
-                  />
-                </>
-              ) : (
-                <div
-                  style={{
-                    textAlign: "center",
-                    padding: "3rem",
-                    color: "#64748b",
-                  }}
-                >
-                  Please select an exam above to view Item Analysis metrics.
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* USER GUIDE TAB (DEDICATED IN-PAGE CONTAINER CARD) */}
-        {activeTab === "user-guide" && (
-          <div>
-            <div
-              className="header-container"
-              style={{
-                marginBottom: "1.5rem",
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-                gap: "1rem",
-                flexWrap: "wrap",
-              }}
-            >
-              <div>
-                <h2 style={{ fontSize: "1.4rem", fontWeight: 800, margin: 0 }}>
-                  SRCB EduAssess User Guide & System Manual
-                </h2>
-                <p
-                  style={{
-                    fontSize: "0.85rem",
-                    color: "var(--text-secondary)",
-                    margin: "0.2rem 0 0 0",
-                  }}
-                >
-                  Role-specific instructions, OMR bubble sheet scanning standards, and OBE item analysis guidelines.
-                </p>
-              </div>
-            </div>
-
-            <UserGuideCard
-              initialRole={currentUser?.role ?? "teacher"}
-              onNavigateTab={(tab) => handleTabSelect(tab as AppTab)}
-            />
-          </div>
-        )}
-
-        {/* Submission Detail Inspection Modal - Global (works from any tab) */}
-        {selectedSubmission && (
-          <div
-            style={{
-              position: "fixed",
-              top: 0,
-              left: 0,
-              width: "100%",
-              height: "100%",
-              background: "rgba(0,0,0,0.8)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              zIndex: 999,
-              padding: "2rem",
-            }}
-          >
-            <div
-              className="card"
-              style={{
+                padding: "1.75rem",
+                maxWidth: "420px",
                 width: "100%",
-                maxWidth: "650px",
-                maxHeight: "90vh",
-                overflowY: "auto",
+                boxShadow: "0 20px 40px rgba(0, 0, 0, 0.15)",
+                border: "1px solid #e2e8f0",
+                animation: "modalScaleIn 0.2s ease-out",
               }}
+              onClick={(e) => e.stopPropagation()}
             >
               <div
                 style={{
                   display: "flex",
-                  justifyContent: "space-between",
                   alignItems: "center",
+                  gap: "0.85rem",
                   marginBottom: "1rem",
-                  borderBottom: "1px solid var(--border)",
-                  paddingBottom: "0.75rem",
                 }}
               >
-                <h3 style={{ fontSize: "1.2rem" }}>Grading Summary</h3>
                 <div
                   style={{
+                    width: "44px",
+                    height: "44px",
+                    borderRadius: "12px",
+                    background: "#fee2e2",
+                    color: "#ef4444",
                     display: "flex",
-                    gap: "0.5rem",
                     alignItems: "center",
+                    justifyContent: "center",
+                    flexShrink: 0,
                   }}
                 >
-                  <button
-                    className="btn btn-success"
-                    style={{
-                      padding: "0.25rem 0.65rem",
-                      fontSize: "0.8rem",
-                      display: "inline-flex",
-                      alignItems: "center",
-                      gap: "5px",
-                    }}
-                    onClick={() =>
-                      handleExportSingleSubmission(selectedSubmission)
-                    }
-                  >
-                    <Download size={14} /> Export Single File (.xlsx)
-                  </button>
-                  <button
-                    className="btn btn-danger"
-                    style={{
-                      padding: "0.25rem 0.5rem",
-                      fontSize: "0.8rem",
-                    }}
-                    onClick={() => setSelectedSubmission(null)}
-                  >
-                    Close
-                  </button>
+                  <LogOut size={22} />
                 </div>
-              </div>
-
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "1fr 1fr",
-                  gap: "1rem",
-                  marginBottom: "1.5rem",
-                }}
-              >
                 <div>
-                  <span
+                  <h3
                     style={{
-                      fontSize: "0.75rem",
-                      color: "var(--text-muted)",
-                    }}
-                  >
-                    Student Roster
-                  </span>
-                  <p
-                    style={{
-                      fontSize: "1rem",
+                      margin: 0,
+                      fontSize: "1.2rem",
                       fontWeight: 800,
-                      margin: "2px 0 0 0",
+                      color: "#0f172a",
                     }}
                   >
-                    {roster.find(
-                      (r) =>
-                        r.student_id.toLowerCase() ===
-                        (selectedSubmission.student_id || "").toLowerCase(),
-                    )?.name ||
-                      selectedSubmission.student_id ||
-                      "N/A"}
-                  </p>
-                  <span
-                    style={{
-                      fontSize: "0.75rem",
-                      color: "var(--text-muted)",
-                    }}
-                  >
-                    ID: {selectedSubmission.student_id}
-                  </span>
-                </div>
-                <div>
-                  <span
-                    style={{
-                      fontSize: "0.75rem",
-                      color: "var(--text-muted)",
-                    }}
-                  >
-                    Graded On
-                  </span>
+                    Confirm Sign Out
+                  </h3>
                   <p
                     style={{
-                      fontSize: "0.9rem",
-                      fontWeight: 600,
-                      margin: "2px 0 0 0",
+                      margin: "0.2rem 0 0 0",
+                      fontSize: "0.85rem",
+                      color: "#64748b",
                     }}
                   >
-                    {formatDate(selectedSubmission.created_at)}
+                    End active institutional session
                   </p>
-                </div>
-                <div>
-                  <span
-                    style={{
-                      fontSize: "0.75rem",
-                      color: "var(--text-muted)",
-                    }}
-                  >
-                    Exam Title
-                  </span>
-                  <p
-                    style={{
-                      fontSize: "0.95rem",
-                      fontWeight: 700,
-                      margin: "2px 0 0 0",
-                    }}
-                  >
-                    {exams.find((e) => e.id === selectedSubmission.exam_id)
-                      ?.name || "Unknown Exam"}
-                  </p>
-                </div>
-                <div>
-                  <span
-                    style={{
-                      fontSize: "0.75rem",
-                      color: "var(--text-muted)",
-                    }}
-                  >
-                    Score Status
-                  </span>
-                  <div style={{ marginTop: "4px" }}>
-                    <StatusBadge
-                      score={selectedSubmission.score}
-                      totalQuestions={selectedSubmission.total_questions}
-                    />
-                  </div>
                 </div>
               </div>
 
-              <h4
+              <p
                 style={{
-                  fontSize: "0.9rem",
-                  color: "var(--text-secondary)",
-                  marginBottom: "0.5rem",
+                  fontSize: "0.92rem",
+                  color: "#475569",
+                  lineHeight: 1.5,
+                  margin: "0 0 1.5rem 0",
                 }}
               >
-                Bubble Check
-              </h4>
+                Are you sure you want to sign out of{" "}
+                <strong style={{ color: "#0f172a" }}>
+                  {currentUser?.name || "your account"}
+                </strong>
+                ? You will need to sign in again to access your institutional workspace.
+              </p>
+
               <div
-                className="bubble-sheet-card"
                 style={{
-                  maxHeight: "350px",
-                  border: "1px solid var(--border)",
-                  borderRadius: "var(--radius-md)",
-                  padding: "1rem",
+                  display: "flex",
+                  justifyContent: "flex-end",
+                  gap: "0.75rem",
                 }}
               >
-                {(() => {
-                  const sortedAnswers = Object.entries(selectedSubmission.answers || {})
-                    .sort((a, b) => parseInt(a[0]) - parseInt(b[0]));
-                  const midIndex = Math.ceil(sortedAnswers.length / 2);
-                  const firstCol = sortedAnswers.slice(0, midIndex);
-                  const secondCol = sortedAnswers.slice(midIndex);
-                  const exam = exams.find((e) => e.id === selectedSubmission.exam_id);
-
-                  return (
-                    <div
-                      style={{
-                        display: "grid",
-                        gridTemplateColumns: "1fr 1fr",
-                        gap: "1rem",
-                      }}
-                    >
-                      <div>
-                        {firstCol.map(([qStr, ansObj]) => {
-                          const correctAns = exam?.answer_key[qStr];
-                          const selected = ansObj.selected;
-                          const isCorrect = selected === correctAns;
-
-                          return (
-                            <div
-                              key={qStr}
-                              className="bubble-row"
-                              style={{
-                                padding: "0.2rem 0.5rem",
-                                justifyContent: "space-between",
-                              }}
-                            >
-                              <span
-                                className="bubble-num"
-                                style={{ width: "20px" }}
-                              >
-                                {qStr}.
-                              </span>
-                              <span
-                                style={{
-                                  fontSize: "0.8rem",
-                                  color: isCorrect
-                                    ? "var(--success)"
-                                    : "var(--error)",
-                                  fontWeight: 600,
-                                }}
-                              >
-                                {ansObj.is_empty
-                                  ? "No Mark"
-                                  : `Marked "${selected}"`}
-                              </span>
-                              <span
-                                style={{
-                                  fontSize: "0.8rem",
-                                  color: "var(--text-muted)",
-                                }}
-                              >
-                                (Key: {correctAns})
-                              </span>
-                            </div>
-                          );
-                        })}
-                      </div>
-                      <div>
-                        {secondCol.map(([qStr, ansObj]) => {
-                          const correctAns = exam?.answer_key[qStr];
-                          const selected = ansObj.selected;
-                          const isCorrect = selected === correctAns;
-
-                          return (
-                            <div
-                              key={qStr}
-                              className="bubble-row"
-                              style={{
-                                padding: "0.2rem 0.5rem",
-                                justifyContent: "space-between",
-                              }}
-                            >
-                              <span
-                                className="bubble-num"
-                                style={{ width: "20px" }}
-                              >
-                                {qStr}.
-                              </span>
-                              <span
-                                style={{
-                                  fontSize: "0.8rem",
-                                  color: isCorrect
-                                    ? "var(--success)"
-                                    : "var(--error)",
-                                  fontWeight: 600,
-                                }}
-                              >
-                                {ansObj.is_empty
-                                  ? "No Mark"
-                                  : `Marked "${selected}"`}
-                              </span>
-                              <span
-                                style={{
-                                  fontSize: "0.8rem",
-                                  color: "var(--text-muted)",
-                                }}
-                              >
-                                (Key: {correctAns})
-                              </span>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  );
-                })()}
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={() => setIsSignOutModalOpen(false)}
+                  style={{
+                    padding: "0.6rem 1.1rem",
+                    fontSize: "0.88rem",
+                    fontWeight: 600,
+                    borderRadius: "8px",
+                    background: "#f1f5f9",
+                    color: "#334155",
+                    border: "1px solid #cbd5e1",
+                  }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  className="btn"
+                  onClick={() => {
+                    setIsSignOutModalOpen(false);
+                    handleSignOut();
+                  }}
+                  style={{
+                    padding: "0.6rem 1.25rem",
+                    fontSize: "0.88rem",
+                    fontWeight: 700,
+                    borderRadius: "8px",
+                    background: "#ef4444",
+                    color: "#ffffff",
+                    border: "none",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "0.4rem",
+                    boxShadow: "0 4px 12px rgba(239, 68, 68, 0.25)",
+                  }}
+                >
+                  <LogOut size={16} />
+                  <span>Yes, Sign Out</span>
+                </button>
               </div>
             </div>
           </div>
         )}
-      </main>
 
-      {/* Sign Out Confirmation Modal */}
-      {isSignOutModalOpen && (
-        <div
-          className="modal-overlay"
-          style={{
-            position: "fixed",
-            inset: 0,
-            background: "rgba(15, 23, 42, 0.6)",
-            backdropFilter: "blur(6px)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            zIndex: 999999,
-            padding: "1rem",
-          }}
-          onClick={() => setIsSignOutModalOpen(false)}
+        {/* Floating User Guide Question Mark Button (Bottom-Right) */}
+        <button
+          type="button"
+          onClick={() => setIsUserGuideOpen(true)}
+          className="floating-help-btn"
+          title="Open User Guide & Documentation"
+          aria-label="Open User Guide"
         >
-          <div
-            className="card"
-            style={{
-              background: "#ffffff",
-              borderRadius: "16px",
-              padding: "1.75rem",
-              maxWidth: "420px",
-              width: "100%",
-              boxShadow: "0 20px 40px rgba(0, 0, 0, 0.15)",
-              border: "1px solid #e2e8f0",
-              animation: "modalScaleIn 0.2s ease-out",
-            }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "0.85rem",
-                marginBottom: "1rem",
-              }}
-            >
-              <div
-                style={{
-                  width: "44px",
-                  height: "44px",
-                  borderRadius: "12px",
-                  background: "#fee2e2",
-                  color: "#ef4444",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  flexShrink: 0,
-                }}
-              >
-                <LogOut size={22} />
-              </div>
-              <div>
-                <h3
-                  style={{
-                    margin: 0,
-                    fontSize: "1.2rem",
-                    fontWeight: 800,
-                    color: "#0f172a",
-                  }}
-                >
-                  Confirm Sign Out
-                </h3>
-                <p
-                  style={{
-                    margin: "0.2rem 0 0 0",
-                    fontSize: "0.85rem",
-                    color: "#64748b",
-                  }}
-                >
-                  End active institutional session
-                </p>
-              </div>
-            </div>
-
-            <p
-              style={{
-                fontSize: "0.92rem",
-                color: "#475569",
-                lineHeight: 1.5,
-                margin: "0 0 1.5rem 0",
-              }}
-            >
-              Are you sure you want to sign out of{" "}
-              <strong style={{ color: "#0f172a" }}>
-                {currentUser?.name || "your account"}
-              </strong>
-              ? You will need to sign in again to access your institutional workspace.
-            </p>
-
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "flex-end",
-                gap: "0.75rem",
-              }}
-            >
-              <button
-                type="button"
-                className="btn btn-secondary"
-                onClick={() => setIsSignOutModalOpen(false)}
-                style={{
-                  padding: "0.6rem 1.1rem",
-                  fontSize: "0.88rem",
-                  fontWeight: 600,
-                  borderRadius: "8px",
-                  background: "#f1f5f9",
-                  color: "#334155",
-                  border: "1px solid #cbd5e1",
-                }}
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                className="btn"
-                onClick={() => {
-                  setIsSignOutModalOpen(false);
-                  handleSignOut();
-                }}
-                style={{
-                  padding: "0.6rem 1.25rem",
-                  fontSize: "0.88rem",
-                  fontWeight: 700,
-                  borderRadius: "8px",
-                  background: "#ef4444",
-                  color: "#ffffff",
-                  border: "none",
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: "0.4rem",
-                  boxShadow: "0 4px 12px rgba(239, 68, 68, 0.25)",
-                }}
-              >
-                <LogOut size={16} />
-                <span>Yes, Sign Out</span>
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Floating User Guide Question Mark Button (Bottom-Right) */}
-      <button
-        type="button"
-        onClick={() => setIsUserGuideOpen(true)}
-        className="floating-help-btn"
-        title="Open User Guide & Documentation"
-        aria-label="Open User Guide"
-      >
-        <HelpCircle size={24} />
-        <span className="floating-help-tooltip">Open User Guide</span>
-      </button>
+          <HelpCircle size={24} />
+          <span className="floating-help-tooltip">Open User Guide</span>
+        </button>
+      </div>
     </div>
-  </div>
   );
 }

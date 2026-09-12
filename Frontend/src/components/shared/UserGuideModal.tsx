@@ -363,7 +363,7 @@ const ROLE_MANUALS: Record<UserRole, RoleManual> = {
     quickActions: [
       { label: "Create New Exam", tab: "exams", icon: BookOpen },
       { label: "Open Quick Scanner", tab: "quick-scan", icon: Sparkles },
-      { label: "View Submissions", tab: "submissions", icon: Award },
+      { label: "Gradebook & Records", tab: "results-management", icon: Award },
     ],
     overview: {
       mission:
@@ -384,7 +384,7 @@ const ROLE_MANUALS: Record<UserRole, RoleManual> = {
           {
             title: "Create Examination Entry",
             description:
-              "Navigate to 'Exams & Grading' and click '+ Create New Exam'. Enter the course code (e.g., ITP 305), subject title, section, and semester.",
+              "Navigate to 'Examinations' and click '+ Create Examination'. Enter the course code (e.g., ITP 305), subject title, section, and semester.",
           },
           {
             title: "Input Master Answer Key (Choices A–E)",
@@ -433,14 +433,14 @@ const ROLE_MANUALS: Record<UserRole, RoleManual> = {
       },
       {
         id: "teacher-grade-export",
-        title: "4. Exporting Official CHED Grade Sheets",
+        title: "4. Exporting Official CHED Grade Sheets & Reports",
         icon: FileSpreadsheet,
         summary: "Download formatted Excel sheets with 1.00–5.00 scales.",
         steps: [
           {
             title: "Export Departmental Excel Report",
             description:
-              "Click 'Export CHED Grade Sheet (.xlsx)' to generate an official spreadsheet complete with raw scores, transmuted grades (1.00–5.00), and passing remarks ready for submission.",
+              "Navigate to 'Gradebook & Records' and click 'Export Grade Sheet (.xlsx)' to generate an official spreadsheet complete with raw scores, transmuted grades (1.00–5.00), and passing remarks ready for submission.",
           },
         ],
       },

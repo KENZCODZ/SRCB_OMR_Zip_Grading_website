@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Filter, Eye } from "lucide-react";
+import { Eye, ChevronDown, BookOpen } from "lucide-react";
 import type { Exam, Submission } from "../../types";
 
 const SAMPLE_EXAM_RECORDS = [
@@ -145,9 +145,13 @@ export default function DeanProgressRecords({
       <div
         style={{
           background: "#ffffff",
+          borderRadius: "16px",
           border: "1px solid #e2e8f0",
-          borderRadius: "12px",
-          padding: "1.25rem 1.4rem",
+          padding: "1.25rem 1.5rem",
+          display: "flex",
+          flexDirection: "column",
+          gap: "1.1rem",
+          boxShadow: "0 2px 8px rgba(0, 0, 0, 0.02)",
         }}
       >
         <div
@@ -156,41 +160,54 @@ export default function DeanProgressRecords({
             justifyContent: "space-between",
             alignItems: "center",
             flexWrap: "wrap",
-            gap: "0.75rem",
-            marginBottom: "1rem",
+            gap: "1rem",
           }}
         >
-          <div>
-            <h3 style={{ margin: 0, fontSize: "1.05rem", fontWeight: 800, color: "#0f172a" }}>
-              Examination Progress & Records Stream
-            </h3>
-            <p style={{ margin: "0.15rem 0 0 0", fontSize: "0.78rem", color: "#64748b" }}>
-              Monitor recent examination handling, faculty in charge, and grading progression
-            </p>
-          </div>
-
-          <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-            <Filter size={14} style={{ color: "#64748b" }} />
-            <select
-              value={selectedProgramFilter}
-              onChange={(e) => setSelectedProgramFilter(e.target.value)}
+          <div style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
+            <div
               style={{
-                height: "32px",
-                padding: "0 0.6rem",
-                fontSize: "0.78rem",
-                borderRadius: "8px",
-                border: "1px solid #cbd5e1",
-                background: "#ffffff",
-                color: "#0f172a",
+                width: "36px",
+                height: "36px",
+                borderRadius: "10px",
+                background: "var(--primary-light-surface, #f5f3ff)",
+                color: "var(--primary, #28166f)",
+                border: "1px solid var(--primary-light-border, #ddd6fe)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                flexShrink: 0,
               }}
             >
-              <option value="all">All Programs</option>
-              <option value="BSIT">BS Information Tech</option>
-              <option value="BSCS">BS Computer Science</option>
-              <option value="BSBA">BS Business Admin</option>
-              <option value="BSEd">BS Education</option>
-              <option value="AB Comm">AB Communication</option>
-            </select>
+              <BookOpen size={17} />
+            </div>
+            <div>
+              <h3 style={{ margin: 0, fontSize: "1.05rem", fontWeight: 800, color: "#0f172a", letterSpacing: "-0.01em" }}>
+                Examination Progress & Records Stream
+              </h3>
+              <p style={{ margin: 0, fontSize: "0.78rem", color: "#64748b", fontWeight: 500 }}>
+                Monitor recent examination handling, faculty in charge, and grading progression
+              </p>
+            </div>
+          </div>
+
+          <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", flexWrap: "wrap" }}>
+            <div style={{ minWidth: "180px" }}>
+              <div className="academic-select-wrapper">
+                <select
+                  value={selectedProgramFilter}
+                  onChange={(e) => setSelectedProgramFilter(e.target.value)}
+                  className="academic-select"
+                >
+                  <option value="all">All Academic Programs</option>
+                  <option value="BSIT">BS Information Tech</option>
+                  <option value="BSCS">BS Computer Science</option>
+                  <option value="BSBA">BS Business Admin</option>
+                  <option value="BSEd">BS Education</option>
+                  <option value="AB Comm">AB Communication</option>
+                </select>
+                <ChevronDown size={14} className="academic-select-arrow" />
+              </div>
+            </div>
           </div>
         </div>
 

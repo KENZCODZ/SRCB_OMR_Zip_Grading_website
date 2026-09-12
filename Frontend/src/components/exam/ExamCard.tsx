@@ -6,7 +6,6 @@ import {
   ChevronRight,
   User,
   Layers,
-  Eye,
 } from "lucide-react";
 import type { Exam } from "../../types";
 
@@ -26,7 +25,7 @@ export const ExamCard: React.FC<ExamCardProps> = ({
   submissionCount,
   onSelect,
   onDelete,
-  onInspect,
+  onInspect: _onInspect,
   formatDate,
 }) => {
   const {
@@ -203,32 +202,6 @@ export const ExamCard: React.FC<ExamCardProps> = ({
             flexShrink: 0,
           }}
         >
-          {onInspect && (
-            <button
-              className="btn btn-secondary btn-icon-only"
-              title="View Exam Details"
-              onClick={(e) => {
-                e.stopPropagation();
-                onInspect(exam);
-              }}
-              style={{
-                width: "28px",
-                height: "28px",
-                padding: 0,
-                background: "#ffffff",
-                border: "1px solid #e2e8f0",
-                boxShadow: "0 1px 3px rgba(0, 0, 0, 0.04)",
-                color: "#475569",
-                borderRadius: "7px",
-                display: "inline-flex",
-                alignItems: "center",
-                justifyContent: "center",
-                cursor: "pointer",
-              }}
-            >
-              <Eye size={13} />
-            </button>
-          )}
           {onDelete && (
             <button
               className="btn btn-secondary btn-icon-only"
@@ -382,6 +355,41 @@ export const ExamCard: React.FC<ExamCardProps> = ({
           <Calendar size={12} />
           {formatDate(created_at)}
         </span>
+      </div>
+
+      {/* Action Footer: Launch Grading Studio */}
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          marginTop: "0.25rem",
+          paddingTop: "0.5rem",
+          borderTop: "1px solid #f1f5f9",
+        }}
+      >
+        <span style={{ fontSize: "0.74rem", color: "#64748b", fontWeight: 600 }}>
+          {submissionCount && submissionCount > 0 ? `${submissionCount} sheets graded` : "Ready for OMR grading"}
+        </span>
+        <button
+          type="button"
+          className="btn btn-sm btn-primary"
+          onClick={(e) => {
+            e.stopPropagation();
+            onSelect(id);
+          }}
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: "4px",
+            fontSize: "0.76rem",
+            fontWeight: 700,
+            borderRadius: "8px",
+            padding: "0.3rem 0.75rem",
+          }}
+        >
+          Open Grading Studio <ChevronRight size={13} />
+        </button>
       </div>
     </div>
   );
