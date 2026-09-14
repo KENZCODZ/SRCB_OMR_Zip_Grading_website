@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Eye, ChevronDown, BookOpen } from "lucide-react";
+import { Eye, ChevronDown, BookOpen, GraduationCap } from "lucide-react";
 import type { Exam, Submission } from "../../types";
 
 const SAMPLE_EXAM_RECORDS = [
@@ -191,22 +191,22 @@ export default function DeanProgressRecords({
           </div>
 
           <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", flexWrap: "wrap" }}>
-            <div style={{ minWidth: "180px" }}>
-              <div className="academic-select-wrapper">
-                <select
-                  value={selectedProgramFilter}
-                  onChange={(e) => setSelectedProgramFilter(e.target.value)}
-                  className="academic-select"
-                >
-                  <option value="all">All Academic Programs</option>
-                  <option value="BSIT">BS Information Tech</option>
-                  <option value="BSCS">BS Computer Science</option>
-                  <option value="BSBA">BS Business Admin</option>
-                  <option value="BSEd">BS Education</option>
-                  <option value="AB Comm">AB Communication</option>
-                </select>
-                <ChevronDown size={14} className="academic-select-arrow" />
-              </div>
+            <div className="unified-filter-toolbar-item" style={{ minWidth: "220px" }} title="Filter by Academic Program">
+              <GraduationCap size={14} className="unified-filter-toolbar-icon" />
+              <select
+                value={selectedProgramFilter}
+                onChange={(e) => setSelectedProgramFilter(e.target.value)}
+                className="unified-filter-toolbar-select"
+                aria-label="Filter by academic program"
+              >
+                <option value="all">All Academic Programs</option>
+                <option value="BSIT">BS Information Tech</option>
+                <option value="BSCS">BS Computer Science</option>
+                <option value="BSBA">BS Business Admin</option>
+                <option value="BSEd">BS Education</option>
+                <option value="AB Comm">AB Communication</option>
+              </select>
+              <ChevronDown size={14} className="academic-select-arrow" />
             </div>
           </div>
         </div>

@@ -9,6 +9,9 @@ import {
   Award,
   Users,
   ChevronDown,
+  GraduationCap,
+  CheckCircle2,
+  X,
 } from "lucide-react";
 import type { AuthUser, Exam, Submission, StudentRosterEntry } from "../../types";
 import { exportExamBatchExcel, exportCompleteDatabaseExcel } from "../../utils/excelUtils";
@@ -92,57 +95,6 @@ export default function DeanExaminations({
 
   return (
     <div style={{ display: "grid", gap: "1.5rem" }}>
-      {/* HEADER BAR */}
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          flexWrap: "wrap",
-          gap: "1rem",
-          padding: "1.25rem 1.5rem",
-          background: "#ffffff",
-          border: "1px solid #e2e8f0",
-          borderRadius: "12px",
-        }}
-      >
-        <div>
-          <h1
-            style={{
-              margin: 0,
-              fontSize: "1.4rem",
-              fontWeight: 800,
-              color: "#0f172a",
-              letterSpacing: "-0.02em",
-            }}
-          >
-            Examinations
-          </h1>
-          <p
-            style={{
-              color: "#64748b",
-              marginTop: "0.2rem",
-              marginBottom: 0,
-              fontSize: "0.82rem",
-            }}
-          >
-            Collegiate assessments, answer keys, and standardized grade records
-          </p>
-        </div>
-
-        <button
-          type="button"
-          className="btn btn-primary"
-          onClick={handleBatchExport}
-          style={{
-            fontSize: "0.82rem",
-            padding: "0.45rem 1rem",
-          }}
-        >
-          <FileSpreadsheet size={15} /> Batch Export (.xlsx)
-        </button>
-      </div>
-
       {/* 4 STAT TILES */}
       <div
         style={{
@@ -261,7 +213,7 @@ export default function DeanExaminations({
           boxShadow: "0 2px 8px rgba(0, 0, 0, 0.02)",
         }}
       >
-        {/* Header Row: Title & Subtitle + Search & Count Badge */}
+        {/* Header Row: Title & Subtitle + Search & Batch Export */}
         <div
           style={{
             display: "flex",
@@ -356,91 +308,102 @@ export default function DeanExaminations({
               />
             </div>
 
-            <span
-              className="badge"
+            <button
+              type="button"
+              className="btn btn-secondary"
+              onClick={handleBatchExport}
+              title="Batch Export All Examinations (.xlsx)"
+              aria-label="Batch Export All Examinations (.xlsx)"
               style={{
-                background: "var(--primary-light-surface, #f5f3ff)",
-                color: "var(--primary, #28166f)",
-                border: "1px solid var(--primary-light-border, #ddd6fe)",
-                fontSize: "0.78rem",
-                fontWeight: 700,
-                padding: "0.45rem 0.75rem",
-                borderRadius: "8px",
+                width: "38px",
                 height: "38px",
+                padding: 0,
                 display: "inline-flex",
                 alignItems: "center",
+                justifyContent: "center",
+                borderRadius: "8px",
+                background: "#ffffff",
+                border: "1px solid #e2e8f0",
+                color: "var(--primary, #28166f)",
+                cursor: "pointer",
                 flexShrink: 0,
+                boxShadow: "0 1px 2px rgba(0, 0, 0, 0.03)",
+                transition: "all 0.2s ease",
               }}
             >
-              Showing {filteredExams.length} of {exams.length} Examinations
-            </span>
+              <FileSpreadsheet size={17} />
+            </button>
+
+            {(programmeFilter !== "all" ||
+              statusFilter !== "all" ||
+              searchQuery.trim().length > 0) && (
+              <button
+                type="button"
+                className="btn btn-secondary btn-sm"
+                onClick={() => {
+                  setProgrammeFilter("all");
+                  setStatusFilter("all");
+                  setSearchQuery("");
+                }}
+                style={{
+                  height: "38px",
+                  padding: "0 0.85rem",
+                  fontSize: "0.8rem",
+                  fontWeight: 600,
+                  color: "#64748b",
+                  borderRadius: "8px",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "4px",
+                  flexShrink: 0,
+                  background: "#ffffff",
+                  border: "1px solid #e2e8f0",
+                }}
+                title="Reset all filters and search query to defaults"
+              >
+                <X size={14} /> Clear Filters
+              </button>
+            )}
           </div>
         </div>
 
-        {/* Filter Grid */}
+        {/* Unified Filter Toolbar */}
         <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(170px, 1fr))",
-            gap: "0.85rem",
-          }}
+          className="unified-filter-toolbar"
+          style={{ gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))" }}
         >
-          <div>
-            <label
-              style={{
-                fontSize: "0.72rem",
-                color: "#334155",
-                fontWeight: 700,
-                display: "block",
-                marginBottom: "4px",
-                textTransform: "uppercase",
-                letterSpacing: "0.03em",
-              }}
+          {/* Program / Department Filter */}
+          <div className="unified-filter-toolbar-item" title="Filter by Program or Department">
+            <GraduationCap size={14} className="unified-filter-toolbar-icon" />
+            <select
+              value={programmeFilter}
+              onChange={(e) => setProgrammeFilter(e.target.value)}
+              className="unified-filter-toolbar-select"
+              aria-label="Filter by program or department"
             >
-              Program / Department
-            </label>
-            <div className="academic-select-wrapper">
-              <select
-                value={programmeFilter}
-                onChange={(e) => setProgrammeFilter(e.target.value)}
-                className="academic-select"
-              >
-                <option value="all">All Programmes</option>
-                <option value="BSIT">BSIT - Information Tech</option>
-                <option value="BSCS">BSCS - Computer Science</option>
-                <option value="BSBA">BSBA - Business Admin</option>
-                <option value="BSEd">BSEd - Secondary Ed</option>
-              </select>
-              <ChevronDown size={14} className="academic-select-arrow" />
-            </div>
+              <option value="all">All Programmes</option>
+              <option value="BSIT">BSIT - Information Tech</option>
+              <option value="BSCS">BSCS - Computer Science</option>
+              <option value="BSBA">BSBA - Business Admin</option>
+              <option value="BSEd">BSEd - Secondary Ed</option>
+            </select>
+            <ChevronDown size={14} className="academic-select-arrow" />
           </div>
 
-          <div>
-            <label
-              style={{
-                fontSize: "0.72rem",
-                color: "#334155",
-                fontWeight: 700,
-                display: "block",
-                marginBottom: "4px",
-                textTransform: "uppercase",
-                letterSpacing: "0.03em",
-              }}
+          {/* Grading Status Filter */}
+          <div className="unified-filter-toolbar-item" title="Filter by Grading Status">
+            <CheckCircle2 size={14} className="unified-filter-toolbar-icon" />
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className="unified-filter-toolbar-select"
+              aria-label="Filter by grading status"
             >
-              Grading Status
-            </label>
-            <div className="academic-select-wrapper">
-              <select
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
-                className="academic-select"
-              >
-                <option value="all">All Status</option>
-                <option value="graded">Has Graded Sheets</option>
-                <option value="published">Published / Ready</option>
-              </select>
-              <ChevronDown size={14} className="academic-select-arrow" />
-            </div>
+              <option value="all">All Status</option>
+              <option value="graded">Has Graded Sheets</option>
+              <option value="published">Published / Ready</option>
+            </select>
+            <ChevronDown size={14} className="academic-select-arrow" />
           </div>
         </div>
       </div>

@@ -2,16 +2,12 @@ import { useState } from "react";
 import {
   GraduationCap,
   Users,
-  Building2,
   BookOpen,
-  Award,
   Search,
   TrendingUp,
-  Download,
-  CheckCircle2,
-  Mail,
   ChevronRight,
-  Layers,
+  X,
+  FileSpreadsheet,
 } from "lucide-react";
 import type { AuthUser, Exam, Submission, StudentRosterEntry } from "../../types";
 import { exportCompleteDatabaseExcel } from "../../utils/excelUtils";
@@ -107,64 +103,6 @@ const DEPARTMENTS: DepartmentData[] = [
   },
 ];
 
-const FACULTY_LEADERSHIP = [
-  {
-    name: "Prof. Ramon Cruz",
-    title: "Programme Head / Chair",
-    college: "College of Computing",
-    programme: "BSIT / BSCS",
-    email: "ramon.cruz@srcb.edu.ph",
-    load: "18 Units • 4 Courses",
-    activeExams: 6,
-    avgScore: "87.5%",
-    status: "Active",
-  },
-  {
-    name: "Ms. Jenny Garcia",
-    title: "Instructor III",
-    college: "College of Computing",
-    programme: "BSIT",
-    email: "jenny.garcia@srcb.edu.ph",
-    load: "21 Units • 5 Courses",
-    activeExams: 5,
-    avgScore: "84.2%",
-    status: "Active",
-  },
-  {
-    name: "Dr. Ernesto Valenzuela",
-    title: "Department Chair",
-    college: "College of Business",
-    programme: "BSBA / BSA",
-    email: "e.valenzuela@srcb.edu.ph",
-    load: "15 Units • 3 Courses",
-    activeExams: 4,
-    avgScore: "82.8%",
-    status: "Active",
-  },
-  {
-    name: "Dr. Teresa Manalo",
-    title: "Dean of Education / Chair",
-    college: "Teacher Education",
-    programme: "BSEd / BEEd",
-    email: "t.manalo@srcb.edu.ph",
-    load: "12 Units • 2 Courses",
-    activeExams: 3,
-    avgScore: "90.1%",
-    status: "Active",
-  },
-  {
-    name: "Prof. Gabriel Mendoza",
-    title: "Department Chair",
-    college: "Arts & Sciences",
-    programme: "AB Comm / Psych",
-    email: "g.mendoza@srcb.edu.ph",
-    load: "18 Units • 4 Courses",
-    activeExams: 4,
-    avgScore: "81.9%",
-    status: "Active",
-  },
-];
-
 export default function DeanAcademicManagement({
   summary,
   exams,
@@ -172,7 +110,6 @@ export default function DeanAcademicManagement({
   roster,
   addToast,
 }: DeanAcademicManagementProps) {
-  const [activeSubTab, setActiveSubTab] = useState<"departments" | "faculty" | "curriculum">("departments");
   const [searchQuery, setSearchQuery] = useState("");
   const [exporting, setExporting] = useState(false);
 
@@ -201,175 +138,142 @@ export default function DeanAcademicManagement({
     return matchesSearch;
   });
 
-  const filteredFaculty = FACULTY_LEADERSHIP.filter((f) => {
-    const matchesSearch =
-      f.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      f.college.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      f.programme.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesSearch;
-  });
-
   return (
     <div style={{ display: "grid", gap: "1.5rem" }}>
-      {/* EXECUTIVE HEADER BAR */}
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          flexWrap: "wrap",
-          gap: "1rem",
-          padding: "1.25rem 1.5rem",
-          background: "#ffffff",
-          border: "1px solid #e2e8f0",
-          borderRadius: "12px",
-        }}
-      >
-        <div>
-          <h1
-            style={{
-              margin: 0,
-              fontSize: "1.4rem",
-              fontWeight: 800,
-              color: "#0f172a",
-              letterSpacing: "-0.02em",
-            }}
-          >
-            Academic Management
-          </h1>
-          <p
-            style={{
-              color: "#64748b",
-              marginTop: "0.2rem",
-              marginBottom: 0,
-              fontSize: "0.82rem",
-            }}
-          >
-            Collegiate departments, faculty leadership, and curriculum oversight
-          </p>
-        </div>
-
-        <button
-          type="button"
-          className="btn btn-primary"
-          onClick={handleExportDatabase}
-          disabled={exporting}
-          style={{
-            fontSize: "0.82rem",
-            padding: "0.45rem 1rem",
-          }}
-        >
-          <Download size={15} />
-          {exporting ? "Exporting..." : "Export Data (.xlsx)"}
-        </button>
-      </div>
-
       {/* 4 CORE EXECUTIVE KPI CARDS */}
       <div
         style={{
           display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
-          gap: "0.85rem",
+          gridTemplateColumns: "repeat(auto-fit, minmax(210px, 1fr))",
+          gap: "1rem",
         }}
       >
         <div
           style={{
-            padding: "1rem 1.15rem",
+            padding: "1.15rem 1.25rem",
             background: "#ffffff",
             border: "1px solid #e2e8f0",
-            borderRadius: "12px",
+            borderRadius: "14px",
             display: "flex",
             alignItems: "center",
             justifyContent: "space-between",
+            boxShadow: "0 1px 3px rgba(0,0,0,0.02)",
+            position: "relative",
+            overflow: "hidden",
           }}
         >
+          <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: "3px", background: "linear-gradient(90deg, #6366f1, #a855f7)" }} />
           <div>
-            <div style={{ fontSize: "0.78rem", fontWeight: 600, color: "#64748b", marginBottom: "0.25rem" }}>
+            <div style={{ fontSize: "0.76rem", fontWeight: 700, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: "0.25rem" }}>
               Total Students
             </div>
-            <div style={{ fontSize: "1.45rem", fontWeight: 800, color: "#0f172a", lineHeight: 1.1 }}>
+            <div style={{ fontSize: "1.55rem", fontWeight: 800, color: "#0f172a", lineHeight: 1.1, fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
               {totalStudents.toLocaleString()}
             </div>
+            <div style={{ fontSize: "0.74rem", color: "#64748b", marginTop: "0.3rem" }}>
+              Across 4 Academic Divisions
+            </div>
           </div>
-          <div style={{ width: "36px", height: "36px", borderRadius: "8px", background: "var(--primary-light-surface, #f5f3ff)", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--primary, #28166f)", flexShrink: 0 }}>
-            <GraduationCap size={18} />
+          <div style={{ width: "42px", height: "42px", borderRadius: "10px", background: "var(--primary-light-surface, #f5f3ff)", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--primary, #28166f)", flexShrink: 0 }}>
+            <GraduationCap size={20} />
           </div>
         </div>
 
         <div
           style={{
-            padding: "1rem 1.15rem",
+            padding: "1.15rem 1.25rem",
             background: "#ffffff",
             border: "1px solid #e2e8f0",
-            borderRadius: "12px",
+            borderRadius: "14px",
             display: "flex",
             alignItems: "center",
             justifyContent: "space-between",
+            boxShadow: "0 1px 3px rgba(0,0,0,0.02)",
+            position: "relative",
+            overflow: "hidden",
           }}
         >
+          <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: "3px", background: "linear-gradient(90deg, #3b82f6, #06b6d4)" }} />
           <div>
-            <div style={{ fontSize: "0.78rem", fontWeight: 600, color: "#64748b", marginBottom: "0.25rem" }}>
-              Faculty
+            <div style={{ fontSize: "0.76rem", fontWeight: 700, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: "0.25rem" }}>
+              Faculty Members
             </div>
-            <div style={{ fontSize: "1.45rem", fontWeight: 800, color: "#0f172a", lineHeight: 1.1 }}>
+            <div style={{ fontSize: "1.55rem", fontWeight: 800, color: "#0f172a", lineHeight: 1.1, fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
               {totalFaculty}
             </div>
+            <div style={{ fontSize: "0.74rem", color: "#64748b", marginTop: "0.3rem" }}>
+              Instructors & Department Chairs
+            </div>
           </div>
-          <div style={{ width: "36px", height: "36px", borderRadius: "8px", background: "var(--primary-light-surface, #f5f3ff)", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--primary, #28166f)", flexShrink: 0 }}>
-            <Users size={18} />
+          <div style={{ width: "42px", height: "42px", borderRadius: "10px", background: "#f0fdf4", display: "flex", alignItems: "center", justifyContent: "center", color: "#16a34a", flexShrink: 0 }}>
+            <Users size={20} />
           </div>
         </div>
 
         <div
           style={{
-            padding: "1rem 1.15rem",
+            padding: "1.15rem 1.25rem",
             background: "#ffffff",
             border: "1px solid #e2e8f0",
-            borderRadius: "12px",
+            borderRadius: "14px",
             display: "flex",
             alignItems: "center",
             justifyContent: "space-between",
+            boxShadow: "0 1px 3px rgba(0,0,0,0.02)",
+            position: "relative",
+            overflow: "hidden",
           }}
         >
+          <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: "3px", background: "linear-gradient(90deg, #f59e0b, #ef4444)" }} />
           <div>
-            <div style={{ fontSize: "0.78rem", fontWeight: 600, color: "#64748b", marginBottom: "0.25rem" }}>
-              Examinations
+            <div style={{ fontSize: "0.76rem", fontWeight: 700, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: "0.25rem" }}>
+              Collegiate Exams
             </div>
-            <div style={{ fontSize: "1.45rem", fontWeight: 800, color: "#0f172a", lineHeight: 1.1 }}>
+            <div style={{ fontSize: "1.55rem", fontWeight: 800, color: "#0f172a", lineHeight: 1.1, fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
               {totalExamsCount}
             </div>
+            <div style={{ fontSize: "0.74rem", color: "#64748b", marginTop: "0.3rem" }}>
+              Active Graded Batches
+            </div>
           </div>
-          <div style={{ width: "36px", height: "36px", borderRadius: "8px", background: "var(--primary-light-surface, #f5f3ff)", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--primary, #28166f)", flexShrink: 0 }}>
-            <BookOpen size={18} />
+          <div style={{ width: "42px", height: "42px", borderRadius: "10px", background: "#fef3c7", display: "flex", alignItems: "center", justifyContent: "center", color: "#d97706", flexShrink: 0 }}>
+            <BookOpen size={20} />
           </div>
         </div>
 
         <div
           style={{
-            padding: "1rem 1.15rem",
+            padding: "1.15rem 1.25rem",
             background: "#ffffff",
             border: "1px solid #e2e8f0",
-            borderRadius: "12px",
+            borderRadius: "14px",
             display: "flex",
             alignItems: "center",
             justifyContent: "space-between",
+            boxShadow: "0 1px 3px rgba(0,0,0,0.02)",
+            position: "relative",
+            overflow: "hidden",
           }}
         >
+          <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: "3px", background: "linear-gradient(90deg, #10b981, #059669)" }} />
           <div>
-            <div style={{ fontSize: "0.78rem", fontWeight: 600, color: "#64748b", marginBottom: "0.25rem" }}>
-              Average Score
+            <div style={{ fontSize: "0.76rem", fontWeight: 700, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: "0.25rem" }}>
+              Institutional Mean
             </div>
-            <div style={{ fontSize: "1.45rem", fontWeight: 800, color: "#0f172a", lineHeight: 1.1 }}>
+            <div style={{ fontSize: "1.55rem", fontWeight: 800, color: "#10b981", lineHeight: 1.1, fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
               {avgScore}
             </div>
+            <div style={{ fontSize: "0.74rem", color: "#64748b", marginTop: "0.3rem" }}>
+              CHED Passing Benchmark: 75.0%
+            </div>
           </div>
-          <div style={{ width: "36px", height: "36px", borderRadius: "8px", background: "var(--primary-light-surface, #f5f3ff)", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--primary, #28166f)", flexShrink: 0 }}>
-            <TrendingUp size={18} />
+          <div style={{ width: "42px", height: "42px", borderRadius: "10px", background: "#ecfdf5", display: "flex", alignItems: "center", justifyContent: "center", color: "#10b981", flexShrink: 0 }}>
+            <TrendingUp size={20} />
           </div>
         </div>
       </div>
 
-      {/* SUB-TABS NAVIGATION & SEARCH BAR */}
+      {/* SEARCH BAR & ACTIONS */}
       <div
         style={{
           display: "flex",
@@ -381,63 +285,6 @@ export default function DeanAcademicManagement({
           paddingBottom: "1rem",
         }}
       >
-        <div style={{ display: "flex", gap: "0.5rem" }}>
-          <button
-            type="button"
-            className="btn"
-            style={{
-              fontSize: "0.85rem",
-              padding: "0.55rem 1rem",
-              borderRadius: "10px",
-              fontWeight: 600,
-              background: activeSubTab === "departments" ? "var(--primary, #28166f)" : "#ffffff",
-              color: activeSubTab === "departments" ? "#ffffff" : "#475569",
-              border: activeSubTab === "departments" ? "none" : "1px solid #e2e8f0",
-              boxShadow: activeSubTab === "departments" ? "0 2px 6px rgba(0, 98, 255, 0.2)" : "none",
-            }}
-            onClick={() => setActiveSubTab("departments")}
-          >
-            <Building2 size={16} style={{ display: "inline", marginRight: "0.4rem", verticalAlign: "middle" }} />
-            Collegiate Departments ({DEPARTMENTS.length})
-          </button>
-          <button
-            type="button"
-            className="btn"
-            style={{
-              fontSize: "0.85rem",
-              padding: "0.55rem 1rem",
-              borderRadius: "10px",
-              fontWeight: 600,
-              background: activeSubTab === "faculty" ? "var(--primary, #28166f)" : "#ffffff",
-              color: activeSubTab === "faculty" ? "#ffffff" : "#475569",
-              border: activeSubTab === "faculty" ? "none" : "1px solid #e2e8f0",
-              boxShadow: activeSubTab === "faculty" ? "0 2px 6px rgba(0, 98, 255, 0.2)" : "none",
-            }}
-            onClick={() => setActiveSubTab("faculty")}
-          >
-            <Users size={16} style={{ display: "inline", marginRight: "0.4rem", verticalAlign: "middle" }} />
-            Faculty Leadership ({FACULTY_LEADERSHIP.length})
-          </button>
-          <button
-            type="button"
-            className="btn"
-            style={{
-              fontSize: "0.85rem",
-              padding: "0.55rem 1rem",
-              borderRadius: "10px",
-              fontWeight: 600,
-              background: activeSubTab === "curriculum" ? "var(--primary, #28166f)" : "#ffffff",
-              color: activeSubTab === "curriculum" ? "#ffffff" : "#475569",
-              border: activeSubTab === "curriculum" ? "none" : "1px solid #e2e8f0",
-              boxShadow: activeSubTab === "curriculum" ? "0 2px 6px rgba(0, 98, 255, 0.2)" : "none",
-            }}
-            onClick={() => setActiveSubTab("curriculum")}
-          >
-            <Layers size={16} style={{ display: "inline", marginRight: "0.4rem", verticalAlign: "middle" }} />
-            Curricular Governance
-          </button>
-        </div>
-
         <div style={{ display: "flex", gap: "0.75rem", alignItems: "center" }}>
           <div style={{ position: "relative", minWidth: "260px" }}>
             <Search
@@ -458,6 +305,7 @@ export default function DeanAcademicManagement({
               className="input"
               style={{
                 paddingLeft: "2.4rem",
+                paddingRight: searchQuery ? "2rem" : "0.85rem",
                 fontSize: "0.83rem",
                 height: "38px",
                 width: "100%",
@@ -467,307 +315,288 @@ export default function DeanAcademicManagement({
                 color: "#0f172a",
               }}
             />
+            {searchQuery && (
+              <button
+                type="button"
+                onClick={() => setSearchQuery("")}
+                style={{
+                  position: "absolute",
+                  right: "0.65rem",
+                  top: "50%",
+                  transform: "translateY(-50%)",
+                  background: "none",
+                  border: "none",
+                  padding: 0,
+                  cursor: "pointer",
+                  color: "#94a3b8",
+                  display: "flex",
+                  alignItems: "center",
+                }}
+                title="Clear search"
+              >
+                <X size={14} />
+              </button>
+            )}
           </div>
+
+          <button
+            type="button"
+            className="btn btn-secondary"
+            onClick={handleExportDatabase}
+            disabled={exporting}
+            title={exporting ? "Exporting Directory..." : "Export Academic Directory (.xlsx)"}
+            aria-label="Export Academic Directory (.xlsx)"
+            style={{
+              width: "38px",
+              height: "38px",
+              padding: 0,
+              display: "inline-flex",
+              alignItems: "center",
+              justifyContent: "center",
+              borderRadius: "10px",
+              background: "#ffffff",
+              border: "1px solid #e2e8f0",
+              color: "var(--primary, #28166f)",
+              cursor: exporting ? "not-allowed" : "pointer",
+              boxShadow: "0 1px 2px rgba(0, 0, 0, 0.03)",
+              transition: "all 0.2s ease",
+              flexShrink: "0",
+
+            }}
+          >
+            <FileSpreadsheet size={17} />
+          </button>
         </div>
       </div>
 
-      {/* VIEW 1: DEPARTMENTS & PROGRAMMES */}
-      {activeSubTab === "departments" && (
-        <div style={{ display: "grid", gap: "1.25rem" }}>
+      {/* COLLEGIATE DEPARTMENTS GRID */}
+      <div style={{ display: "grid", gap: "1.25rem" }}>
           <div
             style={{
               display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(420px, 1fr))",
+              gridTemplateColumns: "repeat(auto-fit, minmax(440px, 1fr))",
               gap: "1.25rem",
             }}
           >
-            {filteredDepartments.map((dept) => (
-              <div
-                key={dept.id}
-                className="card"
-                style={{
-                  background: "#ffffff",
-                  border: "1px solid #e2e8f0",
-                  borderRadius: "16px",
-                  padding: "1.4rem",
-                  display: "flex",
-                  flexDirection: "column",
-                  justifyContent: "space-between",
-                  boxShadow: "0 2px 8px rgba(0,0,0,0.02)",
-                  transition: "transform 0.2s, box-shadow 0.2s",
-                }}
-              >
-                <div>
-                  <div
-                    style={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      alignItems: "flex-start",
-                      marginBottom: "0.85rem",
-                    }}
-                  >
-                    <div>
-                      <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                        <span
-                          style={{
-                            background: "var(--primary-light-surface, #f5f3ff)",
-                            color: "var(--primary, #28166f)",
-                            fontSize: "0.75rem",
-                            fontWeight: 800,
-                            padding: "0.2rem 0.55rem",
-                            borderRadius: "6px",
-                            border: "1px solid var(--primary-light-border, #ddd6fe)",
-                          }}
-                        >
-                          {dept.code}
-                        </span>
-                        <span
-                          className={`badge ${
-                            dept.status === "Exemplary"
-                              ? "badge-success"
-                              : dept.status === "Compliant"
-                              ? "badge-info"
-                              : "badge-warning"
-                          }`}
-                          style={{ fontSize: "0.72rem" }}
-                        >
-                          {dept.status}
-                        </span>
-                      </div>
-                      <h3 style={{ margin: "0.5rem 0 0.2rem 0", fontSize: "1.1rem", fontWeight: 700, color: "#0f172a" }}>
-                        {dept.name}
-                      </h3>
-                    </div>
-                  </div>
+            {filteredDepartments.map((dept) => {
+              const collegeAccent =
+                dept.code === "CCIS"
+                  ? { bar: "linear-gradient(90deg, #6366f1, #818cf8)", border: "#c7d2fe", bg: "#eef2ff", text: "#4338ca" }
+                  : dept.code === "CBA"
+                  ? { bar: "linear-gradient(90deg, #10b981, #34d399)", border: "#a7f3d0", bg: "#ecfdf5", text: "#065f46" }
+                  : dept.code === "CTE"
+                  ? { bar: "linear-gradient(90deg, #f59e0b, #fbbf24)", border: "#fde68a", bg: "#fffbeb", text: "#92400e" }
+                  : { bar: "linear-gradient(90deg, #0284c7, #38bdf8)", border: "#bae6fd", bg: "#f0f9ff", text: "#0369a1" };
 
-                  <div
-                    style={{
-                      padding: "0.75rem",
-                      background: "#f8fafc",
-                      border: "1px solid #e2e8f0",
-                      borderRadius: "10px",
-                      marginBottom: "1rem",
-                      fontSize: "0.82rem",
-                    }}
-                  >
-                    <div style={{ color: "#64748b", marginBottom: "0.3rem", fontSize: "0.74rem", fontWeight: 600 }}>
-                      Academic Leadership
-                    </div>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                      <strong style={{ color: "#0f172a" }}>{dept.chair}</strong>
-                      <span style={{ color: "#64748b", fontSize: "0.78rem" }}>{dept.chairEmail}</span>
-                    </div>
-                  </div>
+              const chairInitials = dept.chair
+                .replace(/^(Dr\.|Prof\.|Ms\.|Mr\.)\s+/i, "")
+                .split(/\s+/)
+                .slice(0, 2)
+                .map((n) => n[0])
+                .join("")
+                .toUpperCase();
 
-                  <div style={{ marginBottom: "1rem" }}>
-                    <div style={{ color: "#64748b", fontSize: "0.75rem", marginBottom: "0.4rem", fontWeight: 600 }}>
-                      Curricular Offerings:
-                    </div>
-                    <div style={{ display: "flex", flexDirection: "column", gap: "0.3rem" }}>
-                      {dept.programmes.map((prog) => (
-                        <div
-                          key={prog}
-                          style={{
-                            fontSize: "0.82rem",
-                            color: "#334155",
-                            display: "flex",
-                            alignItems: "center",
-                            gap: "0.4rem",
-                          }}
-                        >
-                          <ChevronRight size={13} color="var(--primary, #28166f)" />
-                          <span>{prog}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-
-                <div>
-                  <div
-                    style={{
-                      display: "grid",
-                      gridTemplateColumns: "repeat(4, 1fr)",
-                      gap: "0.5rem",
-                      paddingTop: "0.85rem",
-                      borderTop: "1px solid #e2e8f0",
-                      textAlign: "center",
-                    }}
-                  >
-                    <div>
-                      <div style={{ fontSize: "0.72rem", color: "#64748b" }}>Enrolled</div>
-                      <div style={{ fontWeight: 700, fontSize: "0.95rem", marginTop: "0.15rem", color: "#0f172a" }}>
-                        {dept.students}
-                      </div>
-                    </div>
-                    <div>
-                      <div style={{ fontSize: "0.72rem", color: "#64748b" }}>Faculty</div>
-                      <div style={{ fontWeight: 700, fontSize: "0.95rem", marginTop: "0.15rem", color: "#0f172a" }}>
-                        {dept.faculty}
-                      </div>
-                    </div>
-                    <div>
-                      <div style={{ fontSize: "0.72rem", color: "#64748b" }}>Pass Rate</div>
-                      <div style={{ fontWeight: 700, fontSize: "0.95rem", color: "#10b981", marginTop: "0.15rem" }}>
-                        {dept.passingRate}%
-                      </div>
-                    </div>
-                    <div>
-                      <div style={{ fontSize: "0.72rem", color: "#64748b" }}>OBE QA</div>
-                      <div style={{ fontWeight: 700, fontSize: "0.95rem", color: "var(--primary, #28166f)", marginTop: "0.15rem" }}>
-                        {dept.obeCompliance}%
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* VIEW 2: FACULTY & ACADEMIC LEADERSHIP */}
-      {activeSubTab === "faculty" && (
-        <div className="card" style={{ padding: "1.25rem", borderRadius: "16px", background: "#ffffff", border: "1px solid #e2e8f0", boxShadow: "0 2px 8px rgba(0,0,0,0.02)" }}>
-          <div style={{ marginBottom: "1rem", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <div>
-              <h3 style={{ margin: 0, fontSize: "1.1rem", color: "#0f172a" }}>Academic Faculty & Department Leadership</h3>
-              <p style={{ margin: "0.2rem 0 0 0", fontSize: "0.82rem", color: "#64748b" }}>
-                Instructors, Chairs, and Programme Directors overseeing active examination sets.
-              </p>
-            </div>
-            <span style={{ fontSize: "0.8rem", color: "#64748b" }}>
-              Showing {filteredFaculty.length} of {FACULTY_LEADERSHIP.length} faculty members
-            </span>
-          </div>
-
-          <div style={{ overflowX: "auto", borderRadius: "10px", border: "1px solid #e2e8f0" }}>
-            <table style={{ width: "100%", fontSize: "0.85rem", borderCollapse: "collapse", textAlign: "left" }}>
-              <thead>
-                <tr style={{ background: "#f8fafc", borderBottom: "1px solid #e2e8f0" }}>
-                  <th style={{ padding: "0.85rem 1rem", color: "#475569" }}>Faculty Member</th>
-                  <th style={{ padding: "0.85rem 1rem", color: "#475569" }}>Designation & College</th>
-                  <th style={{ padding: "0.85rem 1rem", color: "#475569" }}>Assigned Programmes</th>
-                  <th style={{ padding: "0.85rem 1rem", color: "#475569" }}>Teaching Load</th>
-                  <th style={{ padding: "0.85rem 1rem", color: "#475569" }}>Active Exams</th>
-                  <th style={{ padding: "0.85rem 1rem", color: "#475569" }}>Cohort Avg</th>
-                  <th style={{ padding: "0.85rem 1rem", textAlign: "right", color: "#475569" }}>Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredFaculty.map((f) => (
-                  <tr
-                    key={f.name}
-                    style={{
-                      borderBottom: "1px solid #f1f5f9",
-                      transition: "background 0.2s",
-                    }}
-                  >
-                    <td style={{ padding: "0.85rem 1rem", fontWeight: 600 }}>
-                      <div style={{ color: "#0f172a" }}>{f.name}</div>
-                      <div style={{ fontSize: "0.75rem", color: "#64748b", display: "flex", alignItems: "center", gap: "0.3rem" }}>
-                        <Mail size={12} /> {f.email}
-                      </div>
-                    </td>
-                    <td style={{ padding: "0.85rem 1rem" }}>
-                      <div style={{ fontWeight: 600, color: "#334155" }}>{f.title}</div>
-                      <div style={{ fontSize: "0.75rem", color: "#64748b" }}>{f.college}</div>
-                    </td>
-                    <td style={{ padding: "0.85rem 1rem" }}>
-                      <span className="badge" style={{ background: "var(--primary-light-surface, #f5f3ff)", color: "var(--primary, #28166f)", border: "1px solid var(--primary-light-border, #ddd6fe)" }}>
-                        {f.programme}
-                      </span>
-                    </td>
-                    <td style={{ padding: "0.85rem 1rem", color: "#475569" }}>{f.load}</td>
-                    <td style={{ padding: "0.85rem 1rem" }}>
-                      <span style={{ fontWeight: 700, color: "var(--primary, #28166f)" }}>{f.activeExams} Sets</span>
-                    </td>
-                    <td style={{ padding: "0.85rem 1rem", fontWeight: 700, color: "#10b981" }}>{f.avgScore}</td>
-                    <td style={{ padding: "0.85rem 1rem", textAlign: "right" }}>
-                      <span className="badge badge-success">{f.status}</span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
-
-      {/* VIEW 3: CURRICULAR GOVERNANCE & OBE STANDARDS */}
-      {activeSubTab === "curriculum" && (
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(360px, 1fr))", gap: "1.25rem" }}>
-          <div className="card" style={{ padding: "1.4rem", borderRadius: "16px", background: "#ffffff", border: "1px solid #e2e8f0", boxShadow: "0 2px 8px rgba(0,0,0,0.02)" }}>
-            <h3 style={{ margin: "0 0 0.8rem 0", fontSize: "1.1rem", display: "flex", alignItems: "center", gap: "0.5rem", color: "#0f172a" }}>
-              <CheckCircle2 size={18} color="#10b981" /> CHED Memorandum Order (CMO) Compliance
-            </h3>
-            <p style={{ fontSize: "0.83rem", color: "#64748b", lineHeight: 1.5, marginBottom: "1rem" }}>
-              SRCB Higher Education degree programs strictly adhere to CHED Policies, Standards, and Guidelines (PSGs)
-              enforcing 75% minimum competency pass benchmarks and 50-Base Transmutation scales.
-            </p>
-
-            <div style={{ display: "grid", gap: "0.6rem" }}>
-              {[
-                { title: "CMO No. 25, s. 2015", desc: "Policies & Standards for BS Information Technology", status: "Compliant" },
-                { title: "CMO No. 17, s. 2017", desc: "PSGs for BS Business Administration", status: "Compliant" },
-                { title: "CMO No. 74-75, s. 2017", desc: "Policies & Standards for Teacher Education", status: "Compliant" },
-                { title: "CMO No. 46, s. 2012", desc: "Outcomes-Based Education (OBE) Quality Framework", status: "Active" },
-              ].map((cmo) => (
+              return (
                 <div
-                  key={cmo.title}
+                  key={dept.id}
+                  className="card"
                   style={{
-                    padding: "0.75rem",
-                    borderRadius: "8px",
-                    background: "#f8fafc",
+                    background: "#ffffff",
                     border: "1px solid #e2e8f0",
+                    borderRadius: "16px",
+                    padding: "1.5rem",
                     display: "flex",
+                    flexDirection: "column",
                     justifyContent: "space-between",
-                    alignItems: "center",
+                    boxShadow: "0 2px 10px rgba(0,0,0,0.03)",
+                    position: "relative",
+                    overflow: "hidden",
+                    transition: "transform 0.2s ease, box-shadow 0.2s ease",
                   }}
                 >
+                  <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: "4px", background: collegeAccent.bar }} />
+
                   <div>
-                    <div style={{ fontWeight: 700, fontSize: "0.85rem", color: "#0f172a" }}>{cmo.title}</div>
-                    <div style={{ fontSize: "0.76rem", color: "#64748b" }}>{cmo.desc}</div>
+                    <div
+                      style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "flex-start",
+                        marginBottom: "1rem",
+                        gap: "0.75rem",
+                      }}
+                    >
+                      <div>
+                        <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", flexWrap: "wrap", marginBottom: "0.35rem" }}>
+                          <span
+                            style={{
+                              background: collegeAccent.bg,
+                              color: collegeAccent.text,
+                              fontSize: "0.74rem",
+                              fontWeight: 800,
+                              padding: "0.2rem 0.6rem",
+                              borderRadius: "6px",
+                              border: `1px solid ${collegeAccent.border}`,
+                              letterSpacing: "0.03em",
+                            }}
+                          >
+                            {dept.code}
+                          </span>
+                          <span
+                            className={`badge ${
+                              dept.status === "Exemplary"
+                                ? "badge-success"
+                                : dept.status === "Compliant"
+                                ? "badge-info"
+                                : "badge-warning"
+                            }`}
+                            style={{
+                              fontSize: "0.72rem",
+                              fontWeight: 700,
+                              display: "inline-flex",
+                              alignItems: "center",
+                              gap: "0.3rem",
+                            }}
+                          >
+                            <span
+                              style={{
+                                width: "6px",
+                                height: "6px",
+                                borderRadius: "50%",
+                                background: dept.status === "Exemplary" ? "#10b981" : dept.status === "Compliant" ? "#0284c7" : "#f59e0b",
+                              }}
+                            />
+                            {dept.status}
+                          </span>
+                        </div>
+                        <h3
+                          style={{
+                            margin: 0,
+                            fontSize: "1.15rem",
+                            fontWeight: 800,
+                            color: "#0f172a",
+                            fontFamily: "'Plus Jakarta Sans', sans-serif",
+                            letterSpacing: "-0.01em",
+                            lineHeight: 1.3,
+                          }}
+                        >
+                          {dept.name}
+                        </h3>
+                      </div>
+                    </div>
+
+                    <div
+                      style={{
+                        padding: "0.85rem 1rem",
+                        background: "#f8fafc",
+                        border: "1px solid #e2e8f0",
+                        borderRadius: "12px",
+                        marginBottom: "1rem",
+                        fontSize: "0.82rem",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "0.85rem",
+                      }}
+                    >
+                      <div
+                        style={{
+                          width: "38px",
+                          height: "38px",
+                          borderRadius: "50%",
+                          background: "var(--primary-light-surface, #f5f3ff)",
+                          color: "var(--primary, #28166f)",
+                          border: "1px solid var(--primary-light-border, #ddd6fe)",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          fontWeight: 800,
+                          fontSize: "0.82rem",
+                          flexShrink: 0,
+                        }}
+                      >
+                        {chairInitials}
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ color: "#64748b", fontSize: "0.72rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.03em" }}>
+                          Academic Leadership & Chair
+                        </div>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "0.25rem", marginTop: "0.15rem" }}>
+                          <strong style={{ color: "#0f172a", fontSize: "0.88rem" }}>{dept.chair}</strong>
+                          <span style={{ color: "#64748b", fontSize: "0.76rem" }}>{dept.chairEmail}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div style={{ marginBottom: "1.1rem" }}>
+                      <div style={{ color: "#64748b", fontSize: "0.74rem", marginBottom: "0.45rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.03em" }}>
+                        Degree Programmes Under College:
+                      </div>
+                      <div style={{ display: "flex", flexDirection: "column", gap: "0.35rem" }}>
+                        {dept.programmes.map((prog) => (
+                          <div
+                            key={prog}
+                            style={{
+                              fontSize: "0.82rem",
+                              color: "#334155",
+                              display: "flex",
+                              alignItems: "center",
+                              gap: "0.45rem",
+                              background: "#ffffff",
+                              padding: "0.35rem 0.6rem",
+                              borderRadius: "8px",
+                              border: "1px solid #f1f5f9",
+                            }}
+                          >
+                            <ChevronRight size={13} color="var(--primary, #28166f)" style={{ flexShrink: 0 }} />
+                            <span style={{ fontWeight: 500 }}>{prog}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
                   </div>
-                  <span className="badge badge-success" style={{ fontSize: "0.7rem" }}>{cmo.status}</span>
+
+                  <div>
+                    <div
+                      style={{
+                        display: "grid",
+                        gridTemplateColumns: "repeat(4, 1fr)",
+                        gap: "0.5rem",
+                        paddingTop: "0.95rem",
+                        borderTop: "1px solid #e2e8f0",
+                        textAlign: "center",
+                      }}
+                    >
+                      <div style={{ padding: "0.45rem 0.25rem", background: "#f8fafc", borderRadius: "8px", border: "1px solid #f1f5f9" }}>
+                        <div style={{ fontSize: "0.7rem", color: "#64748b", fontWeight: 600 }}>Students</div>
+                        <div style={{ fontWeight: 800, fontSize: "1rem", marginTop: "0.15rem", color: "#0f172a", fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+                          {dept.students}
+                        </div>
+                      </div>
+                      <div style={{ padding: "0.45rem 0.25rem", background: "#f8fafc", borderRadius: "8px", border: "1px solid #f1f5f9" }}>
+                        <div style={{ fontSize: "0.7rem", color: "#64748b", fontWeight: 600 }}>Faculty</div>
+                        <div style={{ fontWeight: 800, fontSize: "1rem", marginTop: "0.15rem", color: "#0f172a", fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+                          {dept.faculty}
+                        </div>
+                      </div>
+                      <div style={{ padding: "0.45rem 0.25rem", background: "#ecfdf5", borderRadius: "8px", border: "1px solid #a7f3d0" }}>
+                        <div style={{ fontSize: "0.7rem", color: "#065f46", fontWeight: 700 }}>Pass Rate</div>
+                        <div style={{ fontWeight: 800, fontSize: "1rem", color: "#059669", marginTop: "0.15rem", fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+                          {dept.passingRate}%
+                        </div>
+                      </div>
+                      <div style={{ padding: "0.45rem 0.25rem", background: "var(--primary-light-surface, #f5f3ff)", borderRadius: "8px", border: "1px solid var(--primary-light-border, #ddd6fe)" }}>
+                        <div style={{ fontSize: "0.7rem", color: "var(--primary, #28166f)", fontWeight: 700 }}>OBE QA</div>
+                        <div style={{ fontWeight: 800, fontSize: "1rem", color: "var(--primary, #28166f)", marginTop: "0.15rem", fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+                          {dept.obeCompliance}%
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                 </div>
-              ))}
-            </div>
-          </div>
-
-          <div className="card" style={{ padding: "1.4rem", borderRadius: "16px", background: "#ffffff", border: "1px solid #e2e8f0", boxShadow: "0 2px 8px rgba(0,0,0,0.02)" }}>
-            <h3 style={{ margin: "0 0 0.8rem 0", fontSize: "1.1rem", display: "flex", alignItems: "center", gap: "0.5rem", color: "#0f172a" }}>
-              <Award size={18} color="var(--primary, #28166f)" /> OBE Assessment Governance Policies
-            </h3>
-            <p style={{ fontSize: "0.83rem", color: "#64748b", lineHeight: 1.5, marginBottom: "1rem" }}>
-              Quality audit principles enforced by the Office of the Dean for all optical bubble-sheet graded examinations:
-            </p>
-
-            <div style={{ display: "grid", gap: "0.75rem" }}>
-              <div style={{ borderLeft: "3px solid var(--primary, #28166f)", paddingLeft: "0.75rem" }}>
-                <strong style={{ fontSize: "0.85rem", color: "#0f172a" }}>Item Discrimination Index Requirement:</strong>
-                <p style={{ margin: "0.2rem 0 0 0", fontSize: "0.78rem", color: "#64748b" }}>
-                  Exam items with a discrimination index below 0.20 are automatically flagged for instructional review.
-                </p>
-              </div>
-
-              <div style={{ borderLeft: "3px solid #10b981", paddingLeft: "0.75rem" }}>
-                <strong style={{ fontSize: "0.85rem", color: "#0f172a" }}>Standard Philippine Transmutation Scale:</strong>
-                <p style={{ margin: "0.2rem 0 0 0", fontSize: "0.78rem", color: "#64748b" }}>
-                  Calculates official 1.00 (99-100%) down to 3.00 (75% passing) and 5.00 (Failed) CHED conversion tiers.
-                </p>
-              </div>
-
-              <div style={{ borderLeft: "3px solid #6366f1", paddingLeft: "0.75rem" }}>
-                <strong style={{ fontSize: "0.85rem", color: "#0f172a" }}>Archival & Verification Protocol:</strong>
-                <p style={{ margin: "0.2rem 0 0 0", fontSize: "0.78rem", color: "#64748b" }}>
-                  Scanned answer sheets and generated OBE item matrices are stored for permanent accreditation compliance.
-                </p>
-              </div>
-            </div>
+              );
+            })}
           </div>
         </div>
-      )}
     </div>
   );
 }

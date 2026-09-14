@@ -19,6 +19,7 @@ import {
   UserPlus,
   HelpCircle,
   Users,
+  Building2,
   Bell,
   ChevronDown,
   ChevronRight,
@@ -32,6 +33,8 @@ import {
   Key,
   Maximize2,
   Check,
+  Calendar,
+  Clock,
 } from "lucide-react";
 import confetti from "canvas-confetti";
 import type {
@@ -992,7 +995,14 @@ export default function App() {
   const activeExam =
     selectedExamId ? (exams.find((e) => e.id === selectedExamId) || null) : null;
 
-  const navigationItems = (() => {
+  interface NavigationItem {
+    key: AppTab;
+    label: string;
+    icon: any;
+    badge?: string | number;
+  }
+
+  const navigationItems: NavigationItem[] = (() => {
     if (!currentUser) {
       return [
         { key: "dashboard" as AppTab, label: "Dashboard", icon: BarChart3 },
@@ -1001,8 +1011,8 @@ export default function App() {
 
     if (currentUser.role === "admin") {
       return [
-        { key: "dashboard" as AppTab, label: "Overview & Progress", icon: BarChart3 },
-        { key: "quick-scan" as AppTab, label: "Quick Scanner", icon: Sparkles },
+        { key: "dashboard" as AppTab, label: "Dashboard", icon: BarChart3 },
+        { key: "quick-scan" as AppTab, label: "Quick Scan", icon: Sparkles },
         {
           key: "user-management" as AppTab,
           label: "Create Account",
@@ -1010,7 +1020,7 @@ export default function App() {
         },
         {
           key: "user-directory" as AppTab,
-          label: "User Accounts Directory",
+          label: "User Directory",
           icon: Users,
         },
       ];
@@ -1018,33 +1028,41 @@ export default function App() {
 
     if (currentUser.role === "dean") {
       return [
-        { key: "dashboard" as AppTab, label: "Overview & Progress", icon: BarChart3 },
         {
-          key: "examinations" as AppTab,
-          label: "Teacher Examinations",
-          icon: BookOpen,
+          key: "dashboard" as AppTab,
+          label: "Dashboard",
+          icon: BarChart3,
         },
         {
           key: "academic-management" as AppTab,
-          label: "Higher Ed Programs",
-          icon: GraduationCap,
+          label: "Departments",
+          icon: Building2,
+        },
+        {
+          key: "examinations" as AppTab,
+          label: "Examinations",
+          icon: BookOpen,
         },
         {
           key: "user-directory" as AppTab,
-          label: "User Access",
+          label: "Faculty",
           icon: Users,
         },
         {
           key: "progress-records" as AppTab,
-          label: "Progress & Records",
+          label: "Records",
           icon: Activity,
         },
         {
           key: "reports" as AppTab,
-          label: "Program Results & OBE",
+          label: "Reports",
           icon: Award,
         },
-        { key: "settings" as AppTab, label: "Settings", icon: Sliders },
+        {
+          key: "settings" as AppTab,
+          label: "Settings",
+          icon: Sliders,
+        },
       ];
     }
 
@@ -1131,7 +1149,9 @@ export default function App() {
   const getActiveTabTitle = (tab: AppTab) => {
     switch (tab) {
       case "dashboard":
-        return getDashboardDisplayName(currentUser);
+        return currentUser?.role === "dean"
+          ? "Dashboard"
+          : getDashboardDisplayName(currentUser);
       case "examinations":
       case "exams":
         return currentUser?.role === "teacher"
@@ -1150,10 +1170,14 @@ export default function App() {
           : "Grading History";
       case "academic-management":
         return currentUser?.role === "dean"
-          ? "Academic Management"
+          ? "Departments"
           : "Programme Overview";
       case "reports":
-        return "Institutional Reports";
+        return "Reports";
+      case "progress-records":
+        return currentUser?.role === "dean"
+          ? "Records"
+          : "Progress & Records";
       case "item-analysis":
         return "Item Analysis";
       case "user-management":
@@ -1162,10 +1186,10 @@ export default function App() {
         return currentUser?.role === "programme-head"
           ? `${currentUser.programme || "BSIT"} Student Access`
           : currentUser?.role === "dean"
-            ? "User Access"
+            ? "Faculty"
             : "User Directory";
       case "settings":
-        return "System Settings";
+        return "Settings";
       default:
         return "Dashboard";
     }
@@ -1325,13 +1349,34 @@ export default function App() {
                       alignItems: "center",
                       justifyContent: "space-between",
                       width: "100%",
-                      boxSizing: "border-box"
+                      boxSizing: "border-box",
+                      gap: "0.5rem",
                     }}
                   >
                     <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", minWidth: 0, flex: 1, overflow: "hidden" }}>
                       <Icon size={19} className="nav-icon" style={{ flexShrink: 0 }} />
                       <span style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{item.label}</span>
                     </div>
+                    {item.badge !== undefined && (
+                      <span
+                        className="sidebar-pill-badge"
+                        style={{
+                          fontSize: "0.72rem",
+                          fontWeight: 700,
+                          padding: "0.15rem 0.55rem",
+                          borderRadius: "9999px",
+                          lineHeight: 1.2,
+                          flexShrink: 0,
+                          background: isActive ? "rgba(40, 22, 111, 0.12)" : "rgba(255, 255, 255, 0.18)",
+                          color: isActive ? "#28166f" : "#ffffff",
+                          letterSpacing: "0.02em",
+                          border: isActive ? "1px solid rgba(40, 22, 111, 0.15)" : "1px solid rgba(255, 255, 255, 0.25)",
+                          transition: "all 0.2s ease",
+                        }}
+                      >
+                        {item.badge}
+                      </span>
+                    )}
                   </div>
                 </li>
               );
@@ -1699,10 +1744,10 @@ export default function App() {
               >
                 <div>
                   <h2 style={{ fontSize: "1.4rem", fontWeight: 800, margin: 0, color: "#0f172a" }}>
-                    Create Account
+                    Account Provisioning & Enrollment
                   </h2>
                   <p style={{ fontSize: "0.82rem", color: "#64748b", margin: "0.2rem 0 0 0" }}>
-                    Register new teacher and student accounts
+                    Create individual faculty/student accounts or bulk enroll students via Excel / CSV spreadsheet upload
                   </p>
                 </div>
               </div>
@@ -1719,38 +1764,6 @@ export default function App() {
           {/* USER ACCOUNTS DIRECTORY TAB (ADMIN) */}
           {activeTab === "user-directory" && currentUser && (
             <div>
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                  flexWrap: "wrap",
-                  gap: "1rem",
-                  padding: "1.25rem 1.5rem",
-                  background: "#ffffff",
-                  border: "1px solid #e2e8f0",
-                  borderRadius: "12px",
-                  marginBottom: "1.25rem",
-                }}
-              >
-                <div>
-                  <h2 style={{ fontSize: "1.4rem", fontWeight: 800, margin: 0, color: "#0f172a" }}>
-                    {currentUser.role === "programme-head"
-                      ? `${currentUser.programme || "BSIT"} Student Access`
-                      : currentUser.role === "dean"
-                        ? "User Access"
-                        : "User Directory"}
-                  </h2>
-                  <p style={{ fontSize: "0.82rem", color: "#64748b", margin: "0.2rem 0 0 0" }}>
-                    {currentUser.role === "programme-head"
-                      ? `Enrolled student accounts under ${currentUser.programme || "BSIT"} academic program`
-                      : currentUser.role === "dean"
-                        ? "Manage and oversee user access across Higher Education programs"
-                        : "Manage registered faculty and student accounts"}
-                  </p>
-                </div>
-              </div>
-
               <AdminUserManagement
                 currentUser={currentUser}
                 addToast={addToast}
@@ -2143,24 +2156,7 @@ export default function App() {
                           />
                         </div>
 
-                        <span
-                          className="badge"
-                          style={{
-                            background: "var(--primary-light-surface, #f5f3ff)",
-                            color: "var(--primary, #28166f)",
-                            border: "1px solid var(--primary-light-border, #ddd6fe)",
-                            fontSize: "0.78rem",
-                            fontWeight: 700,
-                            padding: "0.45rem 0.75rem",
-                            borderRadius: "8px",
-                            height: "38px",
-                            display: "inline-flex",
-                            alignItems: "center",
-                            flexShrink: 0,
-                          }}
-                        >
-                          {exams.length} Total Assessments
-                        </span>
+
 
                         <button
                           type="button"
@@ -2181,134 +2177,115 @@ export default function App() {
                         >
                           <Plus size={15} /> Create Examination
                         </button>
+
+                        {(examAcademicYearFilter !== "All" ||
+                          examSemesterFilter !== "All" ||
+                          examTypeFilter !== "All" ||
+                          examProgramFilter !== "All" ||
+                          examListSearch.trim().length > 0) && (
+                          <button
+                            type="button"
+                            className="btn btn-secondary btn-sm"
+                            onClick={() => {
+                              setExamAcademicYearFilter("All");
+                              setExamSemesterFilter("All");
+                              setExamTypeFilter("All");
+                              setExamProgramFilter("All");
+                              setExamListSearch("");
+                            }}
+                            style={{
+                              height: "38px",
+                              padding: "0 0.85rem",
+                              fontSize: "0.8rem",
+                              fontWeight: 600,
+                              color: "#64748b",
+                              borderRadius: "8px",
+                              display: "inline-flex",
+                              alignItems: "center",
+                              gap: "4px",
+                              flexShrink: 0,
+                              background: "#ffffff",
+                              border: "1px solid #e2e8f0",
+                            }}
+                            title="Reset all examination filters and search query to defaults"
+                          >
+                            <X size={14} /> Clear Filters
+                          </button>
+                        )}
                       </div>
                     </div>
 
-                    {/* Filter Grid */}
-                    <div
-                      style={{
-                        display: "grid",
-                        gridTemplateColumns: "repeat(auto-fit, minmax(170px, 1fr))",
-                        gap: "0.85rem",
-                      }}
-                    >
-                      <div>
-                        <label
-                          style={{
-                            fontSize: "0.72rem",
-                            color: "#334155",
-                            fontWeight: 700,
-                            display: "block",
-                            marginBottom: "4px",
-                            textTransform: "uppercase",
-                            letterSpacing: "0.03em",
-                          }}
+                    {/* Unified Filter Toolbar */}
+                    <div className="unified-filter-toolbar">
+                      {/* Academic Year Filter */}
+                      <div className="unified-filter-toolbar-item" title="Filter by Academic Year">
+                        <Calendar size={14} className="unified-filter-toolbar-icon" />
+                        <select
+                          className="unified-filter-toolbar-select"
+                          value={examAcademicYearFilter}
+                          onChange={(e) => setExamAcademicYearFilter(e.target.value)}
+                          aria-label="Filter by academic year"
                         >
-                          Academic Year
-                        </label>
-                        <div className="academic-select-wrapper">
-                          <select
-                            className="academic-select"
-                            value={examAcademicYearFilter}
-                            onChange={(e) => setExamAcademicYearFilter(e.target.value)}
-                          >
-                            {examAcademicYears.map((ay) => (
-                              <option key={ay} value={ay}>
-                                {ay === "All" ? "All Academic Years" : `AY ${ay}`}
-                              </option>
-                            ))}
-                          </select>
-                          <ChevronDown size={14} className="academic-select-arrow" />
-                        </div>
+                          {examAcademicYears.map((ay) => (
+                            <option key={ay} value={ay}>
+                              {ay === "All" ? "All Academic Years" : `AY ${ay}`}
+                            </option>
+                          ))}
+                        </select>
+                        <ChevronDown size={14} className="academic-select-arrow" />
                       </div>
 
-                      <div>
-                        <label
-                          style={{
-                            fontSize: "0.72rem",
-                            color: "#334155",
-                            fontWeight: 700,
-                            display: "block",
-                            marginBottom: "4px",
-                            textTransform: "uppercase",
-                            letterSpacing: "0.03em",
-                          }}
+                      {/* Semester Filter */}
+                      <div className="unified-filter-toolbar-item" title="Filter by Semester or Term">
+                        <Clock size={14} className="unified-filter-toolbar-icon" />
+                        <select
+                          className="unified-filter-toolbar-select"
+                          value={examSemesterFilter}
+                          onChange={(e) => setExamSemesterFilter(e.target.value)}
+                          aria-label="Filter by semester or term"
                         >
-                          Semester / Term
-                        </label>
-                        <div className="academic-select-wrapper">
-                          <select
-                            className="academic-select"
-                            value={examSemesterFilter}
-                            onChange={(e) => setExamSemesterFilter(e.target.value)}
-                          >
-                            <option value="All">All Semesters</option>
-                            <option value="1st Semester">1st Semester</option>
-                            <option value="2nd Semester">2nd Semester</option>
-                            <option value="Summer">Summer</option>
-                          </select>
-                          <ChevronDown size={14} className="academic-select-arrow" />
-                        </div>
+                          <option value="All">All Semesters</option>
+                          <option value="1st Semester">1st Semester</option>
+                          <option value="2nd Semester">2nd Semester</option>
+                          <option value="Summer">Summer</option>
+                        </select>
+                        <ChevronDown size={14} className="academic-select-arrow" />
                       </div>
 
-                      <div>
-                        <label
-                          style={{
-                            fontSize: "0.72rem",
-                            color: "#334155",
-                            fontWeight: 700,
-                            display: "block",
-                            marginBottom: "4px",
-                            textTransform: "uppercase",
-                            letterSpacing: "0.03em",
-                          }}
+                      {/* Exam Period Filter */}
+                      <div className="unified-filter-toolbar-item" title="Filter by Exam Period">
+                        <BookOpen size={14} className="unified-filter-toolbar-icon" />
+                        <select
+                          className="unified-filter-toolbar-select"
+                          value={examTypeFilter}
+                          onChange={(e) => setExamTypeFilter(e.target.value)}
+                          aria-label="Filter by exam period"
                         >
-                          Exam Period / Type
-                        </label>
-                        <div className="academic-select-wrapper">
-                          <select
-                            className="academic-select"
-                            value={examTypeFilter}
-                            onChange={(e) => setExamTypeFilter(e.target.value)}
-                          >
-                            <option value="All">All Exam Periods</option>
-                            <option value="Preliminary">Preliminary</option>
-                            <option value="Midterm">Midterm</option>
-                            <option value="Pre-Final">Pre-Final</option>
-                            <option value="Final">Final</option>
-                          </select>
-                          <ChevronDown size={14} className="academic-select-arrow" />
-                        </div>
+                          <option value="All">All Exam Periods</option>
+                          <option value="Preliminary">Preliminary</option>
+                          <option value="Midterm">Midterm</option>
+                          <option value="Pre-Final">Pre-Final</option>
+                          <option value="Final">Final</option>
+                        </select>
+                        <ChevronDown size={14} className="academic-select-arrow" />
                       </div>
 
-                      <div>
-                        <label
-                          style={{
-                            fontSize: "0.72rem",
-                            color: "#334155",
-                            fontWeight: 700,
-                            display: "block",
-                            marginBottom: "4px",
-                            textTransform: "uppercase",
-                            letterSpacing: "0.03em",
-                          }}
+                      {/* Program / Course Filter */}
+                      <div className="unified-filter-toolbar-item" title="Filter by Program or Course">
+                        <GraduationCap size={14} className="unified-filter-toolbar-icon" />
+                        <select
+                          className="unified-filter-toolbar-select"
+                          value={examProgramFilter}
+                          onChange={(e) => setExamProgramFilter(e.target.value)}
+                          aria-label="Filter by program or course"
                         >
-                          Program / Course
-                        </label>
-                        <div className="academic-select-wrapper">
-                          <select
-                            className="academic-select"
-                            value={examProgramFilter}
-                            onChange={(e) => setExamProgramFilter(e.target.value)}
-                          >
-                            {examPrograms.map((prog) => (
-                              <option key={prog} value={prog}>
-                                {prog === "All" ? "All Programs & Courses" : prog}
-                              </option>
-                            ))}
-                          </select>
-                          <ChevronDown size={14} className="academic-select-arrow" />
-                        </div>
+                          {examPrograms.map((prog) => (
+                            <option key={prog} value={prog}>
+                              {prog === "All" ? "All Programs & Courses" : prog}
+                            </option>
+                          ))}
+                        </select>
+                        <ChevronDown size={14} className="academic-select-arrow" />
                       </div>
                     </div>
                   </div>
@@ -3822,40 +3799,23 @@ export default function App() {
                   >
                     <BookOpen size={20} />
                   </div>
-                  <div style={{ flex: 1 }}>
-                    <label
-                      style={{
-                        fontWeight: 700,
-                        fontSize: "0.82rem",
-                        color: "#475569",
-                        display: "block",
-                        marginBottom: "4px",
-                      }}
-                    >
-                      Select Examination to Evaluate:
-                    </label>
-                    <select
-                      className="form-input"
-                      style={{
-                        width: "100%",
-                        maxWidth: "420px",
-                        height: "38px",
-                        fontSize: "0.85rem",
-                        background: "#f8fafc",
-                        border: "1px solid #cbd5e1",
-                        borderRadius: "8px",
-                        color: "#0f172a",
-                        fontWeight: 600,
-                      }}
-                      value={selectedExamId}
-                      onChange={(e) => setSelectedExamId(e.target.value)}
-                    >
-                      {exams.map((exam) => (
-                        <option key={exam.id} value={exam.id}>
-                          {exam.name} {exam.course_code ? `[${exam.course_code}]` : ""} {exam.section ? `• Sec ${exam.section}` : ""}
-                        </option>
-                      ))}
-                    </select>
+                  <div style={{ flex: 1, maxWidth: "460px" }}>
+                    <div className="unified-filter-toolbar-item" title="Select Examination to Evaluate">
+                      <BookOpen size={14} className="unified-filter-toolbar-icon" />
+                      <select
+                        className="unified-filter-toolbar-select"
+                        value={selectedExamId}
+                        onChange={(e) => setSelectedExamId(e.target.value)}
+                        aria-label="Select Examination to Evaluate"
+                      >
+                        {exams.map((exam) => (
+                          <option key={exam.id} value={exam.id}>
+                            {exam.name} {exam.course_code ? `[${exam.course_code}]` : ""} {exam.section ? `• Sec ${exam.section}` : ""}
+                          </option>
+                        ))}
+                      </select>
+                      <ChevronDown size={14} className="academic-select-arrow" />
+                    </div>
                   </div>
                 </div>
 

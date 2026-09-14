@@ -405,157 +405,116 @@ export const GradingHistoryView: React.FC<GradingHistoryViewProps> = ({
               />
             </div>
 
-            <span
-              className="badge"
-              style={{
-                background: "var(--primary-light-surface, #f5f3ff)",
-                color: "var(--primary, #28166f)",
-                border: "1px solid var(--primary-light-border, #ddd6fe)",
-                fontSize: "0.78rem",
-                fontWeight: 700,
-                padding: "0.45rem 0.75rem",
-                borderRadius: "8px",
-                height: "38px",
-                display: "inline-flex",
-                alignItems: "center",
-                flexShrink: 0,
-              }}
-            >
-              {sortedRecords.length} Graded Assessments
-            </span>
+
+            {(selectedExamType !== "All" ||
+              selectedProgram !== "All" ||
+              selectedStatus !== "All" ||
+              sortBy !== "recent" ||
+              searchQuery.trim().length > 0) && (
+              <button
+                type="button"
+                className="btn btn-secondary btn-sm"
+                onClick={() => {
+                  setSelectedExamType("All");
+                  setSelectedProgram("All");
+                  setSelectedStatus("All");
+                  setSortBy("recent");
+                  setSearchQuery("");
+                }}
+                style={{
+                  height: "38px",
+                  padding: "0 0.85rem",
+                  fontSize: "0.8rem",
+                  fontWeight: 600,
+                  color: "#64748b",
+                  borderRadius: "8px",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "4px",
+                  flexShrink: 0,
+                  background: "#ffffff",
+                  border: "1px solid #e2e8f0",
+                }}
+                title="Reset all filters and search query to defaults"
+              >
+                <X size={14} /> Clear Filters
+              </button>
+            )}
           </div>
         </div>
 
-        {/* Filter Grid */}
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(170px, 1fr))",
-            gap: "0.85rem",
-          }}
-        >
+        {/* Unified Filter Toolbar */}
+        <div className="unified-filter-toolbar">
           {/* Exam Type Filter */}
-          <div>
-            <label
-              style={{
-                fontSize: "0.72rem",
-                color: "#334155",
-                fontWeight: 700,
-                display: "block",
-                marginBottom: "4px",
-                textTransform: "uppercase",
-                letterSpacing: "0.03em",
-              }}
+          <div className="unified-filter-toolbar-item" title="Filter by Examination Type">
+            <BookOpen size={14} className="unified-filter-toolbar-icon" />
+            <select
+              className="unified-filter-toolbar-select"
+              value={selectedExamType}
+              onChange={(e) => setSelectedExamType(e.target.value)}
+              aria-label="Filter by examination type"
             >
-              Examination Type
-            </label>
-            <div className="academic-select-wrapper">
-              <select
-                className="academic-select"
-                value={selectedExamType}
-                onChange={(e) => setSelectedExamType(e.target.value)}
-              >
-                {examTypes.map((type) => (
-                  <option key={type} value={type}>
-                    {type === "All" ? "All Examination Types" : type}
-                  </option>
-                ))}
-              </select>
-              <ChevronDown size={14} className="academic-select-arrow" />
-            </div>
+              {examTypes.map((type) => (
+                <option key={type} value={type}>
+                  {type === "All" ? "All Examination Types" : type}
+                </option>
+              ))}
+            </select>
+            <ChevronDown size={14} className="unified-filter-toolbar-arrow" />
           </div>
 
           {/* Program / Course Code Filter */}
-          <div>
-            <label
-              style={{
-                fontSize: "0.72rem",
-                color: "#334155",
-                fontWeight: 700,
-                display: "block",
-                marginBottom: "4px",
-                textTransform: "uppercase",
-                letterSpacing: "0.03em",
-              }}
+          <div className="unified-filter-toolbar-item" title="Filter by Academic Program or Course">
+            <GraduationCap size={14} className="unified-filter-toolbar-icon" />
+            <select
+              className="unified-filter-toolbar-select"
+              value={selectedProgram}
+              onChange={(e) => setSelectedProgram(e.target.value)}
+              aria-label="Filter by program or course"
             >
-              Program / Course
-            </label>
-            <div className="academic-select-wrapper">
-              <select
-                className="academic-select"
-                value={selectedProgram}
-                onChange={(e) => setSelectedProgram(e.target.value)}
-              >
-                {programs.map((prog) => (
-                  <option key={prog} value={prog}>
-                    {prog === "All" ? "All Programs & Courses" : prog}
-                  </option>
-                ))}
-              </select>
-              <ChevronDown size={14} className="academic-select-arrow" />
-            </div>
+              {programs.map((prog) => (
+                <option key={prog} value={prog}>
+                  {prog === "All" ? "All Programs & Courses" : prog}
+                </option>
+              ))}
+            </select>
+            <ChevronDown size={14} className="unified-filter-toolbar-arrow" />
           </div>
 
           {/* Grading Status Filter */}
-          <div>
-            <label
-              style={{
-                fontSize: "0.72rem",
-                color: "#334155",
-                fontWeight: 700,
-                display: "block",
-                marginBottom: "4px",
-                textTransform: "uppercase",
-                letterSpacing: "0.03em",
-              }}
+          <div className="unified-filter-toolbar-item" title="Filter by Grading Evaluation Status">
+            <CheckCircle2 size={14} className="unified-filter-toolbar-icon" />
+            <select
+              className="unified-filter-toolbar-select"
+              value={selectedStatus}
+              onChange={(e) => setSelectedStatus(e.target.value as HistoryStatusFilter)}
+              aria-label="Filter by grading status"
             >
-              Grading Status
-            </label>
-            <div className="academic-select-wrapper">
-              <select
-                className="academic-select"
-                value={selectedStatus}
-                onChange={(e) => setSelectedStatus(e.target.value as HistoryStatusFilter)}
-              >
-                <option value="All">All Grading Statuses</option>
-                <option value="Completed">Completed (Finalized)</option>
-                <option value="Processed">Processed (Active)</option>
-                <option value="Reviewed">Reviewed (Has Ambiguity)</option>
-                <option value="Incomplete">Incomplete (No Submissions)</option>
-              </select>
-              <ChevronDown size={14} className="academic-select-arrow" />
-            </div>
+              <option value="All">All Grading Statuses</option>
+              <option value="Completed">Completed (Finalized)</option>
+              <option value="Processed">Processed (Active)</option>
+              <option value="Reviewed">Reviewed (Has Ambiguity)</option>
+              <option value="Incomplete">Incomplete (No Submissions)</option>
+            </select>
+            <ChevronDown size={14} className="unified-filter-toolbar-arrow" />
           </div>
 
           {/* Sorting Option */}
-          <div>
-            <label
-              style={{
-                fontSize: "0.72rem",
-                color: "#334155",
-                fontWeight: 700,
-                display: "block",
-                marginBottom: "4px",
-                textTransform: "uppercase",
-                letterSpacing: "0.03em",
-              }}
+          <div className="unified-filter-toolbar-item" title="Sort Historical Examination Records">
+            <Clock size={14} className="unified-filter-toolbar-icon" />
+            <select
+              className="unified-filter-toolbar-select"
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value as HistorySortOption)}
+              aria-label="Sort historical examination records"
             >
-              Sort Records By
-            </label>
-            <div className="academic-select-wrapper">
-              <select
-                className="academic-select"
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value as HistorySortOption)}
-              >
-                <option value="recent">Sort: Most Recent Grading</option>
-                <option value="oldest">Sort: Oldest Grading</option>
-                <option value="date">Sort: Examination Date</option>
-                <option value="title">Sort: Examination Title (A-Z)</option>
-                <option value="students">Sort: Total Students Graded</option>
-              </select>
-              <ChevronDown size={14} className="academic-select-arrow" />
-            </div>
+              <option value="recent">Sort: Most Recent Grading</option>
+              <option value="oldest">Sort: Oldest Grading</option>
+              <option value="date">Sort: Examination Date</option>
+              <option value="title">Sort: Examination Title (A-Z)</option>
+              <option value="students">Sort: Total Students Graded</option>
+            </select>
+            <ChevronDown size={14} className="unified-filter-toolbar-arrow" />
           </div>
         </div>
       </div>

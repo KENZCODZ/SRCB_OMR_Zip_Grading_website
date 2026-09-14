@@ -168,6 +168,43 @@ export async function adminCreateUser(payload: {
   }
 }
 
+export async function adminBatchCreateUsers(students: Array<{
+  name: string;
+  student_id: string;
+  email?: string;
+  password?: string;
+  programme?: string;
+  department?: string;
+}>): Promise<{
+  status: string;
+  message: string;
+  created_count: number;
+  failed_count: number;
+  created: any[];
+  failed: any[];
+}> {
+  try {
+    const response = await fetch(`${API_BASE}/api/admin/users/batch`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ students }),
+    });
+    const result = await handleResponse<{
+      status: string;
+      message: string;
+      created_count: number;
+      failed_count: number;
+      created: any[];
+      failed: any[];
+    }>(response, 'Failed to batch create student accounts');
+    cacheManager.invalidate('users_all');
+    cacheManager.invalidate('dashboard_summary');
+    return result;
+  } catch (err) {
+    catchNetworkError(err, 'Failed to batch create student accounts');
+  }
+}
+
 export async function deleteUser(userId: string): Promise<{ status: string; message: string }> {
   try {
     const response = await fetch(`${API_BASE}/api/users/${userId}`, {

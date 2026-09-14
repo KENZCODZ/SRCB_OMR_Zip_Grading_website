@@ -17,7 +17,7 @@ DB_USER = os.getenv("DB_USER", "root")
 DB_PASSWORD = os.getenv("DB_PASSWORD", "")
 DB_NAME = os.getenv("DB_NAME", "aeroomr_db")
 
-SEED_USERS = [
+SEED_USERS: List[Dict[str, Any]] = [
     {
         "id": "admin-001",
         "name": "System Administrator",
@@ -418,24 +418,25 @@ def init_db():
 
     # Auto-provision Instructor Profiles for Teacher Users
     for user in SEED_USERS:
-        if user["role"] in ["teacher", "programme-head"]:
-            instructor_id = f"inst-{user['id']}"
+        user_id = str(user.get("id") or "")
+        if user.get("role") in ["teacher", "programme-head"]:
+            instructor_id = f"inst-{user_id}"
             cursor.execute(
                 """
                 INSERT IGNORE INTO instructors (instructor_id, user_id, program_id, faculty_id_number, created_at)
                 VALUES (%s, %s, %s, %s, %s)
                 """,
-                (instructor_id, user["id"], "prog-bsit-001", f"FAC-{user['id'][-3:]}", now_iso),
+                (instructor_id, user_id, "prog-bsit-001", f"FAC-{user_id[-3:]}", now_iso),
             )
-        elif user["role"] == "student":
-            student_id = f"stud-{user['id']}"
-            inst_id = user.get("student_id") or f"2023-000{user['id'][-1]}"
+        elif user.get("role") == "student":
+            student_id = f"stud-{user_id}"
+            inst_id = user.get("student_id") or f"2023-000{user_id[-1:]}"
             cursor.execute(
                 """
                 INSERT IGNORE INTO students (student_id, user_id, institutional_id_number, created_at)
                 VALUES (%s, %s, %s, %s)
                 """,
-                (student_id, user["id"], inst_id, now_iso),
+                (student_id, user_id, inst_id, now_iso),
             )
 
     conn.commit()
@@ -679,6 +680,161 @@ def create_user_account(
         "student_id": student_id.strip() if student_id else None,
         "status": status,
         "created_at": now_iso,
+    }
+
+
+def batch_create_student_accounts(
+    students: List[Dict[str, Any]],
+) -> Dict[str, Any]:
+    """
+    Enrolls multiple student accounts in batch with conflict detection.
+    Creates user records and associates them with student profiles.
+    """
+    created_list: List[Dict[str, Any]] = []
+    failed_list: List[Dict[str, Any]] = []
+
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    existing_emails = set()
+    existing_student_ids = set()
+
+    try:
+        cursor.execute("SELECT email, student_id FROM users")
+        rows = cursor.fetchall()
+        for r in rows:
+            em = (r.get("email") or "") if isinstance(r, dict) else (r[0] or "")
+            sid = (r.get("student_id") or "") if isinstance(r, dict) else (r[1] or "")
+            if em:
+                existing_emails.add(str(em).strip().lower())
+            if sid:
+                existing_student_ids.add(str(sid).strip().lower())
+    except Exception:
+        pass
+
+    now_iso = datetime.now(timezone.utc).isoformat()
+
+    for idx, s in enumerate(students):
+        name = str(s.get("name") or "").strip()
+        student_id = str(s.get("student_id") or "").strip()
+        email = str(s.get("email") or "").strip().lower()
+        password = str(s.get("password") or "").strip()
+        programme = str(s.get("programme") or "BSIT").strip() or "BSIT"
+        department = str(s.get("department") or "Computing Studies").strip() or "Computing Studies"
+
+        if not name:
+            failed_list.append({
+                "index": idx,
+                "name": name,
+                "student_id": student_id,
+                "reason": "Missing student full name.",
+            })
+            continue
+
+        if not student_id:
+            failed_list.append({
+                "index": idx,
+                "name": name,
+                "student_id": student_id,
+                "reason": "Missing institutional student ID.",
+            })
+            continue
+
+        # Auto-generate school email if omitted
+        if not email:
+            clean_id = student_id.replace(" ", "").replace("-", "").lower()
+            email = f"s.{clean_id}@srcb.edu.ph"
+
+        # Default password policy if omitted
+        if not password or len(password) < 6:
+            password = student_id if len(student_id) >= 6 else f"Srcb@{student_id}"
+
+        clean_id_lower = student_id.lower()
+        if student_id and clean_id_lower in existing_student_ids:
+            failed_list.append({
+                "index": idx,
+                "name": name,
+                "student_id": student_id,
+                "email": email,
+                "reason": f"Student ID '{student_id}' is already registered in the system.",
+            })
+            continue
+
+        if email in existing_emails:
+            failed_list.append({
+                "index": idx,
+                "name": name,
+                "student_id": student_id,
+                "email": email,
+                "reason": f"Email '{email}' is already associated with an existing account.",
+            })
+            continue
+
+        user_id = str(uuid.uuid4())
+        try:
+            cursor.execute(
+                """
+                INSERT INTO users (id, name, email, password, role, programme, department, student_id, status, created_at, updated_at)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                """,
+                (
+                    user_id,
+                    name,
+                    email,
+                    password,
+                    "student",
+                    programme,
+                    department,
+                    student_id,
+                    "active",
+                    now_iso,
+                    now_iso,
+                ),
+            )
+
+            try:
+                cursor.execute(
+                    """
+                    INSERT IGNORE INTO students (student_id, user_id, institutional_id_number, created_at)
+                    VALUES (%s, %s, %s, %s)
+                    """,
+                    (str(uuid.uuid4()), user_id, student_id, now_iso),
+                )
+            except Exception:
+                pass
+
+            existing_emails.add(email)
+            existing_student_ids.add(clean_id_lower)
+
+            created_list.append({
+                "id": user_id,
+                "name": name,
+                "email": email,
+                "role": "student",
+                "programme": programme,
+                "department": department,
+                "student_id": student_id,
+                "initial_password": password,
+            })
+        except Exception as err:
+            failed_list.append({
+                "index": idx,
+                "name": name,
+                "student_id": student_id,
+                "email": email,
+                "reason": str(err),
+            })
+
+    conn.commit()
+    cursor.close()
+    conn.close()
+
+    return {
+        "success": True,
+        "created_count": len(created_list),
+        "failed_count": len(failed_list),
+        "created": created_list,
+        "failed": failed_list,
     }
 
 

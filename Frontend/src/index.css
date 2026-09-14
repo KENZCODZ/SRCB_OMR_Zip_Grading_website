@@ -3248,13 +3248,14 @@ input.login-minimal-input.with-toggle,
 }
 
 .sidebar-brand-title {
-  font-size: 1.12rem;
+  font-size: 1.15rem;
   font-weight: 800;
   color: #ffffff;
-  letter-spacing: -0.01em;
+  letter-spacing: -0.015em;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  font-family: 'Plus Jakarta Sans', sans-serif;
 }
 
 .sidebar-brand-badge {
@@ -3266,6 +3267,15 @@ input.login-minimal-input.with-toggle,
   align-items: center;
   justify-content: center;
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.12);
+}
+
+.sidebar-pill-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
 }
 
 .sidebar-curved-menu {
@@ -5559,4 +5569,243 @@ input.login-minimal-input.with-toggle,
   align-items: center;
   justify-content: center;
 }
+
+/* Unified Institutional Filter Toolbar */
+.unified-filter-toolbar {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.5rem;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 0.45rem;
+  align-items: center;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.02);
+}
+
+.unified-filter-toolbar-item {
+  position: relative;
+  display: flex;
+  align-items: center;
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  height: 40px;
+  min-height: 40px;
+  transition: all 0.15s ease;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
+  overflow: hidden;
+}
+
+.unified-filter-toolbar-item:hover {
+  border-color: #94a3b8;
+  background: #ffffff;
+}
+
+.unified-filter-toolbar-item:focus-within {
+  border-color: var(--primary, #28166f);
+  box-shadow: 0 0 0 3px rgba(40, 22, 111, 0.12);
+}
+
+.unified-filter-toolbar-icon {
+  position: absolute;
+  left: 11px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #64748b;
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1;
+}
+
+.unified-filter-toolbar-select {
+  width: 100%;
+  height: 100%;
+  padding: 0 2.25rem 0 2.25rem !important;
+  font-size: 0.83rem;
+  font-weight: 600;
+  color: #0f172a;
+  background: transparent !important;
+  background-image: none !important;
+  border: none !important;
+  border-radius: 0 !important;
+  appearance: none;
+  -webkit-appearance: none;
+  cursor: pointer;
+  outline: none !important;
+  box-shadow: none !important;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  overflow: hidden;
+  line-height: normal !important;
+  box-sizing: border-box !important;
+}
+
+.unified-filter-toolbar-arrow {
+  position: absolute;
+  right: 11px;
+  top: 50%;
+  transform: translateY(-50%);
+  pointer-events: none;
+  color: #64748b;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1;
+}
+
+@media (max-width: 960px) {
+  .unified-filter-toolbar {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 540px) {
+  .unified-filter-toolbar {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* =========================================================
+   ADMIN: CREATE ACCOUNT & BULK STUDENT ENROLLMENT STYLES
+   ========================================================= */
+
+.account-creation-shell {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  width: 100%;
+}
+
+.account-mode-tabs {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: #f1f5f9;
+  padding: 0.35rem;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+  width: fit-content;
+}
+
+.account-mode-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.6rem 1.15rem;
+  border-radius: 9px;
+  border: none;
+  font-size: 0.88rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  color: #64748b;
+  background: transparent;
+}
+
+.account-mode-btn.active {
+  background: #ffffff;
+  color: var(--primary, #28166f);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.account-card-premium {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  box-shadow: 0 4px 18px rgba(15, 23, 42, 0.03);
+  padding: 1.75rem;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.account-role-pill-group {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+  background: #f8fafc;
+  padding: 6px;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+}
+
+.account-role-pill-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  padding: 0.75rem 1rem;
+  border-radius: 9px;
+  border: none;
+  font-weight: 700;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  color: #64748b;
+  background: transparent;
+}
+
+.account-role-pill-btn.selected {
+  background: var(--primary, #28166f);
+  color: #ffffff;
+  box-shadow: 0 4px 12px rgba(40, 22, 111, 0.25);
+}
+
+.bulk-dropzone {
+  border: 2px dashed #cbd5e1;
+  border-radius: 16px;
+  padding: 2.25rem 1.5rem;
+  text-align: center;
+  background: #f8fafc;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  position: relative;
+}
+
+.bulk-dropzone:hover,
+.bulk-dropzone.dragging {
+  border-color: var(--primary, #28166f);
+  background: #f5f3ff;
+}
+
+.bulk-template-box {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 1rem;
+  padding: 1.15rem 1.35rem;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+}
+
+.bulk-table-wrapper {
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  overflow: hidden;
+  background: #ffffff;
+}
+
+.bulk-badge-ready {
+  background: #ecfdf5;
+  color: #059669;
+  border: 1px solid #a7f3d0;
+}
+
+.bulk-badge-duplicate {
+  background: #fff1f2;
+  color: #e11d48;
+  border: 1px solid #fecdd3;
+}
+
+.bulk-badge-warning {
+  background: #fffbeb;
+  color: #d97706;
+  border: 1px solid #fde68a;
+}
+
+
 

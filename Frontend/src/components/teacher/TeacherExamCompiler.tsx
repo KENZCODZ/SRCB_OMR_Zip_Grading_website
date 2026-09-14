@@ -13,6 +13,9 @@ import {
   Send,
   Database,
   Users,
+  Calendar,
+  Clock,
+  X,
 } from "lucide-react";
 import type { Exam, Submission, StudentRosterEntry, AuthUser } from "../../types";
 import {
@@ -441,139 +444,117 @@ export const TeacherExamCompiler: React.FC<TeacherExamCompilerProps> = ({
             >
               <Database size={15} /> Export All Database (.xlsx)
             </button>
+
+            {/* Clear Filters if any filter or search query is active */}
+            {(selectedAcademicYear !== "All" ||
+              selectedSemester !== "All" ||
+              selectedExamType !== "All" ||
+              selectedSection !== "All" ||
+              searchQuery.trim().length > 0) && (
+              <button
+                type="button"
+                className="btn btn-secondary btn-sm"
+                onClick={() => {
+                  setSelectedAcademicYear("All");
+                  setSelectedSemester("All");
+                  setSelectedExamType("All");
+                  setSelectedSection("All");
+                  setSearchQuery("");
+                }}
+                style={{
+                  height: "38px",
+                  padding: "0 0.85rem",
+                  fontSize: "0.8rem",
+                  fontWeight: 600,
+                  color: "#64748b",
+                  borderRadius: "8px",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "4px",
+                  flexShrink: 0,
+                  background: "#ffffff",
+                  border: "1px solid #e2e8f0",
+                }}
+                title="Reset all filters and search query to defaults"
+              >
+                <X size={14} /> Clear Filters
+              </button>
+            )}
           </div>
         </div>
 
-        {/* Elegant Academic Select Dropdowns Grid */}
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(170px, 1fr))",
-            gap: "0.85rem",
-          }}
-        >
+        {/* Unified Filter Toolbar */}
+        <div className="unified-filter-toolbar">
           {/* Academic Year Filter */}
-          <div>
-            <label
-              style={{
-                fontSize: "0.72rem",
-                color: "#334155",
-                fontWeight: 700,
-                display: "block",
-                marginBottom: "4px",
-                textTransform: "uppercase",
-                letterSpacing: "0.03em",
-              }}
+          <div className="unified-filter-toolbar-item" title="Filter by Academic Year">
+            <Calendar size={14} className="unified-filter-toolbar-icon" />
+            <select
+              className="unified-filter-toolbar-select"
+              value={selectedAcademicYear}
+              onChange={(e) => setSelectedAcademicYear(e.target.value)}
+              aria-label="Filter by academic year"
             >
-              Academic Year
-            </label>
-            <div className="academic-select-wrapper">
-              <select
-                className="academic-select"
-                value={selectedAcademicYear}
-                onChange={(e) => setSelectedAcademicYear(e.target.value)}
-              >
-                {academicYears.map((ay) => (
-                  <option key={ay} value={ay}>
-                    {ay === "All" ? "All Academic Years" : `AY ${ay}`}
-                  </option>
-                ))}
-              </select>
-              <ChevronDown size={14} className="academic-select-arrow" />
-            </div>
+              {academicYears.map((ay) => (
+                <option key={ay} value={ay}>
+                  {ay === "All" ? "All Academic Years" : `AY ${ay}`}
+                </option>
+              ))}
+            </select>
+            <ChevronDown size={14} className="unified-filter-toolbar-arrow" />
           </div>
 
           {/* Semester Filter */}
-          <div>
-            <label
-              style={{
-                fontSize: "0.72rem",
-                color: "#334155",
-                fontWeight: 700,
-                display: "block",
-                marginBottom: "4px",
-                textTransform: "uppercase",
-                letterSpacing: "0.03em",
-              }}
+          <div className="unified-filter-toolbar-item" title="Filter by Semester or Term">
+            <Clock size={14} className="unified-filter-toolbar-icon" />
+            <select
+              className="unified-filter-toolbar-select"
+              value={selectedSemester}
+              onChange={(e) => setSelectedSemester(e.target.value)}
+              aria-label="Filter by semester or term"
             >
-              Semester / Term
-            </label>
-            <div className="academic-select-wrapper">
-              <select
-                className="academic-select"
-                value={selectedSemester}
-                onChange={(e) => setSelectedSemester(e.target.value)}
-              >
-                {semesters.map((sem) => (
-                  <option key={sem} value={sem}>
-                    {sem === "All" ? "All Semesters" : sem}
-                  </option>
-                ))}
-              </select>
-              <ChevronDown size={14} className="academic-select-arrow" />
-            </div>
+              {semesters.map((sem) => (
+                <option key={sem} value={sem}>
+                  {sem === "All" ? "All Semesters" : sem}
+                </option>
+              ))}
+            </select>
+            <ChevronDown size={14} className="unified-filter-toolbar-arrow" />
           </div>
 
           {/* Exam Type Filter */}
-          <div>
-            <label
-              style={{
-                fontSize: "0.72rem",
-                color: "#334155",
-                fontWeight: 700,
-                display: "block",
-                marginBottom: "4px",
-                textTransform: "uppercase",
-                letterSpacing: "0.03em",
-              }}
+          <div className="unified-filter-toolbar-item" title="Filter by Exam Period">
+            <BookOpen size={14} className="unified-filter-toolbar-icon" />
+            <select
+              className="unified-filter-toolbar-select"
+              value={selectedExamType}
+              onChange={(e) => setSelectedExamType(e.target.value)}
+              aria-label="Filter by exam period"
             >
-              Exam Period
-            </label>
-            <div className="academic-select-wrapper">
-              <select
-                className="academic-select"
-                value={selectedExamType}
-                onChange={(e) => setSelectedExamType(e.target.value)}
-              >
-                {examTypes.map((type) => (
-                  <option key={type} value={type}>
-                    {type === "All" ? "All Exam Periods" : type}
-                  </option>
-                ))}
-              </select>
-              <ChevronDown size={14} className="academic-select-arrow" />
-            </div>
+              {examTypes.map((type) => (
+                <option key={type} value={type}>
+                  {type === "All" ? "All Exam Periods" : type}
+                </option>
+              ))}
+            </select>
+            <ChevronDown size={14} className="unified-filter-toolbar-arrow" />
           </div>
 
           {/* Section Filter */}
-          <div>
-            <label
-              style={{
-                fontSize: "0.72rem",
-                color: "#334155",
-                fontWeight: 700,
-                display: "block",
-                marginBottom: "4px",
-                textTransform: "uppercase",
-                letterSpacing: "0.03em",
-              }}
+          <div className="unified-filter-toolbar-item" title="Filter by Class Section">
+            <Users size={14} className="unified-filter-toolbar-icon" />
+            <select
+              className="unified-filter-toolbar-select"
+              value={selectedSection}
+              onChange={(e) => setSelectedSection(e.target.value)}
+              aria-label="Filter by class section"
             >
-              Class Section
-            </label>
-            <div className="academic-select-wrapper">
-              <select
-                className="academic-select"
-                value={selectedSection}
-                onChange={(e) => setSelectedSection(e.target.value)}
-              >
-                {sections.map((sec) => (
-                  <option key={sec} value={sec}>
-                    {sec === "All" ? "All Sections" : `Sec: ${sec}`}
-                  </option>
-                ))}
-              </select>
-              <ChevronDown size={14} className="academic-select-arrow" />
-            </div>
+              {sections.map((sec) => (
+                <option key={sec} value={sec}>
+                  {sec === "All" ? "All Sections" : `Sec: ${sec}`}
+                </option>
+              ))}
+            </select>
+            <ChevronDown size={14} className="unified-filter-toolbar-arrow" />
           </div>
         </div>
       </div>
