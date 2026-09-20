@@ -95,7 +95,7 @@ import {
   storeActiveTab,
   clearAuthSession,
 } from "./components/auth";
-import { CameraScanner } from "./components/camera";
+import { CameraScanner, NormalCameraScanner } from "./components/camera";
 import { AdminUserManagement } from "./components/admin";
 import { TeacherExamCompiler } from "./components/teacher";
 import GradingHistoryView from "./components/GradingHistoryView";
@@ -384,7 +384,7 @@ export default function App() {
   );
 
   // Quick Scanner State
-  const [quickScanMode, setQuickScanMode] = useState<"upload" | "camera">("upload");
+  const [quickScanMode, setQuickScanMode] = useState<"upload" | "normal-camera" | "live-camera">("upload");
   const [quickScanLoading, setQuickScanLoading] = useState(false);
   const [quickScanResult, setQuickScanResult] =
     useState<QuickScanResult | null>(null);
@@ -419,6 +419,8 @@ export default function App() {
   // Active Exam Inspection & Grading State
   const [selectedExamId, setSelectedExamId] = useState<string>("");
   const [isCameraActive, setIsCameraActive] = useState(false);
+  const [examCameraMode, setExamCameraMode] = useState<"normal" | "live">("normal");
+
 
   const [gradingProgress, setGradingProgress] = useState<{
     current: number;
@@ -1810,21 +1812,38 @@ export default function App() {
                 </button>
                 <button
                   type="button"
-                  className={`scan-mode-tab-btn ${quickScanMode === "camera" ? "active" : ""}`}
-                  onClick={() => setQuickScanMode("camera")}
+                  className={`scan-mode-tab-btn ${quickScanMode === "normal-camera" ? "active" : ""}`}
+                  onClick={() => setQuickScanMode("normal-camera")}
                 >
-                  <Camera size={16} /> Scan with Camera
+                  <Camera size={16} /> Normal Camera (Shutter)
+                </button>
+                <button
+                  type="button"
+                  className={`scan-mode-tab-btn ${quickScanMode === "live-camera" ? "active" : ""}`}
+                  onClick={() => setQuickScanMode("live-camera")}
+                >
+                  <Sparkles size={16} /> Live Auto-Scanner
                 </button>
               </div>
 
-              {quickScanMode === "camera" ? (
+              {quickScanMode === "normal-camera" ? (
+                <NormalCameraScanner
+                  onCapture={handleQuickScanUpload}
+                  onSwitchToUpload={() => setQuickScanMode("upload")}
+                  onSwitchToLive={() => setQuickScanMode("live-camera")}
+                  title="Quick OMR Camera"
+                  subtitle="Position the answer sheet inside the framing guide and press the shutter button to take a photo."
+                />
+              ) : quickScanMode === "live-camera" ? (
                 <CameraScanner
                   onCapture={handleQuickScanUpload}
                   onSwitchToUpload={() => setQuickScanMode("upload")}
-                  title="Quick Bubble Camera Scanner"
+                  onSwitchToNormal={() => setQuickScanMode("normal-camera")}
+                  title="Quick Bubble Camera Scanner (Live)"
                   subtitle="Point camera at the ZipGrade answer sheet. Align corners and hold steady to auto-capture."
                 />
               ) : (
+
                 <div className="card" style={{ marginBottom: "2rem" }}>
                   <input
                     type="file"
@@ -3002,23 +3021,41 @@ export default function App() {
                                 </div>
                               )}
 
-                              {/* Live Camera Scanner (Only rendered on-demand when activated) */}
+                              {/* Camera Scanner (Only rendered on-demand when activated) */}
                               {isCameraActive && (
                                 <div style={{ marginBottom: "1.5rem" }}>
-                                  <CameraScanner
-                                    onCapture={async (file) => {
-                                      await handleGradeSheetsSubmit([file]);
-                                    }}
-                                    onClose={() => setIsCameraActive(false)}
-                                    onSwitchToUpload={() => {
-                                      setIsCameraActive(false);
-                                      studentScanInputRef.current?.click();
-                                    }}
-                                    title={`Grade Student Sheet — ${activeExam.name}`}
-                                    subtitle={`Align the 4 black corner squares within the viewfinder. Scored instantly against ${activeExam.name}.`}
-                                  />
+                                  {examCameraMode === "normal" ? (
+                                    <NormalCameraScanner
+                                      onCapture={async (file) => {
+                                        await handleGradeSheetsSubmit([file]);
+                                      }}
+                                      onClose={() => setIsCameraActive(false)}
+                                      onSwitchToUpload={() => {
+                                        setIsCameraActive(false);
+                                        studentScanInputRef.current?.click();
+                                      }}
+                                      onSwitchToLive={() => setExamCameraMode("live")}
+                                      title={`Grade Student Sheet — ${activeExam.name}`}
+                                      subtitle={`Position student sheet inside the frame and press Shutter to score against ${activeExam.name}.`}
+                                    />
+                                  ) : (
+                                    <CameraScanner
+                                      onCapture={async (file) => {
+                                        await handleGradeSheetsSubmit([file]);
+                                      }}
+                                      onClose={() => setIsCameraActive(false)}
+                                      onSwitchToUpload={() => {
+                                        setIsCameraActive(false);
+                                        studentScanInputRef.current?.click();
+                                      }}
+                                      onSwitchToNormal={() => setExamCameraMode("normal")}
+                                      title={`Grade Student Sheet (Live) — ${activeExam.name}`}
+                                      subtitle={`Align the 4 black corner squares within the viewfinder. Scored instantly against ${activeExam.name}.`}
+                                    />
+                                  )}
                                 </div>
                               )}
+
 
                               {/* Latest Grade Result Showcase */}
                               {latestGradeResult ? (
@@ -3455,6 +3492,7 @@ export default function App() {
                                       className="btn btn-secondary"
                                       onClick={() => {
                                         setActiveExamStudioTab("grading");
+                                        setExamCameraMode("normal");
                                         setIsCameraActive(true);
                                       }}
                                       style={{
@@ -3463,8 +3501,25 @@ export default function App() {
                                         borderRadius: "10px",
                                       }}
                                     >
-                                      <Camera size={15} /> Open Camera Viewfinder
+                                      <Camera size={15} /> Normal Camera (Shutter)
                                     </button>
+                                    <button
+                                      type="button"
+                                      className="btn btn-secondary"
+                                      onClick={() => {
+                                        setActiveExamStudioTab("grading");
+                                        setExamCameraMode("live");
+                                        setIsCameraActive(true);
+                                      }}
+                                      style={{
+                                        fontSize: "0.82rem",
+                                        fontWeight: 700,
+                                        borderRadius: "10px",
+                                      }}
+                                    >
+                                      <Sparkles size={15} /> Live Auto-Scanner
+                                    </button>
+
                                   </div>
                                 </div>
                               )}

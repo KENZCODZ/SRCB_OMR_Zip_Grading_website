@@ -28,6 +28,7 @@ export interface CameraScannerProps {
   onCapture: (file: File) => Promise<void> | void;
   onClose?: () => void;
   onSwitchToUpload?: () => void;
+  onSwitchToNormal?: () => void;
   title?: string;
   subtitle?: string;
   defaultMode?: 'auto-lock' | 'single-shot';
@@ -37,10 +38,12 @@ export const CameraScanner: React.FC<CameraScannerProps> = ({
   onCapture,
   onClose,
   onSwitchToUpload,
+  onSwitchToNormal,
   title = 'OMR Grading Studio',
   subtitle = 'Align the student answer sheet inside the frame for automatic bubble detection.',
   defaultMode = 'auto-lock',
 }) => {
+
   const [previewCaptured, setPreviewCaptured] = useState<{ file: File; url: string } | null>(null);
   const [isProcessingSubmission, setIsProcessingSubmission] = useState(false);
   const [shutterTimer, setShutterTimer] = useState<number>(3); // 0s, 2s, 3s, 5s countdown
@@ -335,7 +338,30 @@ export const CameraScanner: React.FC<CameraScannerProps> = ({
           </div>
         </div>
 
-        <div className="omr-header-actions">
+        <div className="omr-header-actions" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          {onSwitchToNormal && (
+            <button
+              type="button"
+              className="btn btn-secondary"
+              onClick={() => {
+                stopCamera();
+                onSwitchToNormal();
+              }}
+              style={{
+                fontSize: '0.78rem',
+                padding: '0.4rem 0.75rem',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '5px',
+                borderRadius: '8px',
+              }}
+              title="Switch to Standard Camera with Manual Shutter"
+            >
+              <Camera size={14} style={{ color: '#1d4ed8' }} />
+              <span>Normal Camera (Shutter)</span>
+            </button>
+          )}
+
           {/* Fullscreen / Theater Mode Toggle */}
           <button
             type="button"
@@ -345,6 +371,7 @@ export const CameraScanner: React.FC<CameraScannerProps> = ({
           >
             {isFullscreen ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
           </button>
+
 
           {onClose && (
             <button
