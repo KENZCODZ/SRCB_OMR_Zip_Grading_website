@@ -32,130 +32,89 @@ import { fetchAllUsers, adminCreateUser, adminBatchCreateUsers, deleteUser } fro
 import { SkeletonTable, SmoothContentTransition } from "../shared";
 import { cacheManager } from "../../utils/cacheManager";
 
-const DEFAULT_SYSTEM_USERS: PendingUser[] = [
+const DEFAULT_SYSTEM_USERS: PendingUser[] = [];
+
+export interface ProgrammeOption {
+  code: string;
+  name: string;
+  label: string;
+  collegiateOptions: string[];
+}
+
+export const PROGRAMME_OPTIONS: ProgrammeOption[] = [
   {
-    id: "dean-001",
-    name: "Dr. Maria Santos",
-    email: "dean@srcb.edu.ph",
-    role: "dean",
-    programme: "Institution-wide",
-    department: "Office of the Dean",
-    status: "active",
-    created_at: "2026-08-01T08:00:00Z",
+    code: "BSIT",
+    name: "Bachelor of Science in Information Technology",
+    label: "BSIT (Bachelor of Science in Information Technology)",
+    collegiateOptions: ["N/A"],
   },
   {
-    id: "ph-001",
-    name: "Prof. Ramon Cruz",
-    email: "ramon.cruz@srcb.edu.ph",
-    role: "programme-head",
-    programme: "BSIT",
-    department: "College of Computing",
-    status: "active",
-    created_at: "2026-08-05T08:00:00Z",
+    code: "BSBA",
+    name: "Bachelor of Science in Business Administration",
+    label: "BSBA (Bachelor of Science in Business Administration)",
+    collegiateOptions: [
+      "Financial Management",
+      "Human Resource Development Management",
+      "Marketing Management",
+    ],
   },
   {
-    id: "teacher-001",
-    name: "Ms. Jenny Garcia",
-    email: "jenny.garcia@srcb.edu.ph",
-    role: "teacher",
-    programme: "BSIT",
-    department: "Computer Studies",
-    status: "active",
-    created_at: "2026-08-10T08:00:00Z",
+    code: "BSCRIM",
+    name: "Bachelor of Science in Criminology",
+    label: "BSCRIM (Bachelor of Science in Criminology)",
+    collegiateOptions: ["N/A"],
   },
   {
-    id: "teacher-002",
-    name: "Dr. Carmen Reyes",
-    email: "carmen.reyes@srcb.edu.ph",
-    role: "teacher",
-    programme: "BSBA",
-    department: "Business Administration",
-    status: "active",
-    created_at: "2026-08-12T08:00:00Z",
+    code: "BSHM",
+    name: "Bachelor of Science in Hotel Management",
+    label: "BSHM (Bachelor of Science in Hotel Management)",
+    collegiateOptions: ["N/A"],
   },
   {
-    id: "teacher-003",
-    name: "Prof. Teresa Perez",
-    email: "teresa.perez@srcb.edu.ph",
-    role: "teacher",
-    programme: "BSEd",
-    department: "Teacher Education",
-    status: "active",
-    created_at: "2026-08-14T08:00:00Z",
+    code: "TEP",
+    name: "Teacher Education Program",
+    label: "TEP (Teacher Education Program)",
+    collegiateOptions: [
+      "English",
+      "Mathematics",
+      "Science",
+      "Filipino",
+    ],
   },
   {
-    id: "student-001",
-    name: "Kenneth Ernest Palicte",
-    email: "k.palicte@srcb.edu.ph",
-    role: "student",
-    programme: "BSIT",
-    department: "Computer Studies",
-    student_id: "2023-00142",
-    status: "active",
-    created_at: "2026-08-15T08:00:00Z",
-  },
-  {
-    id: "student-002",
-    name: "Alyssa Jane Bautista",
-    email: "a.bautista@srcb.edu.ph",
-    role: "student",
-    programme: "BSBA",
-    department: "Business Administration",
-    student_id: "2023-00215",
-    status: "active",
-    created_at: "2026-08-16T08:00:00Z",
-  },
-  {
-    id: "student-003",
-    name: "John Mark Dizon",
-    email: "j.dizon@srcb.edu.ph",
-    role: "student",
-    programme: "BSEd",
-    department: "Teacher Education",
-    student_id: "2023-00388",
-    status: "active",
-    created_at: "2026-08-17T08:00:00Z",
-  },
-  {
-    id: "student-004",
-    name: "Mark Kevin Alcantara",
-    email: "m.alcantara@srcb.edu.ph",
-    role: "student",
-    programme: "BSIT",
-    department: "Computer Studies",
-    student_id: "2023-00155",
-    status: "active",
-    created_at: "2026-08-18T08:00:00Z",
-  },
-  {
-    id: "student-005",
-    name: "Samantha Nicole Cruz",
-    email: "s.cruz@srcb.edu.ph",
-    role: "student",
-    programme: "BSIT",
-    department: "Computer Studies",
-    student_id: "2023-00188",
-    status: "active",
-    created_at: "2026-08-19T08:00:00Z",
+    code: "BEED",
+    name: "Bachelor of Science in Elementary Education",
+    label: "BEED (Bachelor of Science in Elementary Education)",
+    collegiateOptions: ["N/A"],
   },
 ];
 
-const DEPT_PROGRAM_MAP: Record<string, string[]> = {
-  "Computing Studies": ["BSIT", "BSCS"],
-  "Business Administration": ["BSBA"],
-  "Teacher Education": ["BSED", "BEED"],
-  "Hospitality Management": ["BSHM"],
-  "Arts & Sciences": ["General"],
+export const getCollegiateOptionsForProgramme = (progCode: string): string[] => {
+  const p = (progCode || "").trim().toUpperCase();
+  const found = PROGRAMME_OPTIONS.find((item) => item.code.toUpperCase() === p);
+  if (found) return found.collegiateOptions;
+  if (p === "IT" || p.includes("INFO") || p.includes("COMP")) return ["N/A"];
+  if (p.includes("BA") || p.includes("BUS") || p.includes("ADMIN")) {
+    return [
+      "Financial Management",
+      "Human Resource Development Management",
+      "Marketing Management",
+    ];
+  }
+  if (p.includes("CRIM")) return ["N/A"];
+  if (p.includes("HM") || p.includes("HOTEL") || p.includes("HOSP")) return ["N/A"];
+  if (p === "BSED" || p.includes("TEP") || p.includes("TEACH") || p.includes("EDUC")) {
+    return ["English", "Mathematics", "Science", "Filipino"];
+  }
+  if (p.includes("BEED") || p.includes("ELEM")) return ["N/A"];
+  return ["N/A"];
 };
 
-const getDepartmentForProgram = (prog: string): string => {
-  const p = prog.toUpperCase();
-  if (p.includes("IT") || p.includes("CS") || p.includes("COMPUT")) return "Computing Studies";
-  if (p.includes("BA") || p.includes("BUS") || p.includes("ACCOUNT")) return "Business Administration";
-  if (p.includes("ED") || p.includes("TEACH")) return "Teacher Education";
-  if (p.includes("HM") || p.includes("HOSP")) return "Hospitality Management";
-  return "Computing Studies";
+export const getDepartmentForProgram = (prog: string): string => {
+  const options = getCollegiateOptionsForProgramme(prog);
+  return options[0] || "N/A";
 };
+
 
 interface ParsedStudentRow {
   id: string;
@@ -208,7 +167,7 @@ export default function AdminUserManagement({
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [programme, setProgramme] = useState("BSIT");
-  const [department, setDepartment] = useState("Computing Studies");
+  const [department, setDepartment] = useState("N/A");
   const [idSuffix, setIdSuffix] = useState("");
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
@@ -217,7 +176,7 @@ export default function AdminUserManagement({
   const [bulkFile, setBulkFile] = useState<File | null>(null);
   const [parsedStudents, setParsedStudents] = useState<ParsedStudentRow[]>([]);
   const [bulkDefaultProgram, setBulkDefaultProgram] = useState("BSIT");
-  const [bulkDefaultDepartment, setBulkDefaultDepartment] = useState("Computing Studies");
+  const [bulkDefaultDepartment, setBulkDefaultDepartment] = useState("N/A");
   const [bulkPasswordPolicy, setBulkPasswordPolicy] = useState<"student_id" | "random" | "custom">("student_id");
   const [bulkCustomPassword, setBulkCustomPassword] = useState("Srcb@2026");
   const [bulkSearchQuery, setBulkSearchQuery] = useState("");
@@ -281,19 +240,19 @@ export default function AdminUserManagement({
     setTargetRole(newRole);
   };
 
-  const handleDepartmentChange = (newDept: string) => {
-    setDepartment(newDept);
-    const available = DEPT_PROGRAM_MAP[newDept] || ["BSIT"];
-    if (!available.includes(programme)) {
-      setProgramme(available[0]);
+  const handleProgrammeChange = (newProg: string) => {
+    setProgramme(newProg);
+    const available = getCollegiateOptionsForProgramme(newProg);
+    if (!available.includes(department)) {
+      setDepartment(available[0] || "N/A");
     }
   };
 
-  const handleBulkDeptChange = (newDept: string) => {
-    setBulkDefaultDepartment(newDept);
-    const available = DEPT_PROGRAM_MAP[newDept] || ["BSIT"];
-    if (!available.includes(bulkDefaultProgram)) {
-      setBulkDefaultProgram(available[0]);
+  const handleBulkProgramChange = (newProg: string) => {
+    setBulkDefaultProgram(newProg);
+    const available = getCollegiateOptionsForProgramme(newProg);
+    if (!available.includes(bulkDefaultDepartment)) {
+      setBulkDefaultDepartment(available[0] || "N/A");
     }
   };
 
@@ -390,6 +349,8 @@ export default function AdminUserManagement({
       setEmail("");
       setPassword("");
       setIdSuffix("");
+      setProgramme("BSIT");
+      setDepartment("N/A");
 
       loadUsers(true);
     } catch (err: any) {
@@ -428,7 +389,7 @@ export default function AdminUserManagement({
         "Last Name": "Palicte",
         "Email": "k.palicte@srcb.edu.ph",
         "Program": "BSIT",
-        "Department": "Computing Studies",
+        "Department": "N/A",
       },
       {
         "Student ID": "2024-00102",
@@ -437,7 +398,7 @@ export default function AdminUserManagement({
         "Last Name": "Bautista",
         "Email": "a.bautista@srcb.edu.ph",
         "Program": "BSBA",
-        "Department": "Business Administration",
+        "Department": "Financial Management",
       },
       {
         "Student ID": "2024-00103",
@@ -445,8 +406,8 @@ export default function AdminUserManagement({
         "Middle Name": "D.",
         "Last Name": "Dizon",
         "Email": "j.dizon@srcb.edu.ph",
-        "Program": "BSED",
-        "Department": "Teacher Education",
+        "Program": "TEP",
+        "Department": "English",
       },
       {
         "Student ID": "2024-00104",
@@ -455,7 +416,7 @@ export default function AdminUserManagement({
         "Last Name": "Cruz",
         "Email": "s.cruz@srcb.edu.ph",
         "Program": "BSHM",
-        "Department": "Hospitality Management",
+        "Department": "N/A",
       },
     ];
 
@@ -535,7 +496,7 @@ export default function AdminUserManagement({
         ).trim() || bulkDefaultProgram;
 
         const dept = String(
-          row["Department"] || row["Collegiate Department"] || row["department"] || getDepartmentForProgram(prog)
+          row["Department"] || row["Collegiate Department"] || row["Major"] || row["major"] || row["department"] || getDepartmentForProgram(prog)
         ).trim() || getDepartmentForProgram(prog);
 
         let studentEmail = String(
@@ -732,7 +693,12 @@ export default function AdminUserManagement({
   const filteredUsers = users.filter((u) => {
     if (isProgrammeHead) {
       if (u.role !== "student") return false;
-      if ((u.programme || "").toLowerCase() !== phProgram) return false;
+      const uProg = (u.programme || "").toLowerCase().trim();
+      const isMatch =
+        uProg === phProgram ||
+        ((uProg === "it" || uProg === "bsit") && (phProgram === "it" || phProgram === "bsit")) ||
+        ((uProg === "tep" || uProg === "bsed") && (phProgram === "tep" || phProgram === "bsed"));
+      if (!isMatch) return false;
     } else {
       if (roleFilter !== "all" && u.role !== roleFilter) return false;
     }
@@ -1062,26 +1028,8 @@ export default function AdminUserManagement({
                   </div>
                 </div>
 
-                {/* Department and Programme Dropdowns */}
+                {/* Switched Placement: Programme First, then Collegiate Department */}
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem" }}>
-                  <div>
-                    <label style={{ display: "block", fontSize: "0.82rem", fontWeight: 700, marginBottom: "0.4rem", color: "#334155" }}>
-                      Collegiate Department
-                    </label>
-                    <select
-                      className="input"
-                      style={{ width: "100%" }}
-                      value={department}
-                      onChange={(e) => handleDepartmentChange(e.target.value)}
-                    >
-                      <option value="Computing Studies">Computing Studies</option>
-                      <option value="Business Administration">Business Admin</option>
-                      <option value="Teacher Education">Teacher Education</option>
-                      <option value="Hospitality Management">Hospitality Mgmt</option>
-                      <option value="Arts & Sciences">Arts & Sciences</option>
-                    </select>
-                  </div>
-
                   <div>
                     <label style={{ display: "block", fontSize: "0.82rem", fontWeight: 700, marginBottom: "0.4rem", color: "#334155" }}>
                       Programme
@@ -1090,11 +1038,29 @@ export default function AdminUserManagement({
                       className="input"
                       style={{ width: "100%" }}
                       value={programme}
-                      onChange={(e) => setProgramme(e.target.value)}
+                      onChange={(e) => handleProgrammeChange(e.target.value)}
                     >
-                      {(DEPT_PROGRAM_MAP[department] || ["BSIT"]).map((p) => (
-                        <option key={p} value={p}>
-                          {p}
+                      {PROGRAMME_OPTIONS.map((p) => (
+                        <option key={p.code} value={p.code}>
+                          {p.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label style={{ display: "block", fontSize: "0.82rem", fontWeight: 700, marginBottom: "0.4rem", color: "#334155" }}>
+                      Collegiate Department
+                    </label>
+                    <select
+                      className="input"
+                      style={{ width: "100%" }}
+                      value={department}
+                      onChange={(e) => setDepartment(e.target.value)}
+                    >
+                      {getCollegiateOptionsForProgramme(programme).map((opt) => (
+                        <option key={opt} value={opt}>
+                          {opt}
                         </option>
                       ))}
                     </select>
@@ -1232,7 +1198,7 @@ export default function AdminUserManagement({
                       <div style={{ fontWeight: 700 }}>{programme}</div>
                     </div>
                     <div>
-                      <div style={{ opacity: 0.7 }}>DEPARTMENT</div>
+                      <div style={{ opacity: 0.7 }}>COLLEGIATE / MAJOR</div>
                       <div style={{ fontWeight: 700 }}>{department}</div>
                     </div>
                   </div>
@@ -1319,40 +1285,40 @@ export default function AdminUserManagement({
             >
               <div>
                 <label style={{ display: "block", fontSize: "0.8rem", fontWeight: 700, marginBottom: "0.35rem", color: "#475569" }}>
-                  Default Academic Department
-                </label>
-                <select
-                  className="input"
-                  style={{ width: "100%", fontSize: "0.85rem" }}
-                  value={bulkDefaultDepartment}
-                  onChange={(e) => handleBulkDeptChange(e.target.value)}
-                >
-                  <option value="Computing Studies">Computing Studies</option>
-                  <option value="Business Administration">Business Admin</option>
-                  <option value="Teacher Education">Teacher Education</option>
-                  <option value="Hospitality Management">Hospitality Mgmt</option>
-                  <option value="Arts & Sciences">Arts & Sciences</option>
-                </select>
-                <span style={{ fontSize: "0.72rem", color: "#64748b" }}>Applied if row has blank department</span>
-              </div>
-
-              <div>
-                <label style={{ display: "block", fontSize: "0.8rem", fontWeight: 700, marginBottom: "0.35rem", color: "#475569" }}>
                   Default Programme
                 </label>
                 <select
                   className="input"
                   style={{ width: "100%", fontSize: "0.85rem" }}
                   value={bulkDefaultProgram}
-                  onChange={(e) => setBulkDefaultProgram(e.target.value)}
+                  onChange={(e) => handleBulkProgramChange(e.target.value)}
                 >
-                  {(DEPT_PROGRAM_MAP[bulkDefaultDepartment] || ["BSIT"]).map((p) => (
-                    <option key={p} value={p}>
-                      {p}
+                  {PROGRAMME_OPTIONS.map((p) => (
+                    <option key={p.code} value={p.code}>
+                      {p.label}
                     </option>
                   ))}
                 </select>
                 <span style={{ fontSize: "0.72rem", color: "#64748b" }}>Applied if row has blank program</span>
+              </div>
+
+              <div>
+                <label style={{ display: "block", fontSize: "0.8rem", fontWeight: 700, marginBottom: "0.35rem", color: "#475569" }}>
+                  Default Collegiate Department
+                </label>
+                <select
+                  className="input"
+                  style={{ width: "100%", fontSize: "0.85rem" }}
+                  value={bulkDefaultDepartment}
+                  onChange={(e) => setBulkDefaultDepartment(e.target.value)}
+                >
+                  {getCollegiateOptionsForProgramme(bulkDefaultProgram).map((opt) => (
+                    <option key={opt} value={opt}>
+                      {opt}
+                    </option>
+                  ))}
+                </select>
+                <span style={{ fontSize: "0.72rem", color: "#64748b" }}>Applied if row has blank department</span>
               </div>
 
               <div>
@@ -1916,9 +1882,14 @@ export default function AdminUserManagement({
                             </td>
 
                             <td style={{ padding: "0.65rem 0.75rem" }}>
-                              <span style={{ color: "#334155", fontWeight: 500 }}>
+                              <span style={{ color: "#334155", fontWeight: 700 }}>
                                 {u.programme || "General"}
                               </span>
+                              {u.department && u.department !== "N/A" && (
+                                <span style={{ fontSize: "0.74rem", color: "#64748b", marginLeft: "0.4rem" }}>
+                                  ({u.department})
+                                </span>
+                              )}
                             </td>
 
                             <td style={{ padding: "0.65rem 0.75rem" }}>

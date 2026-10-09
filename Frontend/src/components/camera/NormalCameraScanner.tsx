@@ -1,0 +1,740 @@
+// NormalCameraScanner.tsx
+// Standard OMR Sheet Camera Scanner with Manual Shutter
+// Provides a clean camera viewfinder, sheet alignment guide, tactile shutter button,
+// countdown timer, synthetic shutter click sound, flash effect, and photo review.
+
+import React, { useEffect, useRef, useState, useCallback } from 'react';
+import {
+  Camera,
+  RotateCw,
+  Zap,
+  ZapOff,
+  AlertCircle,
+  CheckCircle2,
+  Sparkles,
+  RefreshCw,
+  UploadCloud,
+  X,
+  Timer,
+  Maximize2,
+  Minimize2,
+  FileCheck,
+} from 'lucide-react';
+
+export interface NormalCameraScannerProps {
+  onCapture: (file: File) => Promise<void> | void;
+  onClose?: () => void;
+  onSwitchToUpload?: () => void;
+  onSwitchToLive?: () => void;
+  title?: string;
+  subtitle?: string;
+}
+
+export const NormalCameraScanner: React.FC<NormalCameraScannerProps> = ({
+  onCapture,
+  onClose,
+  onSwitchToUpload,
+  onSwitchToLive,
+  title = 'Standard OMR Camera',
+  subtitle = 'Position the answer sheet inside the framing guide and press the shutter button to take a photo.',
+}) => {
+  const [status, setStatus] = useState<'idle' | 'initializing' | 'ready' | 'error'>('idle');
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [errorType, setErrorType] = useState<'permission' | 'device' | 'general' | null>(null);
+
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [hasTorch, setHasTorch] = useState(false);
+  const [isTorchOn, setIsTorchOn] = useState(false);
+  const [videoDevices, setVideoDevices] = useState<MediaDeviceInfo[]>([]);
+  const [selectedDeviceId, setSelectedDeviceId] = useState<string | null>(null);
+
+  const [shutterTimer, setShutterTimer] = useState<number>(0); // 0s (instant), 2s, 3s, 5s
+  const [countdownActive, setCountdownActive] = useState<number | null>(null);
+  const [flashActive, setFlashActive] = useState(false);
+  const [isCapturing, setIsCapturing] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const [previewCaptured, setPreviewCaptured] = useState<{
+    file: File;
+    url: string;
+    width: number;
+    height: number;
+  } | null>(null);
+
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+  const startRequestIdRef = useRef<number>(0);
+  const audioCtxRef = useRef<AudioContext | null>(null);
+
+  // Play synthetic camera shutter mechanical click
+  const playShutterSound = useCallback(() => {
+    try {
+      const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+      if (!AudioCtx) return;
+      if (!audioCtxRef.current || audioCtxRef.current.state === 'closed') {
+        audioCtxRef.current = new AudioCtx();
+      }
+      const ctx = audioCtxRef.current;
+      if (ctx.state === 'suspended') {
+        ctx.resume();
+      }
+
+      const now = ctx.currentTime;
+      // 1. Initial mechanical click (high frequency chirp)
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(1400, now);
+      osc.frequency.exponentialRampToValueAtTime(320, now + 0.05);
+      gain.gain.setValueAtTime(0.3, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.06);
+
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(now);
+      osc.stop(now + 0.06);
+
+      // 2. Secondary shutter release snap
+      const osc2 = ctx.createOscillator();
+      const gain2 = ctx.createGain();
+      osc2.type = 'triangle';
+      osc2.frequency.setValueAtTime(450, now + 0.04);
+      osc2.frequency.exponentialRampToValueAtTime(120, now + 0.1);
+      gain2.gain.setValueAtTime(0.25, now + 0.04);
+      gain2.gain.exponentialRampToValueAtTime(0.001, now + 0.11);
+
+      osc2.connect(gain2);
+      gain2.connect(ctx.destination);
+      osc2.start(now + 0.04);
+      osc2.stop(now + 0.11);
+    } catch {
+      // Audio playback is optional, ignore audio context restrictions
+    }
+  }, []);
+
+  // Enumerate video devices
+  const enumerateDevices = useCallback(async () => {
+    try {
+      if (!navigator.mediaDevices?.enumerateDevices) return;
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      const videoInputs = devices.filter((d) => d.kind === 'videoinput');
+      setVideoDevices(videoInputs);
+    } catch {
+      // Ignore enumeration failure
+    }
+  }, []);
+
+  // Stop camera feed
+  const stopCamera = useCallback(() => {
+    startRequestIdRef.current++;
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((t) => t.stop());
+      streamRef.current = null;
+    }
+    if (videoRef.current) {
+      videoRef.current.srcObject = null;
+    }
+    setIsTorchOn(false);
+    setHasTorch(false);
+  }, []);
+
+  // Start camera feed
+  const startCamera = useCallback(async () => {
+    const requestId = ++startRequestIdRef.current;
+    stopCamera();
+    setStatus('initializing');
+    setErrorMessage(null);
+    setErrorType(null);
+
+    try {
+      const isMobile =
+        typeof navigator !== 'undefined' &&
+        /Android|iPhone|iPad|iPod/i.test(navigator.userAgent || '');
+
+      const videoConstraints: MediaTrackConstraints = selectedDeviceId
+        ? { deviceId: { exact: selectedDeviceId } }
+        : isMobile
+        ? {
+            facingMode: { ideal: 'environment' },
+            width: { ideal: 1920, min: 1280 },
+            height: { ideal: 1080, min: 720 },
+          }
+        : {
+            width: { ideal: 1920, min: 1280 },
+            height: { ideal: 1080, min: 720 },
+          };
+
+      let stream: MediaStream;
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({
+          audio: false,
+          video: videoConstraints,
+        });
+      } catch {
+        stream = await navigator.mediaDevices.getUserMedia({
+          audio: false,
+          video: true,
+        });
+      }
+
+      if (requestId !== startRequestIdRef.current) {
+        stream.getTracks().forEach((t) => t.stop());
+        return;
+      }
+
+      streamRef.current = stream;
+
+      // Check torch capability
+      const videoTrack = stream.getVideoTracks()[0];
+      if (videoTrack) {
+        const capabilities: any = videoTrack.getCapabilities?.() || {};
+        if (capabilities.torch) {
+          setHasTorch(true);
+        }
+      }
+
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        try {
+          await videoRef.current.play();
+        } catch (playErr: any) {
+          if (playErr.name === 'AbortError') return;
+          throw playErr;
+        }
+      }
+
+      if (requestId !== startRequestIdRef.current) {
+        stream.getTracks().forEach((t) => t.stop());
+        return;
+      }
+
+      await enumerateDevices();
+      setStatus('ready');
+    } catch (err: any) {
+      if (requestId !== startRequestIdRef.current) return;
+      stopCamera();
+      setStatus('error');
+
+      if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+        setErrorType('permission');
+        setErrorMessage('Camera access was denied. Please allow camera permissions in your browser.');
+      } else if (err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError') {
+        setErrorType('device');
+        setErrorMessage('No camera device found on this system.');
+      } else if (err.name === 'NotReadableError' || err.name === 'TrackStartError') {
+        setErrorType('device');
+        setErrorMessage('Camera is currently in use by another application.');
+      } else {
+        setErrorType('general');
+        setErrorMessage(err?.message || 'Unable to access camera.');
+      }
+    }
+  }, [enumerateDevices, selectedDeviceId, stopCamera]);
+
+  // Start camera on mount & cleanup
+  useEffect(() => {
+    startCamera();
+    return () => {
+      stopCamera();
+      if (audioCtxRef.current && audioCtxRef.current.state !== 'closed') {
+        audioCtxRef.current.close().catch(() => {});
+      }
+    };
+  }, [startCamera, stopCamera]);
+
+  // Clean up preview object URL
+  useEffect(() => {
+    return () => {
+      if (previewCaptured?.url) {
+        URL.revokeObjectURL(previewCaptured.url);
+      }
+    };
+  }, [previewCaptured]);
+
+  // Keyboard shortcut: Esc to exit fullscreen
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && isFullscreen) {
+        setIsFullscreen(false);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isFullscreen]);
+
+  // Switch camera device
+  const switchCamera = useCallback(() => {
+    if (videoDevices.length <= 1) return;
+    const currentIndex = videoDevices.findIndex((d) => d.deviceId === selectedDeviceId);
+    const nextIndex = (currentIndex + 1) % videoDevices.length;
+    const nextDevice = videoDevices[nextIndex];
+    setSelectedDeviceId(nextDevice.deviceId);
+  }, [videoDevices, selectedDeviceId]);
+
+  // Toggle torch / flashlight
+  const toggleTorch = useCallback(async () => {
+    if (!streamRef.current) return;
+    const track = streamRef.current.getVideoTracks()[0];
+    if (!track) return;
+    try {
+      const next = !isTorchOn;
+      await (track as any).applyConstraints({
+        advanced: [{ torch: next }],
+      });
+      setIsTorchOn(next);
+    } catch {
+      setHasTorch(false);
+    }
+  }, [isTorchOn]);
+
+  // Perform actual photo snap from live video stream
+  const snapPhoto = useCallback(async () => {
+    const video = videoRef.current;
+    if (!video || video.readyState < HTMLMediaElement.HAVE_CURRENT_DATA) return;
+
+    setIsCapturing(true);
+
+    // 1. Trigger Flash & Shutter Sound
+    setFlashActive(true);
+    playShutterSound();
+    setTimeout(() => setFlashActive(false), 160);
+
+    try {
+      const fullW = video.videoWidth || 1920;
+      const fullH = video.videoHeight || 1080;
+
+      const canvas = document.createElement('canvas');
+      canvas.width = fullW;
+      canvas.height = fullH;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) throw new Error('Failed to create canvas context');
+
+      // Draw full resolution frame
+      ctx.drawImage(video, 0, 0, fullW, fullH);
+
+      const blob = await new Promise<Blob | null>((resolve) =>
+        canvas.toBlob((b) => resolve(b), 'image/jpeg', 0.95)
+      );
+
+      if (!blob) throw new Error('Could not encode captured photo to JPEG');
+
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+      const file = new File([blob], `omr_sheet_snap_${timestamp}.jpg`, { type: 'image/jpeg' });
+      const previewUrl = URL.createObjectURL(blob);
+
+      setPreviewCaptured({
+        file,
+        url: previewUrl,
+        width: fullW,
+        height: fullH,
+      });
+    } catch (err: any) {
+      alert(`Could not capture photo: ${err?.message || 'Unknown error'}`);
+    } finally {
+      setIsCapturing(false);
+    }
+  }, [playShutterSound]);
+
+  // Countdown timer handler
+  useEffect(() => {
+    if (countdownActive === null) return;
+
+    if (countdownActive <= 0) {
+      setCountdownActive(null);
+      snapPhoto();
+      return;
+    }
+
+    const timerId = setTimeout(() => {
+      setCountdownActive((prev) => (prev !== null ? prev - 1 : null));
+    }, 1000);
+
+    return () => clearTimeout(timerId);
+  }, [countdownActive, snapPhoto]);
+
+  // Shutter button click
+  const handleShutterClick = () => {
+    if (isCapturing || previewCaptured || countdownActive !== null) return;
+    if (shutterTimer === 0) {
+      snapPhoto();
+    } else {
+      setCountdownActive(shutterTimer);
+    }
+  };
+
+  // Retake photo
+  const handleRetake = () => {
+    if (previewCaptured?.url) {
+      URL.revokeObjectURL(previewCaptured.url);
+    }
+    setPreviewCaptured(null);
+    setCountdownActive(null);
+    startCamera();
+  };
+
+  // Confirm and submit captured photo
+  const handleConfirmSubmit = async () => {
+    if (!previewCaptured) return;
+    setIsSubmitting(true);
+    try {
+      await onCapture(previewCaptured.file);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  return (
+    <div className={`omr-workspace-wrapper ${isFullscreen ? 'omr-fullscreen' : ''}`}>
+      {/* 1. HEADER */}
+      <div className="omr-workspace-header">
+        <div className="omr-header-left">
+          <div className="omr-title-group">
+            <div className="omr-header-icon-badge" style={{ background: '#eff6ff', color: '#1d4ed8', borderColor: '#bfdbfe' }}>
+              <Camera size={18} />
+            </div>
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                <h3 className="omr-title">{title}</h3>
+                <span
+                  style={{
+                    background: '#f1f5f9',
+                    color: '#475569',
+                    border: '1px solid #cbd5e1',
+                    borderRadius: '20px',
+                    fontSize: '0.7rem',
+                    fontWeight: 700,
+                    padding: '2px 8px',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.04em',
+                  }}
+                >
+                  Manual Shutter Mode
+                </span>
+              </div>
+              <p className="omr-subtitle">{subtitle}</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="omr-header-actions" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          {/* Quick link to Live Auto-Scanner if available */}
+          {onSwitchToLive && (
+            <button
+              type="button"
+              className="btn btn-secondary"
+              onClick={() => {
+                stopCamera();
+                onSwitchToLive();
+              }}
+              style={{
+                fontSize: '0.78rem',
+                padding: '0.4rem 0.75rem',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '5px',
+                borderRadius: '8px',
+              }}
+              title="Switch to Live Auto-Detection Scanner"
+            >
+              <Sparkles size={14} style={{ color: 'var(--primary, #28166f)' }} />
+              <span>Switch to Live Scanner</span>
+            </button>
+          )}
+
+          {/* Theater / Fullscreen Toggle */}
+          <button
+            type="button"
+            className="omr-action-btn"
+            onClick={() => setIsFullscreen(!isFullscreen)}
+            title={isFullscreen ? 'Exit Fullscreen (Esc)' : 'Expand Viewfinder'}
+          >
+            {isFullscreen ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
+          </button>
+
+          {onClose && (
+            <button
+              type="button"
+              className="omr-action-btn omr-close-btn"
+              onClick={() => {
+                stopCamera();
+                onClose();
+              }}
+              title="Close Scanner"
+            >
+              <X size={18} />
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* 2. ERROR STATE */}
+      {status === 'error' && (
+        <div className="omr-camera-error-view">
+          <div className="omr-error-card">
+            <div className="omr-error-icon-box">
+              <AlertCircle size={28} className="text-danger" />
+            </div>
+
+            <h4 className="omr-error-title">
+              {errorType === 'permission'
+                ? 'Camera Permission Needed'
+                : errorType === 'device'
+                ? 'Camera Hardware Unavailable'
+                : 'Camera Unavailable'}
+            </h4>
+
+            <p className="omr-error-desc">
+              {errorMessage || 'Unable to access your video camera device.'}
+            </p>
+
+            {errorType === 'permission' && (
+              <div className="omr-error-steps-box">
+                <strong>How to enable your camera in browser:</strong>
+                <ol>
+                  <li>Click the lock or site settings icon 🔒 next to the URL.</li>
+                  <li>Set <strong>Camera</strong> permissions to <strong>Allow</strong>.</li>
+                  <li>Click <strong>Try Again</strong> below.</li>
+                </ol>
+              </div>
+            )}
+
+            <div className="omr-error-actions">
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={startCamera}
+                style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '0.55rem 1.15rem' }}
+              >
+                <RefreshCw size={15} /> Try Again
+              </button>
+
+              {onSwitchToUpload && (
+                <button
+                  type="button"
+                  className="btn btn-primary"
+                  onClick={() => {
+                    stopCamera();
+                    onSwitchToUpload();
+                  }}
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '0.55rem 1.15rem' }}
+                >
+                  <UploadCloud size={15} /> Switch to File Upload
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 3. NORMAL CAMERA VIEWFINDER & CONTROLS */}
+      {status !== 'error' && (
+        <div className="normal-camera-container">
+          {/* VIEWFINDER SCREEN */}
+          <div className="normal-camera-viewport">
+            <video
+              ref={videoRef}
+              className="normal-camera-video"
+              playsInline
+              autoPlay
+              muted
+            />
+
+            {/* Flash Effect on Capture */}
+            {flashActive && <div className="normal-camera-flash-overlay" />}
+
+            {/* SHEET FRAMING GUIDE OVERLAY */}
+            {!previewCaptured && (
+              <div className="normal-camera-sheet-guide-container">
+                <div className="normal-camera-sheet-frame">
+                  {/* Four Corner Reticles */}
+                  <div className="normal-sheet-corner top-left" />
+                  <div className="normal-sheet-corner top-right" />
+                  <div className="normal-sheet-corner bottom-left" />
+                  <div className="normal-sheet-corner bottom-right" />
+
+                  {/* Center Subtle Crosshair */}
+                  <div className="normal-sheet-crosshair" />
+
+                  {/* Guidance Badge */}
+                  <div className="normal-sheet-guide-label">
+                    <FileCheck size={14} />
+                    <span>Align Answer Sheet inside Frame</span>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* COUNTDOWN OVERLAY */}
+            {countdownActive !== null && (
+              <div className="omr-countdown-layer">
+                <div className="omr-countdown-circle">
+                  <span className="omr-countdown-digit">{countdownActive}</span>
+                  <span className="omr-countdown-caption">Hold Steady</span>
+                </div>
+                <button
+                  type="button"
+                  className="omr-countdown-abort-btn"
+                  onClick={() => setCountdownActive(null)}
+                >
+                  <X size={14} /> Cancel
+                </button>
+              </div>
+            )}
+
+            {/* CAPTURE REVIEW MODAL / OVERLAY */}
+            {previewCaptured && (
+              <div className="omr-preview-modal-overlay">
+                <div className="omr-preview-modal-card">
+                  <div className="omr-preview-header">
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <span className="omr-preview-badge" style={{ background: '#eff6ff', color: '#1d4ed8', borderColor: '#bfdbfe' }}>
+                        <CheckCircle2 size={13} /> Photo Captured
+                      </span>
+                      <span
+                        style={{
+                          fontSize: '0.72rem',
+                          color: '#64748b',
+                          fontWeight: 700,
+                          background: '#f1f5f9',
+                          padding: '2px 8px',
+                          borderRadius: '6px',
+                        }}
+                      >
+                        {previewCaptured.width} × {previewCaptured.height} px
+                      </span>
+                    </div>
+                    <h4 className="omr-preview-title">Review Captured Sheet</h4>
+                    <p className="omr-preview-subtitle">
+                      Verify that all 4 black corner squares and student bubbles are clearly visible and in focus.
+                    </p>
+                  </div>
+
+                  <div className="omr-preview-image-box" style={{ background: '#0f172a' }}>
+                    <img
+                      src={previewCaptured.url}
+                      alt="Captured Answer Sheet"
+                      className="omr-preview-img"
+                    />
+                  </div>
+
+                  <div className="omr-preview-actions">
+                    <button
+                      type="button"
+                      className="btn btn-secondary"
+                      onClick={handleRetake}
+                      disabled={isSubmitting}
+                      style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
+                    >
+                      <RefreshCw size={15} /> Retake Photo
+                    </button>
+                    <button
+                      type="button"
+                      className="btn btn-primary"
+                      onClick={handleConfirmSubmit}
+                      disabled={isSubmitting}
+                      style={{ flex: 1.5, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
+                    >
+                      {isSubmitting ? (
+                        <>
+                          <RefreshCw size={15} className="omr-spin" /> Processing &amp; Grading...
+                        </>
+                      ) : (
+                        <>
+                          <CheckCircle2 size={15} /> Use Photo &amp; Grade Sheet
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* DEDICATED CAMERA BOTTOM CONTROL BAR */}
+          <div className="normal-camera-control-bar">
+            {/* Left Options: Timer & Torch */}
+            <div className="normal-camera-control-group left">
+              {/* Timer Delay Selector */}
+              <button
+                type="button"
+                className={`omr-bar-btn ${shutterTimer > 0 ? 'active-timer' : ''}`}
+                onClick={() => {
+                  const delays = [0, 2, 3, 5];
+                  const next = delays[(delays.indexOf(shutterTimer) + 1) % delays.length];
+                  setShutterTimer(next);
+                }}
+                title="Set shutter timer delay"
+              >
+                <Timer size={15} />
+                <span>Timer: <strong>{shutterTimer === 0 ? 'Off' : `${shutterTimer}s`}</strong></span>
+              </button>
+
+              {/* Torch / Flashlight Toggle */}
+              {hasTorch && (
+                <button
+                  type="button"
+                  className={`omr-bar-btn ${isTorchOn ? 'active-torch' : ''}`}
+                  onClick={toggleTorch}
+                  title="Toggle Flashlight"
+                >
+                  {isTorchOn ? <Zap size={15} /> : <ZapOff size={15} />}
+                  <span>Flash</span>
+                </button>
+              )}
+            </div>
+
+            {/* Center: Prominent Circular Shutter Button */}
+            <div className="normal-camera-control-group center">
+              <button
+                type="button"
+                className="normal-shutter-btn"
+                onClick={handleShutterClick}
+                disabled={isCapturing || !!previewCaptured || countdownActive !== null}
+                title={shutterTimer > 0 ? `Take picture in ${shutterTimer}s` : 'Take picture of answer sheet'}
+              >
+                <div className="normal-shutter-inner">
+                  <Camera size={24} />
+                </div>
+                {shutterTimer > 0 && (
+                  <span className="normal-shutter-timer-badge">{shutterTimer}s</span>
+                )}
+              </button>
+            </div>
+
+            {/* Right: Camera Flip & Upload Switch */}
+            <div className="normal-camera-control-group right">
+              {videoDevices.length > 1 && (
+                <button
+                  type="button"
+                  className="omr-bar-btn"
+                  onClick={switchCamera}
+                  title="Switch camera device"
+                >
+                  <RotateCw size={15} />
+                  <span>Flip Camera</span>
+                </button>
+              )}
+
+              {onSwitchToUpload && (
+                <button
+                  type="button"
+                  className="omr-bar-btn upload-opt"
+                  onClick={() => {
+                    stopCamera();
+                    onSwitchToUpload();
+                  }}
+                  title="Switch to file upload mode"
+                >
+                  <UploadCloud size={15} />
+                  <span>Upload File</span>
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default NormalCameraScanner;

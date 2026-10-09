@@ -284,33 +284,39 @@ export default function LoginPage({
 
               <div className="devtool-roles-list">
                 <div className="devtool-section-title">Select Test Persona:</div>
-                {mockUsers.map((user) => {
-                  const badge = getRoleBadge(user.role);
-                  const isSelected = selectedAuthUserId === user.id;
+                {mockUsers.length === 0 ? (
+                  <div style={{ padding: "0.75rem", fontSize: "0.8rem", color: "#64748b", textAlign: "center" }}>
+                    No mock personas loaded. Log in using your registered school credentials above.
+                  </div>
+                ) : (
+                  mockUsers.map((user) => {
+                    const badge = getRoleBadge(user.role);
+                    const isSelected = selectedAuthUserId === user.id;
 
-                  return (
-                    <button
-                      key={user.id}
-                      type="button"
-                      className={`devtool-role-card ${isSelected ? "selected" : ""}`}
-                      onClick={() => handleDevRoleClick(user)}
-                    >
-                      <div className="devtool-role-avatar">
-                        {getRoleIcon(user.role)}
-                      </div>
-                      <div className="devtool-role-info">
-                        <div className="devtool-role-name">{user.name}</div>
-                        <div className="devtool-role-email">{user.email}</div>
-                      </div>
-                      <span
-                        className="devtool-role-tag"
-                        style={{ color: badge.color, backgroundColor: badge.bg }}
+                    return (
+                      <button
+                        key={user.id}
+                        type="button"
+                        className={`devtool-role-card ${isSelected ? "selected" : ""}`}
+                        onClick={() => handleDevRoleClick(user)}
                       >
-                        {badge.label}
-                      </span>
-                    </button>
-                  );
-                })}
+                        <div className="devtool-role-avatar">
+                          {getRoleIcon(user.role)}
+                        </div>
+                        <div className="devtool-role-info">
+                          <div className="devtool-role-name">{user.name}</div>
+                          <div className="devtool-role-email">{user.email}</div>
+                        </div>
+                        <span
+                          className="devtool-role-tag"
+                          style={{ color: badge.color, backgroundColor: badge.bg }}
+                        >
+                          {badge.label}
+                        </span>
+                      </button>
+                    );
+                  })
+                )}
               </div>
             </div>
           </div>

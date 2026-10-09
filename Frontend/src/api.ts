@@ -30,6 +30,9 @@ async function handleResponse<T>(response: Response, defaultErrorMsg: string): P
   }
 
   if (!response.ok) {
+    if (response.status === 502 || response.status === 503 || response.status === 504) {
+      throw new Error('502 Bad Gateway: Python backend server on port 8000 is not running. Please start the backend server in omr_engine.');
+    }
     const detail = data?.detail || (text && text.length < 150 && !text.includes('<!DOCTYPE') ? text : null) || defaultErrorMsg;
     throw new Error(detail);
   }
