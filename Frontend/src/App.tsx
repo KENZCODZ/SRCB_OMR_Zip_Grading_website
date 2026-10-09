@@ -285,7 +285,7 @@ export default function App() {
 
   // Mobile Sidebar State
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
-  const [selectedAuthUserId, setSelectedAuthUserId] = useState(mockUsers[0].id);
+  const [selectedAuthUserId, setSelectedAuthUserId] = useState(mockUsers[0]?.id || "");
   const [loginEmail, setLoginEmail] = useState("");
   const [loginPassword, setLoginPassword] = useState("");
   const [loginError, setLoginError] = useState("");
@@ -547,9 +547,9 @@ export default function App() {
     } catch {
       if (!cacheManager.has("dashboard_summary")) {
         setDashboardSummary({
-          total_accounts: 12,
-          total_students: 4,
-          total_teachers: 4,
+          total_accounts: mockUsers.length,
+          total_students: mockUsers.filter((u) => u.role === "student").length,
+          total_teachers: mockUsers.filter((u) => u.role === "teacher").length,
           total_exams: 0,
           average_score: 0,
           total_submissions: 0,
@@ -950,12 +950,15 @@ export default function App() {
       const foundMock = mockUsers.find(
         (u) => u.email.toLowerCase() === normalizedEmail,
       );
-      if (
-        foundMock &&
-        (err.message?.includes("Failed to fetch") ||
-          err.message?.includes("NetworkError") ||
-          err.name === "TypeError")
-      ) {
+      const isBackendOffline =
+        err.message?.includes("Failed to fetch") ||
+        err.message?.includes("NetworkError") ||
+        err.message?.includes("502") ||
+        err.message?.includes("Bad Gateway") ||
+        err.message?.includes("backend server") ||
+        err.name === "TypeError";
+
+      if (foundMock && isBackendOffline) {
         const initialTab: AppTab =
           foundMock.role === "admin"
             ? "dashboard"
@@ -969,7 +972,7 @@ export default function App() {
         setCurrentUser(foundMock);
         setActiveTab(initialTab);
         setAuthMessage(
-          `Welcome back, ${foundMock.name}. Your ${foundMock.role.replace("-", " ")} workspace is ready.`,
+          `Welcome back, ${foundMock.name}. Notice: Python backend (port 8000) is offline; logged in via local administrator credentials. Start the backend in omr_engine to connect to live MySQL.`,
         );
         setLoginError("");
         return;

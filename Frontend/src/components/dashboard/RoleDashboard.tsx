@@ -53,25 +53,25 @@ const getDashboardCards = (
     return [
       {
         title: "Active Users",
-        value: summary ? summary.total_accounts.toString() : "14",
+        value: summary ? summary.total_accounts.toString() : "0",
         icon: ShieldCheck,
         subtitle: "Role Matrix",
       },
       {
         title: "Total Students",
-        value: summary ? summary.total_students.toString() : "4",
+        value: summary ? summary.total_students.toString() : "0",
         icon: GraduationCap,
         subtitle: "Enrolled",
       },
       {
         title: "Faculty Staff",
-        value: summary ? summary.total_teachers.toString() : "4",
+        value: summary ? summary.total_teachers.toString() : "0",
         icon: Users,
         subtitle: "Instructors",
       },
       {
         title: "OMR Scans",
-        value: summary ? summary.total_submissions.toString() : "324",
+        value: summary ? summary.total_submissions.toString() : "0",
         icon: Sparkles,
         subtitle: "Engine Graded",
       },
@@ -82,25 +82,25 @@ const getDashboardCards = (
     return [
       {
         title: "Total Exams",
-        value: summary ? summary.total_exams.toString() : "19",
+        value: summary ? summary.total_exams.toString() : "0",
         icon: BookOpen,
         subtitle: "Collegiate",
       },
       {
         title: "Graded Sheets",
-        value: summary ? summary.total_submissions.toString() : "3,420",
+        value: summary ? summary.total_submissions.toString() : "0",
         icon: Sparkles,
         subtitle: "Processed",
       },
       {
         title: "Collegiate Pass Rate",
-        value: "89.2%",
+        value: summary && summary.total_submissions > 0 ? `${summary.average_score}%` : "—",
         icon: Award,
         subtitle: "Threshold: 75%",
       },
       {
         title: "Collegiate Mean",
-        value: summary ? `${summary.average_score}%` : "84.3%",
+        value: summary && summary.total_submissions > 0 ? `${summary.average_score}%` : "—",
         icon: TrendingUp,
         subtitle: "Across Programs",
       },
@@ -111,25 +111,25 @@ const getDashboardCards = (
     return [
       {
         title: "Program Exams",
-        value: summary ? summary.total_exams.toString() : "8",
+        value: summary ? summary.total_exams.toString() : "0",
         icon: BookOpen,
         subtitle: "Oversight",
       },
       {
         title: "Total Submissions",
-        value: summary ? summary.total_submissions.toString() : "240",
+        value: summary ? summary.total_submissions.toString() : "0",
         icon: Sparkles,
         subtitle: "Received",
       },
       {
         title: "Program Faculty",
-        value: summary ? summary.total_teachers.toString() : "6",
+        value: summary ? summary.total_teachers.toString() : "0",
         icon: GraduationCap,
         subtitle: "Department",
       },
       {
         title: "Average Score",
-        value: summary ? `${summary.average_score}%` : "—",
+        value: summary && summary.total_submissions > 0 ? `${summary.average_score}%` : "—",
         icon: TrendingUp,
         subtitle: "Cumulative",
       },
@@ -140,25 +140,25 @@ const getDashboardCards = (
     return [
       {
         title: "Active Exams",
-        value: summary ? summary.total_exams.toString() : "6",
+        value: summary ? summary.total_exams.toString() : "0",
         icon: BookOpen,
         subtitle: "Handling",
       },
       {
         title: "Scanned Sheets",
-        value: summary ? summary.total_submissions.toString() : "324",
+        value: summary ? summary.total_submissions.toString() : "0",
         icon: Sparkles,
         subtitle: "Processed",
       },
       {
         title: "Item Analysis",
-        value: "Ready",
+        value: summary && summary.total_submissions > 0 ? "Ready" : "—",
         icon: BarChart3,
         subtitle: "OBE Reports",
       },
       {
-        title: "Feedback Posts",
-        value: "18",
+        title: "Graded Exams",
+        value: summary ? summary.total_exams.toString() : "0",
         icon: Award,
         subtitle: "Released",
       },
@@ -186,65 +186,6 @@ const getDashboardCards = (
     },
   ];
 };
-
-// Institutional Program Progress Data
-const PROGRAM_PROGRESS = [
-  {
-    program: "College of Computing (BSIT / BSCS)",
-    code: "CCS",
-    completedExams: 18,
-    totalExams: 19,
-    progress: 95,
-    gradedSheets: 912,
-    meanScore: 85.4,
-    passRate: 91,
-    status: "On Schedule",
-  },
-  {
-    program: "College of Business & Accountancy (BSBA / BSA)",
-    code: "CBA",
-    completedExams: 23,
-    totalExams: 25,
-    progress: 92,
-    gradedSheets: 1040,
-    meanScore: 83.2,
-    passRate: 88,
-    status: "On Schedule",
-  },
-  {
-    program: "College of Teacher Education (BSEd / BEEd)",
-    code: "CTE",
-    completedExams: 15,
-    totalExams: 16,
-    progress: 94,
-    gradedSheets: 680,
-    meanScore: 87.1,
-    passRate: 93,
-    status: "On Schedule",
-  },
-  {
-    program: "College of Arts & Sciences (AB Comm / BS Psych)",
-    code: "CAS",
-    completedExams: 14,
-    totalExams: 17,
-    progress: 82,
-    gradedSheets: 520,
-    meanScore: 81.8,
-    passRate: 85,
-    status: "In Progress",
-  },
-  {
-    program: "College of Engineering (BSCE)",
-    code: "COE",
-    completedExams: 12,
-    totalExams: 14,
-    progress: 86,
-    gradedSheets: 440,
-    meanScore: 82.5,
-    passRate: 86,
-    status: "In Progress",
-  },
-];
 
 
 export default function RoleDashboard({
@@ -321,6 +262,131 @@ export default function RoleDashboard({
 
     return { examsTaken, avgScore, latestScore };
   }, [user.role, studentPersonalSubs]);
+
+  // Live Institutional Program Progress computed dynamically from real database exams & submissions
+  const liveProgramProgress = useMemo(() => {
+    if (!exams || exams.length === 0) return [];
+
+    const progMap = new Map<string, {
+      program: string;
+      code: string;
+      exams: Exam[];
+    }>();
+
+    exams.forEach((exam) => {
+      const code = (exam.program || "General").trim();
+      if (!progMap.has(code)) {
+        progMap.set(code, {
+          program: code,
+          code,
+          exams: [],
+        });
+      }
+      progMap.get(code)!.exams.push(exam);
+    });
+
+    return Array.from(progMap.values()).map((item) => {
+      const examIds = new Set(item.exams.map((e) => e.id));
+      const progSubs = submissions.filter((s) => examIds.has(s.exam_id));
+      const totalExams = item.exams.length;
+
+      let completedExams = 0;
+      item.exams.forEach((e) => {
+        const hasSub = submissions.some((s) => s.exam_id === e.id);
+        if (hasSub) completedExams++;
+      });
+
+      const gradedSheets = progSubs.length;
+      let totalPassing = 0;
+      let scoreSum = 0;
+      let totalPossible = 0;
+
+      progSubs.forEach((s) => {
+        const exam = item.exams.find((e) => e.id === s.exam_id);
+        const totalItems = exam ? Object.keys(exam.answer_key || {}).length || 50 : 50;
+        const passScore = exam?.passing_score ?? Math.ceil(totalItems * 0.6);
+        if (s.score >= passScore) totalPassing++;
+        scoreSum += s.score;
+        totalPossible += totalItems;
+      });
+
+      const passRate = gradedSheets > 0 ? Math.round((totalPassing / gradedSheets) * 100) : 0;
+      const progress = totalExams > 0 ? Math.round((completedExams / totalExams) * 100) : 0;
+      const meanScore = totalPossible > 0 ? parseFloat(((scoreSum / totalPossible) * 100).toFixed(1)) : 0;
+
+      return {
+        program: `${item.code} Department`,
+        code: item.code,
+        completedExams,
+        totalExams,
+        progress,
+        gradedSheets,
+        meanScore,
+        passRate,
+        status: progress === 100 ? "Completed" : progress > 0 ? "In Progress" : "Pending",
+      };
+    });
+  }, [exams, submissions]);
+
+  // Overall examination completion rate across all actual exams
+  const overallCompletionRate = useMemo(() => {
+    if (!exams || exams.length === 0) return 0;
+    const completed = exams.filter((e) => submissions.some((s) => s.exam_id === e.id)).length;
+    return Math.round((completed / exams.length) * 100);
+  }, [exams, submissions]);
+
+  // Live Grade Distribution computed directly from actual database submissions
+  const liveGradeDistribution = useMemo(() => {
+    if (!submissions || submissions.length === 0) return null;
+
+    let superior = 0;
+    let good = 0;
+    let pass = 0;
+    let fail = 0;
+
+    submissions.forEach((s) => {
+      const exam = exams.find((e) => e.id === s.exam_id);
+      const totalItems = exam ? Object.keys(exam.answer_key || {}).length || 50 : 50;
+      const trans = calculateTransmutedGrade(s.score, totalItems);
+      const g = parseFloat(trans.grade);
+
+      if (g <= 1.75) superior++;
+      else if (g <= 2.75) good++;
+      else if (g <= 3.0) pass++;
+      else fail++;
+    });
+
+    const total = submissions.length;
+    return {
+      superiorPct: Math.round((superior / total) * 100),
+      goodPct: Math.round((good / total) * 100),
+      passPct: Math.round((pass / total) * 100),
+      failPct: Math.round((fail / total) * 100),
+      totalCount: total,
+    };
+  }, [exams, submissions]);
+
+  // Live Assessment Milestones computed directly from actual database records
+  const liveMilestones = useMemo(() => {
+    const totalSheets = submissions.length;
+    let passingCount = 0;
+
+    submissions.forEach((s) => {
+      const exam = exams.find((e) => e.id === s.exam_id);
+      const totalItems = exam ? Object.keys(exam.answer_key || {}).length || 50 : 50;
+      const passScore = exam?.passing_score ?? Math.ceil(totalItems * 0.6);
+      if (s.score >= passScore) passingCount++;
+    });
+
+    const passRate = totalSheets > 0 ? ((passingCount / totalSheets) * 100).toFixed(1) : "—";
+
+    return {
+      passRate: passRate === "—" ? "—" : `${passRate}%`,
+      sheetsScanned: totalSheets.toLocaleString(),
+      totalExams: exams.length.toString(),
+      totalStudents: summary ? summary.total_students.toString() : "0",
+    };
+  }, [exams, submissions, summary]);
 
   const cards = getDashboardCards(user, summary, studentStats);
 
@@ -411,7 +477,7 @@ export default function RoleDashboard({
                   Higher Education Programs Examination Progress
                 </h3>
                 <p style={{ margin: "0.15rem 0 0 0", fontSize: "0.78rem", color: "#64748b" }}>
-                  Real-time exam submission and grading completion rates by academic college
+                  Real-time exam submission and grading completion rates calculated from database records
                 </p>
               </div>
 
@@ -420,107 +486,113 @@ export default function RoleDashboard({
                   fontSize: "0.75rem",
                   fontWeight: 700,
                   padding: "0.25rem 0.65rem",
-                  background: "#ecfdf5",
-                  color: "#059669",
+                  background: overallCompletionRate > 0 ? "#ecfdf5" : "#f8fafc",
+                  color: overallCompletionRate > 0 ? "#059669" : "#64748b",
                   borderRadius: "20px",
-                  border: "1px solid #a7f3d0",
+                  border: `1px solid ${overallCompletionRate > 0 ? "#a7f3d0" : "#e2e8f0"}`,
                 }}
               >
-                Overall Completion: 91.4%
+                Overall Completion: {overallCompletionRate}%
               </span>
             </div>
 
-            <div style={{ display: "flex", flexDirection: "column", gap: "0.9rem" }}>
-              {PROGRAM_PROGRESS.map((prog) => (
-                <div
-                  key={prog.code}
-                  style={{
-                    padding: "0.85rem 1rem",
-                    background: "#f8fafc",
-                    border: "1px solid #e2e8f0",
-                    borderRadius: "10px",
-                    display: "flex",
-                    flexDirection: "column",
-                    gap: "0.5rem",
-                  }}
-                >
+            {liveProgramProgress.length === 0 ? (
+              <div style={{ textAlign: "center", padding: "2rem 1rem", color: "#64748b", fontSize: "0.85rem", background: "#f8fafc", borderRadius: "10px", border: "1px dashed #cbd5e1" }}>
+                No active examinations found in the database. When faculty members create exams and process OMR sheets, departmental completion progress will automatically appear here.
+              </div>
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column", gap: "0.9rem" }}>
+                {liveProgramProgress.map((prog) => (
                   <div
+                    key={prog.code}
                     style={{
+                      padding: "0.85rem 1rem",
+                      background: "#f8fafc",
+                      border: "1px solid #e2e8f0",
+                      borderRadius: "10px",
                       display: "flex",
-                      justifyContent: "space-between",
-                      alignItems: "center",
-                      flexWrap: "wrap",
+                      flexDirection: "column",
                       gap: "0.5rem",
-                    }}
-                  >
-                    <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                      <span
-                        style={{
-                          background: "var(--primary-light-surface, #f5f3ff)",
-                          color: "var(--primary, #28166f)",
-                          fontWeight: 800,
-                          fontSize: "0.72rem",
-                          padding: "0.15rem 0.45rem",
-                          borderRadius: "6px",
-                          border: "1px solid var(--primary-light-border, #ddd6fe)",
-                        }}
-                      >
-                        {prog.code}
-                      </span>
-                      <span style={{ fontSize: "0.88rem", fontWeight: 700, color: "#0f172a" }}>
-                        {prog.program}
-                      </span>
-                    </div>
-
-                    <div style={{ display: "flex", alignItems: "center", gap: "1.25rem", fontSize: "0.78rem" }}>
-                      <span style={{ color: "#64748b" }}>
-                        Exams: <strong>{prog.completedExams} / {prog.totalExams}</strong>
-                      </span>
-                      <span style={{ color: "#64748b" }}>
-                        Sheets: <strong>{prog.gradedSheets.toLocaleString()}</strong>
-                      </span>
-                      <span style={{ color: prog.passRate >= 85 ? "#059669" : "#d97706", fontWeight: 700 }}>
-                        Pass Rate: {prog.passRate}%
-                      </span>
-                      <span
-                        style={{
-                          fontWeight: 800,
-                          color: "var(--primary, #28166f)",
-                          minWidth: "42px",
-                          textAlign: "right",
-                        }}
-                      >
-                        {prog.progress}%
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Progress Bar */}
-                  <div
-                    style={{
-                      width: "100%",
-                      height: "8px",
-                      background: "#e2e8f0",
-                      borderRadius: "6px",
-                      overflow: "hidden",
                     }}
                   >
                     <div
                       style={{
-                        width: `${prog.progress}%`,
-                        height: "100%",
-                        background:
-                          prog.progress >= 90
-                            ? "linear-gradient(90deg, var(--primary, #28166f), #22c55e)"
-                            : "linear-gradient(90deg, var(--primary, #28166f), #3b82f6)",
-                        borderRadius: "6px",
-                        transition: "width 0.4s ease",
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                        flexWrap: "wrap",
+                        gap: "0.5rem",
                       }}
-                    />
+                    >
+                      <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                        <span
+                          style={{
+                            background: "var(--primary-light-surface, #f5f3ff)",
+                            color: "var(--primary, #28166f)",
+                            fontWeight: 800,
+                            fontSize: "0.72rem",
+                            padding: "0.15rem 0.45rem",
+                            borderRadius: "6px",
+                            border: "1px solid var(--primary-light-border, #ddd6fe)",
+                          }}
+                        >
+                          {prog.code}
+                        </span>
+                        <span style={{ fontSize: "0.88rem", fontWeight: 700, color: "#0f172a" }}>
+                          {prog.program}
+                        </span>
+                      </div>
+
+                      <div style={{ display: "flex", alignItems: "center", gap: "1.25rem", fontSize: "0.78rem" }}>
+                        <span style={{ color: "#64748b" }}>
+                          Exams: <strong>{prog.completedExams} / {prog.totalExams}</strong>
+                        </span>
+                        <span style={{ color: "#64748b" }}>
+                          Sheets: <strong>{prog.gradedSheets.toLocaleString()}</strong>
+                        </span>
+                        <span style={{ color: prog.passRate >= 75 ? "#059669" : "#d97706", fontWeight: 700 }}>
+                          Pass Rate: {prog.passRate}%
+                        </span>
+                        <span
+                          style={{
+                            fontWeight: 800,
+                            color: "var(--primary, #28166f)",
+                            minWidth: "42px",
+                            textAlign: "right",
+                          }}
+                        >
+                          {prog.progress}%
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Progress Bar */}
+                    <div
+                      style={{
+                        width: "100%",
+                        height: "8px",
+                        background: "#e2e8f0",
+                        borderRadius: "6px",
+                        overflow: "hidden",
+                      }}
+                    >
+                      <div
+                        style={{
+                          width: `${prog.progress}%`,
+                          height: "100%",
+                          background:
+                            prog.progress >= 90
+                              ? "linear-gradient(90deg, var(--primary, #28166f), #22c55e)"
+                              : "linear-gradient(90deg, var(--primary, #28166f), #3b82f6)",
+                          borderRadius: "6px",
+                          transition: "width 0.4s ease",
+                        }}
+                      />
+                    </div>
                   </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* SECTION 2: INSTITUTIONAL GRADE DISTRIBUTION & BENCHMARK BAR */}
@@ -544,50 +616,56 @@ export default function RoleDashboard({
                 Collegiate Grade Distribution
               </h3>
               <p style={{ margin: "0.15rem 0 1rem 0", fontSize: "0.78rem", color: "#64748b" }}>
-                Philippine Higher Education 1.00 – 5.00 grading scale distribution
+                Philippine Higher Education 1.00 – 5.00 grading scale calculated from real submissions
               </p>
 
-              <div style={{ display: "flex", flexDirection: "column", gap: "0.65rem" }}>
-                <div>
-                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.78rem", marginBottom: "3px" }}>
-                    <span style={{ fontWeight: 600, color: "#0f172a" }}>1.00 – 1.75 (Outstanding / Superior)</span>
-                    <span style={{ fontWeight: 700, color: "#059669" }}>38%</span>
-                  </div>
-                  <div style={{ width: "100%", height: "7px", background: "#e2e8f0", borderRadius: "4px", overflow: "hidden" }}>
-                    <div style={{ width: "38%", height: "100%", background: "#059669", borderRadius: "4px" }} />
-                  </div>
+              {!liveGradeDistribution ? (
+                <div style={{ textAlign: "center", padding: "1.5rem 0.5rem", color: "#64748b", fontSize: "0.8rem", background: "#f8fafc", borderRadius: "8px", border: "1px dashed #cbd5e1" }}>
+                  No graded test papers found. Transmutation breakdown will dynamically populate as exam sheets are scanned.
                 </div>
+              ) : (
+                <div style={{ display: "flex", flexDirection: "column", gap: "0.65rem" }}>
+                  <div>
+                    <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.78rem", marginBottom: "3px" }}>
+                      <span style={{ fontWeight: 600, color: "#0f172a" }}>1.00 – 1.75 (Outstanding / Superior)</span>
+                      <span style={{ fontWeight: 700, color: "#059669" }}>{liveGradeDistribution.superiorPct}%</span>
+                    </div>
+                    <div style={{ width: "100%", height: "7px", background: "#e2e8f0", borderRadius: "4px", overflow: "hidden" }}>
+                      <div style={{ width: `${liveGradeDistribution.superiorPct}%`, height: "100%", background: "#059669", borderRadius: "4px" }} />
+                    </div>
+                  </div>
 
-                <div>
-                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.78rem", marginBottom: "3px" }}>
-                    <span style={{ fontWeight: 600, color: "#0f172a" }}>2.00 – 2.75 (Very Good / Good)</span>
-                    <span style={{ fontWeight: 700, color: "var(--primary, #28166f)" }}>44%</span>
+                  <div>
+                    <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.78rem", marginBottom: "3px" }}>
+                      <span style={{ fontWeight: 600, color: "#0f172a" }}>2.00 – 2.75 (Very Good / Good)</span>
+                      <span style={{ fontWeight: 700, color: "var(--primary, #28166f)" }}>{liveGradeDistribution.goodPct}%</span>
+                    </div>
+                    <div style={{ width: "100%", height: "7px", background: "#e2e8f0", borderRadius: "4px", overflow: "hidden" }}>
+                      <div style={{ width: `${liveGradeDistribution.goodPct}%`, height: "100%", background: "var(--primary, #28166f)", borderRadius: "4px" }} />
+                    </div>
                   </div>
-                  <div style={{ width: "100%", height: "7px", background: "#e2e8f0", borderRadius: "4px", overflow: "hidden" }}>
-                    <div style={{ width: "44%", height: "100%", background: "var(--primary, #28166f)", borderRadius: "4px" }} />
-                  </div>
-                </div>
 
-                <div>
-                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.78rem", marginBottom: "3px" }}>
-                    <span style={{ fontWeight: 600, color: "#0f172a" }}>3.00 (Passing Benchmark)</span>
-                    <span style={{ fontWeight: 700, color: "#d97706" }}>12%</span>
+                  <div>
+                    <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.78rem", marginBottom: "3px" }}>
+                      <span style={{ fontWeight: 600, color: "#0f172a" }}>3.00 (Passing Benchmark)</span>
+                      <span style={{ fontWeight: 700, color: "#d97706" }}>{liveGradeDistribution.passPct}%</span>
+                    </div>
+                    <div style={{ width: "100%", height: "7px", background: "#e2e8f0", borderRadius: "4px", overflow: "hidden" }}>
+                      <div style={{ width: `${liveGradeDistribution.passPct}%`, height: "100%", background: "#d97706", borderRadius: "4px" }} />
+                    </div>
                   </div>
-                  <div style={{ width: "100%", height: "7px", background: "#e2e8f0", borderRadius: "4px", overflow: "hidden" }}>
-                    <div style={{ width: "12%", height: "100%", background: "#d97706", borderRadius: "4px" }} />
-                  </div>
-                </div>
 
-                <div>
-                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.78rem", marginBottom: "3px" }}>
-                    <span style={{ fontWeight: 600, color: "#0f172a" }}>5.00 (Academic Remediation)</span>
-                    <span style={{ fontWeight: 700, color: "#ef4444" }}>6%</span>
-                  </div>
-                  <div style={{ width: "100%", height: "7px", background: "#e2e8f0", borderRadius: "4px", overflow: "hidden" }}>
-                    <div style={{ width: "6%", height: "100%", background: "#ef4444", borderRadius: "4px" }} />
+                  <div>
+                    <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.78rem", marginBottom: "3px" }}>
+                      <span style={{ fontWeight: 600, color: "#0f172a" }}>5.00 (Academic Remediation)</span>
+                      <span style={{ fontWeight: 700, color: "#ef4444" }}>{liveGradeDistribution.failPct}%</span>
+                    </div>
+                    <div style={{ width: "100%", height: "7px", background: "#e2e8f0", borderRadius: "4px", overflow: "hidden" }}>
+                      <div style={{ width: `${liveGradeDistribution.failPct}%`, height: "100%", background: "#ef4444", borderRadius: "4px" }} />
+                    </div>
                   </div>
                 </div>
-              </div>
+              )}
             </div>
 
             {/* Turnaround & Quality Oversight */}
@@ -603,26 +681,26 @@ export default function RoleDashboard({
                 Assessment Quality Milestones
               </h3>
               <p style={{ margin: "0.15rem 0 1rem 0", fontSize: "0.78rem", color: "#64748b" }}>
-                Institutional evaluation standards and processing metrics
+                Live evaluation standards and processing metrics from database
               </p>
 
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem" }}>
                 <div style={{ padding: "0.85rem", background: "#f8fafc", borderRadius: "10px", border: "1px solid #e2e8f0" }}>
                   <div style={{ display: "flex", alignItems: "center", gap: "0.4rem", color: "#059669", marginBottom: "0.2rem" }}>
                     <CheckCircle2 size={16} />
-                    <span style={{ fontSize: "0.72rem", fontWeight: 700, textTransform: "uppercase" }}>CHED Compliant</span>
+                    <span style={{ fontSize: "0.72rem", fontWeight: 700, textTransform: "uppercase" }}>Overall Pass Rate</span>
                   </div>
-                  <div style={{ fontSize: "1.3rem", fontWeight: 800, color: "#0f172a" }}>89.2%</div>
-                  <div style={{ fontSize: "0.7rem", color: "#64748b" }}>≥ 75.0% threshold</div>
+                  <div style={{ fontSize: "1.3rem", fontWeight: 800, color: "#0f172a" }}>{liveMilestones.passRate}</div>
+                  <div style={{ fontSize: "0.7rem", color: "#64748b" }}>≥ 75.0% passing benchmark</div>
                 </div>
 
                 <div style={{ padding: "0.85rem", background: "#f8fafc", borderRadius: "10px", border: "1px solid #e2e8f0" }}>
                   <div style={{ display: "flex", alignItems: "center", gap: "0.4rem", color: "var(--primary, #28166f)", marginBottom: "0.2rem" }}>
                     <Clock size={16} />
-                    <span style={{ fontSize: "0.72rem", fontWeight: 700, textTransform: "uppercase" }}>Turnaround</span>
+                    <span style={{ fontSize: "0.72rem", fontWeight: 700, textTransform: "uppercase" }}>OMR Processing</span>
                   </div>
-                  <div style={{ fontSize: "1.3rem", fontWeight: 800, color: "#0f172a" }}>1.2 Days</div>
-                  <div style={{ fontSize: "0.7rem", color: "#64748b" }}>Exam to publication</div>
+                  <div style={{ fontSize: "1.3rem", fontWeight: 800, color: "#0f172a" }}>Real-time</div>
+                  <div style={{ fontSize: "0.7rem", color: "#64748b" }}>Optical mark recognition</div>
                 </div>
 
                 <div style={{ padding: "0.85rem", background: "#f8fafc", borderRadius: "10px", border: "1px solid #e2e8f0" }}>
@@ -630,17 +708,17 @@ export default function RoleDashboard({
                     <Sparkles size={16} />
                     <span style={{ fontSize: "0.72rem", fontWeight: 700, textTransform: "uppercase" }}>Sheets Scanned</span>
                   </div>
-                  <div style={{ fontSize: "1.3rem", fontWeight: 800, color: "#0f172a" }}>3,420</div>
-                  <div style={{ fontSize: "0.7rem", color: "#64748b" }}>Bubble sheets graded</div>
+                  <div style={{ fontSize: "1.3rem", fontWeight: 800, color: "#0f172a" }}>{liveMilestones.sheetsScanned}</div>
+                  <div style={{ fontSize: "0.7rem", color: "#64748b" }}>Graded answer sheets</div>
                 </div>
 
                 <div style={{ padding: "0.85rem", background: "#f8fafc", borderRadius: "10px", border: "1px solid #e2e8f0" }}>
                   <div style={{ display: "flex", alignItems: "center", gap: "0.4rem", color: "#059669", marginBottom: "0.2rem" }}>
                     <Award size={16} />
-                    <span style={{ fontSize: "0.72rem", fontWeight: 700, textTransform: "uppercase" }}>OBE Items</span>
+                    <span style={{ fontSize: "0.72rem", fontWeight: 700, textTransform: "uppercase" }}>Total Exams</span>
                   </div>
-                  <div style={{ fontSize: "1.3rem", fontWeight: 800, color: "#0f172a" }}>94.6%</div>
-                  <div style={{ fontSize: "0.7rem", color: "#64748b" }}>Valid discrimination</div>
+                  <div style={{ fontSize: "1.3rem", fontWeight: 800, color: "#0f172a" }}>{liveMilestones.totalExams}</div>
+                  <div style={{ fontSize: "0.7rem", color: "#64748b" }}>Configured examinations</div>
                 </div>
               </div>
             </div>
