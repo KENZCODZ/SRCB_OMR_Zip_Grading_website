@@ -60,6 +60,7 @@ export const NormalCameraScanner: React.FC<NormalCameraScannerProps> = ({
     width: number;
     height: number;
   } | null>(null);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -128,7 +129,11 @@ export const NormalCameraScanner: React.FC<NormalCameraScannerProps> = ({
   const stopCamera = useCallback(() => {
     startRequestIdRef.current++;
     if (streamRef.current) {
-      streamRef.current.getTracks().forEach((t) => t.stop());
+      streamRef.current.getTracks().forEach((t) => {
+        try {
+          t.stop();
+        } catch {}
+      });
       streamRef.current = null;
     }
     if (videoRef.current) {
@@ -138,45 +143,99 @@ export const NormalCameraScanner: React.FC<NormalCameraScannerProps> = ({
     setHasTorch(false);
   }, []);
 
-  // Start camera feed
+  // Start camera feed with robust fallback constraints
   const startCamera = useCallback(async () => {
-    const requestId = ++startRequestIdRef.current;
+    // Stop any existing stream FIRST, before generating the new requestId
     stopCamera();
+    const requestId = ++startRequestIdRef.current;
     setStatus('initializing');
     setErrorMessage(null);
     setErrorType(null);
 
     try {
+      if (!navigator?.mediaDevices?.getUserMedia) {
+        setStatus('error');
+        setErrorType('device');
+        setErrorMessage(
+          window.isSecureContext === false
+            ? 'Camera access requires a secure origin (HTTPS or localhost). Please open this site via http://localhost:5173.'
+            : 'Camera API (navigator.mediaDevices.getUserMedia) is not supported in this browser.'
+        );
+        return;
+      }
+
       const isMobile =
         typeof navigator !== 'undefined' &&
         /Android|iPhone|iPad|iPod/i.test(navigator.userAgent || '');
 
-      const videoConstraints: MediaTrackConstraints = selectedDeviceId
-        ? { deviceId: { exact: selectedDeviceId } }
-        : isMobile
-        ? {
-            facingMode: { ideal: 'environment' },
-            width: { ideal: 1920, min: 1280 },
-            height: { ideal: 1080, min: 720 },
-          }
-        : {
-            width: { ideal: 1920, min: 1280 },
-            height: { ideal: 1080, min: 720 },
-          };
-
-      let stream: MediaStream;
-      try {
-        stream = await navigator.mediaDevices.getUserMedia({
+      // Multi-tier constraint candidates: High Res -> Medium Res -> Any Video
+      const constraintCandidates: MediaStreamConstraints[] = [
+        ...(selectedDeviceId
+          ? [
+              {
+                audio: false,
+                video: {
+                  deviceId: { exact: selectedDeviceId },
+                  width: { ideal: 1920 },
+                  height: { ideal: 1080 },
+                },
+              },
+              {
+                audio: false,
+                video: { deviceId: { exact: selectedDeviceId } },
+              },
+            ]
+          : []),
+        {
           audio: false,
-          video: videoConstraints,
-        });
-      } catch {
-        stream = await navigator.mediaDevices.getUserMedia({
+          video: isMobile
+            ? {
+                facingMode: { ideal: 'environment' },
+                width: { ideal: 1920 },
+                height: { ideal: 1080 },
+              }
+            : {
+                width: { ideal: 1920 },
+                height: { ideal: 1080 },
+              },
+        },
+        {
+          audio: false,
+          video: isMobile
+            ? { facingMode: { ideal: 'environment' } }
+            : { width: { ideal: 1280 }, height: { ideal: 720 } },
+        },
+        {
+          audio: false,
+          video: { width: { ideal: 640 }, height: { ideal: 480 } },
+        },
+        {
           audio: false,
           video: true,
-        });
+        },
+      ];
+
+      let stream: MediaStream | null = null;
+      let lastError: any = null;
+
+      for (const candidate of constraintCandidates) {
+        try {
+          stream = await navigator.mediaDevices.getUserMedia(candidate);
+          if (stream) break;
+        } catch (err: any) {
+          lastError = err;
+          // If explicitly denied by user, stop cascade immediately
+          if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+            throw err;
+          }
+        }
       }
 
+      if (!stream) {
+        throw lastError || new Error('Could not establish connection with camera device.');
+      }
+
+      // Check if another request superceded this one while awaiting
       if (requestId !== startRequestIdRef.current) {
         stream.getTracks().forEach((t) => t.stop());
         return;
@@ -193,13 +252,17 @@ export const NormalCameraScanner: React.FC<NormalCameraScannerProps> = ({
         }
       }
 
+      // Attach stream to video element
       if (videoRef.current) {
-        videoRef.current.srcObject = stream;
+        const video = videoRef.current;
+        video.srcObject = stream;
+        video.muted = true;
         try {
-          await videoRef.current.play();
+          await video.play();
         } catch (playErr: any) {
-          if (playErr.name === 'AbortError') return;
-          throw playErr;
+          if (playErr.name !== 'AbortError') {
+            console.warn('Video play warning:', playErr);
+          }
         }
       }
 
@@ -220,10 +283,10 @@ export const NormalCameraScanner: React.FC<NormalCameraScannerProps> = ({
         setErrorMessage('Camera access was denied. Please allow camera permissions in your browser.');
       } else if (err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError') {
         setErrorType('device');
-        setErrorMessage('No camera device found on this system.');
+        setErrorMessage('No camera device found on this system. Please connect a webcam or use File Upload.');
       } else if (err.name === 'NotReadableError' || err.name === 'TrackStartError') {
         setErrorType('device');
-        setErrorMessage('Camera is currently in use by another application.');
+        setErrorMessage('Camera is currently in use by another application. Please close other camera apps and retry.');
       } else {
         setErrorType('general');
         setErrorMessage(err?.message || 'Unable to access camera.');
@@ -290,7 +353,13 @@ export const NormalCameraScanner: React.FC<NormalCameraScannerProps> = ({
   // Perform actual photo snap from live video stream
   const snapPhoto = useCallback(async () => {
     const video = videoRef.current;
-    if (!video || video.readyState < HTMLMediaElement.HAVE_CURRENT_DATA) return;
+    if (!video) return;
+
+    // Check if video is loaded and ready
+    if (video.readyState < 2 && (!video.videoWidth || !video.videoHeight)) {
+      alert('Camera is still loading. Please wait for the video preview to display before taking a photo.');
+      return;
+    }
 
     setIsCapturing(true);
 
@@ -300,8 +369,8 @@ export const NormalCameraScanner: React.FC<NormalCameraScannerProps> = ({
     setTimeout(() => setFlashActive(false), 160);
 
     try {
-      const fullW = video.videoWidth || 1920;
-      const fullH = video.videoHeight || 1080;
+      const fullW = video.videoWidth || 1280;
+      const fullH = video.videoHeight || 720;
 
       const canvas = document.createElement('canvas');
       canvas.width = fullW;
@@ -354,7 +423,7 @@ export const NormalCameraScanner: React.FC<NormalCameraScannerProps> = ({
 
   // Shutter button click
   const handleShutterClick = () => {
-    if (isCapturing || previewCaptured || countdownActive !== null) return;
+    if (status !== 'ready' || isCapturing || previewCaptured || countdownActive !== null) return;
     if (shutterTimer === 0) {
       snapPhoto();
     } else {
@@ -368,6 +437,7 @@ export const NormalCameraScanner: React.FC<NormalCameraScannerProps> = ({
       URL.revokeObjectURL(previewCaptured.url);
     }
     setPreviewCaptured(null);
+    setSubmitError(null);
     setCountdownActive(null);
     startCamera();
   };
@@ -376,8 +446,21 @@ export const NormalCameraScanner: React.FC<NormalCameraScannerProps> = ({
   const handleConfirmSubmit = async () => {
     if (!previewCaptured) return;
     setIsSubmitting(true);
+    setSubmitError(null);
     try {
       await onCapture(previewCaptured.file);
+      if (previewCaptured?.url) {
+        URL.revokeObjectURL(previewCaptured.url);
+      }
+      setPreviewCaptured(null);
+      if (onClose) {
+        onClose();
+      }
+    } catch (err: any) {
+      setSubmitError(
+        err?.message ||
+          'Grading failed. Ensure all 4 black corner squares of the standard ZipGrade 50-item answer sheet are flat and clearly visible in the frame.'
+      );
     } finally {
       setIsSubmitting(false);
     }
@@ -491,7 +574,7 @@ export const NormalCameraScanner: React.FC<NormalCameraScannerProps> = ({
               <div className="omr-error-steps-box">
                 <strong>How to enable your camera in browser:</strong>
                 <ol>
-                  <li>Click the lock or site settings icon 🔒 next to the URL.</li>
+                  <li>Click the camera or lock icon 🔒 next to the URL in your browser address bar.</li>
                   <li>Set <strong>Camera</strong> permissions to <strong>Allow</strong>.</li>
                   <li>Click <strong>Try Again</strong> below.</li>
                 </ol>
@@ -531,19 +614,49 @@ export const NormalCameraScanner: React.FC<NormalCameraScannerProps> = ({
         <div className="normal-camera-container">
           {/* VIEWFINDER SCREEN */}
           <div className="normal-camera-viewport">
+            {/* Live Video Element */}
             <video
               ref={videoRef}
               className="normal-camera-video"
               playsInline
               autoPlay
               muted
+              onLoadedMetadata={() => {
+                if (videoRef.current) {
+                  videoRef.current.play().catch(() => {});
+                }
+              }}
             />
+
+            {/* Connecting Spinner / Initializing Banner */}
+            {status === 'initializing' && (
+              <div
+                style={{
+                  position: 'absolute',
+                  inset: 0,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  background: 'rgba(7, 11, 20, 0.88)',
+                  color: '#ffffff',
+                  zIndex: 20,
+                  gap: '0.75rem',
+                }}
+              >
+                <RefreshCw size={32} className="omr-spin" style={{ color: '#818cf8' }} />
+                <span style={{ fontSize: '0.95rem', fontWeight: 700 }}>Starting Camera Feed...</span>
+                <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>
+                  Please grant camera permission if prompted by browser
+                </span>
+              </div>
+            )}
 
             {/* Flash Effect on Capture */}
             {flashActive && <div className="normal-camera-flash-overlay" />}
 
             {/* SHEET FRAMING GUIDE OVERLAY */}
-            {!previewCaptured && (
+            {!previewCaptured && status === 'ready' && (
               <div className="normal-camera-sheet-guide-container">
                 <div className="normal-camera-sheet-frame">
                   {/* Four Corner Reticles */}
@@ -617,6 +730,34 @@ export const NormalCameraScanner: React.FC<NormalCameraScannerProps> = ({
                     />
                   </div>
 
+                  {submitError && (
+                    <div
+                      style={{
+                        padding: '0.75rem 1rem',
+                        background: '#fef2f2',
+                        border: '1px solid #fecaca',
+                        borderRadius: '10px',
+                        color: '#b91c1c',
+                        fontSize: '0.8rem',
+                        lineHeight: 1.45,
+                        display: 'flex',
+                        alignItems: 'flex-start',
+                        gap: '8px',
+                      }}
+                    >
+                      <AlertCircle size={16} style={{ color: '#ef4444', flexShrink: 0, marginTop: '2px' }} />
+                      <div>
+                        <strong style={{ color: '#991b1b', display: 'block', marginBottom: '2px' }}>
+                          Grading Failed (400 Bad Request)
+                        </strong>
+                        <span>{submitError}</span>
+                        <div style={{ marginTop: '5px', fontSize: '0.74rem', color: '#64748b' }}>
+                          Tip: The OMR engine requires all 4 black corner squares of the standard ZipGrade 50-item answer sheet to be completely visible, straight, and uncropped.
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
                   <div className="omr-preview-actions">
                     <button
                       type="button"
@@ -689,8 +830,14 @@ export const NormalCameraScanner: React.FC<NormalCameraScannerProps> = ({
                 type="button"
                 className="normal-shutter-btn"
                 onClick={handleShutterClick}
-                disabled={isCapturing || !!previewCaptured || countdownActive !== null}
-                title={shutterTimer > 0 ? `Take picture in ${shutterTimer}s` : 'Take picture of answer sheet'}
+                disabled={status !== 'ready' || isCapturing || !!previewCaptured || countdownActive !== null}
+                title={
+                  status !== 'ready'
+                    ? 'Camera is loading...'
+                    : shutterTimer > 0
+                    ? `Take picture in ${shutterTimer}s`
+                    : 'Take picture of answer sheet'
+                }
               >
                 <div className="normal-shutter-inner">
                   <Camera size={24} />

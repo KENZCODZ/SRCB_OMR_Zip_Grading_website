@@ -699,6 +699,7 @@ export default function App() {
     setLatestGradeResult(null);
 
     let successCount = 0;
+    let lastError: Error | null = null;
 
     for (let i = 0; i < files.length; i++) {
       setGradingProgress({ current: i + 1, total: files.length });
@@ -707,6 +708,7 @@ export default function App() {
         setLatestGradeResult(res);
         successCount++;
       } catch (err: any) {
+        lastError = err;
         addToast("error", `Failed to grade ${files[i].name}: ${err.message}`);
       }
     }
@@ -717,6 +719,8 @@ export default function App() {
     if (successCount > 0) {
       addToast("success", `Successfully graded ${successCount} sheet(s).`);
       triggerConfetti();
+    } else if (lastError) {
+      throw lastError;
     }
   };
 

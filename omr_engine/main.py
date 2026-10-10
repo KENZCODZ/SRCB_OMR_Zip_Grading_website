@@ -631,16 +631,22 @@ async def grade_exam_sheet(
         raise HTTPException(status_code=400, detail="Could not decode the uploaded image file.")
 
     # 5. Process through OMR engine
-    num_items = exam.get("num_items") or len(exam.get("answer_key", {})) or 50
+    raw_key = exam.get("answer_key", {}) or {}
+    configured_items = exam.get("num_items")
+    if raw_key and (not configured_items or configured_items > len(raw_key)):
+        num_items = len(raw_key)
+    else:
+        num_items = configured_items or len(raw_key) or 50
+
     answer_key = {
-        str(q): ans
-        for q, ans in exam.get("answer_key", {}).items()
+        str(q): str(ans).strip().upper()
+        for q, ans in raw_key.items()
         if 1 <= int(q) <= num_items
     }
-    if len(answer_key) != num_items:
+    if not answer_key:
         raise HTTPException(
             status_code=400,
-            detail=f"Exam is configured for {num_items} items, but the stored answer key contains {len(answer_key)} valid entries.",
+            detail="Exam has no valid answer key entries configured.",
         )
 
     try:
@@ -666,9 +672,11 @@ async def grade_exam_sheet(
     return {
         "submission_id": submission_id,
         "student_id": results["student_id"],
+        "key": results.get("key"),
         "score": results["score"],
         "total_questions": results["total_questions"],
         "answers": results["answers"],
+        "template_type": results.get("template_type"),
         "overlay_image": results["overlay_base64"],
     }
 
@@ -710,6 +718,7 @@ async def extract_sheet_answers(
     return {
         "student_id": results["student_id"],
         "answers": results["answers"],
+        "template_type": results.get("template_type"),
         "overlay_image": results["overlay_base64"],
     }
 

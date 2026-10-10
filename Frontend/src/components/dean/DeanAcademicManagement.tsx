@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import {
   GraduationCap,
   Users,
@@ -29,77 +29,66 @@ interface DeanAcademicManagementProps {
   addToast: (type: "success" | "error" | "info", message: string) => void;
 }
 
-interface DepartmentData {
-  id: string;
-  name: string;
-  code: string;
-  chair: string;
-  chairEmail: string;
-  programmes: string[];
-  students: number;
-  faculty: number;
-  activeExams: number;
-  passingRate: number;
-  obeCompliance: number;
-  status: "Exemplary" | "Compliant" | "Review Required";
-}
-
-const DEPARTMENTS: DepartmentData[] = [
+const INSTITUTIONAL_DEPARTMENTS = [
   {
-    id: "dept-cc",
-    name: "College of Computing & Information Studies",
-    code: "CCIS",
-    chair: "Prof. Ramon Cruz",
-    chairEmail: "ramon.cruz@srcb.edu.ph",
-    programmes: ["BS in Information Technology (BSIT)", "BS in Computer Science (BSCS)"],
-    students: 620,
-    faculty: 24,
-    activeExams: 38,
-    passingRate: 88.4,
-    obeCompliance: 96,
-    status: "Exemplary",
+    id: "dept-ccs",
+    name: "College of Computing Studies",
+    code: "CCS",
+    chair: "Prof. Elaine Cruz",
+    chairEmail: "programme-head@srcb.edu.ph",
+    programmes: [
+      "BS in Information Technology (BSIT)",
+      "BS in Computer Science (BSCS)",
+    ],
+    matchPrograms: ["BSIT", "BSCS", "IT", "Computing Studies"],
   },
   {
     id: "dept-cba",
-    name: "College of Business & Accountancy",
+    name: "College of Business Administration",
     code: "CBA",
-    chair: "Dr. Ernesto Valenzuela",
-    chairEmail: "e.valenzuela@srcb.edu.ph",
-    programmes: ["BS in Business Administration (BSBA)", "BS in Accountancy (BSA)"],
-    students: 780,
-    faculty: 32,
-    activeExams: 44,
-    passingRate: 83.2,
-    obeCompliance: 92,
-    status: "Compliant",
+    chair: "Business Administration Leadership",
+    chairEmail: "business@srcb.edu.ph",
+    programmes: ["BS in Business Administration (BSBA)"],
+    matchPrograms: ["BSBA", "Business Administration"],
   },
   {
     id: "dept-cte",
     name: "College of Teacher Education",
     code: "CTE",
-    chair: "Dr. Teresa Manalo",
-    chairEmail: "t.manalo@srcb.edu.ph",
-    programmes: ["Bachelor of Secondary Education (BSEd)", "Bachelor of Elementary Education (BEEd)"],
-    students: 510,
-    faculty: 22,
-    activeExams: 28,
-    passingRate: 89.1,
-    obeCompliance: 94,
-    status: "Exemplary",
+    chair: "Teacher Education Leadership",
+    chairEmail: "education@srcb.edu.ph",
+    programmes: [
+      "Teacher Education Program (TEP)",
+      "Bachelor of Elementary Education (BEED)",
+    ],
+    matchPrograms: ["TEP", "BEED", "BSED", "Teacher Education"],
+  },
+  {
+    id: "dept-chm",
+    name: "College of Hospitality Management",
+    code: "CHM",
+    chair: "Hospitality Management Leadership",
+    chairEmail: "hospitality@srcb.edu.ph",
+    programmes: ["BS in Hospitality Management (BSHM)"],
+    matchPrograms: ["BSHM", "Hospitality Management"],
+  },
+  {
+    id: "dept-ccje",
+    name: "College of Criminal Justice Education",
+    code: "CCJE",
+    chair: "Criminology Department Leadership",
+    chairEmail: "criminology@srcb.edu.ph",
+    programmes: ["BS in Criminology (BSCRIM)"],
+    matchPrograms: ["BSCRIM", "Criminology"],
   },
   {
     id: "dept-cas",
     name: "College of Arts & Sciences",
     code: "CAS",
-    chair: "Prof. Gabriel Mendoza",
-    chairEmail: "g.mendoza@srcb.edu.ph",
-    programmes: ["AB in Communication", "BS in Applied Psychology"],
-    students: 274,
-    faculty: 18,
-    activeExams: 18,
-    passingRate: 81.5,
-    obeCompliance: 88,
-    status: "Compliant",
+    chair: "Arts & Sciences Leadership",
+    chairEmail: "arts.sciences@srcb.edu.ph",
+    programmes: ["Arts & Sciences General Education"],
+    matchPrograms: ["Arts & Sciences", "General"],
   },
 ];
 
@@ -113,10 +102,77 @@ export default function DeanAcademicManagement({
   const [searchQuery, setSearchQuery] = useState("");
   const [exporting, setExporting] = useState(false);
 
-  const totalStudents = summary?.total_students || 2184;
-  const totalFaculty = summary?.total_teachers || 96;
-  const totalExamsCount = summary?.total_exams || exams.length || 128;
-  const avgScore = summary?.average_score ? `${summary.average_score}%` : "84.6%";
+  // Derive real statistics strictly from database summary & props with NO fake numbers
+  const totalStudents = summary ? summary.total_students : roster.length;
+  const totalFaculty = summary ? summary.total_teachers : 0;
+  const totalExamsCount = summary ? summary.total_exams : exams.length;
+
+  const avgScore = useMemo(() => {
+    if (summary && summary.total_submissions > 0) {
+      return `${summary.average_score}%`;
+    }
+    if (submissions.length > 0) {
+      let scoreSum = 0;
+      let totalPossible = 0;
+      submissions.forEach((s) => {
+        const exam = exams.find((e) => e.id === s.exam_id);
+        const totalItems = exam ? Object.keys(exam.answer_key || {}).length || 50 : 50;
+        scoreSum += s.score;
+        totalPossible += totalItems;
+      });
+      return totalPossible > 0 ? `${((scoreSum / totalPossible) * 100).toFixed(1)}%` : "—";
+    }
+    return "—";
+  }, [summary, exams, submissions]);
+
+  // Dynamically compute real departmental progress and exam metrics
+  const liveDepartments = useMemo(() => {
+    return INSTITUTIONAL_DEPARTMENTS.map((dept) => {
+      const deptExams = exams.filter((e) => {
+        const prog = (e.program || "").toLowerCase();
+        return dept.matchPrograms.some((p) => prog.includes(p.toLowerCase()));
+      });
+
+      const examIds = new Set(deptExams.map((e) => e.id));
+      const deptSubs = submissions.filter((s) => examIds.has(s.exam_id));
+
+      const activeExams = deptExams.length;
+      const gradedSheets = deptSubs.length;
+
+      let passCount = 0;
+      deptSubs.forEach((s) => {
+        const exam = deptExams.find((e) => e.id === s.exam_id);
+        const totalItems = exam ? Object.keys(exam.answer_key || {}).length || 50 : 50;
+        const passScore = exam?.passing_score ?? Math.ceil(totalItems * 0.6);
+        if (s.score >= passScore) passCount++;
+      });
+
+      const passingRate = gradedSheets > 0 ? Math.round((passCount / gradedSheets) * 100) : null;
+
+      // Count roster students matching this department
+      const deptStudents = roster.filter((r) => {
+        const course = (r.course_section || "").toLowerCase();
+        return dept.matchPrograms.some((p) => course.includes(p.toLowerCase()));
+      }).length;
+
+      const status: "Exemplary" | "Compliant" | "Pending Data" =
+        passingRate === null
+          ? "Pending Data"
+          : passingRate >= 90
+          ? "Exemplary"
+          : "Compliant";
+
+      return {
+        ...dept,
+        students: deptStudents,
+        activeExams,
+        gradedSheets,
+        passingRate,
+        obeCompliance: passingRate !== null ? passingRate : null,
+        status,
+      };
+    });
+  }, [exams, submissions, roster]);
 
   const handleExportDatabase = async () => {
     setExporting(true);
@@ -130,13 +186,17 @@ export default function DeanAcademicManagement({
     }
   };
 
-  const filteredDepartments = DEPARTMENTS.filter((d) => {
-    const matchesSearch =
-      d.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      d.code.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      d.chair.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesSearch;
-  });
+  const filteredDepartments = useMemo(() => {
+    if (!searchQuery.trim()) return liveDepartments;
+    const q = searchQuery.toLowerCase();
+    return liveDepartments.filter(
+      (d) =>
+        d.name.toLowerCase().includes(q) ||
+        d.code.toLowerCase().includes(q) ||
+        d.chair.toLowerCase().includes(q) ||
+        d.programmes.some((p) => p.toLowerCase().includes(q))
+    );
+  }, [liveDepartments, searchQuery]);
 
   return (
     <div style={{ display: "grid", gap: "1.5rem" }}>
@@ -171,7 +231,7 @@ export default function DeanAcademicManagement({
               {totalStudents.toLocaleString()}
             </div>
             <div style={{ fontSize: "0.74rem", color: "#64748b", marginTop: "0.3rem" }}>
-              Across 4 Academic Divisions
+              Enrolled students in database
             </div>
           </div>
           <div style={{ width: "42px", height: "42px", borderRadius: "10px", background: "var(--primary-light-surface, #f5f3ff)", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--primary, #28166f)", flexShrink: 0 }}>
@@ -199,10 +259,10 @@ export default function DeanAcademicManagement({
               Faculty Members
             </div>
             <div style={{ fontSize: "1.55rem", fontWeight: 800, color: "#0f172a", lineHeight: 1.1, fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
-              {totalFaculty}
+              {totalFaculty.toLocaleString()}
             </div>
             <div style={{ fontSize: "0.74rem", color: "#64748b", marginTop: "0.3rem" }}>
-              Instructors & Department Chairs
+              Registered instructors & staff
             </div>
           </div>
           <div style={{ width: "42px", height: "42px", borderRadius: "10px", background: "#f0fdf4", display: "flex", alignItems: "center", justifyContent: "center", color: "#16a34a", flexShrink: 0 }}>
@@ -230,10 +290,10 @@ export default function DeanAcademicManagement({
               Collegiate Exams
             </div>
             <div style={{ fontSize: "1.55rem", fontWeight: 800, color: "#0f172a", lineHeight: 1.1, fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
-              {totalExamsCount}
+              {totalExamsCount.toLocaleString()}
             </div>
             <div style={{ fontSize: "0.74rem", color: "#64748b", marginTop: "0.3rem" }}>
-              Active Graded Batches
+              Active examination sets
             </div>
           </div>
           <div style={{ width: "42px", height: "42px", borderRadius: "10px", background: "#fef3c7", display: "flex", alignItems: "center", justifyContent: "center", color: "#d97706", flexShrink: 0 }}>
@@ -260,7 +320,7 @@ export default function DeanAcademicManagement({
             <div style={{ fontSize: "0.76rem", fontWeight: 700, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: "0.25rem" }}>
               Institutional Mean
             </div>
-            <div style={{ fontSize: "1.55rem", fontWeight: 800, color: "#10b981", lineHeight: 1.1, fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+            <div style={{ fontSize: "1.55rem", fontWeight: 800, color: avgScore !== "—" ? "#10b981" : "#64748b", lineHeight: 1.1, fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
               {avgScore}
             </div>
             <div style={{ fontSize: "0.74rem", color: "#64748b", marginTop: "0.3rem" }}>
@@ -299,7 +359,7 @@ export default function DeanAcademicManagement({
             />
             <input
               type="text"
-              placeholder="Search department, faculty..."
+              placeholder="Search department, leadership, program..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="input"
@@ -360,8 +420,7 @@ export default function DeanAcademicManagement({
               cursor: exporting ? "not-allowed" : "pointer",
               boxShadow: "0 1px 2px rgba(0, 0, 0, 0.03)",
               transition: "all 0.2s ease",
-              flexShrink: "0",
-
+              flexShrink: 0,
             }}
           >
             <FileSpreadsheet size={17} />
@@ -371,232 +430,241 @@ export default function DeanAcademicManagement({
 
       {/* COLLEGIATE DEPARTMENTS GRID */}
       <div style={{ display: "grid", gap: "1.25rem" }}>
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(440px, 1fr))",
-              gap: "1.25rem",
-            }}
-          >
-            {filteredDepartments.map((dept) => {
-              const collegeAccent =
-                dept.code === "CCIS"
-                  ? { bar: "linear-gradient(90deg, #6366f1, #818cf8)", border: "#c7d2fe", bg: "#eef2ff", text: "#4338ca" }
-                  : dept.code === "CBA"
-                  ? { bar: "linear-gradient(90deg, #10b981, #34d399)", border: "#a7f3d0", bg: "#ecfdf5", text: "#065f46" }
-                  : dept.code === "CTE"
-                  ? { bar: "linear-gradient(90deg, #f59e0b, #fbbf24)", border: "#fde68a", bg: "#fffbeb", text: "#92400e" }
-                  : { bar: "linear-gradient(90deg, #0284c7, #38bdf8)", border: "#bae6fd", bg: "#f0f9ff", text: "#0369a1" };
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(440px, 1fr))",
+            gap: "1.25rem",
+          }}
+        >
+          {filteredDepartments.map((dept) => {
+            const collegeAccent =
+              dept.code === "CCS"
+                ? { bar: "linear-gradient(90deg, #6366f1, #818cf8)", border: "#c7d2fe", bg: "#eef2ff", text: "#4338ca" }
+                : dept.code === "CBA"
+                ? { bar: "linear-gradient(90deg, #10b981, #34d399)", border: "#a7f3d0", bg: "#ecfdf5", text: "#065f46" }
+                : dept.code === "CTE"
+                ? { bar: "linear-gradient(90deg, #f59e0b, #fbbf24)", border: "#fde68a", bg: "#fffbeb", text: "#92400e" }
+                : dept.code === "CHM"
+                ? { bar: "linear-gradient(90deg, #ec4899, #f472b6)", border: "#fbcfe8", bg: "#fdf2f8", text: "#9d174d" }
+                : dept.code === "CCJE"
+                ? { bar: "linear-gradient(90deg, #64748b, #94a3b8)", border: "#cbd5e1", bg: "#f8fafc", text: "#334155" }
+                : { bar: "linear-gradient(90deg, #0284c7, #38bdf8)", border: "#bae6fd", bg: "#f0f9ff", text: "#0369a1" };
 
-              const chairInitials = dept.chair
-                .replace(/^(Dr\.|Prof\.|Ms\.|Mr\.)\s+/i, "")
-                .split(/\s+/)
-                .slice(0, 2)
-                .map((n) => n[0])
-                .join("")
-                .toUpperCase();
+            const chairInitials = dept.chair
+              .replace(/^(Dr\.|Prof\.|Ms\.|Mr\.)\s+/i, "")
+              .split(/\s+/)
+              .slice(0, 2)
+              .map((n) => n[0])
+              .join("")
+              .toUpperCase();
 
-              return (
-                <div
-                  key={dept.id}
-                  className="card"
-                  style={{
-                    background: "#ffffff",
-                    border: "1px solid #e2e8f0",
-                    borderRadius: "16px",
-                    padding: "1.5rem",
-                    display: "flex",
-                    flexDirection: "column",
-                    justifyContent: "space-between",
-                    boxShadow: "0 2px 10px rgba(0,0,0,0.03)",
-                    position: "relative",
-                    overflow: "hidden",
-                    transition: "transform 0.2s ease, box-shadow 0.2s ease",
-                  }}
-                >
-                  <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: "4px", background: collegeAccent.bar }} />
+            return (
+              <div
+                key={dept.id}
+                className="card"
+                style={{
+                  background: "#ffffff",
+                  border: "1px solid #e2e8f0",
+                  borderRadius: "16px",
+                  padding: "1.5rem",
+                  display: "flex",
+                  flexDirection: "column",
+                  justifyContent: "space-between",
+                  boxShadow: "0 2px 10px rgba(0,0,0,0.03)",
+                  position: "relative",
+                  overflow: "hidden",
+                  transition: "transform 0.2s ease, box-shadow 0.2s ease",
+                }}
+              >
+                <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: "4px", background: collegeAccent.bar }} />
 
-                  <div>
-                    <div
-                      style={{
-                        display: "flex",
-                        justifyContent: "space-between",
-                        alignItems: "flex-start",
-                        marginBottom: "1rem",
-                        gap: "0.75rem",
-                      }}
-                    >
-                      <div>
-                        <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", flexWrap: "wrap", marginBottom: "0.35rem" }}>
-                          <span
-                            style={{
-                              background: collegeAccent.bg,
-                              color: collegeAccent.text,
-                              fontSize: "0.74rem",
-                              fontWeight: 800,
-                              padding: "0.2rem 0.6rem",
-                              borderRadius: "6px",
-                              border: `1px solid ${collegeAccent.border}`,
-                              letterSpacing: "0.03em",
-                            }}
-                          >
-                            {dept.code}
-                          </span>
-                          <span
-                            className={`badge ${
-                              dept.status === "Exemplary"
-                                ? "badge-success"
-                                : dept.status === "Compliant"
-                                ? "badge-info"
-                                : "badge-warning"
-                            }`}
-                            style={{
-                              fontSize: "0.72rem",
-                              fontWeight: 700,
-                              display: "inline-flex",
-                              alignItems: "center",
-                              gap: "0.3rem",
-                            }}
-                          >
-                            <span
-                              style={{
-                                width: "6px",
-                                height: "6px",
-                                borderRadius: "50%",
-                                background: dept.status === "Exemplary" ? "#10b981" : dept.status === "Compliant" ? "#0284c7" : "#f59e0b",
-                              }}
-                            />
-                            {dept.status}
-                          </span>
-                        </div>
-                        <h3
+                <div>
+                  <div
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "flex-start",
+                      marginBottom: "1rem",
+                      gap: "0.75rem",
+                    }}
+                  >
+                    <div>
+                      <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", flexWrap: "wrap", marginBottom: "0.35rem" }}>
+                        <span
                           style={{
-                            margin: 0,
-                            fontSize: "1.15rem",
+                            background: collegeAccent.bg,
+                            color: collegeAccent.text,
+                            fontSize: "0.74rem",
                             fontWeight: 800,
-                            color: "#0f172a",
-                            fontFamily: "'Plus Jakarta Sans', sans-serif",
-                            letterSpacing: "-0.01em",
-                            lineHeight: 1.3,
+                            padding: "0.2rem 0.6rem",
+                            borderRadius: "6px",
+                            border: `1px solid ${collegeAccent.border}`,
+                            letterSpacing: "0.03em",
                           }}
                         >
-                          {dept.name}
-                        </h3>
+                          {dept.code}
+                        </span>
+                        <span
+                          className={`badge ${
+                            dept.status === "Exemplary"
+                              ? "badge-success"
+                              : dept.status === "Compliant"
+                              ? "badge-info"
+                              : "badge-warning"
+                          }`}
+                          style={{
+                            fontSize: "0.72rem",
+                            fontWeight: 700,
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: "0.3rem",
+                          }}
+                        >
+                          <span
+                            style={{
+                              width: "6px",
+                              height: "6px",
+                              borderRadius: "50%",
+                              background:
+                                dept.status === "Exemplary"
+                                  ? "#10b981"
+                                  : dept.status === "Compliant"
+                                  ? "#0284c7"
+                                  : "#f59e0b",
+                            }}
+                          />
+                          {dept.status}
+                        </span>
                       </div>
-                    </div>
-
-                    <div
-                      style={{
-                        padding: "0.85rem 1rem",
-                        background: "#f8fafc",
-                        border: "1px solid #e2e8f0",
-                        borderRadius: "12px",
-                        marginBottom: "1rem",
-                        fontSize: "0.82rem",
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "0.85rem",
-                      }}
-                    >
-                      <div
+                      <h3
                         style={{
-                          width: "38px",
-                          height: "38px",
-                          borderRadius: "50%",
-                          background: "var(--primary-light-surface, #f5f3ff)",
-                          color: "var(--primary, #28166f)",
-                          border: "1px solid var(--primary-light-border, #ddd6fe)",
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
+                          margin: 0,
+                          fontSize: "1.15rem",
                           fontWeight: 800,
-                          fontSize: "0.82rem",
-                          flexShrink: 0,
+                          color: "#0f172a",
+                          fontFamily: "'Plus Jakarta Sans', sans-serif",
+                          letterSpacing: "-0.01em",
+                          lineHeight: 1.3,
                         }}
                       >
-                        {chairInitials}
-                      </div>
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ color: "#64748b", fontSize: "0.72rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.03em" }}>
-                          Academic Leadership & Chair
-                        </div>
-                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "0.25rem", marginTop: "0.15rem" }}>
-                          <strong style={{ color: "#0f172a", fontSize: "0.88rem" }}>{dept.chair}</strong>
-                          <span style={{ color: "#64748b", fontSize: "0.76rem" }}>{dept.chairEmail}</span>
-                        </div>
-                      </div>
+                        {dept.name}
+                      </h3>
                     </div>
+                  </div>
 
-                    <div style={{ marginBottom: "1.1rem" }}>
-                      <div style={{ color: "#64748b", fontSize: "0.74rem", marginBottom: "0.45rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.03em" }}>
-                        Degree Programmes Under College:
+                  <div
+                    style={{
+                      padding: "0.85rem 1rem",
+                      background: "#f8fafc",
+                      border: "1px solid #e2e8f0",
+                      borderRadius: "12px",
+                      marginBottom: "1rem",
+                      fontSize: "0.82rem",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "0.85rem",
+                    }}
+                  >
+                    <div
+                      style={{
+                        width: "38px",
+                        height: "38px",
+                        borderRadius: "50%",
+                        background: "var(--primary-light-surface, #f5f3ff)",
+                        color: "var(--primary, #28166f)",
+                        border: "1px solid var(--primary-light-border, #ddd6fe)",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        fontWeight: 800,
+                        fontSize: "0.82rem",
+                        flexShrink: 0,
+                      }}
+                    >
+                      {chairInitials}
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ color: "#64748b", fontSize: "0.72rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.03em" }}>
+                        Academic Leadership & Chair
                       </div>
-                      <div style={{ display: "flex", flexDirection: "column", gap: "0.35rem" }}>
-                        {dept.programmes.map((prog) => (
-                          <div
-                            key={prog}
-                            style={{
-                              fontSize: "0.82rem",
-                              color: "#334155",
-                              display: "flex",
-                              alignItems: "center",
-                              gap: "0.45rem",
-                              background: "#ffffff",
-                              padding: "0.35rem 0.6rem",
-                              borderRadius: "8px",
-                              border: "1px solid #f1f5f9",
-                            }}
-                          >
-                            <ChevronRight size={13} color="var(--primary, #28166f)" style={{ flexShrink: 0 }} />
-                            <span style={{ fontWeight: 500 }}>{prog}</span>
-                          </div>
-                        ))}
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "0.25rem", marginTop: "0.15rem" }}>
+                        <strong style={{ color: "#0f172a", fontSize: "0.88rem" }}>{dept.chair}</strong>
+                        <span style={{ color: "#64748b", fontSize: "0.76rem" }}>{dept.chairEmail}</span>
                       </div>
                     </div>
                   </div>
 
-                  <div>
-                    <div
-                      style={{
-                        display: "grid",
-                        gridTemplateColumns: "repeat(4, 1fr)",
-                        gap: "0.5rem",
-                        paddingTop: "0.95rem",
-                        borderTop: "1px solid #e2e8f0",
-                        textAlign: "center",
-                      }}
-                    >
-                      <div style={{ padding: "0.45rem 0.25rem", background: "#f8fafc", borderRadius: "8px", border: "1px solid #f1f5f9" }}>
-                        <div style={{ fontSize: "0.7rem", color: "#64748b", fontWeight: 600 }}>Students</div>
-                        <div style={{ fontWeight: 800, fontSize: "1rem", marginTop: "0.15rem", color: "#0f172a", fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
-                          {dept.students}
+                  <div style={{ marginBottom: "1.1rem" }}>
+                    <div style={{ color: "#64748b", fontSize: "0.74rem", marginBottom: "0.45rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.03em" }}>
+                      Degree Programmes Under College:
+                    </div>
+                    <div style={{ display: "flex", flexDirection: "column", gap: "0.35rem" }}>
+                      {dept.programmes.map((prog) => (
+                        <div
+                          key={prog}
+                          style={{
+                            fontSize: "0.82rem",
+                            color: "#334155",
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "0.45rem",
+                            background: "#ffffff",
+                            padding: "0.35rem 0.6rem",
+                            borderRadius: "8px",
+                            border: "1px solid #f1f5f9",
+                          }}
+                        >
+                          <ChevronRight size={13} color="var(--primary, #28166f)" style={{ flexShrink: 0 }} />
+                          <span style={{ fontWeight: 500 }}>{prog}</span>
                         </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                <div>
+                  <div
+                    style={{
+                      display: "grid",
+                      gridTemplateColumns: "repeat(4, 1fr)",
+                      gap: "0.5rem",
+                      paddingTop: "0.95rem",
+                      borderTop: "1px solid #e2e8f0",
+                      textAlign: "center",
+                    }}
+                  >
+                    <div style={{ padding: "0.45rem 0.25rem", background: "#f8fafc", borderRadius: "8px", border: "1px solid #f1f5f9" }}>
+                      <div style={{ fontSize: "0.7rem", color: "#64748b", fontWeight: 600 }}>Active Exams</div>
+                      <div style={{ fontWeight: 800, fontSize: "1rem", marginTop: "0.15rem", color: "#0f172a", fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+                        {dept.activeExams}
                       </div>
-                      <div style={{ padding: "0.45rem 0.25rem", background: "#f8fafc", borderRadius: "8px", border: "1px solid #f1f5f9" }}>
-                        <div style={{ fontSize: "0.7rem", color: "#64748b", fontWeight: 600 }}>Faculty</div>
-                        <div style={{ fontWeight: 800, fontSize: "1rem", marginTop: "0.15rem", color: "#0f172a", fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
-                          {dept.faculty}
-                        </div>
+                    </div>
+                    <div style={{ padding: "0.45rem 0.25rem", background: "#f8fafc", borderRadius: "8px", border: "1px solid #f1f5f9" }}>
+                      <div style={{ fontSize: "0.7rem", color: "#64748b", fontWeight: 600 }}>Graded Sheets</div>
+                      <div style={{ fontWeight: 800, fontSize: "1rem", marginTop: "0.15rem", color: "#0f172a", fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+                        {dept.gradedSheets.toLocaleString()}
                       </div>
-                      <div style={{ padding: "0.45rem 0.25rem", background: "#ecfdf5", borderRadius: "8px", border: "1px solid #a7f3d0" }}>
-                        <div style={{ fontSize: "0.7rem", color: "#065f46", fontWeight: 700 }}>Pass Rate</div>
-                        <div style={{ fontWeight: 800, fontSize: "1rem", color: "#059669", marginTop: "0.15rem", fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
-                          {dept.passingRate}%
-                        </div>
+                    </div>
+                    <div style={{ padding: "0.45rem 0.25rem", background: "#ecfdf5", borderRadius: "8px", border: "1px solid #a7f3d0" }}>
+                      <div style={{ fontSize: "0.7rem", color: "#065f46", fontWeight: 700 }}>Pass Rate</div>
+                      <div style={{ fontWeight: 800, fontSize: "1rem", color: dept.passingRate !== null ? "#059669" : "#64748b", marginTop: "0.15rem", fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+                        {dept.passingRate !== null ? `${dept.passingRate}%` : "—"}
                       </div>
-                      <div style={{ padding: "0.45rem 0.25rem", background: "var(--primary-light-surface, #f5f3ff)", borderRadius: "8px", border: "1px solid var(--primary-light-border, #ddd6fe)" }}>
-                        <div style={{ fontSize: "0.7rem", color: "var(--primary, #28166f)", fontWeight: 700 }}>OBE QA</div>
-                        <div style={{ fontWeight: 800, fontSize: "1rem", color: "var(--primary, #28166f)", marginTop: "0.15rem", fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
-                          {dept.obeCompliance}%
-                        </div>
+                    </div>
+                    <div style={{ padding: "0.45rem 0.25rem", background: "var(--primary-light-surface, #f5f3ff)", borderRadius: "8px", border: "1px solid var(--primary-light-border, #ddd6fe)" }}>
+                      <div style={{ fontSize: "0.7rem", color: "var(--primary, #28166f)", fontWeight: 700 }}>Roster</div>
+                      <div style={{ fontWeight: 800, fontSize: "1rem", color: "var(--primary, #28166f)", marginTop: "0.15rem", fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+                        {dept.students > 0 ? dept.students : "—"}
                       </div>
                     </div>
                   </div>
                 </div>
-              );
-            })}
-          </div>
+              </div>
+            );
+          })}
         </div>
+      </div>
     </div>
   );
 }

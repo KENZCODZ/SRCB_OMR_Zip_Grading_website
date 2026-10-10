@@ -1,10 +1,9 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import {
   TrendingUp,
   Download,
   FileSpreadsheet,
   Award,
-
   ShieldCheck,
 } from "lucide-react";
 import type { AuthUser, Exam, Submission, StudentRosterEntry } from "../../types";
@@ -26,46 +25,42 @@ interface DeanReportsAnalyticsProps {
   addToast: (type: "success" | "error" | "info", message: string) => void;
 }
 
-const DEPARTMENT_METRICS = [
+const INSTITUTIONAL_COLLEGES = [
   {
-    name: "College of Computing & Information Studies (CCIS)",
-    code: "CCIS",
-    exams: 38,
-    sheets: 620,
-    meanScore: 88.4,
-    passRate: 91.2,
-    obeStatus: "Exemplary (0.42 Index)",
-    accreditation: "Level III Re-accredited",
+    name: "College of Computing Studies",
+    code: "CCS",
+    programs: ["BSIT", "BSCS", "IT", "Computing Studies"],
+    accreditation: "Candidate Status / Level I",
   },
   {
-    name: "College of Business & Accountancy (CBA)",
+    name: "College of Business Administration",
     code: "CBA",
-    exams: 44,
-    sheets: 780,
-    meanScore: 83.2,
-    passRate: 86.8,
-    obeStatus: "Compliant (0.38 Index)",
-    accreditation: "Level II Accredited",
+    programs: ["BSBA", "Business Administration"],
+    accreditation: "Candidate Status / Level I",
   },
   {
-    name: "College of Teacher Education (CTE)",
+    name: "College of Teacher Education",
     code: "CTE",
-    exams: 28,
-    sheets: 510,
-    meanScore: 89.1,
-    passRate: 93.4,
-    obeStatus: "Exemplary (0.46 Index)",
-    accreditation: "Center of Development",
+    programs: ["TEP", "BEED", "BSED", "Teacher Education"],
+    accreditation: "Candidate Status / Level I",
   },
   {
-    name: "College of Arts & Sciences (CAS)",
+    name: "College of Hospitality Management",
+    code: "CHM",
+    programs: ["BSHM", "Hospitality Management"],
+    accreditation: "Candidate Status / Level I",
+  },
+  {
+    name: "College of Criminal Justice Education",
+    code: "CCJE",
+    programs: ["BSCRIM", "Criminology"],
+    accreditation: "Candidate Status / Level I",
+  },
+  {
+    name: "College of Arts & Sciences",
     code: "CAS",
-    exams: 18,
-    sheets: 274,
-    meanScore: 81.5,
-    passRate: 84.1,
-    obeStatus: "Compliant (0.35 Index)",
-    accreditation: "Level II Accredited",
+    programs: ["Arts & Sciences", "AB Comm", "General"],
+    accreditation: "Candidate Status / Level I",
   },
 ];
 
@@ -78,7 +73,87 @@ export default function DeanReportsAnalytics({
 }: DeanReportsAnalyticsProps) {
   const [downloading, setDownloading] = useState(false);
 
-  const avgInstitutionalScore = summary?.average_score ? `${summary.average_score}%` : "84.6%";
+  // Overall metrics computed directly from real database submissions
+  const overallMetrics = useMemo(() => {
+    const totalSheets = submissions.length;
+    let scoreSum = 0;
+    let totalPossible = 0;
+    let passCount = 0;
+
+    submissions.forEach((s) => {
+      const exam = exams.find((e) => e.id === s.exam_id);
+      const totalItems = exam ? Object.keys(exam.answer_key || {}).length || 50 : 50;
+      const passScore = exam?.passing_score ?? Math.ceil(totalItems * 0.6);
+      if (s.score >= passScore) passCount++;
+      scoreSum += s.score;
+      totalPossible += totalItems;
+    });
+
+    const meanScore =
+      summary?.average_score !== undefined && summary.total_submissions > 0
+        ? summary.average_score
+        : totalPossible > 0
+        ? parseFloat(((scoreSum / totalPossible) * 100).toFixed(1))
+        : null;
+
+    const passRate = totalSheets > 0 ? Math.round((passCount / totalSheets) * 100) : null;
+
+    return {
+      meanScore,
+      passRate,
+      totalSheets,
+    };
+  }, [exams, submissions, summary]);
+
+  // Real departmental breakdown dynamically aggregated from database exams & submissions
+  const departmentMetrics = useMemo(() => {
+    return INSTITUTIONAL_COLLEGES.map((college) => {
+      const collegeExams = exams.filter((e) => {
+        const prog = (e.program || "").toLowerCase();
+        return college.programs.some((p) => prog.includes(p.toLowerCase()));
+      });
+
+      const examIds = new Set(collegeExams.map((e) => e.id));
+      const collegeSubs = submissions.filter((s) => examIds.has(s.exam_id));
+
+      const examCount = collegeExams.length;
+      const sheetCount = collegeSubs.length;
+
+      let scoreSum = 0;
+      let totalPossible = 0;
+      let passCount = 0;
+
+      collegeSubs.forEach((s) => {
+        const exam = collegeExams.find((e) => e.id === s.exam_id);
+        const totalItems = exam ? Object.keys(exam.answer_key || {}).length || 50 : 50;
+        const passScore = exam?.passing_score ?? Math.ceil(totalItems * 0.6);
+        if (s.score >= passScore) passCount++;
+        scoreSum += s.score;
+        totalPossible += totalItems;
+      });
+
+      const meanScore = totalPossible > 0 ? parseFloat(((scoreSum / totalPossible) * 100).toFixed(1)) : null;
+      const passRate = sheetCount > 0 ? Math.round((passCount / sheetCount) * 100) : null;
+
+      const obeStatus =
+        passRate === null
+          ? "Pending Data"
+          : passRate >= 90
+          ? "Exemplary"
+          : passRate >= 75
+          ? "Compliant"
+          : "Needs Review";
+
+      return {
+        ...college,
+        exams: examCount,
+        sheets: sheetCount,
+        meanScore,
+        passRate,
+        obeStatus,
+      };
+    });
+  }, [exams, submissions]);
 
   const handleExportCompleteDb = () => {
     setDownloading(true);
@@ -94,7 +169,7 @@ export default function DeanReportsAnalytics({
 
   const handleExportBatchExams = () => {
     try {
-      exportCompleteDatabaseExcel(exams, submissions, roster, { groupBy: 'exam_type' });
+      exportCompleteDatabaseExcel(exams, submissions, roster, { groupBy: "exam_type" });
       addToast("success", "CHED Curricular Batch Summary exported (.xlsx)");
     } catch {
       addToast("error", "Failed to export batch exams.");
@@ -123,15 +198,35 @@ export default function DeanReportsAnalytics({
         >
           <div style={{ display: "flex", justifyContent: "space-between", color: "#64748b", marginBottom: "0.5rem" }}>
             <span style={{ fontSize: "0.85rem", fontWeight: 600 }}>Overall Mean Score</span>
-            <div style={{ width: "32px", height: "32px", borderRadius: "8px", background: "var(--primary-light-surface, #f5f3ff)", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--primary, #28166f)" }}>
+            <div
+              style={{
+                width: "32px",
+                height: "32px",
+                borderRadius: "8px",
+                background: "var(--primary-light-surface, #f5f3ff)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                color: "var(--primary, #28166f)",
+              }}
+            >
               <TrendingUp size={17} />
             </div>
           </div>
           <div style={{ fontSize: "1.8rem", fontWeight: 800, color: "#0f172a" }}>
-            {avgInstitutionalScore}
+            {overallMetrics.meanScore !== null ? `${overallMetrics.meanScore}%` : "—"}
           </div>
-          <div style={{ fontSize: "0.75rem", color: "#10b981", marginTop: "0.2rem", fontWeight: 600 }}>
-            +9.6% above CHED 75% baseline requirement
+          <div
+            style={{
+              fontSize: "0.75rem",
+              color: overallMetrics.meanScore !== null ? (overallMetrics.meanScore >= 75 ? "#10b981" : "#d97706") : "#64748b",
+              marginTop: "0.2rem",
+              fontWeight: 600,
+            }}
+          >
+            {overallMetrics.meanScore !== null
+              ? `${overallMetrics.meanScore >= 75 ? `+${(overallMetrics.meanScore - 75).toFixed(1)}% above` : `${(75 - overallMetrics.meanScore).toFixed(1)}% below`} CHED 75% baseline requirement`
+              : "No student submissions recorded yet"}
           </div>
         </div>
 
@@ -147,15 +242,28 @@ export default function DeanReportsAnalytics({
         >
           <div style={{ display: "flex", justifyContent: "space-between", color: "#64748b", marginBottom: "0.5rem" }}>
             <span style={{ fontSize: "0.85rem", fontWeight: 600 }}>Collegiate Passing Rate</span>
-            <div style={{ width: "32px", height: "32px", borderRadius: "8px", background: "var(--primary-light-surface, #f5f3ff)", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--primary, #28166f)" }}>
+            <div
+              style={{
+                width: "32px",
+                height: "32px",
+                borderRadius: "8px",
+                background: "var(--primary-light-surface, #f5f3ff)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                color: "var(--primary, #28166f)",
+              }}
+            >
               <Award size={17} />
             </div>
           </div>
           <div style={{ fontSize: "1.8rem", fontWeight: 800, color: "var(--primary, #28166f)" }}>
-            88.8%
+            {overallMetrics.passRate !== null ? `${overallMetrics.passRate}%` : "—"}
           </div>
           <div style={{ fontSize: "0.75rem", color: "#64748b", marginTop: "0.2rem" }}>
-            Cumulative passing across all terms
+            {overallMetrics.totalSheets > 0
+              ? `Cumulative passing across ${overallMetrics.totalSheets.toLocaleString()} sheet(s)`
+              : "Awaiting examination submissions"}
           </div>
         </div>
 
@@ -171,28 +279,76 @@ export default function DeanReportsAnalytics({
         >
           <div style={{ display: "flex", justifyContent: "space-between", color: "#64748b", marginBottom: "0.5rem" }}>
             <span style={{ fontSize: "0.85rem", fontWeight: 600 }}>OBE QA Quality Rating</span>
-            <div style={{ width: "32px", height: "32px", borderRadius: "8px", background: "var(--primary-light-surface, #f5f3ff)", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--primary, #28166f)" }}>
+            <div
+              style={{
+                width: "32px",
+                height: "32px",
+                borderRadius: "8px",
+                background: "var(--primary-light-surface, #f5f3ff)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                color: "var(--primary, #28166f)",
+              }}
+            >
               <ShieldCheck size={17} />
             </div>
           </div>
-          <div style={{ fontSize: "1.8rem", fontWeight: 800, color: "#10b981" }}>
-            High Caliber
+          <div
+            style={{
+              fontSize: "1.8rem",
+              fontWeight: 800,
+              color:
+                overallMetrics.passRate === null
+                  ? "#64748b"
+                  : overallMetrics.passRate >= 85
+                  ? "#10b981"
+                  : overallMetrics.passRate >= 75
+                  ? "var(--primary, #28166f)"
+                  : "#d97706",
+            }}
+          >
+            {overallMetrics.passRate === null
+              ? "Pending Data"
+              : overallMetrics.passRate >= 85
+              ? "High Caliber"
+              : overallMetrics.passRate >= 75
+              ? "Standard QA"
+              : "Review Advised"}
           </div>
           <div style={{ fontSize: "0.75rem", color: "#64748b", marginTop: "0.2rem" }}>
-            Mean discrimination index 0.40
+            {overallMetrics.totalSheets > 0
+              ? `Institutional QA benchmark based on real scores`
+              : "Requires graded student answer sheets"}
           </div>
         </div>
       </div>
 
-
-
       {/* COLLEGIATE BENCHMARK MATRIX */}
-      <div className="card" style={{ padding: "1.25rem", borderRadius: "16px", background: "#ffffff", border: "1px solid #e2e8f0", boxShadow: "0 2px 8px rgba(0,0,0,0.02)" }}>
-        <div style={{ marginBottom: "1rem", display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "1rem" }}>
-          <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+      <div
+        className="card"
+        style={{
+          padding: "1.25rem",
+          borderRadius: "16px",
+          background: "#ffffff",
+          border: "1px solid #e2e8f0",
+          boxShadow: "0 2px 8px rgba(0,0,0,0.02)",
+        }}
+      >
+        <div
+          style={{
+            marginBottom: "1rem",
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "flex-start",
+            flexWrap: "wrap",
+            gap: "1rem",
+          }}
+        >
+          <div style={{ display: "flex", flexDirection: "column", gap: "0.3rem" }}>
             <h3 style={{ margin: 0, fontSize: "1.1rem", color: "#0f172a" }}>Cross-Collegiate Academic Benchmark Matrix</h3>
-            <p style={{ margin: "0.2rem 0 0 0", fontSize: "0.82rem", color: "#64748b" }}>
-              Side-by-side performance indicators across all 4 academic departments at SRCB.
+            <p style={{ margin: 0, fontSize: "0.82rem", color: "#64748b" }}>
+              Live performance indicators dynamically calculated across academic colleges at SRCB.
             </p>
           </div>
           <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
@@ -250,6 +406,23 @@ export default function DeanReportsAnalytics({
           </div>
         </div>
 
+        {exams.length === 0 && (
+          <div
+            style={{
+              padding: "1rem 1.25rem",
+              background: "#f8fafc",
+              border: "1px dashed #cbd5e1",
+              borderRadius: "10px",
+              marginBottom: "1rem",
+              fontSize: "0.82rem",
+              color: "#64748b",
+              textAlign: "center",
+            }}
+          >
+            No active examinations found in the database. When instructors create exams and grade OMR answer sheets, real departmental passing rates and mean scores will appear below.
+          </div>
+        )}
+
         <div style={{ overflowX: "auto", borderRadius: "10px", border: "1px solid #e2e8f0" }}>
           <table style={{ width: "100%", fontSize: "0.85rem", borderCollapse: "collapse", textAlign: "left" }}>
             <thead>
@@ -264,7 +437,7 @@ export default function DeanReportsAnalytics({
               </tr>
             </thead>
             <tbody>
-              {DEPARTMENT_METRICS.map((d) => (
+              {departmentMetrics.map((d) => (
                 <tr
                   key={d.code}
                   style={{
@@ -277,11 +450,47 @@ export default function DeanReportsAnalytics({
                     <div style={{ fontSize: "0.74rem", color: "var(--primary, #28166f)", fontWeight: 700 }}>Code: {d.code}</div>
                   </td>
                   <td style={{ padding: "0.85rem 1rem", color: "#475569" }}>{d.exams} Sets</td>
-                  <td style={{ padding: "0.85rem 1rem", color: "#475569" }}>{d.sheets} Sheets</td>
-                  <td style={{ padding: "0.85rem 1rem", fontWeight: 700, color: "#10b981" }}>{d.meanScore}%</td>
-                  <td style={{ padding: "0.85rem 1rem", fontWeight: 700, color: "var(--primary, #28166f)" }}>{d.passRate}%</td>
+                  <td style={{ padding: "0.85rem 1rem", color: "#475569" }}>{d.sheets.toLocaleString()} Sheets</td>
+                  <td style={{ padding: "0.85rem 1rem", fontWeight: 700, color: d.meanScore !== null ? "#10b981" : "#94a3b8" }}>
+                    {d.meanScore !== null ? `${d.meanScore}%` : "—"}
+                  </td>
+                  <td style={{ padding: "0.85rem 1rem", fontWeight: 700, color: d.passRate !== null ? "var(--primary, #28166f)" : "#94a3b8" }}>
+                    {d.passRate !== null ? `${d.passRate}%` : "—"}
+                  </td>
                   <td style={{ padding: "0.85rem 1rem" }}>
-                    <span className="badge badge-success" style={{ fontSize: "0.72rem" }}>
+                    <span
+                      style={{
+                        fontSize: "0.72rem",
+                        fontWeight: 700,
+                        padding: "0.2rem 0.55rem",
+                        borderRadius: "6px",
+                        background:
+                          d.obeStatus === "Exemplary"
+                            ? "#ecfdf5"
+                            : d.obeStatus === "Compliant"
+                            ? "#eff6ff"
+                            : d.obeStatus === "Needs Review"
+                            ? "#fef2f2"
+                            : "#f8fafc",
+                        color:
+                          d.obeStatus === "Exemplary"
+                            ? "#059669"
+                            : d.obeStatus === "Compliant"
+                            ? "#2563eb"
+                            : d.obeStatus === "Needs Review"
+                            ? "#dc2626"
+                            : "#64748b",
+                        border: `1px solid ${
+                          d.obeStatus === "Exemplary"
+                            ? "#a7f3d0"
+                            : d.obeStatus === "Compliant"
+                            ? "#bfdbfe"
+                            : d.obeStatus === "Needs Review"
+                            ? "#fecaca"
+                            : "#e2e8f0"
+                        }`,
+                      }}
+                    >
                       {d.obeStatus}
                     </span>
                   </td>
