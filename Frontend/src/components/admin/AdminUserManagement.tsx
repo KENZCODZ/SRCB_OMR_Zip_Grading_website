@@ -41,7 +41,7 @@ export interface ProgrammeOption {
   collegiateOptions: string[];
 }
 
-export const PROGRAMME_OPTIONS: ProgrammeOption[] = [
+const PROGRAMME_OPTIONS: ProgrammeOption[] = [
   {
     code: "BSIT",
     name: "Bachelor of Science in Information Technology",
@@ -89,7 +89,7 @@ export const PROGRAMME_OPTIONS: ProgrammeOption[] = [
   },
 ];
 
-export const getCollegiateOptionsForProgramme = (progCode: string): string[] => {
+const getCollegiateOptionsForProgramme = (progCode: string): string[] => {
   const p = (progCode || "").trim().toUpperCase();
   const found = PROGRAMME_OPTIONS.find((item) => item.code.toUpperCase() === p);
   if (found) return found.collegiateOptions;
@@ -110,7 +110,7 @@ export const getCollegiateOptionsForProgramme = (progCode: string): string[] => 
   return ["N/A"];
 };
 
-export const getDepartmentForProgram = (prog: string): string => {
+const getDepartmentForProgram = (prog: string): string => {
   const options = getCollegiateOptionsForProgramme(prog);
   return options[0] || "N/A";
 };

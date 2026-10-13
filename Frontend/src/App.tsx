@@ -306,7 +306,7 @@ export default function App() {
       const cached = cacheManager.get<AppNotification[]>(`notifications_${currentUser.id}`);
       setNotifications(cached || getDefaultNotifications(currentUser.role));
     }
-  }, [currentUser?.id, currentUser?.role]);
+  }, [currentUser]);
 
   const saveNotifications = (newNotifs: AppNotification[]) => {
     setNotifications(newNotifs);
@@ -652,6 +652,7 @@ export default function App() {
         loadDashboardSummary(true),
       ]);
     } catch (err: any) {
+      console.warn("Using offline fallback for exam creation:", err);
       // In mock / offline mode fallback
       const fallbackId = `ex-${Date.now()}`;
       const fallbackExam: Exam = {

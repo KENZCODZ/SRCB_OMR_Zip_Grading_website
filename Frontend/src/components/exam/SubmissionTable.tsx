@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { Eye, Inbox, ChevronLeft, ChevronRight, ChevronDown } from 'lucide-react';
 import type { Submission, Exam, StudentRosterEntry } from '../../types';
 import { calculateTransmutedGrade } from '../../utils/excelUtils';
@@ -39,10 +39,10 @@ export const SubmissionTable: React.FC<SubmissionTableProps> = ({
     }
   }, [selectedSubmissionId, submissions, activeRowId]);
 
-  const getExamName = (examId: string) => {
+  const getExamName = useCallback((examId: string) => {
     const found = exams.find((e) => e.id === examId);
     return found ? found.name : 'Institutional Exam';
-  };
+  }, [exams]);
 
   const rosterMap = useMemo(() => {
     const map = new Map<string, StudentRosterEntry>();
@@ -65,7 +65,7 @@ export const SubmissionTable: React.FC<SubmissionTableProps> = ({
         sub.id.toLowerCase().includes(query)
       );
     });
-  }, [submissions, searchQuery, rosterMap, exams]);
+  }, [submissions, searchQuery, rosterMap, getExamName]);
 
   // Pagination calculation
   const totalPages = Math.ceil(filteredSubmissions.length / pageSize) || 1;
