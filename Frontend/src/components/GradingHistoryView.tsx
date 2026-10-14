@@ -2,7 +2,6 @@ import React, { useState, useMemo } from "react";
 import {
   History,
   Search,
-  Filter,
   Eye,
   Trash2,
   BookOpen,
@@ -11,8 +10,8 @@ import {
   AlertTriangle,
   CheckCircle2,
   X,
-  ArrowUpDown,
   FileCheck,
+  ChevronDown,
 } from "lucide-react";
 import type { Exam, Submission, StudentRosterEntry, AuthUser } from "../types";
 import { calculateTransmutedGrade } from "../utils/excelUtils";
@@ -239,29 +238,6 @@ export const GradingHistoryView: React.FC<GradingHistoryViewProps> = ({
     });
   }, [filteredRecords, sortBy]);
 
-  // Overall Historical Summary Stats
-  const overallStats = useMemo(() => {
-    const totalExams = gradingHistoryRecords.length;
-    const totalSheets = gradingHistoryRecords.reduce((acc, curr) => acc + curr.totalGraded, 0);
-    const completedCount = gradingHistoryRecords.filter((r) => r.status === "Completed").length;
-    const overallPassed = gradingHistoryRecords.reduce((acc, curr) => {
-      return (
-        acc +
-        curr.submissions.filter((s) => {
-          const trans = calculateTransmutedGrade(s.score, curr.totalItems);
-          return trans.status === "Passed";
-        }).length
-      );
-    }, 0);
-    const overallPassRate = totalSheets > 0 ? Math.round((overallPassed / totalSheets) * 100) : 0;
-
-    return {
-      totalExams,
-      totalSheets,
-      completedCount,
-      overallPassRate,
-    };
-  }, [gradingHistoryRecords]);
 
   // Active Inspection Record
   const inspectedRecord = useMemo(() => {
@@ -320,183 +296,83 @@ export const GradingHistoryView: React.FC<GradingHistoryViewProps> = ({
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
       {/* ─────────────────────────────────────────────────────────────────── */}
-      {/* 1. SECTION HEADER BANNER (NO EXPORT BUTTONS)                         */}
+      {/* SEARCH, FILTER & SORT BAR (EXPORT-FREE)                             */}
       {/* ─────────────────────────────────────────────────────────────────── */}
       <div
         style={{
           background: "#ffffff",
-          border: "1px solid #e2e8f0",
           borderRadius: "16px",
+          border: "1px solid #e2e8f0",
           padding: "1.25rem 1.5rem",
           display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          flexWrap: "wrap",
-          gap: "1rem",
-          boxShadow: "0 2px 8px rgba(0, 0, 0, 0.02)",
-        }}
-      >
-        <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
-          <div
-            style={{
-              width: "48px",
-              height: "48px",
-              borderRadius: "12px",
-              background: "#f8fafc",
-              color: "var(--primary, #28166f)",
-              border: "1px solid #e2e8f0",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              flexShrink: 0,
-            }}
-          >
-            <History size={26} />
-          </div>
-          <div>
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "0.5rem",
-                marginBottom: "0.2rem",
-              }}
-            >
-              <span
-                className="badge"
-                style={{
-                  background: "var(--primary-light-surface, #f5f3ff)",
-                  color: "var(--primary, #28166f)",
-                  border: "1px solid var(--primary-light-border, #ddd6fe)",
-                  fontWeight: 700,
-                  fontSize: "0.72rem",
-                }}
-              >
-                Historical Records Audit
-              </span>
-              {currentUser && (
-                <span style={{ fontSize: "0.8rem", color: "#64748b", fontWeight: 500 }}>
-                  Faculty: {currentUser.name}
-                </span>
-              )}
-            </div>
-            <h2
-              style={{
-                fontSize: "1.35rem",
-                fontWeight: 800,
-                margin: 0,
-                color: "#0f172a",
-              }}
-            >
-              Grading History
-            </h2>
-            <p
-              style={{
-                fontSize: "0.85rem",
-                color: "#64748b",
-                margin: "0.2rem 0 0 0",
-              }}
-            >
-              Historical log of previously processed and graded examination activities. Inspect details or manage past records.
-            </p>
-          </div>
-        </div>
-
-        {/* Global Statistics Badges */}
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: "1.25rem",
-            background: "#f8fafc",
-            padding: "0.6rem 1.1rem",
-            borderRadius: "12px",
-            border: "1px solid #e2e8f0",
-          }}
-        >
-          <div>
-            <div
-              style={{
-                fontSize: "0.68rem",
-                color: "#64748b",
-                textTransform: "uppercase",
-                fontWeight: 700,
-              }}
-            >
-              Graded Exams
-            </div>
-            <div style={{ fontSize: "1.2rem", fontWeight: 800, color: "#0f172a" }}>
-              {overallStats.totalExams}
-            </div>
-          </div>
-          <div style={{ width: "1px", height: "30px", background: "#e2e8f0" }} />
-          <div>
-            <div
-              style={{
-                fontSize: "0.68rem",
-                color: "#64748b",
-                textTransform: "uppercase",
-                fontWeight: 700,
-              }}
-            >
-              Processed Sheets
-            </div>
-            <div style={{ fontSize: "1.2rem", fontWeight: 800, color: "var(--primary, #28166f)" }}>
-              {overallStats.totalSheets}
-            </div>
-          </div>
-          <div style={{ width: "1px", height: "30px", background: "#e2e8f0" }} />
-          <div>
-            <div
-              style={{
-                fontSize: "0.68rem",
-                color: "#64748b",
-                textTransform: "uppercase",
-                fontWeight: 700,
-              }}
-            >
-              Historical Pass Rate
-            </div>
-            <div style={{ fontSize: "1.2rem", fontWeight: 800, color: "#059669" }}>
-              {overallStats.overallPassRate}%
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* ─────────────────────────────────────────────────────────────────── */}
-      {/* 2. SEARCH, FILTER & SORT BAR (EXPORT-FREE)                         */}
-      {/* ─────────────────────────────────────────────────────────────────── */}
-      <div
-        style={{
-          background: "#ffffff",
-          borderRadius: "16px",
-          border: "1px solid #e2e8f0",
-          padding: "1.25rem",
-          display: "flex",
           flexDirection: "column",
-          gap: "1rem",
+          gap: "1.1rem",
           boxShadow: "0 2px 8px rgba(0, 0, 0, 0.02)",
         }}
       >
+        {/* Header Row: Title & Subtitle + Search & Count Badge */}
         <div
           style={{
             display: "flex",
             alignItems: "center",
             justifyContent: "space-between",
             flexWrap: "wrap",
-            gap: "0.75rem",
+            gap: "1rem",
           }}
         >
-          <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-            <Filter size={16} style={{ color: "var(--primary, #28166f)" }} />
-            <span style={{ fontSize: "0.9rem", fontWeight: 700, color: "#0f172a" }}>
-              Search & Filter Past Grading Activities
-            </span>
+          <div style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
+            <div
+              style={{
+                width: "36px",
+                height: "36px",
+                borderRadius: "10px",
+                background: "var(--primary-light-surface, #f5f3ff)",
+                color: "var(--primary, #28166f)",
+                border: "1px solid var(--primary-light-border, #ddd6fe)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                flexShrink: 0,
+              }}
+            >
+              <History size={17} />
+            </div>
+            <div>
+              <h3
+                style={{
+                  fontSize: "1.05rem",
+                  fontWeight: 800,
+                  color: "#0f172a",
+                  margin: 0,
+                  letterSpacing: "-0.01em",
+                }}
+              >
+                Examination Records Filters
+              </h3>
+              <p
+                style={{
+                  margin: 0,
+                  fontSize: "0.78rem",
+                  color: "#64748b",
+                  fontWeight: 500,
+                }}
+              >
+                Filter historical evaluations by examination type, program, status, and search query
+              </p>
+            </div>
           </div>
 
-          <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", flexWrap: "wrap", flex: "1 1 300px" }}>
-            <div style={{ position: "relative", flex: "1 1 260px" }}>
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "0.75rem",
+              flexWrap: "wrap",
+              flex: "1 1 360px",
+              justifyContent: "flex-end",
+            }}
+          >
+            <div style={{ position: "relative", minWidth: "250px", flex: "1 1 250px" }}>
               <Search
                 size={16}
                 style={{
@@ -504,88 +380,79 @@ export const GradingHistoryView: React.FC<GradingHistoryViewProps> = ({
                   left: "12px",
                   top: "50%",
                   transform: "translateY(-50%)",
-                  color: "#94a3b8",
+                  color: "#64748b",
                 }}
               />
               <input
                 type="text"
-                className="form-input"
                 placeholder="Search examination title, course code, subject, or section..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 style={{
-                  paddingLeft: "36px",
+                  width: "100%",
                   height: "38px",
-                  fontSize: "0.85rem",
-                  background: "#f8fafc",
-                  border: "1px solid #cbd5e1",
+                  paddingLeft: "36px",
+                  paddingRight: "12px",
+                  fontSize: "0.82rem",
+                  fontWeight: 600,
+                  background: "#ffffff",
+                  border: "1px solid #e2e8f0",
                   borderRadius: "8px",
                   color: "#0f172a",
-                  width: "100%",
+                  outline: "none",
+                  boxShadow: "0 1px 2px rgba(0, 0, 0, 0.03)",
                 }}
               />
             </div>
 
-            {/* Sorting Dropdown */}
-            <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-              <ArrowUpDown size={14} style={{ color: "#64748b" }} />
-              <select
-                className="form-input"
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value as HistorySortOption)}
+
+            {(selectedExamType !== "All" ||
+              selectedProgram !== "All" ||
+              selectedStatus !== "All" ||
+              sortBy !== "recent" ||
+              searchQuery.trim().length > 0) && (
+              <button
+                type="button"
+                className="btn btn-secondary btn-sm"
+                onClick={() => {
+                  setSelectedExamType("All");
+                  setSelectedProgram("All");
+                  setSelectedStatus("All");
+                  setSortBy("recent");
+                  setSearchQuery("");
+                }}
                 style={{
                   height: "38px",
-                  fontSize: "0.82rem",
+                  padding: "0 0.85rem",
+                  fontSize: "0.8rem",
                   fontWeight: 600,
-                  background: "#f8fafc",
-                  border: "1px solid #cbd5e1",
+                  color: "#64748b",
                   borderRadius: "8px",
-                  color: "#0f172a",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "4px",
+                  flexShrink: 0,
+                  background: "#ffffff",
+                  border: "1px solid #e2e8f0",
                 }}
+                title="Reset all filters and search query to defaults"
               >
-                <option value="recent">Sort: Most Recent Grading</option>
-                <option value="oldest">Sort: Oldest Grading</option>
-                <option value="date">Sort: Examination Date</option>
-                <option value="title">Sort: Examination Title (A-Z)</option>
-                <option value="students">Sort: Total Students Graded</option>
-              </select>
-            </div>
+                <X size={14} /> Clear Filters
+              </button>
+            )}
           </div>
         </div>
 
-        {/* Filter Row */}
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
-            gap: "0.75rem",
-          }}
-        >
+        {/* Unified Filter Toolbar */}
+        <div className="unified-filter-toolbar">
           {/* Exam Type Filter */}
-          <div>
-            <label
-              style={{
-                fontSize: "0.72rem",
-                color: "#475569",
-                fontWeight: 600,
-                display: "block",
-                marginBottom: "4px",
-              }}
-            >
-              Examination Type
-            </label>
+          <div className="unified-filter-toolbar-item" title="Filter by Examination Type">
+            <BookOpen size={14} className="unified-filter-toolbar-icon" />
             <select
-              className="form-input"
+              className="unified-filter-toolbar-select"
               value={selectedExamType}
               onChange={(e) => setSelectedExamType(e.target.value)}
-              style={{
-                height: "36px",
-                fontSize: "0.82rem",
-                background: "#f8fafc",
-                border: "1px solid #cbd5e1",
-                borderRadius: "8px",
-                color: "#0f172a",
-              }}
+              aria-label="Filter by examination type"
             >
               {examTypes.map((type) => (
                 <option key={type} value={type}>
@@ -593,33 +460,17 @@ export const GradingHistoryView: React.FC<GradingHistoryViewProps> = ({
                 </option>
               ))}
             </select>
+            <ChevronDown size={14} className="unified-filter-toolbar-arrow" />
           </div>
 
           {/* Program / Course Code Filter */}
-          <div>
-            <label
-              style={{
-                fontSize: "0.72rem",
-                color: "#475569",
-                fontWeight: 600,
-                display: "block",
-                marginBottom: "4px",
-              }}
-            >
-              Program / Course
-            </label>
+          <div className="unified-filter-toolbar-item" title="Filter by Academic Program or Course">
+            <GraduationCap size={14} className="unified-filter-toolbar-icon" />
             <select
-              className="form-input"
+              className="unified-filter-toolbar-select"
               value={selectedProgram}
               onChange={(e) => setSelectedProgram(e.target.value)}
-              style={{
-                height: "36px",
-                fontSize: "0.82rem",
-                background: "#f8fafc",
-                border: "1px solid #cbd5e1",
-                borderRadius: "8px",
-                color: "#0f172a",
-              }}
+              aria-label="Filter by program or course"
             >
               {programs.map((prog) => (
                 <option key={prog} value={prog}>
@@ -627,33 +478,17 @@ export const GradingHistoryView: React.FC<GradingHistoryViewProps> = ({
                 </option>
               ))}
             </select>
+            <ChevronDown size={14} className="unified-filter-toolbar-arrow" />
           </div>
 
           {/* Grading Status Filter */}
-          <div>
-            <label
-              style={{
-                fontSize: "0.72rem",
-                color: "#475569",
-                fontWeight: 600,
-                display: "block",
-                marginBottom: "4px",
-              }}
-            >
-              Grading Status
-            </label>
+          <div className="unified-filter-toolbar-item" title="Filter by Grading Evaluation Status">
+            <CheckCircle2 size={14} className="unified-filter-toolbar-icon" />
             <select
-              className="form-input"
+              className="unified-filter-toolbar-select"
               value={selectedStatus}
               onChange={(e) => setSelectedStatus(e.target.value as HistoryStatusFilter)}
-              style={{
-                height: "36px",
-                fontSize: "0.82rem",
-                background: "#f8fafc",
-                border: "1px solid #cbd5e1",
-                borderRadius: "8px",
-                color: "#0f172a",
-              }}
+              aria-label="Filter by grading status"
             >
               <option value="All">All Grading Statuses</option>
               <option value="Completed">Completed (Finalized)</option>
@@ -661,6 +496,25 @@ export const GradingHistoryView: React.FC<GradingHistoryViewProps> = ({
               <option value="Reviewed">Reviewed (Has Ambiguity)</option>
               <option value="Incomplete">Incomplete (No Submissions)</option>
             </select>
+            <ChevronDown size={14} className="unified-filter-toolbar-arrow" />
+          </div>
+
+          {/* Sorting Option */}
+          <div className="unified-filter-toolbar-item" title="Sort Historical Examination Records">
+            <Clock size={14} className="unified-filter-toolbar-icon" />
+            <select
+              className="unified-filter-toolbar-select"
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value as HistorySortOption)}
+              aria-label="Sort historical examination records"
+            >
+              <option value="recent">Sort: Most Recent Grading</option>
+              <option value="oldest">Sort: Oldest Grading</option>
+              <option value="date">Sort: Examination Date</option>
+              <option value="title">Sort: Examination Title (A-Z)</option>
+              <option value="students">Sort: Total Students Graded</option>
+            </select>
+            <ChevronDown size={14} className="unified-filter-toolbar-arrow" />
           </div>
         </div>
       </div>
@@ -1103,7 +957,7 @@ export const GradingHistoryView: React.FC<GradingHistoryViewProps> = ({
                 }}
               >
                 <h4 style={{ fontSize: "0.95rem", fontWeight: 800, color: "#0f172a", margin: 0 }}>
-                  Graded Student Answer Sheets ({inspectedRecord.submissions.length})
+                  Graded Student Answer Sheets
                 </h4>
                 <span style={{ fontSize: "0.75rem", color: "#64748b" }}>
                   Last Graded Activity: {formatDate(inspectedRecord.processedTimestamp)}

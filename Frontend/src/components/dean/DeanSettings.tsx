@@ -62,63 +62,54 @@ export default function DeanSettings({
 
   return (
     <form onSubmit={handleSaveSettings} style={{ display: "grid", gap: "1.5rem" }}>
-      {/* HEADER BANNER */}
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
+      {/* ACTIONS TOOLBAR */}
+      <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", gap: "0.5rem" }}>
+        <button
+          type="button"
+          className="btn btn-secondary"
+          onClick={handleResetDefaults}
+          title="Reset to Institutional Defaults"
+          aria-label="Reset to Institutional Defaults"
+          style={{
+            width: "38px",
+            height: "38px",
+            padding: 0,
+            display: "inline-flex",
             alignItems: "center",
-            flexWrap: "wrap",
-            gap: "1rem",
-            padding: "1.25rem 1.5rem",
+            justifyContent: "center",
+            borderRadius: "10px",
             background: "#ffffff",
             border: "1px solid #e2e8f0",
-            borderRadius: "12px",
+            color: "#64748b",
+            cursor: "pointer",
+            boxShadow: "0 1px 2px rgba(0, 0, 0, 0.03)",
+            transition: "all 0.2s ease",
           }}
         >
-          <div>
-            <h1
-              style={{
-                margin: 0,
-                fontSize: "1.4rem",
-                fontWeight: 800,
-                color: "#0f172a",
-                letterSpacing: "-0.02em",
-              }}
-            >
-              System Settings
-            </h1>
-            <p
-              style={{
-                color: "#64748b",
-                marginTop: "0.2rem",
-                marginBottom: 0,
-                fontSize: "0.82rem",
-              }}
-            >
-              Grading scales, passing benchmarks, and OBE thresholds
-            </p>
-          </div>
-
-          <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
-            <button
-              type="button"
-              className="btn btn-secondary"
-              onClick={handleResetDefaults}
-              style={{ fontSize: "0.82rem", padding: "0.45rem 0.85rem" }}
-            >
-              <RotateCcw size={14} /> Reset
-            </button>
-            <button
-              type="submit"
-              className="btn btn-primary"
-              disabled={saving}
-              style={{ fontSize: "0.82rem", padding: "0.45rem 1rem" }}
-            >
-              <Save size={14} /> {saving ? "Saving..." : "Save Policies"}
-            </button>
-          </div>
-        </div>
+          <RotateCcw size={17} />
+        </button>
+        <button
+          type="submit"
+          className="btn btn-primary"
+          disabled={saving}
+          title={saving ? "Saving Policies..." : "Save Policies"}
+          aria-label="Save Policies"
+          style={{
+            width: "38px",
+            height: "38px",
+            padding: 0,
+            display: "inline-flex",
+            alignItems: "center",
+            justifyContent: "center",
+            borderRadius: "10px",
+            cursor: saving ? "not-allowed" : "pointer",
+            boxShadow: "0 2px 6px rgba(40, 22, 111, 0.25)",
+            transition: "all 0.2s ease",
+          }}
+        >
+          <Save size={17} />
+        </button>
+      </div>
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(420px, 1fr))", gap: "1.25rem" }}>
         {/* SECTION 1: ACADEMIC CALENDAR & GRADING FORMULA */}

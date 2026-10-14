@@ -8,6 +8,10 @@ import {
   Sparkles,
   Award,
   Users,
+  ChevronDown,
+  GraduationCap,
+  CheckCircle2,
+  X,
 } from "lucide-react";
 import type { AuthUser, Exam, Submission, StudentRosterEntry } from "../../types";
 import { exportExamBatchExcel, exportCompleteDatabaseExcel } from "../../utils/excelUtils";
@@ -91,57 +95,6 @@ export default function DeanExaminations({
 
   return (
     <div style={{ display: "grid", gap: "1.5rem" }}>
-      {/* HEADER BAR */}
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          flexWrap: "wrap",
-          gap: "1rem",
-          padding: "1.25rem 1.5rem",
-          background: "#ffffff",
-          border: "1px solid #e2e8f0",
-          borderRadius: "12px",
-        }}
-      >
-        <div>
-          <h1
-            style={{
-              margin: 0,
-              fontSize: "1.4rem",
-              fontWeight: 800,
-              color: "#0f172a",
-              letterSpacing: "-0.02em",
-            }}
-          >
-            Examinations
-          </h1>
-          <p
-            style={{
-              color: "#64748b",
-              marginTop: "0.2rem",
-              marginBottom: 0,
-              fontSize: "0.82rem",
-            }}
-          >
-            Collegiate assessments, answer keys, and standardized grade records
-          </p>
-        </div>
-
-        <button
-          type="button"
-          className="btn btn-primary"
-          onClick={handleBatchExport}
-          style={{
-            fontSize: "0.82rem",
-            padding: "0.45rem 1rem",
-          }}
-        >
-          <FileSpreadsheet size={15} /> Batch Export (.xlsx)
-        </button>
-      </div>
-
       {/* 4 STAT TILES */}
       <div
         style={{
@@ -249,78 +202,209 @@ export default function DeanExaminations({
 
       {/* FILTER CONTROLS BAR */}
       <div
-        className="card"
         style={{
-          padding: "1rem 1.25rem",
           background: "#ffffff",
+          borderRadius: "16px",
           border: "1px solid #e2e8f0",
+          padding: "1.25rem 1.5rem",
           display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          flexWrap: "wrap",
-          gap: "1rem",
-          borderRadius: "14px",
-          boxShadow: "0 2px 6px rgba(0,0,0,0.02)",
+          flexDirection: "column",
+          gap: "1.1rem",
+          boxShadow: "0 2px 8px rgba(0, 0, 0, 0.02)",
         }}
       >
-        <div style={{ display: "flex", gap: "0.75rem", alignItems: "center", flex: 1, minWidth: "260px" }}>
-          <div style={{ position: "relative", width: "100%", maxWidth: "340px" }}>
-            <Search
-              size={15}
+        {/* Header Row: Title & Subtitle + Search & Batch Export */}
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            flexWrap: "wrap",
+            gap: "1rem",
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
+            <div
               style={{
-                position: "absolute",
-                left: "0.85rem",
-                top: "50%",
-                transform: "translateY(-50%)",
-                color: "#94a3b8",
+                width: "36px",
+                height: "36px",
+                borderRadius: "10px",
+                background: "var(--primary-light-surface, #f5f3ff)",
+                color: "var(--primary, #28166f)",
+                border: "1px solid var(--primary-light-border, #ddd6fe)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                flexShrink: 0,
               }}
-            />
-            <input
-              type="text"
-              placeholder="Search exam title, course code, instructor..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="input"
+            >
+              <BookOpen size={17} />
+            </div>
+            <div>
+              <h3
+                style={{
+                  fontSize: "1.05rem",
+                  fontWeight: 800,
+                  color: "#0f172a",
+                  margin: 0,
+                  letterSpacing: "-0.01em",
+                }}
+              >
+                Dean's Examination Directory
+              </h3>
+              <p
+                style={{
+                  margin: 0,
+                  fontSize: "0.78rem",
+                  color: "#64748b",
+                  fontWeight: 500,
+                }}
+              >
+                Monitor academic assessments, faculty submission coverage, and syllabus exams
+              </p>
+            </div>
+          </div>
+
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "0.75rem",
+              flexWrap: "wrap",
+              flex: "1 1 360px",
+              justifyContent: "flex-end",
+            }}
+          >
+            <div style={{ position: "relative", minWidth: "250px", flex: "1 1 250px" }}>
+              <Search
+                size={16}
+                style={{
+                  position: "absolute",
+                  left: "12px",
+                  top: "50%",
+                  transform: "translateY(-50%)",
+                  color: "#64748b",
+                }}
+              />
+              <input
+                type="text"
+                placeholder="Search exam title, course code, instructor..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                style={{
+                  width: "100%",
+                  height: "38px",
+                  paddingLeft: "36px",
+                  paddingRight: "12px",
+                  fontSize: "0.82rem",
+                  fontWeight: 600,
+                  background: "#ffffff",
+                  border: "1px solid #e2e8f0",
+                  borderRadius: "8px",
+                  color: "#0f172a",
+                  outline: "none",
+                  boxShadow: "0 1px 2px rgba(0, 0, 0, 0.03)",
+                }}
+              />
+            </div>
+
+            <button
+              type="button"
+              className="btn btn-secondary"
+              onClick={handleBatchExport}
+              title="Batch Export All Examinations (.xlsx)"
+              aria-label="Batch Export All Examinations (.xlsx)"
               style={{
-                paddingLeft: "2.4rem",
-                fontSize: "0.83rem",
+                width: "38px",
                 height: "38px",
-                width: "100%",
+                padding: 0,
+                display: "inline-flex",
+                alignItems: "center",
+                justifyContent: "center",
                 borderRadius: "8px",
                 background: "#ffffff",
                 border: "1px solid #e2e8f0",
-                color: "#0f172a",
+                color: "var(--primary, #28166f)",
+                cursor: "pointer",
+                flexShrink: 0,
+                boxShadow: "0 1px 2px rgba(0, 0, 0, 0.03)",
+                transition: "all 0.2s ease",
               }}
-            />
+            >
+              <FileSpreadsheet size={17} />
+            </button>
+
+            {(programmeFilter !== "all" ||
+              statusFilter !== "all" ||
+              searchQuery.trim().length > 0) && (
+              <button
+                type="button"
+                className="btn btn-secondary btn-sm"
+                onClick={() => {
+                  setProgrammeFilter("all");
+                  setStatusFilter("all");
+                  setSearchQuery("");
+                }}
+                style={{
+                  height: "38px",
+                  padding: "0 0.85rem",
+                  fontSize: "0.8rem",
+                  fontWeight: 600,
+                  color: "#64748b",
+                  borderRadius: "8px",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "4px",
+                  flexShrink: 0,
+                  background: "#ffffff",
+                  border: "1px solid #e2e8f0",
+                }}
+                title="Reset all filters and search query to defaults"
+              >
+                <X size={14} /> Clear Filters
+              </button>
+            )}
           </div>
-
-          <select
-            value={programmeFilter}
-            onChange={(e) => setProgrammeFilter(e.target.value)}
-            className="input"
-            style={{ width: "auto", height: "38px", fontSize: "0.82rem", borderRadius: "8px", background: "#ffffff", border: "1px solid #e2e8f0", color: "#0f172a" }}
-          >
-            <option value="all">All Programmes</option>
-            <option value="BSIT">BSIT - Information Tech</option>
-            <option value="BSCS">BSCS - Computer Science</option>
-            <option value="BSBA">BSBA - Business Admin</option>
-            <option value="BSEd">BSEd - Secondary Ed</option>
-          </select>
-
-          <select
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            className="input"
-            style={{ width: "auto", height: "38px", fontSize: "0.82rem", borderRadius: "8px", background: "#ffffff", border: "1px solid #e2e8f0", color: "#0f172a" }}
-          >
-            <option value="all">All Status</option>
-            <option value="graded">Has Graded Sheets</option>
-            <option value="published">Published / Ready</option>
-          </select>
         </div>
 
-        <div style={{ fontSize: "0.82rem", color: "#64748b" }}>
-          Showing <strong>{filteredExams.length}</strong> of {exams.length} examinations
+        {/* Unified Filter Toolbar */}
+        <div
+          className="unified-filter-toolbar"
+          style={{ gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))" }}
+        >
+          {/* Program / Department Filter */}
+          <div className="unified-filter-toolbar-item" title="Filter by Program or Department">
+            <GraduationCap size={14} className="unified-filter-toolbar-icon" />
+            <select
+              value={programmeFilter}
+              onChange={(e) => setProgrammeFilter(e.target.value)}
+              className="unified-filter-toolbar-select"
+              aria-label="Filter by program or department"
+            >
+              <option value="all">All Programmes</option>
+              <option value="BSIT">BSIT - Information Tech</option>
+              <option value="BSCS">BSCS - Computer Science</option>
+              <option value="BSBA">BSBA - Business Admin</option>
+              <option value="BSEd">BSEd - Secondary Ed</option>
+            </select>
+            <ChevronDown size={14} className="academic-select-arrow" />
+          </div>
+
+          {/* Grading Status Filter */}
+          <div className="unified-filter-toolbar-item" title="Filter by Grading Status">
+            <CheckCircle2 size={14} className="unified-filter-toolbar-icon" />
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className="unified-filter-toolbar-select"
+              aria-label="Filter by grading status"
+            >
+              <option value="all">All Status</option>
+              <option value="graded">Has Graded Sheets</option>
+              <option value="published">Published / Ready</option>
+            </select>
+            <ChevronDown size={14} className="academic-select-arrow" />
+          </div>
         </div>
       </div>
 

@@ -539,25 +539,55 @@ export function useLiveOmrScanner({
     resetVoteBuffer();
 
     try {
-      const isMobile = typeof navigator !== 'undefined' && /Android|iPhone|iPad|iPod/i.test(navigator.userAgent || '');
-      const videoConstraints: MediaTrackConstraints = selectedDeviceId
-        ? { deviceId: { exact: selectedDeviceId } }
-        : isMobile
-          ? {
-              facingMode: { ideal: 'environment' },
-              width: { ideal: 1920 },
-              height: { ideal: 1080 },
-            }
-          : {
-              width: { ideal: 1280 },
-              height: { ideal: 720 },
-            };
+      if (!navigator?.mediaDevices?.getUserMedia) {
+        stopCamera();
+        setStatus('error');
+        setErrorType('device');
+        setErrorMessage(
+          window.isSecureContext === false
+            ? 'Camera access requires a secure origin (HTTPS or localhost). Please open this site via http://localhost:5173.'
+            : 'Camera API (navigator.mediaDevices.getUserMedia) is not supported in this browser.'
+        );
+        return;
+      }
 
-      let stream: MediaStream;
-      try {
-        stream = await navigator.mediaDevices.getUserMedia({ audio: false, video: videoConstraints });
-      } catch {
-        stream = await navigator.mediaDevices.getUserMedia({ audio: false, video: true });
+      const isMobile = typeof navigator !== 'undefined' && /Android|iPhone|iPad|iPod/i.test(navigator.userAgent || '');
+      const constraintCandidates: MediaStreamConstraints[] = [
+        ...(selectedDeviceId ? [{ audio: false, video: { deviceId: { exact: selectedDeviceId } } }] : []),
+        {
+          audio: false,
+          video: isMobile
+            ? { facingMode: { ideal: 'environment' }, width: { ideal: 1920 }, height: { ideal: 1080 } }
+            : { width: { ideal: 1280 }, height: { ideal: 720 } },
+        },
+        {
+          audio: false,
+          video: { width: { ideal: 640 }, height: { ideal: 480 } },
+        },
+        {
+          audio: false,
+          video: true,
+        },
+      ];
+
+      let stream: MediaStream | null = null;
+      let lastError: any = null;
+
+      for (const c of constraintCandidates) {
+        try {
+          stream = await navigator.mediaDevices.getUserMedia(c);
+          if (stream) break;
+        } catch (err: any) {
+          lastError = err;
+          // If explicitly denied by user/browser permission policy, abort cascade immediately
+          if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+            throw err;
+          }
+        }
+      }
+
+      if (!stream) {
+        throw lastError || new Error('Could not establish video stream with any camera device.');
       }
 
       // If a newer request has started or component unmounted, immediately stop tracks and abandon
@@ -602,19 +632,33 @@ export function useLiveOmrScanner({
       setStatus('error');
       if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
         setErrorType('permission');
-        setErrorMessage('Camera access was denied. Please allow camera permissions in your browser settings.');
+        setErrorMessage('Camera access was denied. Please allow camera permissions in your browser address bar.');
       } else if (err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError') {
         setErrorType('device');
-        setErrorMessage('No camera device found on this system.');
+        setErrorMessage('No camera device found on this system. Please connect a USB webcam or use File Upload.');
       } else if (err.name === 'NotReadableError' || err.name === 'TrackStartError') {
         setErrorType('device');
-        setErrorMessage('Camera is currently in use by another application.');
+        setErrorMessage('Camera is currently in use by another application (Zoom, Teams, etc.). Please close other camera apps and try again.');
       } else {
         setErrorType('general');
         setErrorMessage(err?.message || 'Could not start camera feed.');
       }
     }
   }, [selectedDeviceId, stopCamera, enumerateDevices, resetVoteBuffer]);
+
+  // Synchronize video element srcObject if video element mounted while stream was initializing
+  useEffect(() => {
+    if (videoRef.current && streamRef.current && status === 'scanning') {
+      if (videoRef.current.srcObject !== streamRef.current) {
+        videoRef.current.srcObject = streamRef.current;
+        videoRef.current.play().catch((playErr: any) => {
+          if (playErr.name !== 'AbortError') {
+            console.warn('Video stream play deferred:', playErr);
+          }
+        });
+      }
+    }
+  }, [status]);
 
   // Keep fresh callback references for the long-lived Web Worker
   const updateVoteBufferRef = useRef(updateVoteBuffer);

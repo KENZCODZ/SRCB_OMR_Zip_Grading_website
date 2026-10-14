@@ -30,6 +30,7 @@ from database import (
     update_user_status,
     authenticate_user,
     create_user_account,
+    batch_create_student_accounts,
     list_all_users,
     delete_user,
     list_programs,
@@ -151,6 +152,19 @@ class AdminCreateUserRequest(BaseModel):
     programme: Optional[str] = Field(default="BSIT", description="Academic Programme")
     department: Optional[str] = Field(default="Computing Studies", description="Academic Department")
     student_id: Optional[str] = Field(default=None, description="Student ID if student")
+
+
+class StudentBatchItem(BaseModel):
+    name: str = Field(..., min_length=2, description="Student Full Name")
+    student_id: str = Field(..., min_length=2, description="Student ID number")
+    email: Optional[str] = Field(default=None, description="School Email (optional, auto-generated if omitted)")
+    password: Optional[str] = Field(default=None, description="Initial Password")
+    programme: Optional[str] = Field(default="BSIT", description="Academic Programme")
+    department: Optional[str] = Field(default="Computing Studies", description="Academic Department")
+
+
+class AdminBatchCreateUsersRequest(BaseModel):
+    students: List[StudentBatchItem] = Field(..., min_length=1, description="List of student records to enroll")
 
 
 class ProgramCreate(BaseModel):
@@ -303,6 +317,24 @@ def admin_create_user(payload: AdminCreateUserRequest):
         "status": "success",
         "message": f"Successfully created {role_norm.capitalize()} account for {payload.name}.",
         "user": created,
+    }
+
+
+@app.post("/api/admin/users/batch", status_code=status.HTTP_201_CREATED)
+def admin_batch_create_students(payload: AdminBatchCreateUsersRequest):
+    if not payload.students:
+        raise HTTPException(status_code=400, detail="No student records provided for batch enrollment.")
+
+    student_dicts = [s.model_dump() for s in payload.students]
+    result = batch_create_student_accounts(student_dicts)
+
+    return {
+        "status": "success",
+        "message": f"Enrolled {result['created_count']} student accounts ({result['failed_count']} skipped/duplicate).",
+        "created_count": result["created_count"],
+        "failed_count": result["failed_count"],
+        "created": result["created"],
+        "failed": result["failed"],
     }
 
 

@@ -10,9 +10,12 @@ import {
   CheckCircle2,
   Clock,
   Users,
+  ArrowRight,
+  AlertTriangle,
+  Eye,
 } from "lucide-react";
 import type { AuthUser, Exam, Submission, StudentRosterEntry } from "../../types";
-import { TeacherExamCompiler } from "../teacher";
+import { calculateTransmutedGrade } from "../../utils/excelUtils";
 
 interface MetricCard {
   title: string;
@@ -38,6 +41,7 @@ interface RoleDashboardProps {
   onInspectExam?: (exam: Exam) => void;
   addToast?: (type: "success" | "error" | "info", message: string) => void;
   formatDate?: (iso: string) => string;
+  onNavigateTab?: (tab: string) => void;
 }
 
 const getDashboardCards = (
@@ -250,9 +254,10 @@ export default function RoleDashboard({
   submissions = [],
   roster = [],
   onSelectSubmission,
-  onInspectExam,
-  addToast,
+  onInspectExam: _onInspectExam,
+  addToast: _addToast,
   formatDate = (iso) => new Date(iso).toLocaleDateString(),
+  onNavigateTab,
 }: RoleDashboardProps) {
   // Filter submissions strictly to the logged-in student
   const studentPersonalSubs = useMemo(() => {
@@ -321,54 +326,6 @@ export default function RoleDashboard({
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
-      {/* Sleek Minimalist Welcome Bar */}
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          flexWrap: "wrap",
-          gap: "0.75rem",
-          padding: "1.15rem 1.4rem",
-          background: "#ffffff",
-          border: "1px solid #e2e8f0",
-          borderRadius: "12px",
-        }}
-      >
-        <div>
-          <h2 style={{ margin: 0, fontSize: "1.35rem", fontWeight: 800, color: "#0f172a" }}>
-            Overview & Progress
-          </h2>
-          <span style={{ fontSize: "0.82rem", color: "#64748b" }}>
-            {user.role === "dean"
-              ? "Collegiate Examination Progress & Performance Oversight Across All Higher Education Programs"
-              : `Welcome back, ${user.name} • ${user.department || "Academic Assessment Portal"}`}
-          </span>
-        </div>
-
-        <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-          <span
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              gap: "0.35rem",
-              padding: "0.3rem 0.75rem",
-              borderRadius: "20px",
-              fontSize: "0.75rem",
-              fontWeight: 700,
-              background: "var(--primary-light-surface, #f5f3ff)",
-              color: "var(--primary, #28166f)",
-              border: "1px solid var(--primary-light-border, #ddd6fe)",
-              textTransform: "uppercase",
-              letterSpacing: "0.03em",
-            }}
-          >
-            <ShieldCheck size={13} />
-            {user.role.replace("-", " ")}
-          </span>
-        </div>
-      </div>
-
       {/* KPI Metric Cards */}
       <div
         style={{
@@ -691,19 +648,462 @@ export default function RoleDashboard({
         </>
       )}
 
-      {/* Teacher Direct Assessment Flow */}
-      {user.role === "teacher" && (
-        <TeacherExamCompiler
-          exams={exams}
-          submissions={submissions}
-          roster={roster}
-          currentUser={user}
-          onSelectSubmission={onSelectSubmission}
-          onInspectExam={onInspectExam}
-          addToast={addToast}
-          formatDate={formatDate}
-        />
-      )}
+      {/* TEACHER DEDICATED COMMAND CENTER DASHBOARD */}
+      {user.role === "teacher" && (() => {
+        // Build roster lookup map
+        const rosterMap = new Map<string, StudentRosterEntry>();
+        roster.forEach((r) => {
+          if (r.student_id) rosterMap.set(r.student_id.toLowerCase(), r);
+        });
+
+        // Compute teacher class summaries
+        const examSummaries = exams.map((exam) => {
+          const subs = submissions.filter((s) => s.exam_id === exam.id);
+          const totalItems = Object.keys(exam.answer_key || {}).length || 50;
+          let totalScore = 0;
+          let passCount = 0;
+
+          subs.forEach((s) => {
+            totalScore += s.score;
+            if (s.score / totalItems >= 0.60) passCount++;
+          });
+
+          const meanScore = subs.length > 0 ? (totalScore / subs.length).toFixed(1) : "0.0";
+          const avgPct = subs.length > 0 ? Math.round((totalScore / (subs.length * totalItems)) * 100) : 0;
+          const passRate = subs.length > 0 ? Math.round((passCount / subs.length) * 100) : 0;
+
+          return {
+            exam,
+            subs,
+            totalItems,
+            totalScanned: subs.length,
+            meanScore,
+            avgPct,
+            passRate,
+          };
+        });
+
+        // Latest submissions across all exams
+        const recentSubmissions = [...submissions]
+          .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+          .slice(0, 6);
+
+        return (
+          <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
+            {/* ACTIVE EXAMS & CLASS PROGRESS CARDS */}
+            <div
+              style={{
+                background: "#ffffff",
+                border: "1px solid #e2e8f0",
+                borderRadius: "16px",
+                padding: "1.5rem",
+                boxShadow: "0 2px 8px rgba(0, 0, 0, 0.02)",
+              }}
+            >
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  marginBottom: "1.25rem",
+                  flexWrap: "wrap",
+                  gap: "0.75rem",
+                }}
+              >
+                <div>
+                  <h3 style={{ fontSize: "1.1rem", fontWeight: 800, color: "#0f172a", margin: 0 }}>
+                    Active Classes & Examination Performance
+                  </h3>
+                  <p style={{ fontSize: "0.8rem", color: "#64748b", margin: "0.2rem 0 0 0", fontWeight: 500 }}>
+                    Class-level grading completion, transmuted averages, and passing rates
+                  </p>
+                </div>
+
+                {onNavigateTab && (
+                  <button
+                    type="button"
+                    onClick={() => onNavigateTab("results-management")}
+                    style={{
+                      background: "none",
+                      border: "none",
+                      color: "var(--primary, #28166f)",
+                      fontWeight: 800,
+                      fontSize: "0.82rem",
+                      cursor: "pointer",
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: "4px",
+                    }}
+                  >
+                    View All in Gradebook <ArrowRight size={14} />
+                  </button>
+                )}
+              </div>
+
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))",
+                  gap: "1rem",
+                }}
+              >
+                {examSummaries.map((summaryItem) => {
+                  const { exam, totalItems, totalScanned, meanScore, avgPct, passRate } = summaryItem;
+                  const targetStudents = 45; // Section enrolled benchmark
+                  const progressPct = Math.min(100, Math.round((totalScanned / targetStudents) * 100));
+
+                  return (
+                    <div
+                      key={exam.id}
+                      style={{
+                        padding: "1.15rem 1.25rem",
+                        background: "#f8fafc",
+                        border: "1px solid #e2e8f0",
+                        borderRadius: "12px",
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: "0.85rem",
+                        transition: "all 0.15s ease",
+                      }}
+                    >
+                      {/* Top Badges & Course Code */}
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap" }}>
+                          {exam.course_code && (
+                            <span
+                              style={{
+                                fontSize: "0.76rem",
+                                fontWeight: 800,
+                                color: "var(--primary, #28166f)",
+                                background: "var(--primary-light-surface, #f5f3ff)",
+                                border: "1px solid var(--primary-light-border, #ddd6fe)",
+                                padding: "0.15rem 0.5rem",
+                                borderRadius: "6px",
+                              }}
+                            >
+                              {exam.course_code}
+                            </span>
+                          )}
+                          <span
+                            style={{
+                              fontSize: "0.72rem",
+                              fontWeight: 700,
+                              color: "#059669",
+                              background: "#ecfdf5",
+                              border: "1px solid #a7f3d0",
+                              padding: "0.15rem 0.5rem",
+                              borderRadius: "6px",
+                            }}
+                          >
+                            Sec: {exam.section || "A"}
+                          </span>
+                        </div>
+
+                        <span
+                          style={{
+                            fontSize: "0.72rem",
+                            fontWeight: 700,
+                            color: "#64748b",
+                          }}
+                        >
+                          {exam.exam_type || "Midterm"}
+                        </span>
+                      </div>
+
+                      {/* Exam Title */}
+                      <div>
+                        <h4
+                          style={{
+                            fontSize: "0.95rem",
+                            fontWeight: 800,
+                            color: "#0f172a",
+                            margin: 0,
+                            lineHeight: 1.3,
+                          }}
+                        >
+                          {exam.name}
+                        </h4>
+                        <span style={{ fontSize: "0.78rem", color: "#64748b", fontWeight: 500 }}>
+                          {exam.subject || "Academic Subject"} • {totalItems} Test Items
+                        </span>
+                      </div>
+
+                      {/* Progress Bar */}
+                      <div>
+                        <div
+                          style={{
+                            display: "flex",
+                            justifyContent: "space-between",
+                            fontSize: "0.74rem",
+                            color: "#475569",
+                            fontWeight: 700,
+                            marginBottom: "4px",
+                          }}
+                        >
+                          <span>Scanned: <strong>{totalScanned}</strong> papers</span>
+                          <span>{progressPct}% processed</span>
+                        </div>
+                        <div
+                          style={{
+                            height: "6px",
+                            background: "#e2e8f0",
+                            borderRadius: "3px",
+                            overflow: "hidden",
+                          }}
+                        >
+                          <div
+                            style={{
+                              height: "100%",
+                              width: `${progressPct}%`,
+                              background: "linear-gradient(90deg, var(--primary, #28166f), #4326b8)",
+                              borderRadius: "3px",
+                            }}
+                          />
+                        </div>
+                      </div>
+
+                      {/* Performance KPIs */}
+                      <div
+                        style={{
+                          display: "grid",
+                          gridTemplateColumns: "1fr 1fr",
+                          gap: "0.5rem",
+                          paddingTop: "0.4rem",
+                          borderTop: "1px solid #e2e8f0",
+                        }}
+                      >
+                        <div>
+                          <span style={{ fontSize: "0.68rem", color: "#64748b", fontWeight: 700, textTransform: "uppercase" }}>
+                            Class Mean
+                          </span>
+                          <div style={{ fontSize: "1.05rem", fontWeight: 800, color: "#0f172a" }}>
+                            {meanScore} <span style={{ fontSize: "0.75rem", color: "#64748b", fontWeight: 600 }}>({avgPct}%)</span>
+                          </div>
+                        </div>
+
+                        <div>
+                          <span style={{ fontSize: "0.68rem", color: "#64748b", fontWeight: 700, textTransform: "uppercase" }}>
+                            Passing Rate
+                          </span>
+                          <div
+                            style={{
+                              fontSize: "1.05rem",
+                              fontWeight: 800,
+                              color: passRate >= 75 ? "#059669" : "#dc2626",
+                            }}
+                          >
+                            {passRate}%
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Card Actions */}
+                      <div style={{ display: "flex", gap: "0.5rem", marginTop: "0.2rem" }}>
+                        {onNavigateTab && (
+                          <>
+                            <button
+                              type="button"
+                              className="btn btn-secondary btn-sm"
+                              onClick={() => onNavigateTab("results-management")}
+                              style={{
+                                flex: 1,
+                                fontSize: "0.76rem",
+                                fontWeight: 700,
+                                background: "#ffffff",
+                                border: "1px solid #e2e8f0",
+                                color: "#0f172a",
+                                borderRadius: "6px",
+                              }}
+                            >
+                              View Gradebook
+                            </button>
+                            <button
+                              type="button"
+                              className="btn btn-primary btn-sm"
+                              onClick={() => onNavigateTab("exams")}
+                              style={{
+                                flex: 1,
+                                fontSize: "0.76rem",
+                                fontWeight: 700,
+                                background: "var(--primary, #28166f)",
+                                borderRadius: "6px",
+                              }}
+                            >
+                              Scan Sheets
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* 3. RECENT GRADED SUBMISSIONS LOG */}
+            <div
+              style={{
+                background: "#ffffff",
+                border: "1px solid #e2e8f0",
+                borderRadius: "16px",
+                padding: "1.5rem",
+                boxShadow: "0 2px 8px rgba(0, 0, 0, 0.02)",
+              }}
+            >
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  marginBottom: "1rem",
+                  flexWrap: "wrap",
+                  gap: "0.75rem",
+                }}
+              >
+                <div>
+                  <h3 style={{ fontSize: "1.1rem", fontWeight: 800, color: "#0f172a", margin: 0 }}>
+                    Recent Graded Answer Sheets
+                  </h3>
+                  <p style={{ fontSize: "0.8rem", color: "#64748b", margin: "0.2rem 0 0 0", fontWeight: 500 }}>
+                    Latest student test papers processed via optical mark recognition
+                  </p>
+                </div>
+
+                {onNavigateTab && (
+                  <button
+                    type="button"
+                    onClick={() => onNavigateTab("history")}
+                    style={{
+                      background: "none",
+                      border: "none",
+                      color: "var(--primary, #28166f)",
+                      fontWeight: 800,
+                      fontSize: "0.82rem",
+                      cursor: "pointer",
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: "4px",
+                    }}
+                  >
+                    View All Audit Records <ArrowRight size={14} />
+                  </button>
+                )}
+              </div>
+
+              {recentSubmissions.length === 0 ? (
+                <div style={{ textAlign: "center", padding: "2rem", color: "#64748b", fontSize: "0.85rem" }}>
+                  No recent graded student answer sheets found.
+                </div>
+              ) : (
+                <div style={{ overflowX: "auto" }}>
+                  <table style={{ width: "100%", borderCollapse: "collapse", textAlign: "left", fontSize: "0.82rem" }}>
+                    <thead>
+                      <tr style={{ background: "#f8fafc", borderBottom: "1px solid #e2e8f0" }}>
+                        <th style={{ padding: "0.65rem 1rem", color: "#334155", fontWeight: 800, fontSize: "0.75rem", textTransform: "uppercase" }}>Student Name / ID</th>
+                        <th style={{ padding: "0.65rem 1rem", color: "#334155", fontWeight: 800, fontSize: "0.75rem", textTransform: "uppercase" }}>Examination</th>
+                        <th style={{ padding: "0.65rem 1rem", color: "#334155", fontWeight: 800, fontSize: "0.75rem", textTransform: "uppercase" }}>Raw Score</th>
+                        <th style={{ padding: "0.65rem 1rem", color: "#334155", fontWeight: 800, fontSize: "0.75rem", textTransform: "uppercase" }}>Transmuted Grade</th>
+                        <th style={{ padding: "0.65rem 1rem", color: "#334155", fontWeight: 800, fontSize: "0.75rem", textTransform: "uppercase" }}>Status</th>
+                        <th style={{ padding: "0.65rem 1rem", color: "#334155", fontWeight: 800, fontSize: "0.75rem", textTransform: "uppercase" }}>Graded At</th>
+                        <th style={{ padding: "0.65rem 1rem", color: "#334155", fontWeight: 800, fontSize: "0.75rem", textTransform: "uppercase", textAlign: "right" }}>Action</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {recentSubmissions.map((sub) => {
+                        const matched = rosterMap.get((sub.student_id || "").toLowerCase());
+                        const exam = exams.find((e) => e.id === sub.exam_id);
+                        const totalItems = exam ? Object.keys(exam.answer_key || {}).length || 50 : 50;
+                        const trans = calculateTransmutedGrade(sub.score, totalItems);
+
+                        return (
+                          <tr key={sub.id} style={{ borderBottom: "1px solid #f1f5f9" }}>
+                            <td style={{ padding: "0.7rem 1rem" }}>
+                              <div style={{ fontWeight: 800, color: "#0f172a" }}>
+                                {matched ? matched.name : `Student ${sub.student_id}`}
+                              </div>
+                              <div style={{ fontSize: "0.74rem", color: "#64748b", fontWeight: 600 }}>
+                                ID: {sub.student_id}
+                              </div>
+                            </td>
+
+                            <td style={{ padding: "0.7rem 1rem", color: "#334155", fontWeight: 600 }}>
+                              {exam ? exam.name : "Exam"}
+                            </td>
+
+                            <td style={{ padding: "0.7rem 1rem", fontWeight: 800, color: "#0f172a" }}>
+                              {sub.score} / {totalItems}
+                            </td>
+
+                            <td style={{ padding: "0.7rem 1rem" }}>
+                              <span
+                                style={{
+                                  background: trans.status === "Passed" ? "#ecfdf5" : "#fef2f2",
+                                  color: trans.status === "Passed" ? "#059669" : "#dc2626",
+                                  border: trans.status === "Passed" ? "1px solid #a7f3d0" : "1px solid #fecaca",
+                                  padding: "0.2rem 0.55rem",
+                                  borderRadius: "6px",
+                                  fontSize: "0.76rem",
+                                  fontWeight: 800,
+                                }}
+                              >
+                                {trans.grade} ({trans.remarks})
+                              </span>
+                            </td>
+
+                            <td style={{ padding: "0.7rem 1rem" }}>
+                              <span
+                                style={{
+                                  display: "inline-flex",
+                                  alignItems: "center",
+                                  gap: "4px",
+                                  fontWeight: 700,
+                                  fontSize: "0.8rem",
+                                  color: trans.status === "Passed" ? "#059669" : "#dc2626",
+                                }}
+                              >
+                                {trans.status === "Passed" ? <CheckCircle2 size={14} /> : <AlertTriangle size={14} />}
+                                {trans.status}
+                              </span>
+                            </td>
+
+                            <td style={{ padding: "0.7rem 1rem", color: "#64748b", fontSize: "0.78rem", fontWeight: 600 }}>
+                              {sub.created_at ? formatDate(sub.created_at) : "Recorded"}
+                            </td>
+
+                            <td style={{ padding: "0.7rem 1rem", textAlign: "right" }}>
+                              {onSelectSubmission && (
+                                <button
+                                  type="button"
+                                  className="btn btn-secondary btn-sm"
+                                  onClick={() => onSelectSubmission(sub)}
+                                  style={{
+                                    display: "inline-flex",
+                                    alignItems: "center",
+                                    gap: "4px",
+                                    fontSize: "0.75rem",
+                                    background: "#ffffff",
+                                    border: "1px solid #e2e8f0",
+                                    color: "#0f172a",
+                                    borderRadius: "6px",
+                                    fontWeight: 700,
+                                    padding: "0.3rem 0.65rem",
+                                  }}
+                                >
+                                  <Eye size={12} /> Inspect
+                                </button>
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Student Progress Flow */}
       {user.role === "student" && (
