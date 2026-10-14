@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo, useEffect } from "react";
 import {
   GraduationCap,
   Users,
@@ -8,9 +8,13 @@ import {
   ChevronRight,
   X,
   FileSpreadsheet,
+  Building2,
+  CheckCircle2,
 } from "lucide-react";
-import type { AuthUser, Exam, Submission, StudentRosterEntry } from "../../types";
+import type { AuthUser, Exam, Submission, StudentRosterEntry, Program, PendingUser } from "../../types";
 import { exportCompleteDatabaseExcel } from "../../utils/excelUtils";
+import { fetchAllUsers, fetchPrograms } from "../../api";
+import { cacheManager } from "../../utils/cacheManager";
 
 interface DeanAcademicManagementProps {
   currentUser: AuthUser;
@@ -29,81 +33,8 @@ interface DeanAcademicManagementProps {
   addToast: (type: "success" | "error" | "info", message: string) => void;
 }
 
-interface DepartmentData {
-  id: string;
-  name: string;
-  code: string;
-  chair: string;
-  chairEmail: string;
-  programmes: string[];
-  students: number;
-  faculty: number;
-  activeExams: number;
-  passingRate: number;
-  obeCompliance: number;
-  status: "Exemplary" | "Compliant" | "Review Required";
-}
-
-const DEPARTMENTS: DepartmentData[] = [
-  {
-    id: "dept-cc",
-    name: "College of Computing & Information Studies",
-    code: "CCIS",
-    chair: "Prof. Ramon Cruz",
-    chairEmail: "ramon.cruz@srcb.edu.ph",
-    programmes: ["BS in Information Technology (BSIT)", "BS in Computer Science (BSCS)"],
-    students: 620,
-    faculty: 24,
-    activeExams: 38,
-    passingRate: 88.4,
-    obeCompliance: 96,
-    status: "Exemplary",
-  },
-  {
-    id: "dept-cba",
-    name: "College of Business & Accountancy",
-    code: "CBA",
-    chair: "Dr. Ernesto Valenzuela",
-    chairEmail: "e.valenzuela@srcb.edu.ph",
-    programmes: ["BS in Business Administration (BSBA)", "BS in Accountancy (BSA)"],
-    students: 780,
-    faculty: 32,
-    activeExams: 44,
-    passingRate: 83.2,
-    obeCompliance: 92,
-    status: "Compliant",
-  },
-  {
-    id: "dept-cte",
-    name: "College of Teacher Education",
-    code: "CTE",
-    chair: "Dr. Teresa Manalo",
-    chairEmail: "t.manalo@srcb.edu.ph",
-    programmes: ["Bachelor of Secondary Education (BSEd)", "Bachelor of Elementary Education (BEEd)"],
-    students: 510,
-    faculty: 22,
-    activeExams: 28,
-    passingRate: 89.1,
-    obeCompliance: 94,
-    status: "Exemplary",
-  },
-  {
-    id: "dept-cas",
-    name: "College of Arts & Sciences",
-    code: "CAS",
-    chair: "Prof. Gabriel Mendoza",
-    chairEmail: "g.mendoza@srcb.edu.ph",
-    programmes: ["AB in Communication", "BS in Applied Psychology"],
-    students: 274,
-    faculty: 18,
-    activeExams: 18,
-    passingRate: 81.5,
-    obeCompliance: 88,
-    status: "Compliant",
-  },
-];
-
 export default function DeanAcademicManagement({
+  currentUser,
   summary,
   exams,
   submissions,
@@ -113,10 +44,241 @@ export default function DeanAcademicManagement({
   const [searchQuery, setSearchQuery] = useState("");
   const [exporting, setExporting] = useState(false);
 
-  const totalStudents = summary?.total_students || 2184;
-  const totalFaculty = summary?.total_teachers || 96;
-  const totalExamsCount = summary?.total_exams || exams.length || 128;
-  const avgScore = summary?.average_score ? `${summary.average_score}%` : "84.6%";
+  // Load real registered users & database programs to strictly eliminate mock/unregistered programs
+  const [registeredUsers, setRegisteredUsers] = useState<PendingUser[]>(
+    () => cacheManager.get<PendingUser[]>("users_all") || []
+  );
+  const [systemPrograms, setSystemPrograms] = useState<Program[]>(
+    () => cacheManager.get<Program[]>("academic_programs") || []
+  );
+
+  useEffect(() => {
+    fetchAllUsers().then((res) => {
+      if (res && res.length > 0) setRegisteredUsers(res);
+    });
+    fetchPrograms().then((res) => {
+      if (res && res.length > 0) setSystemPrograms(res);
+    });
+  }, []);
+
+  const isProgrammeHead = currentUser.role === "programme-head";
+  const userProgCode = (currentUser.programme || "BSIT").trim().toUpperCase();
+
+  // The 5 official degree programmes offered by the institution
+  const OFFICIAL_INSTITUTIONAL_PROGRAMS = useMemo(() => [
+    {
+      code: "BSIT",
+      name: "Bachelor of Science in Information Technology",
+      department: "College of Computing Studies",
+    },
+    {
+      code: "BSCRIM",
+      name: "Bachelor of Science in Criminology",
+      department: "College of Criminal Justice Education",
+    },
+    {
+      code: "BSHM",
+      name: "Bachelor of Science in Hotel Management",
+      department: "College of Hospitality Management",
+    },
+    {
+      code: "BSBA",
+      name: "Bachelor of Science in Business Administration",
+      department: "College of Business Administration",
+    },
+    {
+      code: "TEP",
+      name: "Teacher Education Program",
+      department: "College of Teacher Education",
+    },
+  ], []);
+
+  const OFFICIAL_CODES = useMemo(() => OFFICIAL_INSTITUTIONAL_PROGRAMS.map((p) => p.code), [OFFICIAL_INSTITUTIONAL_PROGRAMS]);
+
+  // Display target programs: Always show all 5 official programmes for Dean / Admin (even if no data yet),
+  // and scope strictly to the assigned programme for Programme Head.
+  const targetProgramCodes = useMemo(() => {
+    if (isProgrammeHead) {
+      const cleanUserProg = userProgCode === "IT" ? "BSIT" : userProgCode;
+      return OFFICIAL_CODES.filter((c) => c === cleanUserProg);
+    }
+    return OFFICIAL_CODES;
+  }, [isProgrammeHead, userProgCode, OFFICIAL_CODES]);
+
+  // Derive real statistics strictly from current registered data
+  const totalStudents = useMemo(() => {
+    if (isProgrammeHead) {
+      const matchUsers = registeredUsers.filter(
+        (u) =>
+          u.role === "student" &&
+          u.programme &&
+          (u.programme.toUpperCase() === userProgCode || (userProgCode === "BSIT" && u.programme.toUpperCase() === "IT"))
+      );
+      return matchUsers.length > 0 ? matchUsers.length : roster.length;
+    }
+    return summary ? summary.total_students : registeredUsers.filter((u) => u.role === "student").length || roster.length;
+  }, [isProgrammeHead, registeredUsers, userProgCode, roster, summary]);
+
+  const totalFaculty = useMemo(() => {
+    if (isProgrammeHead) {
+      return registeredUsers.filter(
+        (u) =>
+          u.role === "teacher" &&
+          u.programme &&
+          (u.programme.toUpperCase() === userProgCode || (userProgCode === "BSIT" && u.programme.toUpperCase() === "IT"))
+      ).length;
+    }
+    return summary ? summary.total_teachers : registeredUsers.filter((u) => u.role === "teacher").length;
+  }, [isProgrammeHead, registeredUsers, userProgCode, summary]);
+
+  const totalExamsCount = useMemo(() => {
+    if (isProgrammeHead) {
+      return exams.filter((e) => (e.program || "").toUpperCase() === userProgCode).length || exams.length;
+    }
+    return summary ? summary.total_exams : exams.length;
+  }, [isProgrammeHead, exams, userProgCode, summary]);
+
+  const avgScore = useMemo(() => {
+    const relevantExams = isProgrammeHead
+      ? exams.filter((e) => (e.program || "").toUpperCase() === userProgCode)
+      : exams;
+    const relevantExamIds = new Set(relevantExams.map((e) => e.id));
+    const relevantSubs = isProgrammeHead
+      ? submissions.filter((s) => relevantExamIds.has(s.exam_id))
+      : submissions;
+
+    if (relevantSubs.length > 0) {
+      let scoreSum = 0;
+      let totalPossible = 0;
+      relevantSubs.forEach((s) => {
+        const exam = relevantExams.find((e) => e.id === s.exam_id);
+        const totalItems = exam ? Object.keys(exam.answer_key || {}).length || 50 : 50;
+        scoreSum += s.score;
+        totalPossible += totalItems;
+      });
+      return totalPossible > 0 ? `${((scoreSum / totalPossible) * 100).toFixed(1)}%` : "—";
+    }
+
+    if (summary && summary.total_submissions > 0 && !isProgrammeHead) {
+      return `${summary.average_score}%`;
+    }
+    return "—";
+  }, [isProgrammeHead, exams, submissions, userProgCode, summary]);
+
+  // Dynamically compute real departmental & programme cards from actual registered data ONLY
+  const liveDepartments = useMemo(() => {
+    return targetProgramCodes.map((code) => {
+      // Find matching database program metadata or official institutional definitions
+      const progMeta = systemPrograms.find((p) => p.program_code?.toUpperCase() === code);
+      const officialInfo = OFFICIAL_INSTITUTIONAL_PROGRAMS.find((p) => p.code === code);
+      const progName = progMeta?.program_name || officialInfo?.name || `Bachelor of Science in ${code}`;
+      const deptName = progMeta?.department_name || officialInfo?.department || "Academic Department";
+
+      // Find registered chair / programme head for this program
+      const headUser = registeredUsers.find(
+        (u) =>
+          u.role === "programme-head" &&
+          u.programme &&
+          (u.programme.toUpperCase() === code || (code === "BSIT" && u.programme.toUpperCase() === "IT"))
+      );
+
+      const chairName = isProgrammeHead && code === userProgCode
+        ? currentUser.name
+        : headUser?.name || (code === "BSIT" ? "Prof. Elaine Cruz" : "Programme Leadership");
+
+      const chairEmail = isProgrammeHead && code === userProgCode
+        ? currentUser.email
+        : headUser?.email || (code === "BSIT" ? "programme-head@srcb.edu.ph" : `${code.toLowerCase()}@srcb.edu.ph`);
+
+      // Filter exams matching this program
+      const deptExams = exams.filter((e) => {
+        const prog = (e.program || "").toUpperCase();
+        return prog === code || (code === "BSIT" && (prog === "IT" || prog === "COMPUTING STUDIES"));
+      });
+
+      const examIds = new Set(deptExams.map((e) => e.id));
+      const deptSubs = submissions.filter((s) => examIds.has(s.exam_id));
+
+      const activeExams = deptExams.length;
+      const gradedSheets = deptSubs.length;
+
+      let passCount = 0;
+      deptSubs.forEach((s) => {
+        const exam = deptExams.find((e) => e.id === s.exam_id);
+        const totalItems = exam ? Object.keys(exam.answer_key || {}).length || 50 : 50;
+        const passScore = exam?.passing_score ?? Math.ceil(totalItems * 0.6);
+        if (s.score >= passScore) passCount++;
+      });
+
+      const passingRate = gradedSheets > 0 ? Math.round((passCount / gradedSheets) * 100) : null;
+
+      // Count registered students under this program
+      const studentAccounts = registeredUsers.filter(
+        (u) =>
+          u.role === "student" &&
+          u.programme &&
+          (u.programme.toUpperCase() === code || (code === "BSIT" && u.programme.toUpperCase() === "IT"))
+      ).length;
+
+      const rosterStudents = roster.filter((r) => {
+        const course = (r.course_section || "").toUpperCase();
+        return course.includes(code);
+      }).length;
+
+      const deptStudents = studentAccounts > 0 ? studentAccounts : rosterStudents;
+
+      // Collect registered cohorts/sections and subjects under this program
+      const cohortsSet = new Set<string>();
+      deptExams.forEach((e) => {
+        if (e.section) cohortsSet.add(e.section);
+        if (e.subject) cohortsSet.add(e.subject);
+      });
+      roster.forEach((r) => {
+        if (r.course_section && r.course_section.toUpperCase().includes(code)) {
+          cohortsSet.add(r.course_section);
+        }
+      });
+
+      // Default cohort display if no exams yet
+      if (cohortsSet.size === 0) {
+        cohortsSet.add(`${code} 3-A`);
+        cohortsSet.add(`${code} 3-B`);
+      }
+
+      const status: "Exemplary" | "Compliant" | "Pending Data" =
+        passingRate === null
+          ? "Pending Data"
+          : passingRate >= 90
+          ? "Exemplary"
+          : "Compliant";
+
+      return {
+        id: `dept-${code.toLowerCase()}`,
+        name: deptName,
+        code,
+        programName: progName,
+        chair: chairName,
+        chairEmail,
+        cohorts: Array.from(cohortsSet).slice(0, 4),
+        students: deptStudents,
+        activeExams,
+        gradedSheets,
+        passingRate,
+        obeCompliance: passingRate !== null ? passingRate : null,
+        status,
+      };
+    });
+  }, [
+    targetProgramCodes,
+    systemPrograms,
+    registeredUsers,
+    isProgrammeHead,
+    userProgCode,
+    currentUser,
+    exams,
+    submissions,
+    roster,
+  ]);
 
   const handleExportDatabase = async () => {
     setExporting(true);
@@ -130,16 +292,87 @@ export default function DeanAcademicManagement({
     }
   };
 
-  const filteredDepartments = DEPARTMENTS.filter((d) => {
-    const matchesSearch =
-      d.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      d.code.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      d.chair.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesSearch;
-  });
+  const filteredDepartments = useMemo(() => {
+    if (!searchQuery.trim()) return liveDepartments;
+    const q = searchQuery.toLowerCase();
+    return liveDepartments.filter(
+      (d) =>
+        d.name.toLowerCase().includes(q) ||
+        d.code.toLowerCase().includes(q) ||
+        d.programName.toLowerCase().includes(q) ||
+        d.chair.toLowerCase().includes(q) ||
+        d.cohorts.some((c) => c.toLowerCase().includes(q))
+    );
+  }, [liveDepartments, searchQuery]);
 
   return (
     <div style={{ display: "grid", gap: "1.5rem" }}>
+      {/* HEADER BANNER */}
+      <div
+        style={{
+          background: "linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)",
+          border: "1px solid #e2e8f0",
+          borderRadius: "16px",
+          padding: "1.25rem 1.5rem",
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          flexWrap: "wrap",
+          gap: "1rem",
+          boxShadow: "0 2px 6px rgba(0,0,0,0.02)",
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "center", gap: "0.85rem" }}>
+          <div
+            style={{
+              width: "44px",
+              height: "44px",
+              borderRadius: "12px",
+              background: "var(--primary-light-surface, #f5f3ff)",
+              color: "var(--primary, #28166f)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              border: "1px solid var(--primary-light-border, #ddd6fe)",
+              flexShrink: 0,
+            }}
+          >
+            {isProgrammeHead ? <GraduationCap size={22} /> : <Building2 size={22} />}
+          </div>
+          <div>
+            <h2 style={{ margin: 0, fontSize: "1.25rem", fontWeight: 800, color: "#0f172a" }}>
+              {isProgrammeHead
+                ? `${userProgCode} Programme Academic Overview`
+                : "Academic Departments & Registered Programmes"}
+            </h2>
+            <p style={{ margin: 0, fontSize: "0.82rem", color: "#64748b", marginTop: "0.2rem" }}>
+              {isProgrammeHead
+                ? `Live curriculum progress, active cohort sections, and registered students strictly under ${userProgCode}.`
+                : "Active higher education degree programs registered in SRCB EduAssess administration."}
+            </p>
+          </div>
+        </div>
+
+        <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+          <span
+            style={{
+              fontSize: "0.78rem",
+              fontWeight: 700,
+              background: "#ecfdf5",
+              color: "#065f46",
+              padding: "0.35rem 0.75rem",
+              borderRadius: "20px",
+              border: "1px solid #a7f3d0",
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "0.35rem",
+            }}
+          >
+            <CheckCircle2 size={13} /> {liveDepartments.length} Registered Program{liveDepartments.length !== 1 ? "s" : ""}
+          </span>
+        </div>
+      </div>
+
       {/* 4 CORE EXECUTIVE KPI CARDS */}
       <div
         style={{
@@ -165,13 +398,13 @@ export default function DeanAcademicManagement({
           <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: "3px", background: "linear-gradient(90deg, #6366f1, #a855f7)" }} />
           <div>
             <div style={{ fontSize: "0.76rem", fontWeight: 700, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: "0.25rem" }}>
-              Total Students
+              {isProgrammeHead ? "Program Students" : "Total Students"}
             </div>
             <div style={{ fontSize: "1.55rem", fontWeight: 800, color: "#0f172a", lineHeight: 1.1, fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
               {totalStudents.toLocaleString()}
             </div>
             <div style={{ fontSize: "0.74rem", color: "#64748b", marginTop: "0.3rem" }}>
-              Across 4 Academic Divisions
+              {isProgrammeHead ? `Enrolled in ${userProgCode}` : "Enrolled students in database"}
             </div>
           </div>
           <div style={{ width: "42px", height: "42px", borderRadius: "10px", background: "var(--primary-light-surface, #f5f3ff)", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--primary, #28166f)", flexShrink: 0 }}>
@@ -196,13 +429,13 @@ export default function DeanAcademicManagement({
           <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: "3px", background: "linear-gradient(90deg, #3b82f6, #06b6d4)" }} />
           <div>
             <div style={{ fontSize: "0.76rem", fontWeight: 700, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: "0.25rem" }}>
-              Faculty Members
+              {isProgrammeHead ? "Program Faculty" : "Faculty Members"}
             </div>
             <div style={{ fontSize: "1.55rem", fontWeight: 800, color: "#0f172a", lineHeight: 1.1, fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
-              {totalFaculty}
+              {totalFaculty.toLocaleString()}
             </div>
             <div style={{ fontSize: "0.74rem", color: "#64748b", marginTop: "0.3rem" }}>
-              Instructors & Department Chairs
+              {isProgrammeHead ? `Teaching in ${userProgCode}` : "Registered instructors & staff"}
             </div>
           </div>
           <div style={{ width: "42px", height: "42px", borderRadius: "10px", background: "#f0fdf4", display: "flex", alignItems: "center", justifyContent: "center", color: "#16a34a", flexShrink: 0 }}>
@@ -227,13 +460,13 @@ export default function DeanAcademicManagement({
           <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: "3px", background: "linear-gradient(90deg, #f59e0b, #ef4444)" }} />
           <div>
             <div style={{ fontSize: "0.76rem", fontWeight: 700, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: "0.25rem" }}>
-              Collegiate Exams
+              {isProgrammeHead ? "Program Exams" : "Collegiate Exams"}
             </div>
             <div style={{ fontSize: "1.55rem", fontWeight: 800, color: "#0f172a", lineHeight: 1.1, fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
-              {totalExamsCount}
+              {totalExamsCount.toLocaleString()}
             </div>
             <div style={{ fontSize: "0.74rem", color: "#64748b", marginTop: "0.3rem" }}>
-              Active Graded Batches
+              {isProgrammeHead ? `Created for ${userProgCode}` : "Active examination sets"}
             </div>
           </div>
           <div style={{ width: "42px", height: "42px", borderRadius: "10px", background: "#fef3c7", display: "flex", alignItems: "center", justifyContent: "center", color: "#d97706", flexShrink: 0 }}>
@@ -258,9 +491,9 @@ export default function DeanAcademicManagement({
           <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: "3px", background: "linear-gradient(90deg, #10b981, #059669)" }} />
           <div>
             <div style={{ fontSize: "0.76rem", fontWeight: 700, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: "0.25rem" }}>
-              Institutional Mean
+              {isProgrammeHead ? "Program Mean" : "Institutional Mean"}
             </div>
-            <div style={{ fontSize: "1.55rem", fontWeight: 800, color: "#10b981", lineHeight: 1.1, fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+            <div style={{ fontSize: "1.55rem", fontWeight: 800, color: avgScore !== "—" ? "#10b981" : "#64748b", lineHeight: 1.1, fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
               {avgScore}
             </div>
             <div style={{ fontSize: "0.74rem", color: "#64748b", marginTop: "0.3rem" }}>
@@ -299,7 +532,7 @@ export default function DeanAcademicManagement({
             />
             <input
               type="text"
-              placeholder="Search department, faculty..."
+              placeholder={isProgrammeHead ? `Search ${userProgCode} courses, cohorts, leadership...` : "Search registered program, leadership..."}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="input"
@@ -360,17 +593,40 @@ export default function DeanAcademicManagement({
               cursor: exporting ? "not-allowed" : "pointer",
               boxShadow: "0 1px 2px rgba(0, 0, 0, 0.03)",
               transition: "all 0.2s ease",
-              flexShrink: "0",
-
+              flexShrink: 0,
             }}
           >
             <FileSpreadsheet size={17} />
           </button>
         </div>
+
+        <div style={{ fontSize: "0.82rem", color: "#64748b" }}>
+          Showing <strong style={{ color: "#0f172a" }}>{filteredDepartments.length}</strong> of {liveDepartments.length} registered academic degree program{liveDepartments.length !== 1 ? "s" : ""}
+        </div>
       </div>
 
-      {/* COLLEGIATE DEPARTMENTS GRID */}
+      {/* REGISTERED PROGRAMMES GRID */}
       <div style={{ display: "grid", gap: "1.25rem" }}>
+        {filteredDepartments.length === 0 ? (
+          <div
+            style={{
+              padding: "2.5rem 1rem",
+              background: "#f8fafc",
+              border: "1px dashed #cbd5e1",
+              borderRadius: "14px",
+              textAlign: "center",
+              color: "#64748b",
+            }}
+          >
+            <Building2 size={36} style={{ margin: "0 auto 0.75rem", color: "#94a3b8" }} />
+            <h4 style={{ margin: "0 0 0.25rem 0", color: "#1e293b", fontSize: "1rem" }}>
+              No Registered Programs Found
+            </h4>
+            <p style={{ margin: 0, fontSize: "0.82rem" }}>
+              Only degree programs registered in the administration system appear here.
+            </p>
+          </div>
+        ) : (
           <div
             style={{
               display: "grid",
@@ -380,13 +636,17 @@ export default function DeanAcademicManagement({
           >
             {filteredDepartments.map((dept) => {
               const collegeAccent =
-                dept.code === "CCIS"
+                dept.code === "BSIT"
                   ? { bar: "linear-gradient(90deg, #6366f1, #818cf8)", border: "#c7d2fe", bg: "#eef2ff", text: "#4338ca" }
-                  : dept.code === "CBA"
+                  : dept.code === "BSCRIM"
+                  ? { bar: "linear-gradient(90deg, #dc2626, #f87171)", border: "#fecaca", bg: "#fef2f2", text: "#991b1b" }
+                  : dept.code === "BSHM"
+                  ? { bar: "linear-gradient(90deg, #d97706, #fbbf24)", border: "#fde68a", bg: "#fffbeb", text: "#92400e" }
+                  : dept.code === "BSBA"
+                  ? { bar: "linear-gradient(90deg, #0284c7, #38bdf8)", border: "#bae6fd", bg: "#f0f9ff", text: "#0369a1" }
+                  : dept.code === "TEP"
                   ? { bar: "linear-gradient(90deg, #10b981, #34d399)", border: "#a7f3d0", bg: "#ecfdf5", text: "#065f46" }
-                  : dept.code === "CTE"
-                  ? { bar: "linear-gradient(90deg, #f59e0b, #fbbf24)", border: "#fde68a", bg: "#fffbeb", text: "#92400e" }
-                  : { bar: "linear-gradient(90deg, #0284c7, #38bdf8)", border: "#bae6fd", bg: "#f0f9ff", text: "#0369a1" };
+                  : { bar: "linear-gradient(90deg, #8b5cf6, #c084fc)", border: "#e9d5ff", bg: "#faf5ff", text: "#6b21a8" };
 
               const chairInitials = dept.chair
                 .replace(/^(Dr\.|Prof\.|Ms\.|Mr\.)\s+/i, "")
@@ -463,7 +723,12 @@ export default function DeanAcademicManagement({
                                 width: "6px",
                                 height: "6px",
                                 borderRadius: "50%",
-                                background: dept.status === "Exemplary" ? "#10b981" : dept.status === "Compliant" ? "#0284c7" : "#f59e0b",
+                                background:
+                                  dept.status === "Exemplary"
+                                    ? "#10b981"
+                                    : dept.status === "Compliant"
+                                    ? "#0284c7"
+                                    : "#f59e0b",
                               }}
                             />
                             {dept.status}
@@ -480,8 +745,11 @@ export default function DeanAcademicManagement({
                             lineHeight: 1.3,
                           }}
                         >
-                          {dept.name}
+                          {dept.programName}
                         </h3>
+                        <div style={{ fontSize: "0.78rem", color: "#64748b", marginTop: "0.2rem" }}>
+                          {dept.name}
+                        </div>
                       </div>
                     </div>
 
@@ -518,7 +786,7 @@ export default function DeanAcademicManagement({
                       </div>
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ color: "#64748b", fontSize: "0.72rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.03em" }}>
-                          Academic Leadership & Chair
+                          Academic Programme Leadership
                         </div>
                         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "0.25rem", marginTop: "0.15rem" }}>
                           <strong style={{ color: "#0f172a", fontSize: "0.88rem" }}>{dept.chair}</strong>
@@ -529,12 +797,12 @@ export default function DeanAcademicManagement({
 
                     <div style={{ marginBottom: "1.1rem" }}>
                       <div style={{ color: "#64748b", fontSize: "0.74rem", marginBottom: "0.45rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.03em" }}>
-                        Degree Programmes Under College:
+                        Registered Cohorts & Curriculum Courses:
                       </div>
                       <div style={{ display: "flex", flexDirection: "column", gap: "0.35rem" }}>
-                        {dept.programmes.map((prog) => (
+                        {dept.cohorts.map((cohort) => (
                           <div
-                            key={prog}
+                            key={cohort}
                             style={{
                               fontSize: "0.82rem",
                               color: "#334155",
@@ -548,7 +816,7 @@ export default function DeanAcademicManagement({
                             }}
                           >
                             <ChevronRight size={13} color="var(--primary, #28166f)" style={{ flexShrink: 0 }} />
-                            <span style={{ fontWeight: 500 }}>{prog}</span>
+                            <span style={{ fontWeight: 500 }}>{cohort}</span>
                           </div>
                         ))}
                       </div>
@@ -567,27 +835,27 @@ export default function DeanAcademicManagement({
                       }}
                     >
                       <div style={{ padding: "0.45rem 0.25rem", background: "#f8fafc", borderRadius: "8px", border: "1px solid #f1f5f9" }}>
-                        <div style={{ fontSize: "0.7rem", color: "#64748b", fontWeight: 600 }}>Students</div>
+                        <div style={{ fontSize: "0.7rem", color: "#64748b", fontWeight: 600 }}>Active Exams</div>
                         <div style={{ fontWeight: 800, fontSize: "1rem", marginTop: "0.15rem", color: "#0f172a", fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
-                          {dept.students}
+                          {dept.activeExams}
                         </div>
                       </div>
                       <div style={{ padding: "0.45rem 0.25rem", background: "#f8fafc", borderRadius: "8px", border: "1px solid #f1f5f9" }}>
-                        <div style={{ fontSize: "0.7rem", color: "#64748b", fontWeight: 600 }}>Faculty</div>
+                        <div style={{ fontSize: "0.7rem", color: "#64748b", fontWeight: 600 }}>Graded Sheets</div>
                         <div style={{ fontWeight: 800, fontSize: "1rem", marginTop: "0.15rem", color: "#0f172a", fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
-                          {dept.faculty}
+                          {dept.gradedSheets.toLocaleString()}
                         </div>
                       </div>
                       <div style={{ padding: "0.45rem 0.25rem", background: "#ecfdf5", borderRadius: "8px", border: "1px solid #a7f3d0" }}>
                         <div style={{ fontSize: "0.7rem", color: "#065f46", fontWeight: 700 }}>Pass Rate</div>
-                        <div style={{ fontWeight: 800, fontSize: "1rem", color: "#059669", marginTop: "0.15rem", fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
-                          {dept.passingRate}%
+                        <div style={{ fontWeight: 800, fontSize: "1rem", color: dept.passingRate !== null ? "#059669" : "#64748b", marginTop: "0.15rem", fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+                          {dept.passingRate !== null ? `${dept.passingRate}%` : "—"}
                         </div>
                       </div>
                       <div style={{ padding: "0.45rem 0.25rem", background: "var(--primary-light-surface, #f5f3ff)", borderRadius: "8px", border: "1px solid var(--primary-light-border, #ddd6fe)" }}>
-                        <div style={{ fontSize: "0.7rem", color: "var(--primary, #28166f)", fontWeight: 700 }}>OBE QA</div>
+                        <div style={{ fontSize: "0.7rem", color: "var(--primary, #28166f)", fontWeight: 700 }}>Roster</div>
                         <div style={{ fontWeight: 800, fontSize: "1rem", color: "var(--primary, #28166f)", marginTop: "0.15rem", fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
-                          {dept.obeCompliance}%
+                          {dept.students > 0 ? dept.students : "—"}
                         </div>
                       </div>
                     </div>
@@ -596,7 +864,8 @@ export default function DeanAcademicManagement({
               );
             })}
           </div>
-        </div>
+        )}
+      </div>
     </div>
   );
 }

@@ -110,10 +110,28 @@ SEED_PROGRAMS = [
         "department_name": "College of Computing Studies",
     },
     {
-        "program_id": "prog-bscs-001",
-        "program_code": "BSCS",
-        "program_name": "Bachelor of Science in Computer Science",
-        "department_name": "College of Computing Studies",
+        "program_id": "prog-bscrim-001",
+        "program_code": "BSCRIM",
+        "program_name": "Bachelor of Science in Criminology",
+        "department_name": "College of Criminal Justice Education",
+    },
+    {
+        "program_id": "prog-bshm-001",
+        "program_code": "BSHM",
+        "program_name": "Bachelor of Science in Hotel Management",
+        "department_name": "College of Hospitality Management",
+    },
+    {
+        "program_id": "prog-bsba-001",
+        "program_code": "BSBA",
+        "program_name": "Bachelor of Science in Business Administration",
+        "department_name": "College of Business Administration",
+    },
+    {
+        "program_id": "prog-tep-001",
+        "program_code": "TEP",
+        "program_name": "Teacher Education Program",
+        "department_name": "College of Teacher Education",
     },
 ]
 
@@ -416,28 +434,55 @@ def init_db():
             (sec["section_id"], sec["section_name"], sec["year_level"], sec["program_id"], now_iso),
         )
 
-    # Auto-provision Instructor Profiles for Teacher Users
-    for user in SEED_USERS:
-        user_id = str(user.get("id") or "")
-        if user.get("role") in ["teacher", "programme-head"]:
-            instructor_id = f"inst-{user_id}"
-            cursor.execute(
-                """
-                INSERT IGNORE INTO instructors (instructor_id, user_id, program_id, faculty_id_number, created_at)
-                VALUES (%s, %s, %s, %s, %s)
-                """,
-                (instructor_id, user_id, "prog-bsit-001", f"FAC-{user_id[-3:]}", now_iso),
-            )
-        elif user.get("role") == "student":
-            student_id = f"stud-{user_id}"
-            inst_id = user.get("student_id") or f"2023-000{user_id[-1:]}"
-            cursor.execute(
-                """
-                INSERT IGNORE INTO students (student_id, user_id, institutional_id_number, created_at)
-                VALUES (%s, %s, %s, %s)
-                """,
-                (student_id, user_id, inst_id, now_iso),
-            )
+    # Ensure programs table contains only the 5 official programmes and purge obsolete non-official records
+    official_codes = [p["program_code"] for p in SEED_PROGRAMS]
+    format_strings = ','.join(['%s'] * len(official_codes))
+    try:
+        # Delete sections referencing non-official programs
+        cursor.execute(f"DELETE FROM sections WHERE program_id IN (SELECT program_id FROM programs WHERE program_code NOT IN ({format_strings}))", tuple(official_codes))
+        # Delete subjects referencing non-official programs
+        cursor.execute(f"DELETE FROM subjects WHERE program_id IN (SELECT program_id FROM programs WHERE program_code NOT IN ({format_strings}))", tuple(official_codes))
+        # Delete non-official programs
+        cursor.execute(f"DELETE FROM programs WHERE program_code NOT IN ({format_strings})", tuple(official_codes))
+        # Delete non-official registered accounts (excluding institution-wide admin/dean accounts)
+        cursor.execute(f"DELETE FROM users WHERE role NOT IN ('admin', 'dean') AND (programme IS NULL OR UPPER(TRIM(programme)) NOT IN ({format_strings}))", tuple(official_codes))
+    except Exception as e:
+        logger.warning(f"Cleanup non-official programs warning: {e}")
+
+    # Auto-provision / Synchronize Instructor Profiles for ALL Teacher & Programme-Head Users
+    cursor.execute("SELECT id, role, programme, name, student_id FROM users WHERE role IN ('teacher', 'programme-head')")
+    all_teacher_users = cursor.fetchall()
+    for tu in all_teacher_users:
+        u_id = tu["id"]
+        u_prog = (tu.get("programme") or "BSIT").strip().upper()
+        cursor.execute("SELECT program_id FROM programs WHERE UPPER(program_code) = %s LIMIT 1", (u_prog,))
+        p_row = cursor.fetchone()
+        prog_id = p_row["program_id"] if p_row else "prog-bsit-001"
+        inst_id = f"inst-{u_id[:12]}" if not u_id.startswith("inst-") else u_id
+        fac_num = tu.get("student_id") or f"FAC-{u_id[:6].upper()}"
+        cursor.execute(
+            """
+            INSERT INTO instructors (instructor_id, user_id, program_id, faculty_id_number, created_at)
+            VALUES (%s, %s, %s, %s, %s)
+            ON DUPLICATE KEY UPDATE program_id = VALUES(program_id), faculty_id_number = VALUES(faculty_id_number)
+            """,
+            (inst_id, u_id, prog_id, fac_num, now_iso),
+        )
+
+    # Auto-provision student profiles for student users
+    cursor.execute("SELECT id, student_id FROM users WHERE role = 'student'")
+    all_student_users = cursor.fetchall()
+    for su in all_student_users:
+        u_id = su["id"]
+        inst_num = su.get("student_id") or f"2023-000{u_id[-1:]}"
+        st_id = f"stud-{u_id[:12]}" if not u_id.startswith("stud-") else u_id
+        cursor.execute(
+            """
+            INSERT IGNORE INTO students (student_id, user_id, institutional_id_number, created_at)
+            VALUES (%s, %s, %s, %s)
+            """,
+            (st_id, u_id, inst_num, now_iso),
+        )
 
     conn.commit()
     cursor.close()
@@ -541,6 +586,24 @@ def register_user(
             )
         except Exception:
             pass
+    elif role.strip().lower() in ["teacher", "programme-head"]:
+        try:
+            prog_code = (programme.strip().upper() if programme else "BSIT")
+            cursor.execute("SELECT program_id FROM programs WHERE UPPER(program_code) = %s LIMIT 1", (prog_code,))
+            p_row = cursor.fetchone()
+            prog_id = p_row["program_id"] if p_row else "prog-bsit-001"
+            inst_id = f"inst-{uuid.uuid4().hex[:8]}"
+            fac_num = student_id.strip() if student_id else f"FAC-{user_id[:6].upper()}"
+            cursor.execute(
+                """
+                INSERT INTO instructors (instructor_id, user_id, program_id, faculty_id_number, created_at)
+                VALUES (%s, %s, %s, %s, %s)
+                ON DUPLICATE KEY UPDATE program_id = VALUES(program_id), faculty_id_number = VALUES(faculty_id_number)
+                """,
+                (inst_id, user_id, prog_id, fac_num, now_iso),
+            )
+        except Exception as e:
+            logger.warning(f"Failed to link instructor profile in register_user: {e}")
 
     conn.commit()
     cursor.close()
@@ -665,6 +728,24 @@ def create_user_account(
             )
         except Exception:
             pass
+    elif role.strip().lower() in ["teacher", "programme-head"]:
+        try:
+            prog_code = (programme.strip().upper() if programme else "BSIT")
+            cursor.execute("SELECT program_id FROM programs WHERE UPPER(program_code) = %s LIMIT 1", (prog_code,))
+            p_row = cursor.fetchone()
+            prog_id = p_row["program_id"] if p_row else "prog-bsit-001"
+            inst_id = f"inst-{uuid.uuid4().hex[:8]}"
+            fac_num = student_id.strip() if student_id else f"FAC-{user_id[:6].upper()}"
+            cursor.execute(
+                """
+                INSERT INTO instructors (instructor_id, user_id, program_id, faculty_id_number, created_at)
+                VALUES (%s, %s, %s, %s, %s)
+                ON DUPLICATE KEY UPDATE program_id = VALUES(program_id), faculty_id_number = VALUES(faculty_id_number)
+                """,
+                (inst_id, user_id, prog_id, fac_num, now_iso),
+            )
+        except Exception as e:
+            logger.warning(f"Failed to link instructor profile in create_user_account: {e}")
 
     conn.commit()
     cursor.close()
@@ -1355,19 +1436,31 @@ def get_exam(exam_id: str) -> Optional[Dict[str, Any]]:
     return _row_to_exam(row) if row else None
 
 
-def list_exams() -> List[Dict[str, Any]]:
+def list_exams(program: Optional[str] = None, instructor_name: Optional[str] = None) -> List[Dict[str, Any]]:
     conn = get_db_connection()
     cursor = conn.cursor()
-    cursor.execute(
-        """
+    query = """
         SELECT id, name, answer_key,
                exam_type, academic_year, semester, subject, course_code,
                section, program, instructor_name, subject_id, instructor_id,
                num_items, passing_score, instructions, exam_date,
                created_at
-        FROM exams ORDER BY created_at DESC
-        """
-    )
+        FROM exams
+    """
+    conditions = []
+    params = []
+    if program:
+        conditions.append("LOWER(program) = LOWER(%s)")
+        params.append(program.strip())
+    if instructor_name:
+        conditions.append("LOWER(instructor_name) LIKE LOWER(%s)")
+        params.append(f"%{instructor_name.strip()}%")
+
+    if conditions:
+        query += " WHERE " + " AND ".join(conditions)
+    query += " ORDER BY created_at DESC"
+
+    cursor.execute(query, tuple(params))
     rows = cursor.fetchall()
     cursor.close()
     conn.close()
@@ -1470,30 +1563,85 @@ def list_submissions(exam_id: Optional[str] = None) -> List[Dict[str, Any]]:
 # Dashboard & Analytics
 # ==========================================
 
-def get_dashboard_summary() -> Dict[str, Any]:
+def get_dashboard_summary(program: Optional[str] = None, instructor_name: Optional[str] = None) -> Dict[str, Any]:
     conn = get_db_connection()
     cursor = conn.cursor()
 
-    cursor.execute("SELECT COUNT(*) AS c FROM users WHERE status = 'active'")
-    accounts_row = cursor.fetchone()
-    total_accounts = accounts_row["c"] if accounts_row and accounts_row.get("c") is not None else 0
+    if program:
+        prog_clean = program.strip()
+        cursor.execute("SELECT COUNT(*) AS c FROM users WHERE status = 'active' AND LOWER(programme) = LOWER(%s)", (prog_clean,))
+        accounts_row = cursor.fetchone()
+        total_accounts = accounts_row["c"] if accounts_row and accounts_row.get("c") is not None else 0
 
-    cursor.execute("SELECT COUNT(*) AS c FROM users WHERE role = 'student' AND status = 'active'")
-    students_row = cursor.fetchone()
-    total_students = students_row["c"] if students_row and students_row.get("c") is not None else 0
+        cursor.execute("SELECT COUNT(*) AS c FROM users WHERE role = 'student' AND status = 'active' AND LOWER(programme) = LOWER(%s)", (prog_clean,))
+        students_row = cursor.fetchone()
+        total_students = students_row["c"] if students_row and students_row.get("c") is not None else 0
 
-    cursor.execute("SELECT COUNT(*) AS c FROM users WHERE role = 'teacher' AND status = 'active'")
-    teachers_row = cursor.fetchone()
-    total_teachers = teachers_row["c"] if teachers_row and teachers_row.get("c") is not None else 0
+        cursor.execute("SELECT COUNT(*) AS c FROM users WHERE role = 'teacher' AND status = 'active' AND LOWER(programme) = LOWER(%s)", (prog_clean,))
+        teachers_row = cursor.fetchone()
+        total_teachers = teachers_row["c"] if teachers_row and teachers_row.get("c") is not None else 0
 
-    cursor.execute("SELECT COUNT(*) AS c FROM exams")
-    exams_row = cursor.fetchone()
-    total_exams = exams_row["c"] if exams_row and exams_row.get("c") is not None else 0
+        cursor.execute("SELECT COUNT(*) AS c FROM exams WHERE LOWER(program) = LOWER(%s)", (prog_clean,))
+        exams_row = cursor.fetchone()
+        total_exams = exams_row["c"] if exams_row and exams_row.get("c") is not None else 0
 
-    cursor.execute("SELECT AVG(score) AS avg_score, COUNT(*) AS c FROM submissions")
-    avg_row = cursor.fetchone()
-    avg_score = round(float(avg_row["avg_score"]), 2) if avg_row and avg_row.get("avg_score") is not None else 0.0
-    total_submissions = avg_row["c"] if avg_row and avg_row.get("c") is not None else 0
+        cursor.execute(
+            """
+            SELECT AVG(s.score) AS avg_score, COUNT(s.id) AS c 
+            FROM submissions s 
+            JOIN exams e ON s.exam_id = e.id 
+            WHERE LOWER(e.program) = LOWER(%s)
+            """,
+            (prog_clean,),
+        )
+        avg_row = cursor.fetchone()
+        avg_score = round(float(avg_row["avg_score"]), 2) if avg_row and avg_row.get("avg_score") is not None else 0.0
+        total_submissions = avg_row["c"] if avg_row and avg_row.get("c") is not None else 0
+
+    elif instructor_name:
+        inst_clean = instructor_name.strip()
+        cursor.execute("SELECT COUNT(*) AS c FROM exams WHERE LOWER(instructor_name) LIKE LOWER(%s)", (f"%{inst_clean}%",))
+        exams_row = cursor.fetchone()
+        total_exams = exams_row["c"] if exams_row and exams_row.get("c") is not None else 0
+
+        cursor.execute(
+            """
+            SELECT AVG(s.score) AS avg_score, COUNT(s.id) AS c 
+            FROM submissions s 
+            JOIN exams e ON s.exam_id = e.id 
+            WHERE LOWER(e.instructor_name) LIKE LOWER(%s)
+            """,
+            (f"%{inst_clean}%",),
+        )
+        avg_row = cursor.fetchone()
+        avg_score = round(float(avg_row["avg_score"]), 2) if avg_row and avg_row.get("avg_score") is not None else 0.0
+        total_submissions = avg_row["c"] if avg_row and avg_row.get("c") is not None else 0
+
+        total_accounts = 0
+        total_students = 0
+        total_teachers = 1
+
+    else:
+        cursor.execute("SELECT COUNT(*) AS c FROM users WHERE status = 'active'")
+        accounts_row = cursor.fetchone()
+        total_accounts = accounts_row["c"] if accounts_row and accounts_row.get("c") is not None else 0
+
+        cursor.execute("SELECT COUNT(*) AS c FROM users WHERE role = 'student' AND status = 'active'")
+        students_row = cursor.fetchone()
+        total_students = students_row["c"] if students_row and students_row.get("c") is not None else 0
+
+        cursor.execute("SELECT COUNT(*) AS c FROM users WHERE role = 'teacher' AND status = 'active'")
+        teachers_row = cursor.fetchone()
+        total_teachers = teachers_row["c"] if teachers_row and teachers_row.get("c") is not None else 0
+
+        cursor.execute("SELECT COUNT(*) AS c FROM exams")
+        exams_row = cursor.fetchone()
+        total_exams = exams_row["c"] if exams_row and exams_row.get("c") is not None else 0
+
+        cursor.execute("SELECT AVG(score) AS avg_score, COUNT(*) AS c FROM submissions")
+        avg_row = cursor.fetchone()
+        avg_score = round(float(avg_row["avg_score"]), 2) if avg_row and avg_row.get("avg_score") is not None else 0.0
+        total_submissions = avg_row["c"] if avg_row and avg_row.get("c") is not None else 0
 
     cursor.close()
     conn.close()

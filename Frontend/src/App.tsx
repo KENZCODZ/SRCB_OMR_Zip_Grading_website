@@ -95,7 +95,7 @@ import {
   storeActiveTab,
   clearAuthSession,
 } from "./components/auth";
-import { CameraScanner } from "./components/camera";
+import { CameraScanner, NormalCameraScanner } from "./components/camera";
 import { AdminUserManagement } from "./components/admin";
 import { TeacherExamCompiler } from "./components/teacher";
 import GradingHistoryView from "./components/GradingHistoryView";
@@ -285,7 +285,7 @@ export default function App() {
 
   // Mobile Sidebar State
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
-  const [selectedAuthUserId, setSelectedAuthUserId] = useState(mockUsers[0].id);
+  const [selectedAuthUserId, setSelectedAuthUserId] = useState(mockUsers[0]?.id || "");
   const [loginEmail, setLoginEmail] = useState("");
   const [loginPassword, setLoginPassword] = useState("");
   const [loginError, setLoginError] = useState("");
@@ -383,8 +383,66 @@ export default function App() {
       }
   );
 
+  // Strictly role-scoped records:
+  // - Teachers only see their assigned courses/exams
+  // - Programme Heads only see their assigned academic programme
+  // - Admins and Deans have institutional access
+  const scopedExams = useMemo(() => {
+    if (!currentUser || currentUser.role === "admin" || currentUser.role === "dean") {
+      return exams;
+    }
+    if (currentUser.role === "teacher") {
+      const teacherName = currentUser.name.trim().toLowerCase();
+      const teacherId = currentUser.id;
+      return exams.filter((e) => {
+        const instName = (e.instructor_name || "").trim().toLowerCase();
+        const instId = (e as any).instructor_id;
+        return (
+          (instName && (instName.includes(teacherName) || teacherName.includes(instName))) ||
+          (instId && instId === teacherId)
+        );
+      });
+    }
+    if (currentUser.role === "programme-head") {
+      const phProg = (currentUser.programme || "BSIT").trim().toLowerCase();
+      return exams.filter((e) => {
+        const examProg = (e.program || "").trim().toLowerCase();
+        return (
+          examProg === phProg ||
+          ((examProg === "it" || examProg === "bsit") && (phProg === "it" || phProg === "bsit")) ||
+          ((examProg === "tep" || examProg === "bsed") && (phProg === "tep" || phProg === "bsed"))
+        );
+      });
+    }
+    return exams;
+  }, [exams, currentUser]);
+
+  const scopedExamIds = useMemo(() => new Set(scopedExams.map((e) => e.id)), [scopedExams]);
+
+  const scopedSubmissions = useMemo(() => {
+    if (!currentUser || currentUser.role === "admin" || currentUser.role === "dean") {
+      return submissions;
+    }
+    return submissions.filter((s) => scopedExamIds.has(s.exam_id));
+  }, [submissions, scopedExamIds, currentUser]);
+
+  const scopedRoster = useMemo(() => {
+    if (!currentUser || currentUser.role === "admin" || currentUser.role === "dean") {
+      return roster;
+    }
+    const studentIds = new Set(scopedSubmissions.map((s) => s.student_id));
+    if (currentUser.role === "programme-head") {
+      const phProg = (currentUser.programme || "BSIT").trim().toLowerCase();
+      return roster.filter((r) =>
+        studentIds.has(r.student_id) ||
+        (r.course_section && r.course_section.toLowerCase().includes(phProg))
+      );
+    }
+    return roster.filter((r) => studentIds.has(r.student_id));
+  }, [roster, scopedSubmissions, currentUser]);
+
   // Quick Scanner State
-  const [quickScanMode, setQuickScanMode] = useState<"upload" | "camera">("upload");
+  const [quickScanMode, setQuickScanMode] = useState<"upload" | "normal-camera" | "live-camera">("upload");
   const [quickScanLoading, setQuickScanLoading] = useState(false);
   const [quickScanResult, setQuickScanResult] =
     useState<QuickScanResult | null>(null);
@@ -401,24 +459,26 @@ export default function App() {
 
   const examAcademicYears = useMemo(() => {
     const set = new Set<string>();
-    exams.forEach((e) => {
+    scopedExams.forEach((e) => {
       if (e.academic_year) set.add(e.academic_year);
     });
     return ["All", ...Array.from(set).sort().reverse()];
-  }, [exams]);
+  }, [scopedExams]);
 
   const examPrograms = useMemo(() => {
     const set = new Set<string>();
-    exams.forEach((e) => {
+    scopedExams.forEach((e) => {
       if (e.program) set.add(e.program);
       else if (e.course_code) set.add(e.course_code);
     });
     return ["All", ...Array.from(set).sort()];
-  }, [exams]);
+  }, [scopedExams]);
 
   // Active Exam Inspection & Grading State
   const [selectedExamId, setSelectedExamId] = useState<string>("");
   const [isCameraActive, setIsCameraActive] = useState(false);
+  const [examCameraMode, setExamCameraMode] = useState<"normal" | "live">("normal");
+
 
   const [gradingProgress, setGradingProgress] = useState<{
     current: number;
@@ -538,24 +598,25 @@ export default function App() {
 
   const loadDashboardSummary = useCallback(async (forceRefresh = false) => {
     try {
-      const data = await fetchDashboardSummary({ forceRefresh });
+      const program = currentUser?.role === "programme-head" ? (currentUser.programme || "BSIT") : undefined;
+      const instructorName = currentUser?.role === "teacher" ? currentUser.name : undefined;
+      const data = await fetchDashboardSummary({ forceRefresh, program, instructorName });
       if (data) {
         setDashboardSummary(data);
       }
     } catch {
       if (!cacheManager.has("dashboard_summary")) {
         setDashboardSummary({
-          total_accounts: 12,
-          total_students: 4,
-          total_teachers: 4,
+          total_accounts: mockUsers.length,
+          total_students: mockUsers.filter((u) => u.role === "student").length,
+          total_teachers: mockUsers.filter((u) => u.role === "teacher").length,
           total_exams: 0,
           average_score: 0,
           total_submissions: 0,
         });
       }
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [currentUser]);
 
   // Initial Data Fetch
   useEffect(() => {
@@ -563,6 +624,13 @@ export default function App() {
     loadSubmissions();
     loadDashboardSummary();
   }, [loadExams, loadSubmissions, loadDashboardSummary]);
+
+  // Reload scoped summary whenever currentUser changes
+  useEffect(() => {
+    if (currentUser) {
+      loadDashboardSummary(true);
+    }
+  }, [currentUser, loadDashboardSummary]);
 
   // Trigger Confetti Effect
   const triggerConfetti = () => {
@@ -697,6 +765,7 @@ export default function App() {
     setLatestGradeResult(null);
 
     let successCount = 0;
+    let lastError: Error | null = null;
 
     for (let i = 0; i < files.length; i++) {
       setGradingProgress({ current: i + 1, total: files.length });
@@ -705,6 +774,7 @@ export default function App() {
         setLatestGradeResult(res);
         successCount++;
       } catch (err: any) {
+        lastError = err;
         addToast("error", `Failed to grade ${files[i].name}: ${err.message}`);
       }
     }
@@ -715,6 +785,8 @@ export default function App() {
     if (successCount > 0) {
       addToast("success", `Successfully graded ${successCount} sheet(s).`);
       triggerConfetti();
+    } else if (lastError) {
+      throw lastError;
     }
   };
 
@@ -948,12 +1020,15 @@ export default function App() {
       const foundMock = mockUsers.find(
         (u) => u.email.toLowerCase() === normalizedEmail,
       );
-      if (
-        foundMock &&
-        (err.message?.includes("Failed to fetch") ||
-          err.message?.includes("NetworkError") ||
-          err.name === "TypeError")
-      ) {
+      const isBackendOffline =
+        err.message?.includes("Failed to fetch") ||
+        err.message?.includes("NetworkError") ||
+        err.message?.includes("502") ||
+        err.message?.includes("Bad Gateway") ||
+        err.message?.includes("backend server") ||
+        err.name === "TypeError";
+
+      if (foundMock && isBackendOffline) {
         const initialTab: AppTab =
           foundMock.role === "admin"
             ? "dashboard"
@@ -967,7 +1042,7 @@ export default function App() {
         setCurrentUser(foundMock);
         setActiveTab(initialTab);
         setAuthMessage(
-          `Welcome back, ${foundMock.name}. Your ${foundMock.role.replace("-", " ")} workspace is ready.`,
+          `Welcome back, ${foundMock.name}. Notice: Python backend (port 8000) is offline; logged in via local administrator credentials. Start the backend in omr_engine to connect to live MySQL.`,
         );
         setLoginError("");
         return;
@@ -1045,7 +1120,7 @@ export default function App() {
         },
         {
           key: "user-directory" as AppTab,
-          label: "Faculty",
+          label: "User Directory",
           icon: Users,
         },
         {
@@ -1186,7 +1261,7 @@ export default function App() {
         return currentUser?.role === "programme-head"
           ? `${currentUser.programme || "BSIT"} Student Access`
           : currentUser?.role === "dean"
-            ? "Faculty"
+            ? "User Accounts Directory"
             : "User Directory";
       case "settings":
         return "Settings";
@@ -1618,9 +1693,9 @@ export default function App() {
             <RoleDashboard
               user={currentUser}
               summary={dashboardSummary}
-              exams={exams}
-              submissions={submissions}
-              roster={roster}
+              exams={scopedExams}
+              submissions={scopedSubmissions}
+              roster={scopedRoster}
               onSelectSubmission={viewSubmissionDetails}
               onInspectExam={(exam) => setInspectExam(exam)}
               addToast={addToast}
@@ -1630,88 +1705,65 @@ export default function App() {
           )}
 
           {/* PROGRAMME-SCOPED OR INSTITUTION-WIDE WORKSPACE */}
-          {(() => {
-            const isPh = currentUser?.role === "programme-head";
-            const phProgram = (currentUser?.programme || "BSIT").toLowerCase();
-            const currentExams = isPh
-              ? exams.filter((e) => !e.program || e.program.toLowerCase() === phProgram)
-              : exams;
-            const currentExamIds = new Set(currentExams.map((e) => e.id));
-            const currentSubmissions = isPh
-              ? submissions.filter((s) => currentExamIds.has(s.exam_id))
-              : submissions;
-            const currentStudentIds = new Set(currentSubmissions.map((s) => s.student_id));
-            const currentRoster = isPh
-              ? roster.filter((r) =>
-                currentStudentIds.has(r.student_id) ||
-                (r.course_section && r.course_section.toLowerCase().includes(phProgram))
-              )
-              : roster;
+          {activeTab === "academic-management" && currentUser && (
+            <DeanAcademicManagement
+              currentUser={currentUser}
+              summary={dashboardSummary}
+              exams={scopedExams}
+              submissions={scopedSubmissions}
+              roster={scopedRoster}
+              onInspectExam={(exam) => setInspectExam(exam)}
+              addToast={addToast}
+            />
+          )}
 
-            return (
-              <>
-                {activeTab === "academic-management" && currentUser && (
-                  <DeanAcademicManagement
-                    currentUser={currentUser}
-                    summary={dashboardSummary}
-                    exams={currentExams}
-                    submissions={currentSubmissions}
-                    roster={currentRoster}
-                    onInspectExam={(exam) => setInspectExam(exam)}
-                    addToast={addToast}
-                  />
-                )}
+          {activeTab === "examinations" && currentUser && (
+            currentUser.role === "student" ? (
+              <StudentPortalView
+                currentUser={currentUser}
+                exams={exams}
+                submissions={submissions}
+                roster={roster}
+                formatDate={formatDate}
+              />
+            ) : (
+              <DeanExaminations
+                currentUser={currentUser}
+                exams={scopedExams}
+                submissions={scopedSubmissions}
+                roster={scopedRoster}
+                onInspectExam={(exam) => setInspectExam(exam)}
+                addToast={addToast}
+                formatDate={formatDate}
+              />
+            )
+          )}
 
-                {activeTab === "examinations" && currentUser && (
-                  currentUser.role === "student" ? (
-                    <StudentPortalView
-                      currentUser={currentUser}
-                      exams={exams}
-                      submissions={submissions}
-                      roster={roster}
-                      formatDate={formatDate}
-                    />
-                  ) : (
-                    <DeanExaminations
-                      currentUser={currentUser}
-                      exams={currentExams}
-                      submissions={currentSubmissions}
-                      roster={currentRoster}
-                      onInspectExam={(exam) => setInspectExam(exam)}
-                      addToast={addToast}
-                      formatDate={formatDate}
-                    />
-                  )
-                )}
-
-                {activeTab === "reports" && currentUser && (
-                  currentUser.role === "student" ? (
-                    <StudentPortalView
-                      currentUser={currentUser}
-                      exams={exams}
-                      submissions={submissions}
-                      roster={roster}
-                      formatDate={formatDate}
-                    />
-                  ) : (
-                    <DeanReportsAnalytics
-                      currentUser={currentUser}
-                      exams={currentExams}
-                      submissions={currentSubmissions}
-                      roster={currentRoster}
-                      summary={dashboardSummary}
-                      addToast={addToast}
-                    />
-                  )
-                )}
-              </>
-            );
-          })()}
+          {activeTab === "reports" && currentUser && (
+            currentUser.role === "student" ? (
+              <StudentPortalView
+                currentUser={currentUser}
+                exams={exams}
+                submissions={submissions}
+                roster={roster}
+                formatDate={formatDate}
+              />
+            ) : (
+              <DeanReportsAnalytics
+                currentUser={currentUser}
+                exams={scopedExams}
+                submissions={scopedSubmissions}
+                roster={scopedRoster}
+                summary={dashboardSummary}
+                addToast={addToast}
+              />
+            )
+          )}
 
           {activeTab === "progress-records" && currentUser && (
             <DeanProgressRecords
-              exams={exams}
-              submissions={submissions}
+              exams={scopedExams}
+              submissions={scopedSubmissions}
               onInspectExam={(exam) => setInspectExam(exam)}
               formatDate={formatDate}
               programFilter="all"
@@ -1810,21 +1862,38 @@ export default function App() {
                 </button>
                 <button
                   type="button"
-                  className={`scan-mode-tab-btn ${quickScanMode === "camera" ? "active" : ""}`}
-                  onClick={() => setQuickScanMode("camera")}
+                  className={`scan-mode-tab-btn ${quickScanMode === "normal-camera" ? "active" : ""}`}
+                  onClick={() => setQuickScanMode("normal-camera")}
                 >
-                  <Camera size={16} /> Scan with Camera
+                  <Camera size={16} /> Normal Camera (Shutter)
+                </button>
+                <button
+                  type="button"
+                  className={`scan-mode-tab-btn ${quickScanMode === "live-camera" ? "active" : ""}`}
+                  onClick={() => setQuickScanMode("live-camera")}
+                >
+                  <Sparkles size={16} /> Live Auto-Scanner
                 </button>
               </div>
 
-              {quickScanMode === "camera" ? (
+              {quickScanMode === "normal-camera" ? (
+                <NormalCameraScanner
+                  onCapture={handleQuickScanUpload}
+                  onSwitchToUpload={() => setQuickScanMode("upload")}
+                  onSwitchToLive={() => setQuickScanMode("live-camera")}
+                  title="Quick OMR Camera"
+                  subtitle="Position the answer sheet inside the framing guide and press the shutter button to take a photo."
+                />
+              ) : quickScanMode === "live-camera" ? (
                 <CameraScanner
                   onCapture={handleQuickScanUpload}
                   onSwitchToUpload={() => setQuickScanMode("upload")}
-                  title="Quick Bubble Camera Scanner"
+                  onSwitchToNormal={() => setQuickScanMode("normal-camera")}
+                  title="Quick Bubble Camera Scanner (Live)"
                   subtitle="Point camera at the ZipGrade answer sheet. Align corners and hold steady to auto-capture."
                 />
               ) : (
+
                 <div className="card" style={{ marginBottom: "2rem" }}>
                   <input
                     type="file"
@@ -2293,11 +2362,11 @@ export default function App() {
                   {/* Grid of All Created Examination Containers */}
                   <SmoothContentTransition
                     isLoading={loadingExams}
-                    hasExistingData={exams.length > 0}
+                    hasExistingData={scopedExams.length > 0}
                     skeleton={<SkeletonExamList count={6} />}
                   >
                     {(() => {
-                      const filtered = exams.filter((ex) => {
+                      const filtered = scopedExams.filter((ex) => {
                         const q = examListSearch.toLowerCase().trim();
                         const matchesSearch =
                           !q ||
@@ -3002,23 +3071,41 @@ export default function App() {
                                 </div>
                               )}
 
-                              {/* Live Camera Scanner (Only rendered on-demand when activated) */}
+                              {/* Camera Scanner (Only rendered on-demand when activated) */}
                               {isCameraActive && (
                                 <div style={{ marginBottom: "1.5rem" }}>
-                                  <CameraScanner
-                                    onCapture={async (file) => {
-                                      await handleGradeSheetsSubmit([file]);
-                                    }}
-                                    onClose={() => setIsCameraActive(false)}
-                                    onSwitchToUpload={() => {
-                                      setIsCameraActive(false);
-                                      studentScanInputRef.current?.click();
-                                    }}
-                                    title={`Grade Student Sheet — ${activeExam.name}`}
-                                    subtitle={`Align the 4 black corner squares within the viewfinder. Scored instantly against ${activeExam.name}.`}
-                                  />
+                                  {examCameraMode === "normal" ? (
+                                    <NormalCameraScanner
+                                      onCapture={async (file) => {
+                                        await handleGradeSheetsSubmit([file]);
+                                      }}
+                                      onClose={() => setIsCameraActive(false)}
+                                      onSwitchToUpload={() => {
+                                        setIsCameraActive(false);
+                                        studentScanInputRef.current?.click();
+                                      }}
+                                      onSwitchToLive={() => setExamCameraMode("live")}
+                                      title={`Grade Student Sheet — ${activeExam.name}`}
+                                      subtitle={`Position student sheet inside the frame and press Shutter to score against ${activeExam.name}.`}
+                                    />
+                                  ) : (
+                                    <CameraScanner
+                                      onCapture={async (file) => {
+                                        await handleGradeSheetsSubmit([file]);
+                                      }}
+                                      onClose={() => setIsCameraActive(false)}
+                                      onSwitchToUpload={() => {
+                                        setIsCameraActive(false);
+                                        studentScanInputRef.current?.click();
+                                      }}
+                                      onSwitchToNormal={() => setExamCameraMode("normal")}
+                                      title={`Grade Student Sheet (Live) — ${activeExam.name}`}
+                                      subtitle={`Align the 4 black corner squares within the viewfinder. Scored instantly against ${activeExam.name}.`}
+                                    />
+                                  )}
                                 </div>
                               )}
+
 
                               {/* Latest Grade Result Showcase */}
                               {latestGradeResult ? (
@@ -3455,6 +3542,7 @@ export default function App() {
                                       className="btn btn-secondary"
                                       onClick={() => {
                                         setActiveExamStudioTab("grading");
+                                        setExamCameraMode("normal");
                                         setIsCameraActive(true);
                                       }}
                                       style={{
@@ -3463,8 +3551,25 @@ export default function App() {
                                         borderRadius: "10px",
                                       }}
                                     >
-                                      <Camera size={15} /> Open Camera Viewfinder
+                                      <Camera size={15} /> Normal Camera (Shutter)
                                     </button>
+                                    <button
+                                      type="button"
+                                      className="btn btn-secondary"
+                                      onClick={() => {
+                                        setActiveExamStudioTab("grading");
+                                        setExamCameraMode("live");
+                                        setIsCameraActive(true);
+                                      }}
+                                      style={{
+                                        fontSize: "0.82rem",
+                                        fontWeight: 700,
+                                        borderRadius: "10px",
+                                      }}
+                                    >
+                                      <Sparkles size={15} /> Live Auto-Scanner
+                                    </button>
+
                                   </div>
                                 </div>
                               )}
@@ -3731,9 +3836,9 @@ export default function App() {
           {/* EXAM RECORDS / GRADING AUDIT HISTORY TAB */}
           {activeTab === "history" && (
             <GradingHistoryView
-              exams={exams}
-              submissions={submissions}
-              roster={roster}
+              exams={scopedExams}
+              submissions={scopedSubmissions}
+              roster={scopedRoster}
               currentUser={currentUser}
               onSelectSubmission={viewSubmissionDetails}
               onDeleteGradingRecord={handleDeleteGradingRecord}
@@ -3745,9 +3850,9 @@ export default function App() {
           {/* OFFICIAL GRADEBOOK & ASSESSMENT RECORDS TAB (TEACHER) */}
           {(activeTab === "results-management" || activeTab === "compiler") && currentUser && (
             <TeacherExamCompiler
-              exams={exams}
-              submissions={submissions}
-              roster={roster}
+              exams={scopedExams}
+              submissions={scopedSubmissions}
+              roster={scopedRoster}
               currentUser={currentUser}
               onSelectSubmission={viewSubmissionDetails}
               onInspectExam={(exam) => setInspectExam(exam)}
@@ -3808,7 +3913,7 @@ export default function App() {
                         onChange={(e) => setSelectedExamId(e.target.value)}
                         aria-label="Select Examination to Evaluate"
                       >
-                        {exams.map((exam) => (
+                        {scopedExams.map((exam) => (
                           <option key={exam.id} value={exam.id}>
                             {exam.name} {exam.course_code ? `[${exam.course_code}]` : ""} {exam.section ? `• Sec ${exam.section}` : ""}
                           </option>

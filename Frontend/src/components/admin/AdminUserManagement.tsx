@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useMemo } from "react";
 import {
   UserPlus,
   ShieldCheck,
@@ -25,6 +25,10 @@ import {
   Shield,
   FileDown,
   IdCard,
+  ChevronDown,
+  ArrowUpDown,
+  RotateCcw,
+  BookOpen,
 } from "lucide-react";
 import * as XLSX from "xlsx";
 import type { AuthUser, PendingUser } from "../../types";
@@ -32,130 +36,85 @@ import { fetchAllUsers, adminCreateUser, adminBatchCreateUsers, deleteUser } fro
 import { SkeletonTable, SmoothContentTransition } from "../shared";
 import { cacheManager } from "../../utils/cacheManager";
 
-const DEFAULT_SYSTEM_USERS: PendingUser[] = [
+const DEFAULT_SYSTEM_USERS: PendingUser[] = [];
+
+export interface ProgrammeOption {
+  code: string;
+  name: string;
+  label: string;
+  collegiateOptions: string[];
+}
+
+export const PROGRAMME_OPTIONS: ProgrammeOption[] = [
   {
-    id: "dean-001",
-    name: "Dr. Maria Santos",
-    email: "dean@srcb.edu.ph",
-    role: "dean",
-    programme: "Institution-wide",
-    department: "Office of the Dean",
-    status: "active",
-    created_at: "2026-08-01T08:00:00Z",
+    code: "BSIT",
+    name: "Bachelor of Science in Information Technology",
+    label: "BSIT — Bachelor of Science in Information Technology",
+    collegiateOptions: ["College of Computing Studies", "N/A"],
   },
   {
-    id: "ph-001",
-    name: "Prof. Ramon Cruz",
-    email: "ramon.cruz@srcb.edu.ph",
-    role: "programme-head",
-    programme: "BSIT",
-    department: "College of Computing",
-    status: "active",
-    created_at: "2026-08-05T08:00:00Z",
+    code: "BSCRIM",
+    name: "Bachelor of Science in Criminology",
+    label: "BSCRIM — Bachelor of Science in Criminology",
+    collegiateOptions: ["College of Criminal Justice Education", "N/A"],
   },
   {
-    id: "teacher-001",
-    name: "Ms. Jenny Garcia",
-    email: "jenny.garcia@srcb.edu.ph",
-    role: "teacher",
-    programme: "BSIT",
-    department: "Computer Studies",
-    status: "active",
-    created_at: "2026-08-10T08:00:00Z",
+    code: "BSHM",
+    name: "Bachelor of Science in Hotel Management",
+    label: "BSHM — Bachelor of Science in Hotel Management",
+    collegiateOptions: ["College of Hospitality Management", "N/A"],
   },
   {
-    id: "teacher-002",
-    name: "Dr. Carmen Reyes",
-    email: "carmen.reyes@srcb.edu.ph",
-    role: "teacher",
-    programme: "BSBA",
-    department: "Business Administration",
-    status: "active",
-    created_at: "2026-08-12T08:00:00Z",
+    code: "BSBA",
+    name: "Bachelor of Science in Business Administration",
+    label: "BSBA — Bachelor of Science in Business Administration",
+    collegiateOptions: [
+      "Financial Management",
+      "Human Resource Development Management",
+      "Marketing Management",
+      "College of Business Administration",
+    ],
   },
   {
-    id: "teacher-003",
-    name: "Prof. Teresa Perez",
-    email: "teresa.perez@srcb.edu.ph",
-    role: "teacher",
-    programme: "BSEd",
-    department: "Teacher Education",
-    status: "active",
-    created_at: "2026-08-14T08:00:00Z",
-  },
-  {
-    id: "student-001",
-    name: "Kenneth Ernest Palicte",
-    email: "k.palicte@srcb.edu.ph",
-    role: "student",
-    programme: "BSIT",
-    department: "Computer Studies",
-    student_id: "2023-00142",
-    status: "active",
-    created_at: "2026-08-15T08:00:00Z",
-  },
-  {
-    id: "student-002",
-    name: "Alyssa Jane Bautista",
-    email: "a.bautista@srcb.edu.ph",
-    role: "student",
-    programme: "BSBA",
-    department: "Business Administration",
-    student_id: "2023-00215",
-    status: "active",
-    created_at: "2026-08-16T08:00:00Z",
-  },
-  {
-    id: "student-003",
-    name: "John Mark Dizon",
-    email: "j.dizon@srcb.edu.ph",
-    role: "student",
-    programme: "BSEd",
-    department: "Teacher Education",
-    student_id: "2023-00388",
-    status: "active",
-    created_at: "2026-08-17T08:00:00Z",
-  },
-  {
-    id: "student-004",
-    name: "Mark Kevin Alcantara",
-    email: "m.alcantara@srcb.edu.ph",
-    role: "student",
-    programme: "BSIT",
-    department: "Computer Studies",
-    student_id: "2023-00155",
-    status: "active",
-    created_at: "2026-08-18T08:00:00Z",
-  },
-  {
-    id: "student-005",
-    name: "Samantha Nicole Cruz",
-    email: "s.cruz@srcb.edu.ph",
-    role: "student",
-    programme: "BSIT",
-    department: "Computer Studies",
-    student_id: "2023-00188",
-    status: "active",
-    created_at: "2026-08-19T08:00:00Z",
+    code: "TEP",
+    name: "Teacher Education Program",
+    label: "TEP — Teacher Education Program",
+    collegiateOptions: [
+      "English",
+      "Mathematics",
+      "Science",
+      "Filipino",
+      "College of Teacher Education",
+    ],
   },
 ];
 
-const DEPT_PROGRAM_MAP: Record<string, string[]> = {
-  "Computing Studies": ["BSIT", "BSCS"],
-  "Business Administration": ["BSBA"],
-  "Teacher Education": ["BSED", "BEED"],
-  "Hospitality Management": ["BSHM"],
-  "Arts & Sciences": ["General"],
+export const getCollegiateOptionsForProgramme = (progCode: string): string[] => {
+  const p = (progCode || "").trim().toUpperCase();
+  const found = PROGRAMME_OPTIONS.find((item) => item.code.toUpperCase() === p);
+  if (found) return found.collegiateOptions;
+  if (p === "IT" || p.includes("INFO") || p.includes("COMP")) return ["College of Computing Studies", "N/A"];
+  if (p.includes("BA") || p.includes("BUS") || p.includes("ADMIN")) {
+    return [
+      "Financial Management",
+      "Human Resource Development Management",
+      "Marketing Management",
+      "College of Business Administration",
+    ];
+  }
+  if (p.includes("CRIM")) return ["College of Criminal Justice Education", "N/A"];
+  if (p.includes("HM") || p.includes("HOTEL") || p.includes("HOSP")) return ["College of Hospitality Management", "N/A"];
+  if (p === "BSED" || p.includes("TEP") || p.includes("TEACH") || p.includes("EDUC")) {
+    return ["English", "Mathematics", "Science", "Filipino", "College of Teacher Education"];
+  }
+  return ["N/A"];
 };
 
-const getDepartmentForProgram = (prog: string): string => {
-  const p = prog.toUpperCase();
-  if (p.includes("IT") || p.includes("CS") || p.includes("COMPUT")) return "Computing Studies";
-  if (p.includes("BA") || p.includes("BUS") || p.includes("ACCOUNT")) return "Business Administration";
-  if (p.includes("ED") || p.includes("TEACH")) return "Teacher Education";
-  if (p.includes("HM") || p.includes("HOSP")) return "Hospitality Management";
-  return "Computing Studies";
+export const getDepartmentForProgram = (prog: string): string => {
+  const options = getCollegiateOptionsForProgramme(prog);
+  return options[0] || "N/A";
 };
+
 
 interface ParsedStudentRow {
   id: string;
@@ -191,13 +150,17 @@ export default function AdminUserManagement({
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const [roleFilter, setRoleFilter] = useState<"all" | "teacher" | "student">("all");
+  const [roleFilter, setRoleFilter] = useState<"all" | "teacher" | "student" | "programme-head" | "admin">("all");
+  const [programFilter, setProgramFilter] = useState<string>("all");
+  const [deptFilter, setDeptFilter] = useState<string>("all");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [sortBy, setSortBy] = useState<"name_asc" | "name_desc" | "date_desc" | "date_asc" | "role">("name_asc");
 
   // Mode state within creation tab
   const [creationTab, setCreationTab] = useState<"single" | "bulk">("single");
 
   // Single Account Form State
-  const [targetRole, setTargetRole] = useState<"teacher" | "student">("student");
+  const [targetRole, setTargetRole] = useState<"teacher" | "programme-head" | "student">("teacher");
   const [honorific, setHonorific] = useState("Prof.");
   const [firstName, setFirstName] = useState("");
   const [middleName, setMiddleName] = useState("");
@@ -208,7 +171,7 @@ export default function AdminUserManagement({
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [programme, setProgramme] = useState("BSIT");
-  const [department, setDepartment] = useState("Computing Studies");
+  const [department, setDepartment] = useState("College of Computing Studies");
   const [idSuffix, setIdSuffix] = useState("");
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
@@ -217,7 +180,7 @@ export default function AdminUserManagement({
   const [bulkFile, setBulkFile] = useState<File | null>(null);
   const [parsedStudents, setParsedStudents] = useState<ParsedStudentRow[]>([]);
   const [bulkDefaultProgram, setBulkDefaultProgram] = useState("BSIT");
-  const [bulkDefaultDepartment, setBulkDefaultDepartment] = useState("Computing Studies");
+  const [bulkDefaultDepartment, setBulkDefaultDepartment] = useState("N/A");
   const [bulkPasswordPolicy, setBulkPasswordPolicy] = useState<"student_id" | "random" | "custom">("student_id");
   const [bulkCustomPassword, setBulkCustomPassword] = useState("Srcb@2026");
   const [bulkSearchQuery, setBulkSearchQuery] = useState("");
@@ -233,7 +196,7 @@ export default function AdminUserManagement({
 
   const getFullName = () => {
     const parts: string[] = [];
-    if (targetRole === "teacher" && honorific && honorific !== "None") {
+    if ((targetRole === "teacher" || targetRole === "programme-head") && honorific && honorific !== "None") {
       parts.push(honorific);
     }
     if (firstName.trim()) parts.push(firstName.trim());
@@ -277,23 +240,23 @@ export default function AdminUserManagement({
     loadUsers();
   }, []);
 
-  const handleRoleSwitch = (newRole: "teacher" | "student") => {
+  const handleRoleSwitch = (newRole: "teacher" | "programme-head" | "student") => {
     setTargetRole(newRole);
   };
 
-  const handleDepartmentChange = (newDept: string) => {
-    setDepartment(newDept);
-    const available = DEPT_PROGRAM_MAP[newDept] || ["BSIT"];
-    if (!available.includes(programme)) {
-      setProgramme(available[0]);
+  const handleProgrammeChange = (newProg: string) => {
+    setProgramme(newProg);
+    const available = getCollegiateOptionsForProgramme(newProg);
+    if (!available.includes(department)) {
+      setDepartment(available[0] || "N/A");
     }
   };
 
-  const handleBulkDeptChange = (newDept: string) => {
-    setBulkDefaultDepartment(newDept);
-    const available = DEPT_PROGRAM_MAP[newDept] || ["BSIT"];
-    if (!available.includes(bulkDefaultProgram)) {
-      setBulkDefaultProgram(available[0]);
+  const handleBulkProgramChange = (newProg: string) => {
+    setBulkDefaultProgram(newProg);
+    const available = getCollegiateOptionsForProgramme(newProg);
+    if (!available.includes(bulkDefaultDepartment)) {
+      setBulkDefaultDepartment(available[0] || "N/A");
     }
   };
 
@@ -390,6 +353,8 @@ export default function AdminUserManagement({
       setEmail("");
       setPassword("");
       setIdSuffix("");
+      setProgramme("BSIT");
+      setDepartment("N/A");
 
       loadUsers(true);
     } catch (err: any) {
@@ -428,7 +393,7 @@ export default function AdminUserManagement({
         "Last Name": "Palicte",
         "Email": "k.palicte@srcb.edu.ph",
         "Program": "BSIT",
-        "Department": "Computing Studies",
+        "Department": "N/A",
       },
       {
         "Student ID": "2024-00102",
@@ -437,7 +402,7 @@ export default function AdminUserManagement({
         "Last Name": "Bautista",
         "Email": "a.bautista@srcb.edu.ph",
         "Program": "BSBA",
-        "Department": "Business Administration",
+        "Department": "Financial Management",
       },
       {
         "Student ID": "2024-00103",
@@ -445,8 +410,8 @@ export default function AdminUserManagement({
         "Middle Name": "D.",
         "Last Name": "Dizon",
         "Email": "j.dizon@srcb.edu.ph",
-        "Program": "BSED",
-        "Department": "Teacher Education",
+        "Program": "TEP",
+        "Department": "English",
       },
       {
         "Student ID": "2024-00104",
@@ -455,7 +420,7 @@ export default function AdminUserManagement({
         "Last Name": "Cruz",
         "Email": "s.cruz@srcb.edu.ph",
         "Program": "BSHM",
-        "Department": "Hospitality Management",
+        "Department": "N/A",
       },
     ];
 
@@ -535,7 +500,7 @@ export default function AdminUserManagement({
         ).trim() || bulkDefaultProgram;
 
         const dept = String(
-          row["Department"] || row["Collegiate Department"] || row["department"] || getDepartmentForProgram(prog)
+          row["Department"] || row["Collegiate Department"] || row["Major"] || row["major"] || row["department"] || getDepartmentForProgram(prog)
         ).trim() || getDepartmentForProgram(prog);
 
         let studentEmail = String(
@@ -728,25 +693,128 @@ export default function AdminUserManagement({
   // Stats calculation
   const totalTeachers = users.filter((u) => u.role === "teacher").length;
   const totalStudents = users.filter((u) => u.role === "student").length;
+  const totalProgrammeHeads = users.filter((u) => u.role === "programme-head").length;
+  const totalAdminsAndDeans = users.filter((u) => u.role === "admin" || u.role === "dean").length;
 
-  const filteredUsers = users.filter((u) => {
-    if (isProgrammeHead) {
-      if (u.role !== "student") return false;
-      if ((u.programme || "").toLowerCase() !== phProgram) return false;
-    } else {
-      if (roleFilter !== "all" && u.role !== roleFilter) return false;
+  const OFFICIAL_PROGRAM_CODES = ["BSIT", "BSCRIM", "BSHM", "BSBA", "TEP"];
+
+  const availablePrograms = useMemo(() => {
+    return OFFICIAL_PROGRAM_CODES;
+  }, []);
+
+  const availableDepartments = useMemo(() => {
+    const set = new Set<string>();
+    users.forEach((u) => {
+      if (u.department && u.department.trim() && u.department !== "N/A") {
+        set.add(u.department.trim());
+      }
+    });
+    return Array.from(set).sort();
+  }, [users]);
+
+  const filteredUsers = useMemo(() => {
+    const result = users.filter((u) => {
+      // Exclude any account not belonging to the 5 official institutional programmes (unless administrative system role)
+      if (u.role !== "admin" && u.role !== "dean") {
+        const uProg = (u.programme || "").trim().toUpperCase();
+        if (!OFFICIAL_PROGRAM_CODES.includes(uProg)) {
+          return false;
+        }
+      }
+
+      if (isProgrammeHead) {
+        if (u.role !== "student") return false;
+        const uProg = (u.programme || "").toLowerCase().trim();
+        const isMatch =
+          uProg === phProgram ||
+          ((uProg === "it" || uProg === "bsit") && (phProgram === "it" || phProgram === "bsit")) ||
+          ((uProg === "tep" || uProg === "bsed") && (phProgram === "tep" || phProgram === "bsed"));
+        if (!isMatch) return false;
+      } else {
+        if (roleFilter !== "all") {
+          if (roleFilter === "admin") {
+            if (u.role !== "admin" && u.role !== "dean") return false;
+          } else if (u.role !== roleFilter) {
+            return false;
+          }
+        }
+      }
+
+      if (programFilter !== "all") {
+        if ((u.programme || "").toLowerCase() !== programFilter.toLowerCase()) return false;
+      }
+
+      if (deptFilter !== "all") {
+        if ((u.department || "").toLowerCase() !== deptFilter.toLowerCase()) return false;
+      }
+
+      if (statusFilter !== "all") {
+        if ((u.status || "active").toLowerCase() !== statusFilter.toLowerCase()) return false;
+      }
+
+      if (searchQuery.trim()) {
+        const q = searchQuery.toLowerCase();
+        const matchName = (u.name || "").toLowerCase().includes(q);
+        const matchEmail = (u.email || "").toLowerCase().includes(q);
+        const matchDept = (u.department || "").toLowerCase().includes(q);
+        const matchProg = (u.programme || "").toLowerCase().includes(q);
+        const matchId = (u.student_id || "").toLowerCase().includes(q);
+        return matchName || matchEmail || matchDept || matchProg || matchId;
+      }
+
+      return true;
+    });
+
+    result.sort((a, b) => {
+      if (sortBy === "name_asc") return (a.name || "").localeCompare(b.name || "");
+      if (sortBy === "name_desc") return (b.name || "").localeCompare(a.name || "");
+      if (sortBy === "date_desc") return (b.created_at || "").localeCompare(a.created_at || "");
+      if (sortBy === "date_asc") return (a.created_at || "").localeCompare(b.created_at || "");
+      if (sortBy === "role") return (a.role || "").localeCompare(b.role || "");
+      return 0;
+    });
+
+    return result;
+  }, [users, isProgrammeHead, phProgram, roleFilter, programFilter, deptFilter, statusFilter, searchQuery, sortBy]);
+
+  const hasActiveFilters =
+    searchQuery.trim() !== "" ||
+    roleFilter !== "all" ||
+    programFilter !== "all" ||
+    deptFilter !== "all" ||
+    statusFilter !== "all";
+
+  const handleResetFilters = () => {
+    setSearchQuery("");
+    setRoleFilter("all");
+    setProgramFilter("all");
+    setDeptFilter("all");
+    setStatusFilter("all");
+    setSortBy("name_asc");
+  };
+
+  const handleExportFilteredUsers = () => {
+    try {
+      const data = filteredUsers.map((u: PendingUser, index: number) => ({
+        "No.": index + 1,
+        "Name": u.name,
+        "Role": u.role.toUpperCase(),
+        "Email": u.email,
+        "Programme": u.programme || "—",
+        "Department": u.department || "—",
+        "Student / Institutional ID": u.student_id || "—",
+        "Account Status": u.status || "active",
+        "Registered Date": u.created_at ? new Date(u.created_at).toLocaleDateString() : "—",
+      }));
+      const ws = XLSX.utils.json_to_sheet(data);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "User Accounts Directory");
+      XLSX.writeFile(wb, `SRCB_User_Accounts_Directory_${new Date().toISOString().slice(0, 10)}.xlsx`);
+      addToast("success", `Exported ${filteredUsers.length} user records to Excel (.xlsx).`);
+    } catch {
+      addToast("error", "Failed to export user accounts directory to Excel.");
     }
-    if (searchQuery.trim()) {
-      const q = searchQuery.toLowerCase();
-      const matchName = (u.name || "").toLowerCase().includes(q);
-      const matchEmail = (u.email || "").toLowerCase().includes(q);
-      const matchDept = (u.department || "").toLowerCase().includes(q);
-      const matchProg = (u.programme || "").toLowerCase().includes(q);
-      const matchId = (u.student_id || "").toLowerCase().includes(q);
-      return matchName || matchEmail || matchDept || matchProg || matchId;
-    }
-    return true;
-  });
+  };
 
   const validParsedCount = parsedStudents.filter((s) => s.status === "ready").length;
   const duplicateParsedCount = parsedStudents.filter((s) => s.status === "duplicate_file" || s.status === "exists_system").length;
@@ -839,18 +907,26 @@ export default function AdminUserManagement({
             <div className="account-role-pill-group">
               <button
                 type="button"
-                onClick={() => handleRoleSwitch("student")}
-                className={`account-role-pill-btn ${targetRole === "student" ? "selected" : ""}`}
-              >
-                <GraduationCap size={18} /> Student Account
-              </button>
-
-              <button
-                type="button"
                 onClick={() => handleRoleSwitch("teacher")}
                 className={`account-role-pill-btn ${targetRole === "teacher" ? "selected" : ""}`}
               >
                 <ShieldCheck size={18} /> Teacher / Faculty
+              </button>
+
+              <button
+                type="button"
+                onClick={() => handleRoleSwitch("programme-head")}
+                className={`account-role-pill-btn ${targetRole === "programme-head" ? "selected" : ""}`}
+              >
+                <Award size={18} /> Programme Head
+              </button>
+
+              <button
+                type="button"
+                onClick={() => handleRoleSwitch("student")}
+                className={`account-role-pill-btn ${targetRole === "student" ? "selected" : ""}`}
+              >
+                <GraduationCap size={18} /> Student Account
               </button>
             </div>
 
@@ -863,8 +939,8 @@ export default function AdminUserManagement({
                     Full Legal Name <span style={{ color: "#ef4444" }}>*</span>
                   </label>
 
-                  <div style={{ display: "grid", gridTemplateColumns: targetRole === "teacher" ? "90px 1fr 1fr" : "1fr 1fr", gap: "0.5rem", marginBottom: "0.5rem" }}>
-                    {targetRole === "teacher" && (
+                  <div style={{ display: "grid", gridTemplateColumns: (targetRole === "teacher" || targetRole === "programme-head") ? "90px 1fr 1fr" : "1fr 1fr", gap: "0.5rem", marginBottom: "0.5rem" }}>
+                    {(targetRole === "teacher" || targetRole === "programme-head") && (
                       <select
                         className="input"
                         value={honorific}
@@ -1062,43 +1138,94 @@ export default function AdminUserManagement({
                   </div>
                 </div>
 
-                {/* Department and Programme Dropdowns */}
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem" }}>
-                  <div>
-                    <label style={{ display: "block", fontSize: "0.82rem", fontWeight: 700, marginBottom: "0.4rem", color: "#334155" }}>
-                      Collegiate Department
+                {/* Academic Role & Programme Assignment */}
+                <div
+                  style={{
+                    background: (targetRole === "teacher" || targetRole === "programme-head") ? "#f5f3ff" : "#f8fafc",
+                    border: (targetRole === "teacher" || targetRole === "programme-head") ? "1.5px solid #c4b5fd" : "1px solid #e2e8f0",
+                    borderRadius: "14px",
+                    padding: "1.1rem",
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: "0.85rem",
+                  }}
+                >
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                    <label style={{ fontSize: "0.84rem", fontWeight: 800, color: (targetRole === "teacher" || targetRole === "programme-head") ? "var(--primary, #28166f)" : "#334155", display: "flex", alignItems: "center", gap: "6px" }}>
+                      <BookOpen size={16} />
+                      {(targetRole === "teacher" || targetRole === "programme-head")
+                        ? "Assigned Academic Programme (System Role Recognition) *"
+                        : "Academic Programme & Department *"}
                     </label>
-                    <select
-                      className="input"
-                      style={{ width: "100%" }}
-                      value={department}
-                      onChange={(e) => handleDepartmentChange(e.target.value)}
+                    <span
+                      style={{
+                        fontSize: "0.72rem",
+                        fontWeight: 800,
+                        padding: "0.2rem 0.55rem",
+                        borderRadius: "6px",
+                        background: (targetRole === "teacher" || targetRole === "programme-head") ? "#ede9fe" : "#e2e8f0",
+                        color: (targetRole === "teacher" || targetRole === "programme-head") ? "#5b21b6" : "#475569",
+                      }}
                     >
-                      <option value="Computing Studies">Computing Studies</option>
-                      <option value="Business Administration">Business Admin</option>
-                      <option value="Teacher Education">Teacher Education</option>
-                      <option value="Hospitality Management">Hospitality Mgmt</option>
-                      <option value="Arts & Sciences">Arts & Sciences</option>
-                    </select>
+                      {programme}
+                    </span>
                   </div>
 
-                  <div>
-                    <label style={{ display: "block", fontSize: "0.82rem", fontWeight: 700, marginBottom: "0.4rem", color: "#334155" }}>
-                      Programme
-                    </label>
-                    <select
-                      className="input"
-                      style={{ width: "100%" }}
-                      value={programme}
-                      onChange={(e) => setProgramme(e.target.value)}
-                    >
-                      {(DEPT_PROGRAM_MAP[department] || ["BSIT"]).map((p) => (
-                        <option key={p} value={p}>
-                          {p}
-                        </option>
-                      ))}
-                    </select>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem" }}>
+                    <div>
+                      <span style={{ display: "block", fontSize: "0.76rem", fontWeight: 700, marginBottom: "0.3rem", color: "#475569" }}>
+                        Designated Programme *
+                      </span>
+                      <select
+                        className="input"
+                        style={{ width: "100%", fontWeight: 600 }}
+                        value={programme}
+                        onChange={(e) => handleProgrammeChange(e.target.value)}
+                      >
+                        {PROGRAMME_OPTIONS.map((p) => (
+                          <option key={p.code} value={p.code}>
+                            {p.label}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div>
+                      <span style={{ display: "block", fontSize: "0.76rem", fontWeight: 700, marginBottom: "0.3rem", color: "#475569" }}>
+                        Collegiate Department / Specialization
+                      </span>
+                      <select
+                        className="input"
+                        style={{ width: "100%", fontWeight: 600 }}
+                        value={department}
+                        onChange={(e) => setDepartment(e.target.value)}
+                      >
+                        {getCollegiateOptionsForProgramme(programme).map((opt) => (
+                          <option key={opt} value={opt}>
+                            {opt}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
                   </div>
+
+                  {(targetRole === "teacher" || targetRole === "programme-head") && (
+                    <div
+                      style={{
+                        fontSize: "0.74rem",
+                        color: "#4c1d95",
+                        background: "rgba(255, 255, 255, 0.7)",
+                        padding: "0.55rem 0.8rem",
+                        borderRadius: "8px",
+                        border: "1px solid #ddd6fe",
+                        lineHeight: 1.45,
+                      }}
+                    >
+                      <Sparkles size={13} style={{ verticalAlign: "middle", marginRight: "4px", color: "var(--primary, #28166f)" }} />
+                      <strong>Engine Recognition:</strong> When created, this {targetRole === "programme-head" ? "Programme Head" : "Teacher"} account will be automatically bound to the{" "}
+                      <strong>{PROGRAMME_OPTIONS.find(p => p.code === programme)?.name || programme}</strong> ({programme}) faculty roster. All exam sets, sheet grading, item analyses, and dean oversight matrices will immediately recognize this account under this programme.
+                    </div>
+                  )}
                 </div>
 
                 {/* Submit Button */}
@@ -1126,7 +1253,13 @@ export default function AdminUserManagement({
                     </>
                   ) : (
                     <>
-                      <CheckCircle2 size={18} style={{ marginRight: "0.5rem" }} /> Create & Provision {targetRole === "teacher" ? "Faculty" : "Student"} Account
+                      <CheckCircle2 size={18} style={{ marginRight: "0.5rem" }} /> Create & Provision{" "}
+                      {targetRole === "teacher"
+                        ? "Faculty Teacher"
+                        : targetRole === "programme-head"
+                        ? "Programme Head"
+                        : "Student"}{" "}
+                      Account
                     </>
                   )}
                 </button>
@@ -1150,9 +1283,9 @@ export default function AdminUserManagement({
                   </div>
                   <span
                     style={{
-                      background: targetRole === "student" ? "#ecfdf5" : "#f5f3ff",
-                      color: targetRole === "student" ? "#059669" : "var(--primary, #28166f)",
-                      border: `1px solid ${targetRole === "student" ? "#a7f3d0" : "var(--primary-light-border, #ddd6fe)"}`,
+                      background: targetRole === "student" ? "#ecfdf5" : targetRole === "programme-head" ? "#eff6ff" : "#f5f3ff",
+                      color: targetRole === "student" ? "#059669" : targetRole === "programme-head" ? "#1d4ed8" : "var(--primary, #28166f)",
+                      border: `1px solid ${targetRole === "student" ? "#a7f3d0" : targetRole === "programme-head" ? "#bfdbfe" : "var(--primary-light-border, #ddd6fe)"}`,
                       padding: "0.2rem 0.55rem",
                       borderRadius: "6px",
                       fontSize: "0.72rem",
@@ -1162,8 +1295,8 @@ export default function AdminUserManagement({
                       gap: "4px",
                     }}
                   >
-                    {targetRole === "student" ? <GraduationCap size={12} /> : <ShieldCheck size={12} />}
-                    {targetRole === "student" ? "STUDENT" : "FACULTY"}
+                    {targetRole === "student" ? <GraduationCap size={12} /> : targetRole === "programme-head" ? <Award size={12} /> : <ShieldCheck size={12} />}
+                    {targetRole === "student" ? "STUDENT" : targetRole === "programme-head" ? "PROGRAMME HEAD" : "FACULTY TEACHER"}
                   </span>
                 </div>
 
@@ -1214,7 +1347,7 @@ export default function AdminUserManagement({
                         flexShrink: 0,
                       }}
                     >
-                      {firstName ? firstName[0].toUpperCase() : targetRole === "student" ? "S" : "F"}
+                      {firstName ? firstName[0].toUpperCase() : targetRole === "student" ? "S" : targetRole === "programme-head" ? "H" : "F"}
                     </div>
                     <div>
                       <div style={{ fontSize: "1.1rem", fontWeight: 800, lineHeight: 1.2 }}>
@@ -1232,7 +1365,7 @@ export default function AdminUserManagement({
                       <div style={{ fontWeight: 700 }}>{programme}</div>
                     </div>
                     <div>
-                      <div style={{ opacity: 0.7 }}>DEPARTMENT</div>
+                      <div style={{ opacity: 0.7 }}>COLLEGIATE / MAJOR</div>
                       <div style={{ fontWeight: 700 }}>{department}</div>
                     </div>
                   </div>
@@ -1319,40 +1452,40 @@ export default function AdminUserManagement({
             >
               <div>
                 <label style={{ display: "block", fontSize: "0.8rem", fontWeight: 700, marginBottom: "0.35rem", color: "#475569" }}>
-                  Default Academic Department
-                </label>
-                <select
-                  className="input"
-                  style={{ width: "100%", fontSize: "0.85rem" }}
-                  value={bulkDefaultDepartment}
-                  onChange={(e) => handleBulkDeptChange(e.target.value)}
-                >
-                  <option value="Computing Studies">Computing Studies</option>
-                  <option value="Business Administration">Business Admin</option>
-                  <option value="Teacher Education">Teacher Education</option>
-                  <option value="Hospitality Management">Hospitality Mgmt</option>
-                  <option value="Arts & Sciences">Arts & Sciences</option>
-                </select>
-                <span style={{ fontSize: "0.72rem", color: "#64748b" }}>Applied if row has blank department</span>
-              </div>
-
-              <div>
-                <label style={{ display: "block", fontSize: "0.8rem", fontWeight: 700, marginBottom: "0.35rem", color: "#475569" }}>
                   Default Programme
                 </label>
                 <select
                   className="input"
                   style={{ width: "100%", fontSize: "0.85rem" }}
                   value={bulkDefaultProgram}
-                  onChange={(e) => setBulkDefaultProgram(e.target.value)}
+                  onChange={(e) => handleBulkProgramChange(e.target.value)}
                 >
-                  {(DEPT_PROGRAM_MAP[bulkDefaultDepartment] || ["BSIT"]).map((p) => (
-                    <option key={p} value={p}>
-                      {p}
+                  {PROGRAMME_OPTIONS.map((p) => (
+                    <option key={p.code} value={p.code}>
+                      {p.label}
                     </option>
                   ))}
                 </select>
                 <span style={{ fontSize: "0.72rem", color: "#64748b" }}>Applied if row has blank program</span>
+              </div>
+
+              <div>
+                <label style={{ display: "block", fontSize: "0.8rem", fontWeight: 700, marginBottom: "0.35rem", color: "#475569" }}>
+                  Default Collegiate Department
+                </label>
+                <select
+                  className="input"
+                  style={{ width: "100%", fontSize: "0.85rem" }}
+                  value={bulkDefaultDepartment}
+                  onChange={(e) => setBulkDefaultDepartment(e.target.value)}
+                >
+                  {getCollegiateOptionsForProgramme(bulkDefaultProgram).map((opt) => (
+                    <option key={opt} value={opt}>
+                      {opt}
+                    </option>
+                  ))}
+                </select>
+                <span style={{ fontSize: "0.72rem", color: "#64748b" }}>Applied if row has blank department</span>
               </div>
 
               <div>
@@ -1722,47 +1855,127 @@ export default function AdminUserManagement({
         {/* ========================================================= */}
         {(viewMode === "all" || viewMode === "directory") && (
           <div className="account-card-premium">
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.25rem" }}>
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                flexWrap: "wrap",
+                gap: "1rem",
+                marginBottom: "1.25rem",
+              }}
+            >
               <div>
                 <h3 style={{ margin: 0, fontSize: "1.15rem", fontWeight: 800, color: "#0f172a" }}>
                   {isProgrammeHead ? `${currentUser?.programme || "BSIT"} Enrolled Students` : "User Accounts Directory"}
                 </h3>
-                <p style={{ margin: 0, fontSize: "0.8rem", color: "#64748b" }}>
+                <p style={{ margin: 0, fontSize: "0.8rem", color: "#64748b", marginTop: "0.2rem" }}>
                   {isProgrammeHead
                     ? `Active student records under ${currentUser?.programme || "BSIT"} department (${filteredUsers.length} students)`
-                    : `Active institutional users list (${filteredUsers.length} accounts found)`}
+                    : `Comprehensive institutional user directory with multi-criteria filtering (${filteredUsers.length} accounts found)`}
                 </p>
               </div>
-              <button
-                className="btn btn-secondary"
-                onClick={() => loadUsers(true)}
-                disabled={loading}
-                title="Refresh users list"
-                style={{ padding: "0.4rem 0.75rem", fontSize: "0.8rem" }}
-              >
-                <RefreshCw size={14} className={loading ? "spin" : ""} style={{ marginRight: "0.3rem" }} /> Refresh
-              </button>
+
+              <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={handleExportFilteredUsers}
+                  title="Export Filtered Directory (.xlsx)"
+                  style={{
+                    padding: "0.45rem 0.85rem",
+                    fontSize: "0.8rem",
+                    fontWeight: 600,
+                    borderRadius: "8px",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "0.4rem",
+                    color: "var(--primary, #28166f)",
+                  }}
+                >
+                  <FileSpreadsheet size={15} /> Export Excel
+                </button>
+
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={() => loadUsers(true)}
+                  disabled={loading}
+                  title="Refresh users list"
+                  style={{
+                    padding: "0.45rem 0.85rem",
+                    fontSize: "0.8rem",
+                    fontWeight: 600,
+                    borderRadius: "8px",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "0.4rem",
+                  }}
+                >
+                  <RefreshCw size={14} className={loading ? "spin" : ""} /> Refresh
+                </button>
+              </div>
             </div>
 
-            {/* Search and Filters */}
-            <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem", marginBottom: "1.25rem" }}>
+            {/* Complete Filtration Toolbar */}
+            <div style={{ display: "flex", flexDirection: "column", gap: "0.85rem", marginBottom: "1.25rem" }}>
+              {/* Primary Search Bar */}
               <div style={{ position: "relative" }}>
                 <input
                   type="text"
                   className="input"
-                  style={{ width: "100%", paddingLeft: "2.2rem", fontSize: "0.85rem", height: "38px" }}
+                  style={{
+                    width: "100%",
+                    paddingLeft: "2.3rem",
+                    paddingRight: searchQuery ? "2.2rem" : "0.85rem",
+                    fontSize: "0.84rem",
+                    height: "38px",
+                    borderRadius: "10px",
+                    border: "1px solid #e2e8f0",
+                  }}
                   placeholder={
                     isProgrammeHead
                       ? `Search ${currentUser?.programme || "BSIT"} students by name, email, or student ID...`
-                      : "Search by name, email, department, or student ID..."
+                      : "Search by user name, school email, department, programme, or ID number..."
                   }
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                 />
-                <Search size={16} style={{ position: "absolute", left: "0.75rem", top: "50%", transform: "translateY(-50%)", color: "#94a3b8" }} />
+                <Search
+                  size={16}
+                  style={{
+                    position: "absolute",
+                    left: "0.8rem",
+                    top: "50%",
+                    transform: "translateY(-50%)",
+                    color: "#94a3b8",
+                  }}
+                />
+                {searchQuery && (
+                  <button
+                    type="button"
+                    onClick={() => setSearchQuery("")}
+                    style={{
+                      position: "absolute",
+                      right: "0.75rem",
+                      top: "50%",
+                      transform: "translateY(-50%)",
+                      background: "none",
+                      border: "none",
+                      padding: 0,
+                      cursor: "pointer",
+                      color: "#94a3b8",
+                      display: "flex",
+                      alignItems: "center",
+                    }}
+                    title="Clear search"
+                  >
+                    <X size={14} />
+                  </button>
+                )}
               </div>
 
-              {/* Filter Pills */}
+              {/* Role Filter Pills */}
               <div style={{ display: "flex", gap: "0.4rem", flexWrap: "wrap", alignItems: "center" }}>
                 {isProgrammeHead ? (
                   <span
@@ -1771,45 +1984,318 @@ export default function AdminUserManagement({
                       fontWeight: 700,
                       background: "var(--primary-light-surface, #f5f3ff)",
                       color: "var(--primary, #28166f)",
-                      padding: "0.3rem 0.75rem",
+                      padding: "0.35rem 0.85rem",
                       borderRadius: "20px",
                       border: "1px solid var(--primary-light-border, #ddd6fe)",
                       display: "inline-flex",
                       alignItems: "center",
-                      gap: "5px",
+                      gap: "6px",
                     }}
                   >
-                    <GraduationCap size={13} /> {currentUser?.programme || "BSIT"} Students Only ({filteredUsers.length})
+                    <GraduationCap size={14} /> {currentUser?.programme || "BSIT"} Students Only ({filteredUsers.length})
                   </span>
                 ) : (
                   <>
                     <button
                       type="button"
                       className={`btn btn-sm ${roleFilter === "all" ? "btn-primary" : "btn-secondary"}`}
-                      style={{ fontSize: "0.78rem", padding: "0.3rem 0.7rem", borderRadius: "20px" }}
+                      style={{ fontSize: "0.78rem", padding: "0.32rem 0.75rem", borderRadius: "20px", display: "inline-flex", alignItems: "center", gap: "4px" }}
                       onClick={() => setRoleFilter("all")}
                     >
-                      All ({users.length})
+                      <Users size={13} /> All Accounts ({users.length})
                     </button>
                     <button
                       type="button"
                       className={`btn btn-sm ${roleFilter === "teacher" ? "btn-primary" : "btn-secondary"}`}
-                      style={{ fontSize: "0.78rem", padding: "0.3rem 0.7rem", borderRadius: "20px" }}
+                      style={{ fontSize: "0.78rem", padding: "0.32rem 0.75rem", borderRadius: "20px", display: "inline-flex", alignItems: "center", gap: "4px" }}
                       onClick={() => setRoleFilter("teacher")}
                     >
-                      Teachers ({totalTeachers})
+                      <ShieldCheck size={13} /> Faculty Teachers ({totalTeachers})
                     </button>
                     <button
                       type="button"
                       className={`btn btn-sm ${roleFilter === "student" ? "btn-primary" : "btn-secondary"}`}
-                      style={{ fontSize: "0.78rem", padding: "0.3rem 0.7rem", borderRadius: "20px" }}
+                      style={{ fontSize: "0.78rem", padding: "0.32rem 0.75rem", borderRadius: "20px", display: "inline-flex", alignItems: "center", gap: "4px" }}
                       onClick={() => setRoleFilter("student")}
                     >
-                      Students ({totalStudents})
+                      <GraduationCap size={13} /> Students ({totalStudents})
+                    </button>
+                    <button
+                      type="button"
+                      className={`btn btn-sm ${roleFilter === "programme-head" ? "btn-primary" : "btn-secondary"}`}
+                      style={{ fontSize: "0.78rem", padding: "0.32rem 0.75rem", borderRadius: "20px", display: "inline-flex", alignItems: "center", gap: "4px" }}
+                      onClick={() => setRoleFilter("programme-head")}
+                    >
+                      <Award size={13} /> Programme Heads ({totalProgrammeHeads})
+                    </button>
+                    <button
+                      type="button"
+                      className={`btn btn-sm ${roleFilter === "admin" ? "btn-primary" : "btn-secondary"}`}
+                      style={{ fontSize: "0.78rem", padding: "0.32rem 0.75rem", borderRadius: "20px", display: "inline-flex", alignItems: "center", gap: "4px" }}
+                      onClick={() => setRoleFilter("admin")}
+                    >
+                      <Shield size={13} /> Admins & Deans ({totalAdminsAndDeans})
                     </button>
                   </>
                 )}
               </div>
+
+              {/* Multi-Criteria Secondary Filter Controls (Dean / Admin Navigation) */}
+              {!isProgrammeHead && (
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "repeat(auto-fit, minmax(170px, 1fr))",
+                    gap: "0.6rem",
+                    padding: "0.75rem 0.85rem",
+                    background: "#f8fafc",
+                    border: "1px solid #e2e8f0",
+                    borderRadius: "12px",
+                  }}
+                >
+                  {/* Academic Program Select */}
+                  <div style={{ position: "relative" }}>
+                    <select
+                      value={programFilter}
+                      onChange={(e) => setProgramFilter(e.target.value)}
+                      style={{
+                        width: "100%",
+                        height: "34px",
+                        fontSize: "0.8rem",
+                        padding: "0 1.8rem 0 0.75rem",
+                        borderRadius: "8px",
+                        border: "1px solid #cbd5e1",
+                        background: "#ffffff",
+                        color: "#0f172a",
+                        fontWeight: 600,
+                        appearance: "none",
+                      }}
+                      aria-label="Filter by academic program"
+                    >
+                      <option value="all">All Programmes</option>
+                      {availablePrograms.map((p: string) => (
+                        <option key={p} value={p}>
+                          {p}
+                        </option>
+                      ))}
+                    </select>
+                    <ChevronDown size={13} style={{ position: "absolute", right: "8px", top: "50%", transform: "translateY(-50%)", color: "#64748b", pointerEvents: "none" }} />
+                  </div>
+
+                  {/* Department Select */}
+                  <div style={{ position: "relative" }}>
+                    <select
+                      value={deptFilter}
+                      onChange={(e) => setDeptFilter(e.target.value)}
+                      style={{
+                        width: "100%",
+                        height: "34px",
+                        fontSize: "0.8rem",
+                        padding: "0 1.8rem 0 0.75rem",
+                        borderRadius: "8px",
+                        border: "1px solid #cbd5e1",
+                        background: "#ffffff",
+                        color: "#0f172a",
+                        fontWeight: 600,
+                        appearance: "none",
+                      }}
+                      aria-label="Filter by department"
+                    >
+                      <option value="all">All Departments</option>
+                      {availableDepartments.map((d: string) => (
+                        <option key={d} value={d}>
+                          {d}
+                        </option>
+                      ))}
+                    </select>
+                    <ChevronDown size={13} style={{ position: "absolute", right: "8px", top: "50%", transform: "translateY(-50%)", color: "#64748b", pointerEvents: "none" }} />
+                  </div>
+
+                  {/* Status Select */}
+                  <div style={{ position: "relative" }}>
+                    <select
+                      value={statusFilter}
+                      onChange={(e) => setStatusFilter(e.target.value)}
+                      style={{
+                        width: "100%",
+                        height: "34px",
+                        fontSize: "0.8rem",
+                        padding: "0 1.8rem 0 0.75rem",
+                        borderRadius: "8px",
+                        border: "1px solid #cbd5e1",
+                        background: "#ffffff",
+                        color: "#0f172a",
+                        fontWeight: 600,
+                        appearance: "none",
+                      }}
+                      aria-label="Filter by account status"
+                    >
+                      <option value="all">All Statuses</option>
+                      <option value="active">Active</option>
+                      <option value="pending">Pending Approval</option>
+                      <option value="rejected">Rejected</option>
+                    </select>
+                    <ChevronDown size={13} style={{ position: "absolute", right: "8px", top: "50%", transform: "translateY(-50%)", color: "#64748b", pointerEvents: "none" }} />
+                  </div>
+
+                  {/* Sort By Select */}
+                  <div style={{ position: "relative" }}>
+                    <select
+                      value={sortBy}
+                      onChange={(e) => setSortBy(e.target.value as any)}
+                      style={{
+                        width: "100%",
+                        height: "34px",
+                        fontSize: "0.8rem",
+                        padding: "0 1.8rem 0 0.75rem",
+                        borderRadius: "8px",
+                        border: "1px solid #cbd5e1",
+                        background: "#ffffff",
+                        color: "#0f172a",
+                        fontWeight: 600,
+                        appearance: "none",
+                      }}
+                      aria-label="Sort users"
+                    >
+                      <option value="name_asc">Sort: Name (A → Z)</option>
+                      <option value="name_desc">Sort: Name (Z → A)</option>
+                      <option value="date_desc">Sort: Newest Registered</option>
+                      <option value="date_asc">Sort: Oldest Registered</option>
+                      <option value="role">Sort: Role</option>
+                    </select>
+                    <ArrowUpDown size={13} style={{ position: "absolute", right: "8px", top: "50%", transform: "translateY(-50%)", color: "#64748b", pointerEvents: "none" }} />
+                  </div>
+
+                  {/* Quick Reset Button */}
+                  {hasActiveFilters && (
+                    <button
+                      type="button"
+                      onClick={handleResetFilters}
+                      style={{
+                        height: "34px",
+                        fontSize: "0.78rem",
+                        padding: "0 0.75rem",
+                        borderRadius: "8px",
+                        border: "1px solid #cbd5e1",
+                        background: "#ffffff",
+                        color: "#dc2626",
+                        fontWeight: 700,
+                        display: "inline-flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        gap: "5px",
+                        cursor: "pointer",
+                      }}
+                      title="Clear all active filters"
+                    >
+                      <RotateCcw size={12} /> Clear Filters
+                    </button>
+                  )}
+                </div>
+              )}
+
+              {/* Active Filter Badges */}
+              {hasActiveFilters && !isProgrammeHead && (
+                <div style={{ display: "flex", gap: "0.35rem", flexWrap: "wrap", alignItems: "center" }}>
+                  <span style={{ fontSize: "0.74rem", color: "#64748b", fontWeight: 700, marginRight: "0.2rem" }}>
+                    Active Filters:
+                  </span>
+                  {searchQuery && (
+                    <span
+                      style={{
+                        fontSize: "0.72rem",
+                        background: "#ffffff",
+                        border: "1px solid #cbd5e1",
+                        padding: "0.15rem 0.5rem",
+                        borderRadius: "14px",
+                        color: "#0f172a",
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: "4px",
+                      }}
+                    >
+                      Search: "{searchQuery}"
+                      <X size={11} style={{ cursor: "pointer" }} onClick={() => setSearchQuery("")} />
+                    </span>
+                  )}
+                  {roleFilter !== "all" && (
+                    <span
+                      style={{
+                        fontSize: "0.72rem",
+                        background: "var(--primary-light-surface, #f5f3ff)",
+                        border: "1px solid var(--primary-light-border, #ddd6fe)",
+                        padding: "0.15rem 0.5rem",
+                        borderRadius: "14px",
+                        color: "var(--primary, #28166f)",
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: "4px",
+                        fontWeight: 700,
+                      }}
+                    >
+                      Role: {roleFilter.toUpperCase()}
+                      <X size={11} style={{ cursor: "pointer" }} onClick={() => setRoleFilter("all")} />
+                    </span>
+                  )}
+                  {programFilter !== "all" && (
+                    <span
+                      style={{
+                        fontSize: "0.72rem",
+                        background: "#eff6ff",
+                        border: "1px solid #bfdbfe",
+                        padding: "0.15rem 0.5rem",
+                        borderRadius: "14px",
+                        color: "#1d4ed8",
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: "4px",
+                        fontWeight: 700,
+                      }}
+                    >
+                      Programme: {programFilter}
+                      <X size={11} style={{ cursor: "pointer" }} onClick={() => setProgramFilter("all")} />
+                    </span>
+                  )}
+                  {deptFilter !== "all" && (
+                    <span
+                      style={{
+                        fontSize: "0.72rem",
+                        background: "#f0fdf4",
+                        border: "1px solid #bbf7d0",
+                        padding: "0.15rem 0.5rem",
+                        borderRadius: "14px",
+                        color: "#15803d",
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: "4px",
+                        fontWeight: 700,
+                      }}
+                    >
+                      Dept: {deptFilter}
+                      <X size={11} style={{ cursor: "pointer" }} onClick={() => setDeptFilter("all")} />
+                    </span>
+                  )}
+                  {statusFilter !== "all" && (
+                    <span
+                      style={{
+                        fontSize: "0.72rem",
+                        background: "#fffbeb",
+                        border: "1px solid #fde68a",
+                        padding: "0.15rem 0.5rem",
+                        borderRadius: "14px",
+                        color: "#b45309",
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: "4px",
+                        fontWeight: 700,
+                      }}
+                    >
+                      Status: {statusFilter.toUpperCase()}
+                      <X size={11} style={{ cursor: "pointer" }} onClick={() => setStatusFilter("all")} />
+                    </span>
+                  )}
+                </div>
+              )}
             </div>
 
             {/* User Table List */}
@@ -1820,34 +2306,70 @@ export default function AdminUserManagement({
               <div
                 style={{
                   position: "relative",
-                  maxHeight: "460px",
+                  maxHeight: "520px",
                   overflowY: "auto",
                   border: "1px solid #e2e8f0",
-                  borderRadius: "10px",
+                  borderRadius: "12px",
                   background: "#ffffff",
                 }}
               >
                 {filteredUsers.length === 0 ? (
-                  <div style={{ padding: "2rem", textAlign: "center", color: "#64748b" }}>
-                    <Users size={32} style={{ margin: "0 auto 0.5rem", color: "#94a3b8" }} />
-                    <p>No user accounts matched your search.</p>
+                  <div style={{ padding: "3rem 1.5rem", textAlign: "center", color: "#64748b" }}>
+                    <Users size={36} style={{ margin: "0 auto 0.75rem", color: "#94a3b8" }} />
+                    <p style={{ fontWeight: 700, fontSize: "0.95rem", color: "#1e293b", margin: "0 0 0.25rem 0" }}>
+                      No matching user accounts found
+                    </p>
+                    <p style={{ margin: 0, fontSize: "0.82rem" }}>
+                      Try clearing or adjusting your search filters above.
+                    </p>
+                    {hasActiveFilters && (
+                      <button
+                        type="button"
+                        onClick={handleResetFilters}
+                        className="btn btn-secondary btn-sm"
+                        style={{ marginTop: "1rem" }}
+                      >
+                        Reset All Filters
+                      </button>
+                    )}
                   </div>
                 ) : (
                   <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.82rem" }}>
                     <thead>
                       <tr style={{ borderBottom: "1px solid #e2e8f0", background: "#f8fafc", textAlign: "left" }}>
-                        <th style={{ padding: "0.6rem 0.75rem", color: "#475569" }}>User</th>
-                        <th style={{ padding: "0.6rem 0.75rem", color: "#475569" }}>Role</th>
-                        <th style={{ padding: "0.6rem 0.75rem", color: "#475569" }}>Programme</th>
-                        <th style={{ padding: "0.6rem 0.75rem", color: "#475569" }}>Status</th>
-                        <th style={{ padding: "0.6rem 0.75rem", textAlign: "right", color: "#475569" }}>Action</th>
+                        <th style={{ padding: "0.75rem 1rem", color: "#475569" }}>User Profile</th>
+                        <th style={{ padding: "0.75rem 1rem", color: "#475569" }}>System Role</th>
+                        <th style={{ padding: "0.75rem 1rem", color: "#475569" }}>Academic Programme</th>
+                        <th style={{ padding: "0.75rem 1rem", color: "#475569" }}>Status</th>
+                        <th style={{ padding: "0.75rem 1rem", color: "#475569" }}>Registered</th>
+                        <th style={{ padding: "0.75rem 1rem", textAlign: "right", color: "#475569" }}>Action</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {filteredUsers.map((u) => {
+                      {filteredUsers.map((u: PendingUser) => {
                         const isTeacher = u.role === "teacher";
                         const isStudent = u.role === "student";
+                        const isPh = u.role === "programme-head";
+                        const isDean = u.role === "dean";
                         const isAdmin = u.role === "admin";
+
+                        const roleBadgeConfig = isDean
+                          ? { label: "DEAN", bg: "#fef3c7", color: "#b45309", border: "#fde68a", icon: <Award size={12} /> }
+                          : isPh
+                          ? { label: "PROG HEAD", bg: "#f0f9ff", color: "#0284c7", border: "#bae6fd", icon: <BookOpen size={12} /> }
+                          : isTeacher
+                          ? { label: "FACULTY", bg: "#ecfdf5", color: "#059669", border: "#a7f3d0", icon: <ShieldCheck size={12} /> }
+                          : isStudent
+                          ? { label: "STUDENT", bg: "var(--primary-light-surface, #f5f3ff)", color: "var(--primary, #28166f)", border: "var(--primary-light-border, #ddd6fe)", icon: <GraduationCap size={12} /> }
+                          : { label: "ADMIN", bg: "#f5f3ff", color: "#7c3aed", border: "#ddd6fe", icon: <Shield size={12} /> };
+
+                        const initials = (u.name || "U")
+                          .replace(/^(Dr\.|Prof\.|Ms\.|Mr\.)\s+/i, "")
+                          .split(/\s+/)
+                          .slice(0, 2)
+                          .map((n: string) => n[0])
+                          .join("")
+                          .toUpperCase();
 
                         return (
                           <tr
@@ -1859,85 +2381,106 @@ export default function AdminUserManagement({
                             onMouseEnter={(e) => (e.currentTarget.style.background = "#f8fafc")}
                             onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
                           >
-                            <td style={{ padding: "0.65rem 0.75rem" }}>
-                              <div style={{ fontWeight: 700, color: "#0f172a" }}>{u.name}</div>
-                              <div style={{ fontSize: "0.75rem", color: "#64748b" }}>{u.email}</div>
-                              {u.student_id && (
-                                <div style={{ fontSize: "0.72rem", color: "var(--primary, #28166f)", fontWeight: 700 }}>
-                                  ID: {u.student_id}
+                            <td style={{ padding: "0.75rem 1rem" }}>
+                              <div style={{ display: "flex", alignItems: "center", gap: "0.65rem" }}>
+                                <div
+                                  style={{
+                                    width: "34px",
+                                    height: "34px",
+                                    borderRadius: "50%",
+                                    background: roleBadgeConfig.bg,
+                                    color: roleBadgeConfig.color,
+                                    border: `1px solid ${roleBadgeConfig.border}`,
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                    fontWeight: 800,
+                                    fontSize: "0.75rem",
+                                    flexShrink: 0,
+                                  }}
+                                >
+                                  {initials}
                                 </div>
-                              )}
+                                <div>
+                                  <div style={{ fontWeight: 700, color: "#0f172a" }}>{u.name}</div>
+                                  <div style={{ fontSize: "0.74rem", color: "#64748b" }}>{u.email}</div>
+                                  {u.student_id && (
+                                    <div style={{ fontSize: "0.72rem", color: "var(--primary, #28166f)", fontWeight: 700, marginTop: "0.1rem" }}>
+                                      ID: {u.student_id}
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
                             </td>
 
-                            <td style={{ padding: "0.65rem 0.75rem" }}>
+                            <td style={{ padding: "0.75rem 1rem" }}>
                               <span
                                 style={{
                                   display: "inline-flex",
                                   alignItems: "center",
-                                  gap: "0.3rem",
-                                  padding: "0.2rem 0.5rem",
+                                  gap: "0.35rem",
+                                  padding: "0.22rem 0.55rem",
                                   borderRadius: "6px",
                                   fontSize: "0.72rem",
-                                  fontWeight: 700,
-                                  background: isTeacher
-                                    ? "var(--primary-light-surface, #f5f3ff)"
-                                    : isStudent
-                                    ? "var(--primary-light-surface, #f5f3ff)"
-                                    : isAdmin
-                                    ? "#f5f3ff"
-                                    : "#fef2f2",
-                                  color: isTeacher
-                                    ? "var(--primary, #28166f)"
-                                    : isStudent
-                                    ? "var(--primary, #28166f)"
-                                    : isAdmin
-                                    ? "#7c3aed"
-                                    : "#dc2626",
-                                  border: `1px solid ${
-                                    isTeacher
-                                      ? "var(--primary-light-border, #ddd6fe)"
-                                      : isStudent
-                                      ? "var(--primary-light-border, #ddd6fe)"
-                                      : isAdmin
-                                      ? "#ddd6fe"
-                                      : "#fecaca"
-                                  }`,
+                                  fontWeight: 800,
+                                  background: roleBadgeConfig.bg,
+                                  color: roleBadgeConfig.color,
+                                  border: `1px solid ${roleBadgeConfig.border}`,
                                 }}
                               >
-                                {isTeacher ? (
-                                  <ShieldCheck size={12} />
-                                ) : isStudent ? (
-                                  <GraduationCap size={12} />
-                                ) : (
-                                  <Award size={12} />
-                                )}
-                                {u.role.toUpperCase()}
+                                {roleBadgeConfig.icon}
+                                {roleBadgeConfig.label}
                               </span>
                             </td>
 
-                            <td style={{ padding: "0.65rem 0.75rem" }}>
-                              <span style={{ color: "#334155", fontWeight: 500 }}>
-                                {u.programme || "General"}
+                            <td style={{ padding: "0.75rem 1rem" }}>
+                              <span style={{ color: "#0f172a", fontWeight: 700 }}>
+                                {u.programme || "Institution-wide"}
                               </span>
+                              {u.department && u.department !== "N/A" && (
+                                <div style={{ fontSize: "0.74rem", color: "#64748b" }}>
+                                  {u.department}
+                                </div>
+                              )}
                             </td>
 
-                            <td style={{ padding: "0.65rem 0.75rem" }}>
+                            <td style={{ padding: "0.75rem 1rem" }}>
                               <span
                                 style={{
-                                  padding: "0.15rem 0.45rem",
+                                  padding: "0.18rem 0.5rem",
                                   borderRadius: "6px",
                                   fontSize: "0.72rem",
                                   fontWeight: 700,
-                                  background: u.status === "active" ? "#ecfdf5" : "#fffbeb",
-                                  color: u.status === "active" ? "#059669" : "#b45309",
-                                  border: `1px solid ${u.status === "active" ? "#a7f3d0" : "#fde68a"}`,
+                                  background:
+                                    u.status === "active"
+                                      ? "#ecfdf5"
+                                      : u.status === "rejected"
+                                      ? "#fef2f2"
+                                      : "#fffbeb",
+                                  color:
+                                    u.status === "active"
+                                      ? "#059669"
+                                      : u.status === "rejected"
+                                      ? "#dc2626"
+                                      : "#b45309",
+                                  border: `1px solid ${
+                                    u.status === "active"
+                                      ? "#a7f3d0"
+                                      : u.status === "rejected"
+                                      ? "#fecaca"
+                                      : "#fde68a"
+                                  }`,
                                 }}
                               >
                                 {u.status || "active"}
                               </span>
                             </td>
 
-                            <td style={{ padding: "0.65rem 0.75rem", textAlign: "right" }}>
+                            <td style={{ padding: "0.75rem 1rem", color: "#64748b", fontSize: "0.76rem" }}>
+                              {u.created_at ? new Date(u.created_at).toLocaleDateString() : "—"}
+                            </td>
+
+                            <td style={{ padding: "0.75rem 1rem", textAlign: "right" }}>
                               <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", gap: "0.4rem" }}>
                                 {isCurrentUserAdmin && !isAdmin && (
                                   <button
