@@ -352,8 +352,8 @@ def remove_user(user_id: str):
 
 
 @app.get("/api/dashboard/summary")
-def dashboard_summary():
-    return get_dashboard_summary()
+def dashboard_summary(program: Optional[str] = None, instructor_name: Optional[str] = None):
+    return get_dashboard_summary(program=program, instructor_name=instructor_name)
 
 
 # ==========================================
@@ -480,8 +480,8 @@ def edit_exam_key(exam_id: str, exam: ExamUpdate):
 
 
 @app.get("/api/exams")
-def get_all_exams():
-    return list_exams()
+def get_all_exams(program: Optional[str] = None, instructor_name: Optional[str] = None):
+    return list_exams(program=program, instructor_name=instructor_name)
 
 
 @app.delete("/api/exams/{exam_id}")

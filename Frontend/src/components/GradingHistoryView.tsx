@@ -60,23 +60,33 @@ export const GradingHistoryView: React.FC<GradingHistoryViewProps> = ({
     return map;
   }, [roster]);
 
-  // Role-based examination filtering: Teachers only see their assigned courses
+  // Role-based examination filtering: Teachers only see their assigned courses; Programme Heads only see their programme
   const roleFilteredExams = useMemo(() => {
     if (!currentUser || currentUser.role === "admin" || currentUser.role === "dean") {
       return exams;
     }
     if (currentUser.role === "teacher") {
-      const teacherExams = exams.filter(
-        (e) =>
-          !e.instructor_name ||
-          e.instructor_name.toLowerCase().includes(currentUser.name.toLowerCase()) ||
-          currentUser.name.toLowerCase().includes((e.instructor_name || "").toLowerCase()),
-      );
-      return teacherExams.length > 0 ? teacherExams : exams;
+      const teacherName = currentUser.name.trim().toLowerCase();
+      const teacherId = currentUser.id;
+      return exams.filter((e) => {
+        const instName = (e.instructor_name || "").trim().toLowerCase();
+        const instId = (e as any).instructor_id;
+        return (
+          (instName && (instName.includes(teacherName) || teacherName.includes(instName))) ||
+          (instId && instId === teacherId)
+        );
+      });
     }
     if (currentUser.role === "programme-head") {
-      const prog = currentUser.programme || "BSIT";
-      return exams.filter((e) => !e.program || e.program.toLowerCase() === prog.toLowerCase());
+      const prog = (currentUser.programme || "BSIT").trim().toLowerCase();
+      return exams.filter((e) => {
+        const examProg = (e.program || "").trim().toLowerCase();
+        return (
+          examProg === prog ||
+          ((examProg === "it" || examProg === "bsit") && (prog === "it" || prog === "bsit")) ||
+          ((examProg === "tep" || examProg === "bsed") && (prog === "tep" || prog === "bsed"))
+        );
+      });
     }
     return exams;
   }, [exams, currentUser]);

@@ -445,12 +445,11 @@ export default function RegisterForm({ onSwitchToLogin, onRegisteredSuccess }: R
                     ))
                   ) : (
                     <>
-                      <option value="BSIT">BSIT</option>
-                      <option value="BSCS">BSCS</option>
-                      <option value="BSED">BSED</option>
-                      <option value="BEED">BEED</option>
-                      <option value="BSBA">BSBA</option>
-                      <option value="BSCRIM">BSCRIM</option>
+                      <option value="BSIT">BSIT — Bachelor of Science in Information Technology</option>
+                      <option value="BSCRIM">BSCRIM — Bachelor of Science in Criminology</option>
+                      <option value="BSHM">BSHM — Bachelor of Science in Hotel Management</option>
+                      <option value="BSBA">BSBA — Bachelor of Science in Business Administration</option>
+                      <option value="TEP">TEP — Teacher Education Program</option>
                     </>
                   )}
                 </select>

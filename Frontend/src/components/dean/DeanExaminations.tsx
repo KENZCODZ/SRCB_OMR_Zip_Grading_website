@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import {
   BookOpen,
   Search,
@@ -27,6 +27,7 @@ interface DeanExaminationsProps {
 }
 
 export default function DeanExaminations({
+  currentUser,
   exams,
   submissions,
   roster,
@@ -34,6 +35,16 @@ export default function DeanExaminations({
   addToast,
   formatDate = (iso) => new Date(iso).toLocaleDateString(),
 }: DeanExaminationsProps) {
+  const isProgrammeHead = currentUser?.role === "programme-head";
+  const phProg = (currentUser?.programme || "BSIT").toUpperCase();
+
+  const availableProgrammes = useMemo(() => {
+    if (isProgrammeHead) {
+      return [phProg === "IT" ? "BSIT" : phProg];
+    }
+    return ["BSIT", "BSCRIM", "BSHM", "BSBA", "TEP"];
+  }, [isProgrammeHead, phProg]);
+
   const [searchQuery, setSearchQuery] = useState("");
   const [programmeFilter, setProgrammeFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
@@ -250,7 +261,7 @@ export default function DeanExaminations({
                   letterSpacing: "-0.01em",
                 }}
               >
-                Dean's Examination Directory
+                {isProgrammeHead ? `${currentUser?.programme || "BSIT"} Examination Records` : "Dean's Examination Directory"}
               </h3>
               <p
                 style={{
@@ -260,7 +271,9 @@ export default function DeanExaminations({
                   fontWeight: 500,
                 }}
               >
-                Monitor academic assessments, faculty submission coverage, and syllabus exams
+                {isProgrammeHead
+                  ? `Review exams, OBE test coverage, and performance metrics for ${currentUser?.programme || "BSIT"}`
+                  : "Monitor academic assessments, faculty submission coverage, and syllabus exams"}
               </p>
             </div>
           </div>
@@ -373,22 +386,25 @@ export default function DeanExaminations({
           style={{ gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))" }}
         >
           {/* Program / Department Filter */}
-          <div className="unified-filter-toolbar-item" title="Filter by Program or Department">
-            <GraduationCap size={14} className="unified-filter-toolbar-icon" />
-            <select
-              value={programmeFilter}
-              onChange={(e) => setProgrammeFilter(e.target.value)}
-              className="unified-filter-toolbar-select"
-              aria-label="Filter by program or department"
-            >
-              <option value="all">All Programmes</option>
-              <option value="BSIT">BSIT - Information Tech</option>
-              <option value="BSCS">BSCS - Computer Science</option>
-              <option value="BSBA">BSBA - Business Admin</option>
-              <option value="BSEd">BSEd - Secondary Ed</option>
-            </select>
-            <ChevronDown size={14} className="academic-select-arrow" />
-          </div>
+          {!isProgrammeHead && (
+            <div className="unified-filter-toolbar-item" title="Filter by Program or Department">
+              <GraduationCap size={14} className="unified-filter-toolbar-icon" />
+              <select
+                value={programmeFilter}
+                onChange={(e) => setProgrammeFilter(e.target.value)}
+                className="unified-filter-toolbar-select"
+                aria-label="Filter by program or department"
+              >
+                <option value="all">All Programmes ({availableProgrammes.length})</option>
+                {availableProgrammes.map((p) => (
+                  <option key={p} value={p}>
+                    {p} Program
+                  </option>
+                ))}
+              </select>
+              <ChevronDown size={14} className="academic-select-arrow" />
+            </div>
+          )}
 
           {/* Grading Status Filter */}
           <div className="unified-filter-toolbar-item" title="Filter by Grading Status">
