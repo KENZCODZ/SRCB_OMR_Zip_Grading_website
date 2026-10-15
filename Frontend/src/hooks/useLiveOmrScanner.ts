@@ -1,9 +1,29 @@
 // useLiveOmrScanner.ts
-// Hook managing real-time OMR scanning, per-question vote buffer locking,
-// dual finalize triggers (all-locked & sheet-removed), and multi-camera selection.
+// Redesigned Live OMR Scanning Hook matching the Architectural Flowchart:
+// Camera Frame -> Image Quality Check -> Detect Sheet Corners -> Perspective Correction ->
+// Align OMR Template -> Detect & Classify Bubbles -> Validate Question Count ->
+// Generate One Complete Result -> Update UI Atomically -> Sheet Stable? -> Lock or Capture Sheet
+//
+// Key Fixes:
+// 1. Tracks continuous session across frames (prevents detection count fluctuations 49/50 -> 0/50).
+// 2. Atomic sequence frame dispatching via monotonic frameId (prevents partial state tearing).
+// 3. Complete Evaluator telemetry synchronized with atomic results (input dimensions, detected bubbles, classified answers, errors).
+// 4. Stream ownership decoupled from processing (preview video is NEVER destroyed or blacked out during capture or retake).
+// 5. Validated multi-frame stability detector ("Sheet Stable?") before locking answers.
 
-import { useState, useEffect, useRef, useCallback } from 'react';
-import type { QuestionBubbleRead } from '../workers/omrScanner.worker';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import type { FrameResultMessage } from '../workers/omrScanner.worker';
+import {
+  gradeAnswers,
+  traceToEvaluatorStats,
+  type AnswerState,
+  type EvaluationTrace,
+  type EvaluatorStats,
+  type GradeSummary,
+  type QuestionRead,
+} from '../omr/omrEvaluation';
+
+export type { EvaluatorStats };
 
 export interface CornerPoint {
   x: number;
@@ -28,12 +48,36 @@ export interface LiveScanResult {
   questions: Record<string, QuestionStatus>;
   studentId: string;
   needsReviewQuestions: string[];
+  trace?: EvaluationTrace | null;
+  grade?: GradeSummary;
+}
+
+/**
+ * Settled answer state of a question, or undefined if it has not settled yet.
+ * A question settles when the same reading (single letter, multi-mark, or blank)
+ * is seen on `lockThresholdConsecutive` consecutive template-verified frames.
+ */
+export function settledAnswerState(q: QuestionStatus | undefined): AnswerState | undefined {
+  if (!q) return undefined;
+  if (q.state === 'needs_review') return { status: 'multiple', selected: q.lockedAnswer };
+  if (q.state !== 'locked') return undefined;
+  return q.lockedAnswer ? { status: 'single', selected: q.lockedAnswer } : { status: 'blank', selected: null };
+}
+
+/** Session-level counters (multi-frame). Every count is restricted to questions 1..N. */
+export interface SessionCounters {
+  total: number; // N
+  settled: number; // answered + multiple + blank
+  answered: number; // settled single-mark answers (the only gradable answers)
+  multiple: number; // settled multi-mark -> needs review
+  blank: number; // settled blank
+  unsettled: number; // N - settled
 }
 
 // Configurable Tuning Constants
-export const DEFAULT_CONSECUTIVE_LOCK_FRAMES = 4; // Frames needed to settle a question answer
-export const DEFAULT_MIN_LOCK_THRESHOLD_ON_REMOVAL = 5; // Minimum questions locked to auto-submit when sheet is pulled away
-export const DEFAULT_BLUR_THRESHOLD = 45; // Laplacian blur rejection threshold
+export const DEFAULT_CONSECUTIVE_LOCK_FRAMES = 3; // Frames required to settle an answer
+export const DEFAULT_MIN_LOCK_THRESHOLD_ON_REMOVAL = 5; // Minimum answers to auto-submit when sheet pulled away
+export const DEFAULT_BLUR_THRESHOLD = 35; // Laplacian blur threshold
 
 export interface UseLiveOmrScannerOptions {
   onCapture: (file: File, previewUrl: string, liveSummary?: LiveScanResult) => Promise<void> | void;
@@ -41,6 +85,9 @@ export interface UseLiveOmrScannerOptions {
   minLockThresholdToFinalizeOnRemoval?: number;
   blurThreshold?: number;
   initialMode?: 'auto-lock' | 'single-shot';
+  answerKey?: Record<string, string>;
+  numItems?: number;
+  passingScore?: number;
 }
 
 export function useLiveOmrScanner({
@@ -49,7 +96,13 @@ export function useLiveOmrScanner({
   minLockThresholdToFinalizeOnRemoval = DEFAULT_MIN_LOCK_THRESHOLD_ON_REMOVAL,
   blurThreshold = DEFAULT_BLUR_THRESHOLD,
   initialMode = 'auto-lock',
+  answerKey,
+  numItems,
+  passingScore,
 }: UseLiveOmrScannerOptions) {
+  // One exam length used by the worker, the session counters and the grader alike.
+  // (Previously the worker graded `numItems || 50` while the UI divided by the key length.)
+  const totalItems = Math.min(50, Math.max(1, numItems || (answerKey ? Object.keys(answerKey).length : 50)));
   const [scanMode, setScanMode] = useState<'auto-lock' | 'single-shot'>(initialMode);
   const [status, setStatus] = useState<
     'idle' | 'requesting-permission' | 'scanning' | 'capturing' | 'submitting' | 'error'
@@ -57,13 +110,15 @@ export function useLiveOmrScanner({
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [errorType, setErrorType] = useState<'permission' | 'device' | 'worker' | 'general' | null>(null);
 
+  // Sheet Detection State
   const [isSheetDetected, setIsSheetDetected] = useState(false);
+  const [isSheetStable, setIsSheetStable] = useState(false);
   const [detectedCorners, setDetectedCorners] = useState<CornerPoint[] | null>(null);
   const [normalizedCorners, setNormalizedCorners] = useState<CornerPoint[] | null>(null);
   const [isBlurry, setIsBlurry] = useState(false);
   const [blurScore, setBlurScore] = useState(100);
 
-  // Live Questions State
+  // Live Questions State (Questions 1 to 50)
   const [questionsState, setQuestionsState] = useState<Record<string, QuestionStatus>>(() => {
     const init: Record<string, QuestionStatus> = {};
     for (let i = 1; i <= 50; i++) {
@@ -80,6 +135,11 @@ export function useLiveOmrScanner({
   });
 
   const [detectedStudentId, setDetectedStudentId] = useState<string>('');
+
+  // Latest per-frame evaluation, rendered verbatim by the telemetry panel.
+  const [latestTrace, setLatestTrace] = useState<EvaluationTrace | null>(null);
+
+  // Hardware / Stream State
   const [isSmartDetectionAvailable, setIsSmartDetectionAvailable] = useState(true);
   const [hasTorch, setHasTorch] = useState(false);
   const [isTorchOn, setIsTorchOn] = useState(false);
@@ -94,8 +154,23 @@ export function useLiveOmrScanner({
   const animationFrameRef = useRef<number | null>(null);
   const offscreenCanvasRef = useRef<HTMLCanvasElement | null>(null);
 
-  // Vote buffer reference: question -> history of readings
-  const voteBufferRef = useRef<Record<string, { lastRead: string | null; count: number; locked: boolean; lockedValue: string | null; isMulti: boolean }>>({});
+  // Monotonic frame tracking to prevent out-of-order partial state tearing
+  const frameSeqRef = useRef<number>(0);
+  const lastProcessedFrameIdRef = useRef<number>(0);
+
+  // Persistent Vote Buffer across continuous session
+  const voteBufferRef = useRef<
+    Record<
+      string,
+      {
+        lastRead: string | null;
+        count: number;
+        locked: boolean;
+        lockedValue: string | null;
+        isMulti: boolean;
+      }
+    >
+  >({});
 
   // Performance throttling & adaptive interval
   const lastProcessedTimeRef = useRef<number>(0);
@@ -105,16 +180,20 @@ export function useLiveOmrScanner({
   const detectedCornersRef = useRef<CornerPoint[] | null>(null);
   const normalizedCornersRef = useRef<CornerPoint[] | null>(null);
 
-  // Sheet tracking for removal trigger
+  // Stability detection references (calculates corner movement delta)
+  const prevNormalizedCornersRef = useRef<CornerPoint[] | null>(null);
+  const stabilityStreakRef = useRef<number>(0);
+
+  // Session Grace Decay: retains detected state across momentary 1-2 frame blur/occlusion
+  const sessionGraceFramesRef = useRef<number>(0);
   const consecutiveSheetDetectedRef = useRef<number>(0);
   const lostSheetFramesRef = useRef<number>(0);
-  const lastGoodImageBufferRef = useRef<ImageData | null>(null);
 
   isSubmittingRef.current = isSubmitting;
   detectedCornersRef.current = detectedCorners;
   normalizedCornersRef.current = normalizedCorners;
 
-  // Initialize vote buffer
+  // Initialize vote buffer once
   useEffect(() => {
     const initBuffer: typeof voteBufferRef.current = {};
     for (let i = 1; i <= 50; i++) {
@@ -148,10 +227,9 @@ export function useLiveOmrScanner({
     }
   }, []);
 
-  // Race-condition prevention: monotonic request ID ref
   const startRequestIdRef = useRef<number>(0);
 
-  // Stop camera media stream
+  // Stop camera media stream completely (only on unmount or device switch)
   const stopCamera = useCallback(() => {
     startRequestIdRef.current++;
     if (streamRef.current) {
@@ -182,17 +260,20 @@ export function useLiveOmrScanner({
   }, [isTorchOn]);
 
   // Switch camera device
-  const switchCamera = useCallback((deviceId?: string) => {
-    if (deviceId) {
-      setSelectedDeviceId(deviceId);
-    } else if (videoDevices.length > 1) {
-      const currentIndex = videoDevices.findIndex((d) => d.deviceId === selectedDeviceId);
-      const nextIndex = (currentIndex + 1) % videoDevices.length;
-      setSelectedDeviceId(videoDevices[nextIndex].deviceId);
-    }
-  }, [videoDevices, selectedDeviceId]);
+  const switchCamera = useCallback(
+    (deviceId?: string) => {
+      if (deviceId) {
+        setSelectedDeviceId(deviceId);
+      } else if (videoDevices.length > 1) {
+        const currentIndex = videoDevices.findIndex((d) => d.deviceId === selectedDeviceId);
+        const nextIndex = (currentIndex + 1) % videoDevices.length;
+        setSelectedDeviceId(videoDevices[nextIndex].deviceId);
+      }
+    },
+    [videoDevices, selectedDeviceId]
+  );
 
-  // Reset live vote buffer (e.g. for new scan)
+  // Reset live vote buffer without interrupting camera stream
   const resetVoteBuffer = useCallback(() => {
     const initBuffer: typeof voteBufferRef.current = {};
     const newQuestions: Record<string, QuestionStatus> = {};
@@ -220,14 +301,23 @@ export function useLiveOmrScanner({
     setDetectedStudentId('');
     consecutiveSheetDetectedRef.current = 0;
     lostSheetFramesRef.current = 0;
+    sessionGraceFramesRef.current = 0;
+    stabilityStreakRef.current = 0;
+    setIsSheetStable(false);
   }, []);
+
+  // Seamless Retake (DOES NOT touch the MediaStream; camera continues running smoothly)
+  const retake = useCallback(() => {
+    resetVoteBuffer();
+    setIsSubmitting(false);
+    setStatus('scanning');
+  }, [resetVoteBuffer]);
 
   // Capture and perspective warp
   const finalizeAndSubmit = useCallback(
     async (triggerReason: 'all_locked' | 'sheet_removed' | 'manual' = 'all_locked') => {
       if (isSubmittingRef.current || !videoRef.current) return;
       setIsSubmitting(true);
-      setStatus('capturing');
 
       try {
         const video = videoRef.current;
@@ -255,11 +345,12 @@ export function useLiveOmrScanner({
 
         const liveSummary: LiveScanResult = {
           lockedCount,
-          totalQuestions: 50,
-          lockedPercentage: Math.round((lockedCount / 50) * 100),
+          totalQuestions: totalItems,
+          lockedPercentage: Math.round((lockedCount / totalItems) * 100),
           questions: questionsState,
           studentId: detectedStudentId,
           needsReviewQuestions: needsReview,
+          trace: latestTrace,
         };
 
         // If we have valid corners and worker, perform perspective warp
@@ -319,14 +410,16 @@ export function useLiveOmrScanner({
                 warpedCanvas.toBlob((b) => res(b), 'image/jpeg', 0.92)
               );
               if (blob) {
-                const file = new File([blob], `omr_scan_${triggerReason}_${Date.now()}.jpg`, { type: 'image/jpeg' });
+                const file = new File([blob], `omr_scan_${triggerReason}_${Date.now()}.jpg`, {
+                  type: 'image/jpeg',
+                });
                 const previewUrl = URL.createObjectURL(blob);
                 await onCapture(file, previewUrl, liveSummary);
                 return;
               }
             }
           } catch {
-            // Fallback to unwarped
+            // Fallback to unwarped direct capture
           }
         }
 
@@ -336,26 +429,32 @@ export function useLiveOmrScanner({
         );
 
         if (blob) {
-          const file = new File([blob], `omr_scan_${triggerReason}_${Date.now()}.jpg`, { type: 'image/jpeg' });
+          const file = new File([blob], `omr_scan_${triggerReason}_${Date.now()}.jpg`, {
+            type: 'image/jpeg',
+          });
           const previewUrl = URL.createObjectURL(blob);
           await onCapture(file, previewUrl, liveSummary);
         }
       } catch (err: any) {
         setErrorMessage(err?.message || 'Capture failed');
-        setStatus('scanning');
       } finally {
         setIsSubmitting(false);
       }
     },
-    [questionsState, detectedStudentId, isSmartDetectionAvailable, onCapture]
+    [questionsState, detectedStudentId, isSmartDetectionAvailable, onCapture, totalItems, latestTrace]
   );
 
-  // Update rolling vote buffer with new frame readings
-  const updateVoteBuffer = useCallback(
-    (decodedQuestions: Record<string, QuestionBubbleRead>, studentId: string) => {
+  // Update rolling vote buffer with continuous session tracking
+  const updateSessionVotes = useCallback(
+    (
+      decodedQuestions: Record<string, QuestionRead>,
+      studentId: string,
+      isTemplateAligned: boolean
+    ) => {
       const buffer = voteBufferRef.current;
       const updatedQuestions: Record<string, QuestionStatus> = {};
       let totalLocked = 0;
+      const targetQuestions = totalItems;
 
       for (let i = 1; i <= 50; i++) {
         const qStr = String(i);
@@ -368,7 +467,8 @@ export function useLiveOmrScanner({
           isMulti: false,
         };
 
-        if (!read) {
+        // If template was not aligned, keep previous locked answer without updating reading
+        if (!isTemplateAligned || !read) {
           updatedQuestions[qStr] = {
             questionNumber: qStr,
             state: prev.locked ? (prev.isMulti ? 'needs_review' : 'locked') : 'searching',
@@ -381,7 +481,7 @@ export function useLiveOmrScanner({
           continue;
         }
 
-        // If already locked, keep locked state to avoid shadow flickers
+        // If already locked, retain locked value across shadow flickers
         if (prev.locked) {
           updatedQuestions[qStr] = {
             questionNumber: qStr,
@@ -395,13 +495,14 @@ export function useLiveOmrScanner({
           continue;
         }
 
-        // Evaluate read consistency
-        const currentReadVal = read.selected || (read.status === 'unfilled' ? 'EMPTY' : null);
+        // Evaluate read consistency across frames
+        // Vote key: 'A' (single), 'AC' (multiple), 'EMPTY' (blank). Blank is a reading, not a gap.
+        const currentReadVal = read.status === 'blank' ? 'EMPTY' : read.selected;
 
         if (currentReadVal !== null && currentReadVal === prev.lastRead) {
           const nextCount = prev.count + 1;
           const isNowLocked = nextCount >= lockThresholdConsecutive;
-          const isMulti = read.isMultiMark;
+          const isMulti = read.status === 'multiple';
 
           buffer[qStr] = {
             lastRead: currentReadVal,
@@ -434,7 +535,7 @@ export function useLiveOmrScanner({
             count: 1,
             locked: false,
             lockedValue: null,
-            isMulti: read.isMultiMark,
+            isMulti: read.status === 'multiple',
           };
 
           updatedQuestions[qStr] = {
@@ -442,7 +543,7 @@ export function useLiveOmrScanner({
             state: 'reading',
             lockedAnswer: null,
             currentReading: read.selected,
-            isMultiMark: read.isMultiMark,
+            isMultiMark: read.status === 'multiple',
             consecutiveMatches: 1,
           };
         }
@@ -451,12 +552,18 @@ export function useLiveOmrScanner({
       setQuestionsState(updatedQuestions);
       if (studentId) setDetectedStudentId(studentId);
 
-      // Trigger 1: All 50 Questions Locked!
-      if (totalLocked === 50 && !isSubmittingRef.current && scanMode === 'auto-lock') {
+      // Completion = every question 1..N has SETTLED (answered, multi-mark or blank) on a
+      // stable, template-verified sheet. It does not mean every question was answered.
+      if (
+        totalLocked >= targetQuestions &&
+        isSheetStable &&
+        !isSubmittingRef.current &&
+        scanMode === 'auto-lock'
+      ) {
         finalizeAndSubmit('all_locked');
       }
     },
-    [lockThresholdConsecutive, scanMode, finalizeAndSubmit]
+    [lockThresholdConsecutive, scanMode, isSheetStable, finalizeAndSubmit, totalItems]
   );
 
   // Main frame processing loop
@@ -508,17 +615,21 @@ export function useLiveOmrScanner({
       ctx.drawImage(video, 0, 0, procW, procH);
       const imgData = ctx.getImageData(0, 0, procW, procH);
 
-      lastGoodImageBufferRef.current = imgData;
+      const frameId = ++frameSeqRef.current;
       isWorkerBusyRef.current = true;
 
       workerRef.current.postMessage(
         {
           type: 'PROCESS_FRAME',
+          frameId,
           imageData: imgData,
           width: procW,
           height: procH,
           decodeBubbles: scanMode === 'auto-lock',
           blurThreshold,
+          numExpectedQuestions: totalItems,
+          answerKey,
+          passingScore,
         },
         [imgData.data.buffer]
       );
@@ -527,9 +638,9 @@ export function useLiveOmrScanner({
     }
 
     animationFrameRef.current = requestAnimationFrame(processVideoFrame);
-  }, [status, scanMode, isSmartDetectionAvailable, blurThreshold]);
+  }, [status, scanMode, isSmartDetectionAvailable, blurThreshold, totalItems, answerKey, passingScore]);
 
-  // Start Camera
+  // Start Camera (Acquires stream once and leaves it running)
   const startCamera = useCallback(async () => {
     stopCamera();
     const requestId = ++startRequestIdRef.current;
@@ -551,7 +662,8 @@ export function useLiveOmrScanner({
         return;
       }
 
-      const isMobile = typeof navigator !== 'undefined' && /Android|iPhone|iPad|iPod/i.test(navigator.userAgent || '');
+      const isMobile =
+        typeof navigator !== 'undefined' && /Android|iPhone|iPad|iPod/i.test(navigator.userAgent || '');
       const constraintCandidates: MediaStreamConstraints[] = [
         ...(selectedDeviceId ? [{ audio: false, video: { deviceId: { exact: selectedDeviceId } } }] : []),
         {
@@ -579,7 +691,6 @@ export function useLiveOmrScanner({
           if (stream) break;
         } catch (err: any) {
           lastError = err;
-          // If explicitly denied by user/browser permission policy, abort cascade immediately
           if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
             throw err;
           }
@@ -590,7 +701,6 @@ export function useLiveOmrScanner({
         throw lastError || new Error('Could not establish video stream with any camera device.');
       }
 
-      // If a newer request has started or component unmounted, immediately stop tracks and abandon
       if (requestId !== startRequestIdRef.current) {
         stream.getTracks().forEach((track) => track.stop());
         return;
@@ -609,10 +719,7 @@ export function useLiveOmrScanner({
         try {
           await videoRef.current.play();
         } catch (playErr: any) {
-          if (playErr.name === 'AbortError') {
-            // Expected signal that a newer load request took over
-            return;
-          }
+          if (playErr.name === 'AbortError') return;
           throw playErr;
         }
       }
@@ -625,20 +732,24 @@ export function useLiveOmrScanner({
       await enumerateDevices();
       setStatus('scanning');
     } catch (err: any) {
-      if (requestId !== startRequestIdRef.current) {
-        return;
-      }
+      if (requestId !== startRequestIdRef.current) return;
       stopCamera();
       setStatus('error');
       if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
         setErrorType('permission');
-        setErrorMessage('Camera access was denied. Please allow camera permissions in your browser address bar.');
+        setErrorMessage(
+          'Camera access was denied. Please allow camera permissions in your browser address bar.'
+        );
       } else if (err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError') {
         setErrorType('device');
-        setErrorMessage('No camera device found on this system. Please connect a USB webcam or use File Upload.');
+        setErrorMessage(
+          'No camera device found on this system. Please connect a USB webcam or use File Upload.'
+        );
       } else if (err.name === 'NotReadableError' || err.name === 'TrackStartError') {
         setErrorType('device');
-        setErrorMessage('Camera is currently in use by another application (Zoom, Teams, etc.). Please close other camera apps and try again.');
+        setErrorMessage(
+          'Camera is currently in use by another application. Please close other camera apps and try again.'
+        );
       } else {
         setErrorType('general');
         setErrorMessage(err?.message || 'Could not start camera feed.');
@@ -660,9 +771,8 @@ export function useLiveOmrScanner({
     }
   }, [status]);
 
-  // Keep fresh callback references for the long-lived Web Worker
-  const updateVoteBufferRef = useRef(updateVoteBuffer);
-  updateVoteBufferRef.current = updateVoteBuffer;
+  const updateSessionVotesRef = useRef(updateSessionVotes);
+  updateSessionVotesRef.current = updateSessionVotes;
 
   const finalizeAndSubmitRef = useRef(finalizeAndSubmit);
   finalizeAndSubmitRef.current = finalizeAndSubmit;
@@ -689,47 +799,111 @@ export function useLiveOmrScanner({
 
         if (data.type === 'OPENCV_READY') {
           setIsSmartDetectionAvailable(true);
-        } else if (data.type === 'OPENCV_ERROR') {
+          return;
+        }
+        if (data.type === 'OPENCV_ERROR') {
           setIsSmartDetectionAvailable(false);
-        } else if (data.type === 'FRAME_PROCESSED') {
+          return;
+        }
+
+        if (data.type === 'FRAME_RESULT') {
+          const frameResult = data as FrameResultMessage;
+          const trace = frameResult.trace;
           isWorkerBusyRef.current = false;
 
-          // Adaptive frame interval: adjust if worker latency exceeds budget
-          if (data.processingTimeMs && data.processingTimeMs > 110) {
-            targetFrameIntervalRef.current = 190; // ~5 FPS
-          } else {
-            targetFrameIntervalRef.current = 140; // ~7 FPS
+          // Monotonic sequence verification: discard stale or out-of-order frames
+          if (frameResult.frameId < lastProcessedFrameIdRef.current) {
+            return;
+          }
+          lastProcessedFrameIdRef.current = frameResult.frameId;
+
+          // Adaptive frame interval
+          targetFrameIntervalRef.current = trace.processingTimeMs > 110 ? 190 : 140;
+
+          // Telemetry renders this exact object (same evalId/frameId as the log line below).
+          setLatestTrace(trace);
+          if (trace.stage === 'evaluated' || trace.stage === 'template') {
+            const c = trace.counters;
+            const fg = trace.frameGrade;
+            console.debug(
+              `[OMR ${trace.evalId} frame ${trace.frameId}] stage=${trace.stage} ` +
+                `warped=${trace.warpedWidth}x${trace.warpedHeight} corners=${trace.cornerSource} ` +
+                `fiducials=${trace.template?.fiducialsFound ?? 0}/4 layout=${trace.template?.layout ?? '-'} | ` +
+                `read=${c.questionsRead} slots=${c.bubbleSlotsSampled} marked=${c.bubblesMarked} ` +
+                `classified=${c.answersClassified} multi=${c.multipleMarked} blank=${c.blank} ` +
+                `rejected=${trace.rejectedQuestions} | key=${trace.answerKeyEntries}/${trace.numItems} ` +
+                (fg ? `graded=${fg.answersGraded} score=${fg.score} scoringErrors=${fg.scoringErrors}` : 'graded=- (no key)') +
+                (trace.error ? ` | error="${trace.error}"` : '')
+            );
           }
 
-          const blurry = !!data.isBlurry;
+          const blurry = trace.qualityReason === 'BLURRY';
           setIsBlurry(blurry);
-          setBlurScore(data.blurScore ?? 100);
+          setBlurScore(trace.blurScore);
 
-          if (data.detected && data.corners && data.normalizedCorners) {
+          // Flowchart Step: Usable Quality & Detected Sheet
+          if (frameResult.sheetDetected && frameResult.corners && frameResult.normalizedCorners) {
+            sessionGraceFramesRef.current = 0;
             setIsSheetDetected(true);
-            setDetectedCorners(data.corners);
-            setNormalizedCorners(data.normalizedCorners);
+            setDetectedCorners(frameResult.corners);
+            setNormalizedCorners(frameResult.normalizedCorners);
             consecutiveSheetDetectedRef.current++;
-            if (data.questions) {
-              updateVoteBufferRef.current(data.questions, data.studentId || '');
+
+            // Measure corner drift across consecutive frames (Sheet Stability detector)
+            if (prevNormalizedCornersRef.current && prevNormalizedCornersRef.current.length === 4) {
+              const prev = prevNormalizedCornersRef.current;
+              const cur = frameResult.normalizedCorners;
+              let driftSum = 0;
+              for (let i = 0; i < 4; i++) {
+                driftSum += Math.hypot(cur[i].x - prev[i].x, cur[i].y - prev[i].y);
+              }
+              const avgDrift = driftSum / 4;
+
+              // Stable = corner drift < 1.5% of frame AND template verified on this frame
+              if (avgDrift < 0.015 && frameResult.templateGradable && !blurry) {
+                stabilityStreakRef.current = Math.min(10, stabilityStreakRef.current + 1);
+              } else {
+                stabilityStreakRef.current = Math.max(0, stabilityStreakRef.current - 1);
+              }
+            }
+            prevNormalizedCornersRef.current = frameResult.normalizedCorners;
+            setIsSheetStable(stabilityStreakRef.current >= 3);
+
+            // Only template-verified frames carry answers; rejected frames never touch votes.
+            if (frameResult.templateGradable && frameResult.questions) {
+              updateSessionVotesRef.current(
+                frameResult.questions,
+                frameResult.studentId || '',
+                true
+              );
             }
           } else {
-            setIsSheetDetected(false);
-            setDetectedCorners(null);
-            setNormalizedCorners(null);
+            // Sheet not detected in this frame
+            sessionGraceFramesRef.current++;
+            stabilityStreakRef.current = 0;
+            setIsSheetStable(false);
 
-            // Sheet was lost: check Trigger 2 (Sheet Removed)
+            // Grace Decay: Only clear outline after 8 consecutive missing frames (~1.2s)
+            // This prevents the outline and detection count from flickering wildly
+            if (sessionGraceFramesRef.current >= 8) {
+              setIsSheetDetected(false);
+              setDetectedCorners(null);
+              setNormalizedCorners(null);
+              prevNormalizedCornersRef.current = null;
+            }
+
+            // Trigger 2: Sheet Removed from view after locking answers
             if (consecutiveSheetDetectedRef.current >= 4) {
               lostSheetFramesRef.current++;
-              let lockedCount = 0;
+              let answeredCount = 0;
               Object.values(voteBufferRef.current).forEach((v) => {
-                if (v.locked) lockedCount++;
+                // Settled answers only — a settled blank is not evidence the sheet was read.
+                if (v.locked && v.lockedValue !== null && !v.isMulti) answeredCount++;
               });
 
-              // If sheet removed after locking sufficient questions, trigger auto-submit!
               if (
-                lostSheetFramesRef.current >= 3 &&
-                lockedCount >= minLockThresholdRef.current &&
+                lostSheetFramesRef.current >= 4 &&
+                answeredCount >= minLockThresholdRef.current &&
                 !isSubmittingRef.current &&
                 scanModeRef.current === 'auto-lock'
               ) {
@@ -773,19 +947,38 @@ export function useLiveOmrScanner({
     };
   }, [stopCamera]);
 
-  // Compute live statistics
-  let lockedQuestionsCount = 0;
-  let needsReviewCount = 0;
+  // ── Session counters & score (single grader, settled answers only) ─────────────────────
+  // Root cause of "50/50 complete" with 7 answers: blank questions that settled were counted
+  // as "detected". Now settled, answered, blank and multi-mark are reported separately.
+  const settledAnswers: Record<string, AnswerState | undefined> = {};
   const needsReviewList: string[] = [];
+  const sessionCounters: SessionCounters = {
+    total: totalItems,
+    settled: 0,
+    answered: 0,
+    multiple: 0,
+    blank: 0,
+    unsettled: 0,
+  };
+  for (let i = 1; i <= totalItems; i++) {
+    const qStr = String(i);
+    const s = settledAnswerState(questionsState[qStr]);
+    settledAnswers[qStr] = s;
+    if (!s) continue;
+    sessionCounters.settled++;
+    if (s.status === 'single') sessionCounters.answered++;
+    else if (s.status === 'multiple') {
+      sessionCounters.multiple++;
+      needsReviewList.push(qStr);
+    } else sessionCounters.blank++;
+  }
+  sessionCounters.unsettled = totalItems - sessionCounters.settled;
 
-  Object.values(questionsState).forEach((q) => {
-    if (q.state === 'locked') lockedQuestionsCount++;
-    if (q.state === 'needs_review') {
-      lockedQuestionsCount++;
-      needsReviewCount++;
-      needsReviewList.push(q.questionNumber);
-    }
-  });
+  const hasAnswerKey = !!answerKey && Object.keys(answerKey).length > 0;
+  // Same gradeAnswers() the worker uses per frame. Unsettled questions are "pending", never
+  // scored from a transient reading, so the score can only change when an answer settles.
+  const grade = gradeAnswers(settledAnswers, answerKey, totalItems, passingScore);
+  const evaluatorStats = useMemo(() => traceToEvaluatorStats(latestTrace), [latestTrace]);
 
   return {
     videoRef,
@@ -795,17 +988,29 @@ export function useLiveOmrScanner({
     scanMode,
     setScanMode,
     isSheetDetected,
+    isSheetStable,
     detectedCorners,
     normalizedCorners,
     isBlurry,
     blurScore,
     questionsState,
     detectedStudentId,
-    lockedQuestionsCount,
-    needsReviewCount,
+    sessionCounters,
+    /** @deprecated use sessionCounters.settled — kept for existing callers. */
+    lockedQuestionsCount: sessionCounters.settled,
+    needsReviewCount: sessionCounters.multiple,
     needsReviewList,
-    totalQuestions: 50,
-    lockedPercentage: Math.round((lockedQuestionsCount / 50) * 100),
+    totalQuestions: totalItems,
+    lockedPercentage: Math.round((sessionCounters.settled / totalItems) * 100),
+    grade,
+    liveScore: grade.score,
+    livePercentage: grade.percentage,
+    isPassing: grade.isPassing,
+    passingThreshold: grade.passingThreshold,
+    correctMap: grade.correctMap,
+    hasAnswerKey,
+    latestTrace,
+    evaluatorStats,
     isSmartDetectionAvailable,
     hasTorch,
     isTorchOn,
@@ -817,6 +1022,7 @@ export function useLiveOmrScanner({
     toggleTorch,
     switchCamera,
     resetVoteBuffer,
+    retake,
     finalizeAndSubmit,
   };
 }

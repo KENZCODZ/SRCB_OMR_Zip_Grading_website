@@ -51,7 +51,10 @@ export interface GradeResult {
   score: number;
   total_questions: number;
   answers: Record<string, SubmissionAnswerDetail>;
-  overlay_image: string; // Base64 string
+  overlay_image: string; // Base64 string (deskewed warped sheet)
+  ar_overlay_image?: string; // Base64 string (inverse perspective AR camera photo)
+  template_type?: string;
+  key?: string;
 }
 
 // Student Roster Import Entry

@@ -1,9 +1,11 @@
 // LiveScanOverlay.tsx
-// Redesigned OMR Detection Dashboard:
-// - Header with detection progress ("48 / 50 detected", "X requiring review")
-// - Prominent "Latest Detection" card with large readable letter and confidence
-// - Compact vertically scrollable list (01 A ✓ Locked) with auto-scroll to latest detection
-// - Academic, restrained styling fitting SRCC EduAssess identity
+// Redesigned OMR Detection Dashboard & Telemetry Panel
+// Implements complete Evaluator Telemetry exposing:
+// - Evaluator's actual error & diagnostic warnings
+// - Input image dimensions & warped standard resolution
+// - Number of detected bubbles & classified answers
+// - Template alignment score & blur variance
+// - Synchronized quantitative pass/fail grading
 
 import React, { useEffect, useRef, useState } from 'react';
 import {
@@ -11,8 +13,12 @@ import {
   AlertTriangle,
   RefreshCw,
   Sparkles,
+  Award,
+  X,
+  Activity,
 } from 'lucide-react';
 import type { QuestionStatus } from '../../hooks/useLiveOmrScanner';
+import type { EvaluatorStats } from '../../workers/omrScanner.worker';
 
 export interface LiveScanOverlayProps {
   questions: Record<string, QuestionStatus>;
@@ -22,10 +28,19 @@ export interface LiveScanOverlayProps {
   needsReviewList: string[];
   studentId?: string;
   isSheetDetected: boolean;
+  isSheetStable?: boolean;
   isBlurry: boolean;
   onResetScan?: () => void;
   onManualCapture?: () => void;
   isSubmitting?: boolean;
+  answerKey?: Record<string, string>;
+  examName?: string;
+  passingScore?: number;
+  liveScore?: number;
+  livePercentage?: number;
+  isPassing?: boolean;
+  passingThreshold?: number;
+  evaluatorStats?: EvaluatorStats;
 }
 
 export const LiveScanOverlay: React.FC<LiveScanOverlayProps> = ({
@@ -36,24 +51,34 @@ export const LiveScanOverlay: React.FC<LiveScanOverlayProps> = ({
   needsReviewList,
   studentId,
   isSheetDetected,
+  isSheetStable = false,
   isBlurry,
   onResetScan,
   onManualCapture,
   isSubmitting,
+  answerKey,
+  examName,
+  passingScore,
+  liveScore = 0,
+  livePercentage = 0,
+  isPassing = false,
+  passingThreshold,
+  evaluatorStats,
 }) => {
+  const effectivePassingThreshold = passingThreshold !== undefined ? passingThreshold : passingScore;
   const questionKeys = Array.from({ length: totalQuestions }, (_, i) => String(i + 1));
   const reviewCount = needsReviewList.length;
 
-  // Track latest detected question
+  const [showDiagnostics, setShowDiagnostics] = useState<boolean>(true);
   const [latestQNum, setLatestQNum] = useState<string>('1');
   const prevQuestionsRef = useRef<Record<string, QuestionStatus>>({});
   const rowRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const listContainerRef = useRef<HTMLDivElement | null>(null);
 
+  // Track which question recently changed
   useEffect(() => {
     let changedQ: string | null = null;
 
-    // Check which question recently transitioned or changed
     for (let i = 1; i <= totalQuestions; i++) {
       const qKey = String(i);
       const cur = questions[qKey];
@@ -77,7 +102,6 @@ export const LiveScanOverlay: React.FC<LiveScanOverlayProps> = ({
     if (changedQ) {
       setLatestQNum(changedQ);
     } else if (lockedCount === 0) {
-      // If nothing detected yet, default to first question
       if (!latestQNum || latestQNum === '1') {
         setLatestQNum('1');
       }
@@ -86,7 +110,7 @@ export const LiveScanOverlay: React.FC<LiveScanOverlayProps> = ({
     prevQuestionsRef.current = { ...questions };
   }, [questions, totalQuestions, lockedCount, latestQNum]);
 
-  // Automatically keep latest detected question in view within the list
+  // Keep latest detected question in view
   useEffect(() => {
     if (latestQNum && rowRefs.current[latestQNum]) {
       rowRefs.current[latestQNum]?.scrollIntoView({
@@ -105,7 +129,6 @@ export const LiveScanOverlay: React.FC<LiveScanOverlayProps> = ({
     consecutiveMatches: 0,
   };
 
-  // Compute confidence for latest detection card
   let latestConfidence = '—';
   if (latestQ.state === 'locked') {
     latestConfidence = '98% confidence';
@@ -115,6 +138,9 @@ export const LiveScanOverlay: React.FC<LiveScanOverlayProps> = ({
     const confVal = Math.min(92, Math.max(55, Math.round(50 + (latestQ.consecutiveMatches / 4) * 42)));
     latestConfidence = `${confVal}% confidence`;
   }
+
+  const hasAnswersRead =
+    lockedCount > 0 || (evaluatorStats && evaluatorStats.classifiedAnswersCount > 0);
 
   return (
     <div className="omr-detection-panel">
@@ -129,24 +155,51 @@ export const LiveScanOverlay: React.FC<LiveScanOverlayProps> = ({
               </span>
             )}
           </div>
-          {lockedCount === totalQuestions && totalQuestions > 0 ? (
-            <span className="omr-detection-complete-tag">
-              <CheckCircle2 size={12} /> 100% Complete
-            </span>
-          ) : (
-            <span className="omr-detection-live-tag">
-              <span className="omr-live-indicator-dot" /> Live
-            </span>
-          )}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            {isSheetStable && (
+              <span
+                style={{
+                  fontSize: '0.65rem',
+                  fontWeight: 700,
+                  padding: '2px 7px',
+                  borderRadius: '10px',
+                  background: 'rgba(16, 185, 129, 0.15)',
+                  color: '#065f46',
+                  border: '1px solid rgba(16, 185, 129, 0.35)',
+                }}
+              >
+                Stable
+              </span>
+            )}
+            {lockedCount === totalQuestions && totalQuestions > 0 && isSheetStable ? (
+              <span className="omr-detection-complete-tag">
+                <CheckCircle2 size={12} /> 100% Settled
+              </span>
+            ) : (
+              <span className="omr-detection-live-tag">
+                <span className="omr-live-indicator-dot" /> Live ({lockedCount}/{totalQuestions})
+              </span>
+            )}
+          </div>
         </div>
 
-        {/* Counts Row: "48 / 50 detected", "2 requiring review" */}
+        {/* Counts Row: Clearly separated Settled Answers, Classified, and Review */}
         <div className="omr-detection-counts-row">
-          <div className="omr-count-item detected">
-            <span className="omr-count-number">{lockedCount} / {totalQuestions}</span>
-            <span className="omr-count-label">detected</span>
+          <div className="omr-count-item detected" title="Questions confirmed and settled across stable frames">
+            <span className="omr-count-number">
+              {lockedCount} / {totalQuestions}
+            </span>
+            <span className="omr-count-label">settled</span>
           </div>
-          <div className={`omr-count-item ${reviewCount > 0 ? 'review-alert' : 'review-clean'}`}>
+          {evaluatorStats && (
+            <div className="omr-count-item" style={{ background: '#f8fafc', border: '1px solid #e2e8f0' }} title="Questions with filled or marked answers on current frame">
+              <span className="omr-count-number" style={{ color: '#0284c7' }}>
+                {evaluatorStats.classifiedAnswersCount} / {totalQuestions}
+              </span>
+              <span className="omr-count-label">classified</span>
+            </div>
+          )}
+          <div className={`omr-count-item ${reviewCount > 0 ? 'review-alert' : 'review-clean'}`} title="Multiple marks or near-tie marks needing review">
             <span className="omr-count-number">{reviewCount}</span>
             <span className="omr-count-label">requiring review</span>
           </div>
@@ -154,11 +207,337 @@ export const LiveScanOverlay: React.FC<LiveScanOverlayProps> = ({
 
         {/* Minimal Progress Line */}
         <div className="omr-progress-track">
-          <div
-            className="omr-progress-bar"
-            style={{ width: `${lockedPercentage}%` }}
-          />
+          <div className="omr-progress-bar" style={{ width: `${lockedPercentage}%` }} />
         </div>
+
+        {/* ── PROBLEM 2 FIX: EVALUATOR DIAGNOSTICS TELEMETRY ───────────────── */}
+        {evaluatorStats && (
+          <div
+            style={{
+              marginTop: '10px',
+              padding: '8px 12px',
+              borderRadius: '8px',
+              background: '#f8fafc',
+              border: '1px solid #e2e8f0',
+              fontSize: '0.72rem',
+            }}
+          >
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                marginBottom: '6px',
+              }}
+            >
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '5px',
+                  color: '#475569',
+                  fontWeight: 700,
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.04em',
+                }}
+              >
+                <Activity size={12} style={{ color: '#2563eb' }} />
+                <span>Evaluator Telemetry</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowDiagnostics(!showDiagnostics)}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: '#64748b',
+                  fontSize: '0.68rem',
+                  cursor: 'pointer',
+                  padding: 0,
+                  textDecoration: 'underline',
+                }}
+              >
+                {showDiagnostics ? 'Hide' : 'Show'}
+              </button>
+            </div>
+
+            {showDiagnostics && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                {/* Trace & Frame ID Header */}
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    padding: '3px 6px',
+                    borderRadius: '4px',
+                    background: '#f1f5f9',
+                    color: '#475569',
+                    fontWeight: 600,
+                    fontSize: '0.67rem',
+                  }}
+                >
+                  <span>
+                    Trace: <strong>#{evaluatorStats.evalId}</strong> • Frame #{evaluatorStats.frameId}
+                  </span>
+                  <span>
+                    Stage: <strong style={{ textTransform: 'uppercase' }}>{evaluatorStats.stage}</strong>
+                  </span>
+                </div>
+
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                  {/* Warp Perspective Status */}
+                  <span
+                    style={{
+                      background: evaluatorStats.warpSuccess ? '#f0fdf4' : '#fef2f2',
+                      border: `1px solid ${evaluatorStats.warpSuccess ? '#bbf7d0' : '#fecaca'}`,
+                      color: evaluatorStats.warpSuccess ? '#166534' : '#991b1b',
+                      padding: '2px 6px',
+                      borderRadius: '4px',
+                      fontWeight: 600,
+                    }}
+                    title="Warped perspective transformation status (Expected 850×1100)"
+                  >
+                    Warp: {evaluatorStats.warpSuccess ? `${evaluatorStats.warpedWidth}×${evaluatorStats.warpedHeight} (OK)` : 'Failed'}
+                  </span>
+
+                  {/* Input Dimensions */}
+                  <span
+                    style={{
+                      background: '#ffffff',
+                      border: '1px solid #cbd5e1',
+                      padding: '2px 6px',
+                      borderRadius: '4px',
+                      color: '#334155',
+                      fontWeight: 600,
+                    }}
+                    title="Camera processing frame resolution"
+                  >
+                    Input: {evaluatorStats.inputWidth}×{evaluatorStats.inputHeight}
+                  </span>
+
+                  {/* Blur Score */}
+                  <span
+                    style={{
+                      background: evaluatorStats.isBlurry ? '#fee2e2' : '#ffffff',
+                      border: `1px solid ${evaluatorStats.isBlurry ? '#fca5a5' : '#cbd5e1'}`,
+                      color: evaluatorStats.isBlurry ? '#b91c1c' : '#334155',
+                      padding: '2px 6px',
+                      borderRadius: '4px',
+                      fontWeight: 600,
+                    }}
+                    title="Laplacian blur variance (Higher = sharper focus)"
+                  >
+                    Focus: {evaluatorStats.blurScore} {evaluatorStats.isBlurry ? '(Blurry)' : '(Sharp)'}
+                  </span>
+
+                  {/* Template Alignment */}
+                  <span
+                    style={{
+                      background: evaluatorStats.templateAligned ? '#dcfce7' : '#fef3c7',
+                      border: `1px solid ${evaluatorStats.templateAligned ? '#86efac' : '#fde68a'}`,
+                      color: evaluatorStats.templateAligned ? '#15803d' : '#b45309',
+                      padding: '2px 6px',
+                      borderRadius: '4px',
+                      fontWeight: 600,
+                    }}
+                    title="Corner fiducials alignment density"
+                  >
+                    Template: {evaluatorStats.templateAligned ? `Aligned (${evaluatorStats.alignmentScore}%)` : 'Checking...'}
+                  </span>
+                </div>
+
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                  {/* Answer Key Matched */}
+                  <span
+                    style={{
+                      background: evaluatorStats.answerKeyMatched ? '#f0fdf4' : '#f8fafc',
+                      border: `1px solid ${evaluatorStats.answerKeyMatched ? '#bbf7d0' : '#cbd5e1'}`,
+                      color: evaluatorStats.answerKeyMatched ? '#166534' : '#475569',
+                      padding: '2px 6px',
+                      borderRadius: '4px',
+                      fontWeight: 600,
+                    }}
+                    title="Answer key status"
+                  >
+                    Key: {evaluatorStats.answerKeyMatched ? `${evaluatorStats.answerKeyEntries} items matched` : 'No Answer Key'}
+                  </span>
+
+                  {/* Detected Bubbles */}
+                  <span
+                    style={{
+                      background: '#ffffff',
+                      border: '1px solid #cbd5e1',
+                      padding: '2px 6px',
+                      borderRadius: '4px',
+                      color: '#334155',
+                      fontWeight: 600,
+                    }}
+                    title="Number of bubble ROIs with mark density detected"
+                  >
+                    Bubbles: {evaluatorStats.detectedBubblesCount} detected
+                  </span>
+
+                  {/* Classified Answers */}
+                  <span
+                    style={{
+                      background: '#ffffff',
+                      border: '1px solid #cbd5e1',
+                      padding: '2px 6px',
+                      borderRadius: '4px',
+                      color: '#334155',
+                      fontWeight: 600,
+                    }}
+                    title="Number of questions classified as single filled"
+                  >
+                    Classified: {evaluatorStats.classifiedAnswersCount} / {totalQuestions}
+                  </span>
+
+                  {/* Rejected Questions */}
+                  {evaluatorStats.rejectedQuestions > 0 && (
+                    <span
+                      style={{
+                        background: '#fff7ed',
+                        border: '1px solid #fed7aa',
+                        color: '#c2410c',
+                        padding: '2px 6px',
+                        borderRadius: '4px',
+                        fontWeight: 600,
+                      }}
+                      title="Questions rejected during evaluation"
+                    >
+                      Rejected: {evaluatorStats.rejectedQuestions}
+                    </span>
+                  )}
+
+                  {/* Scoring Errors */}
+                  {evaluatorStats.scoringErrors > 0 && (
+                    <span
+                      style={{
+                        background: '#fef2f2',
+                        border: '1px solid #fecaca',
+                        color: '#b91c1c',
+                        padding: '2px 6px',
+                        borderRadius: '4px',
+                        fontWeight: 600,
+                      }}
+                      title="Scoring errors (e.g. missing or invalid key entries)"
+                    >
+                      Scoring Errors: {evaluatorStats.scoringErrors}
+                    </span>
+                  )}
+                </div>
+
+                {/* Evaluator Error / Rejection Reason */}
+                {evaluatorStats.evaluatorError && (
+                  <div
+                    style={{
+                      marginTop: '4px',
+                      padding: '6px 10px',
+                      borderRadius: '4px',
+                      background: '#fef2f2',
+                      border: '1px solid #fecaca',
+                      color: '#b91c1c',
+                      fontSize: '0.70rem',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                    }}
+                  >
+                    <AlertTriangle size={13} style={{ flexShrink: 0 }} />
+                    <span>
+                      <strong>Rejection Reason:</strong> {evaluatorStats.evaluatorError}
+                    </span>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ── QUANTITATIVE EVALUATION SCORE CARD ──────────────────────────── */}
+        {answerKey && Object.keys(answerKey).length > 0 && (
+          <div
+            style={{
+              marginTop: '10px',
+              padding: '10px 14px',
+              borderRadius: '8px',
+              background: !hasAnswersRead
+                ? '#f8fafc'
+                : isPassing
+                ? 'rgba(16, 185, 129, 0.08)'
+                : 'rgba(239, 68, 68, 0.08)',
+              border: `1px solid ${
+                !hasAnswersRead
+                  ? '#e2e8f0'
+                  : isPassing
+                  ? 'rgba(16, 185, 129, 0.35)'
+                  : 'rgba(239, 68, 68, 0.35)'
+              }`,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+            }}
+          >
+            <div>
+              <div
+                style={{
+                  fontSize: '0.68rem',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.06em',
+                  color: '#64748b',
+                  fontWeight: 700,
+                }}
+              >
+                {examName || 'Live Exam Score'}{' '}
+                {effectivePassingThreshold !== undefined ? `• Pass: ${effectivePassingThreshold} pts` : ''}
+              </div>
+              <div style={{ display: 'flex', alignItems: 'baseline', gap: '5px', marginTop: '2px' }}>
+                <span
+                  style={{
+                    fontSize: '1.35rem',
+                    fontWeight: 800,
+                    color: !hasAnswersRead ? '#64748b' : isPassing ? '#065f46' : '#991b1b',
+                  }}
+                >
+                  {liveScore}
+                </span>
+                <span style={{ fontSize: '0.8rem', color: '#64748b', fontWeight: 600 }}>
+                  / {totalQuestions} ({livePercentage}%)
+                </span>
+              </div>
+            </div>
+            <div
+              style={{
+                fontSize: '0.72rem',
+                fontWeight: 700,
+                padding: '3px 8px',
+                borderRadius: '12px',
+                backgroundColor: !hasAnswersRead
+                  ? '#f1f5f9'
+                  : isPassing
+                  ? '#dcfce7'
+                  : '#fee2e2',
+                color: !hasAnswersRead ? '#475569' : isPassing ? '#15803d' : '#b91c1c',
+                border: `1px solid ${
+                  !hasAnswersRead ? '#cbd5e1' : isPassing ? '#86efac' : '#fca5a5'
+                }`,
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '4px',
+              }}
+            >
+              <Award size={12} />
+              <span>
+                {!hasAnswersRead
+                  ? 'READING SHEET'
+                  : isPassing
+                  ? 'PASSED'
+                  : 'FAILING'}
+              </span>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* 2. PROMINENT "LATEST DETECTION" CARD */}
@@ -215,7 +594,7 @@ export const LiveScanOverlay: React.FC<LiveScanOverlayProps> = ({
         <div className="omr-list-table-header">
           <span className="col-num">Q#</span>
           <span className="col-answer">ANSWER</span>
-          <span className="col-status">STATUS</span>
+          <span className="col-status">{answerKey ? 'KEY / RESULT' : 'STATUS'}</span>
           <span className="col-conf">CONFIDENCE</span>
         </div>
 
@@ -232,6 +611,7 @@ export const LiveScanOverlay: React.FC<LiveScanOverlayProps> = ({
 
             const isSelected = qNum === latestQNum;
             const paddedNum = qNum.padStart(2, '0');
+            const officialKey = answerKey ? answerKey[qNum] : null;
 
             let answerChar = '—';
             let statusLabel = 'Pending';
@@ -241,22 +621,42 @@ export const LiveScanOverlay: React.FC<LiveScanOverlayProps> = ({
 
             if (q.state === 'locked') {
               answerChar = q.lockedAnswer || '∅';
-              statusLabel = 'Locked';
-              statusIcon = <CheckCircle2 size={13} className="text-emerald" />;
-              statusClass = 'status-locked';
               confText = '98%';
+
+              if (officialKey) {
+                if (answerChar === officialKey) {
+                  statusLabel = 'Correct';
+                  statusIcon = <CheckCircle2 size={13} style={{ color: '#10b981' }} />;
+                  statusClass = 'status-locked';
+                } else {
+                  statusLabel = `Key: ${officialKey}`;
+                  statusIcon = <X size={13} style={{ color: '#ef4444' }} />;
+                  statusClass = 'status-review';
+                }
+              } else {
+                statusLabel = 'Locked';
+                statusIcon = <CheckCircle2 size={13} className="text-emerald" />;
+                statusClass = 'status-locked';
+              }
             } else if (q.state === 'needs_review') {
               answerChar = q.currentReading || 'Multi';
-              statusLabel = 'Review';
+              statusLabel = officialKey ? `Review (Key: ${officialKey})` : 'Review';
               statusIcon = <AlertTriangle size={13} className="text-amber" />;
               statusClass = 'status-review';
               confText = '60%';
             } else if (q.state === 'reading') {
               answerChar = q.currentReading || '?';
-              statusLabel = 'Reading';
+              confText = `${Math.min(92, Math.max(55, Math.round(50 + (q.consecutiveMatches / 4) * 42)))}%`;
+              if (officialKey && answerChar !== '?') {
+                statusLabel =
+                  answerChar === officialKey ? 'Reading (Match)' : `Reading (Key: ${officialKey})`;
+              } else {
+                statusLabel = officialKey ? `Key: ${officialKey}` : 'Reading';
+              }
               statusIcon = <RefreshCw size={12} className="omr-spin text-indigo" />;
               statusClass = 'status-reading';
-              confText = `${Math.min(92, Math.max(55, Math.round(50 + (q.consecutiveMatches / 4) * 42)))}%`;
+            } else if (officialKey) {
+              statusLabel = `Key: ${officialKey}`;
             }
 
             return (
@@ -289,10 +689,10 @@ export const LiveScanOverlay: React.FC<LiveScanOverlayProps> = ({
         <div className="omr-detection-status-hint">
           {isSheetDetected ? (
             isBlurry ? (
-              <span style={{ color: '#f87171' }}>⚠️ Motion blur</span>
+              <span style={{ color: '#f87171' }}>⚠️ Motion blur detected</span>
             ) : (
               <span style={{ color: '#10b981', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                <Sparkles size={12} /> Live tracking active
+                <Sparkles size={12} /> {isSheetStable ? 'Sheet locked & stable' : 'Live tracking active'}
               </span>
             )
           ) : (

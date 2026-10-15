@@ -133,10 +133,60 @@ class OMREngine:
             ):
                 return [tl, tr, bl, br]
 
+        # Tier 4 Fallback: Canny Edge Detection + 4-Corner Polygon Approximation
+        # (Isolates the structural rectangular boundaries of the MCQ paper, following the live OMR methodology)
+        canny_corners = self._detect_sheet_contour_canny(blurred, min_dim, img_area)
+        if canny_corners is not None:
+            return canny_corners
+
         raise OMRCornerDetectionError(
             "Failed to find all 4 corner markers. "
             "Ensure the sheet is flat, fully visible, and corner squares are not obscured."
         )
+
+    def _detect_sheet_contour_canny(self, blurred: np.ndarray, min_dim: float, img_area: float) -> Optional[List[List[float]]]:
+        """
+        Secondary detector: Isolates the structural rectangular boundaries of the MCQ paper
+        using Canny Edge Detection and polygon approximation.
+        """
+        edges = cv2.Canny(blurred, 40, 140)
+        kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (3, 3))
+        dilated = cv2.dilate(edges, kernel, iterations=1)
+
+        contours, _ = cv2.findContours(dilated, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        min_contour_area = 0.12 * img_area
+
+        for c in sorted(contours, key=cv2.contourArea, reverse=True):
+            area = cv2.contourArea(c)
+            if area < min_contour_area:
+                break
+
+            peri = cv2.arcLength(c, True)
+            approx = cv2.approxPolyDP(c, 0.025 * peri, True)
+
+            if len(approx) == 4 and cv2.isContourConvex(approx):
+                pts = approx.reshape(4, 2).astype(np.float32)
+                # Sort: [tl, tr, bl, br]
+                sum_pts = pts[:, 0] + pts[:, 1]
+                diff_pts = pts[:, 0] - pts[:, 1]
+                tl = pts[int(np.argmin(sum_pts))].tolist()
+                br = pts[int(np.argmax(sum_pts))].tolist()
+                tr = pts[int(np.argmax(diff_pts))].tolist()
+                bl = pts[int(np.argmin(diff_pts))].tolist()
+
+                w_top = np.linalg.norm(np.array(tr) - np.array(tl))
+                w_bot = np.linalg.norm(np.array(br) - np.array(bl))
+                h_left = np.linalg.norm(np.array(bl) - np.array(tl))
+                h_right = np.linalg.norm(np.array(br) - np.array(tr))
+
+                if (
+                    w_top >= min_dim * 0.30
+                    and w_bot >= min_dim * 0.30
+                    and h_left >= min_dim * 0.30
+                    and h_right >= min_dim * 0.30
+                ):
+                    return [tl, tr, bl, br]
+        return None
 
     def warp_image(self, image: np.ndarray, corners: List[List[float]]) -> np.ndarray:
         """Warps the source image to a standardized 850x1100 view using detected corners."""
@@ -414,6 +464,20 @@ class OMREngine:
         _, buffer = cv2.imencode(".png", overlay)
         overlay_base64 = base64.b64encode(buffer).decode("utf-8")
 
+        # Generate Augmented Reality Inverse Perspective Overlay (following live OMR methodology)
+        ar_overlay = self.create_ar_grading_overlay(
+            image=image,
+            corners=corners,
+            student_answers=student_answers,
+            answer_key=answer_key,
+            score=score,
+            total_questions=total_questions,
+            student_id=student_id_str,
+            template_type=template_type,
+        )
+        _, ar_buffer = cv2.imencode(".png", ar_overlay)
+        ar_overlay_base64 = base64.b64encode(ar_buffer).decode("utf-8")
+
         return {
             "student_id": student_id_str,
             "key": parsed_key,
@@ -421,8 +485,119 @@ class OMREngine:
             "total_questions": total_questions,
             "answers": student_answers,
             "template_type": template_type,
-            "overlay_base64": overlay_base64
+            "overlay_base64": overlay_base64,
+            "ar_overlay_base64": ar_overlay_base64,
         }
+
+    def create_ar_grading_overlay(
+        self,
+        image: np.ndarray,
+        corners: List[List[float]],
+        student_answers: Dict[str, Any],
+        answer_key: Dict[str, str],
+        score: int,
+        total_questions: int,
+        student_id: str = "",
+        template_type: str = "zipgrade_50",
+    ) -> np.ndarray:
+        """
+        Creates an Augmented Reality overlay using Inverse Perspective Transform.
+        Draws green (correct) and red (incorrect) circles onto a standardized 850x1100 canvas,
+        then maps them back onto the skewed source image using invM = cv2.getPerspectiveTransform(src_pts, dst_pts).
+        """
+        coordinates = self._load_coordinates(template_type)
+        question_coords = coordinates.get("questions", {})
+
+        # 1. Create transparent/empty overlay canvas in warped space (1100, 850, 3)
+        h_warp, w_warp = 1100, 850
+        ar_canvas = np.zeros((h_warp, w_warp, 3), dtype=np.uint8)
+
+        # 2. Draw circles for all questions
+        for q_num_str, opt_data in student_answers.items():
+            correct_ans = answer_key.get(q_num_str)
+            if not correct_ans:
+                continue
+
+            q_coords = question_coords.get(q_num_str, {})
+            selected = opt_data.get("selected")
+            is_empty = opt_data.get("is_empty", False)
+            is_ambiguous = opt_data.get("is_ambiguous", False)
+
+            correct_bubble = q_coords.get(correct_ans)
+
+            if is_empty:
+                # Student omitted: mark correct answer in cyan/blue
+                if correct_bubble:
+                    cv2.circle(ar_canvas, (correct_bubble["cx"], correct_bubble["cy"]), correct_bubble["r"] + 3, (255, 180, 0), 2)
+            elif is_ambiguous:
+                # Ambiguous: draw yellow
+                for opt_char in (selected or ""):
+                    b_coords = q_coords.get(opt_char)
+                    if b_coords:
+                        cv2.circle(ar_canvas, (b_coords["cx"], b_coords["cy"]), b_coords["r"] + 3, (0, 220, 255), 2)
+                if correct_bubble:
+                    cv2.circle(ar_canvas, (correct_bubble["cx"], correct_bubble["cy"]), correct_bubble["r"] + 3, (255, 180, 0), 2)
+            else:
+                student_bubble = q_coords.get(selected)
+                if selected == correct_ans:
+                    # Correct: Glowing green circle with filled center
+                    if student_bubble:
+                        cv2.circle(ar_canvas, (student_bubble["cx"], student_bubble["cy"]), student_bubble["r"] + 3, (0, 230, 80), 3)
+                        cv2.circle(ar_canvas, (student_bubble["cx"], student_bubble["cy"]), student_bubble["r"] - 2, (0, 230, 80), -1)
+                else:
+                    # Incorrect: Red circle on student's choice
+                    if student_bubble:
+                        cv2.circle(ar_canvas, (student_bubble["cx"], student_bubble["cy"]), student_bubble["r"] + 3, (40, 40, 240), 3)
+                        r = student_bubble["r"]
+                        cx, cy = student_bubble["cx"], student_bubble["cy"]
+                        cv2.line(ar_canvas, (cx - r + 3, cy - r + 3), (cx + r - 3, cy + r - 3), (40, 40, 240), 2)
+                        cv2.line(ar_canvas, (cx - r + 3, cy + r - 3), (cx + r - 3, cy - r + 3), (40, 40, 240), 2)
+                    # Mark correct answer in green/cyan
+                    if correct_bubble:
+                        cv2.circle(ar_canvas, (correct_bubble["cx"], correct_bubble["cy"]), correct_bubble["r"] + 4, (0, 220, 180), 2)
+
+        # 3. Draw Student ID highlight
+        student_id_coords = coordinates.get("student_id", [])
+        if student_id and student_id_coords:
+            for col_idx, char in enumerate(student_id):
+                if char.isdigit() and col_idx < len(student_id_coords):
+                    digit_val = int(char)
+                    row_idx = digit_val if template_type == "eduassess_6980" else (9 if digit_val == 0 else digit_val - 1)
+                    if row_idx < len(student_id_coords[col_idx]):
+                        b = student_id_coords[col_idx][row_idx]
+                        if b:
+                            cv2.circle(ar_canvas, (b["cx"], b["cy"]), b["r"] + 2, (255, 140, 0), 2)
+
+        # 4. Draw Score HUD Banner in warped space
+        pct = round((score / total_questions) * 100, 1) if total_questions > 0 else 0
+        banner_text = f"SCORE: {score}/{total_questions} ({pct}%)"
+        id_text = f"ID: {student_id}" if student_id else ""
+
+        cv2.rectangle(ar_canvas, (50, 8), (800, 45), (20, 20, 20), -1)
+        cv2.rectangle(ar_canvas, (50, 8), (800, 45), (0, 200, 100) if pct >= 60 else (40, 40, 240), 2)
+        cv2.putText(ar_canvas, banner_text, (65, 33), cv2.FONT_HERSHEY_SIMPLEX, 0.75, (255, 255, 255), 2, cv2.LINE_AA)
+        if id_text:
+            cv2.putText(ar_canvas, id_text, (560, 33), cv2.FONT_HERSHEY_SIMPLEX, 0.65, (0, 220, 255), 2, cv2.LINE_AA)
+
+        # 5. Inverse Perspective Transform (Murtaza CV Key Step)
+        src_pts = np.array([
+            [50, 50],
+            [800, 50],
+            [50, 1050],
+            [800, 1050]
+        ], dtype=np.float32)
+        dst_pts = np.array(corners, dtype=np.float32)
+
+        invM = cv2.getPerspectiveTransform(src_pts, dst_pts)
+        h_orig, w_orig = image.shape[:2]
+        warped_back = cv2.warpPerspective(ar_canvas, invM, (w_orig, h_orig), flags=cv2.INTER_LINEAR)
+
+        # 6. Blend onto the original image
+        mask = (warped_back > 0).any(axis=2)
+        blended = image.copy()
+        blended[mask] = cv2.addWeighted(image, 0.2, warped_back, 0.8, 0)[mask]
+
+        return blended
 
     def extract_answers(
         self,

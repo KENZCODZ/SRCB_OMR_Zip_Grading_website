@@ -428,6 +428,7 @@ export default function App() {
   } | null>(null);
   const [latestGradeResult, setLatestGradeResult] =
     useState<GradeResult | null>(null);
+  const [overlayViewMode, setOverlayViewMode] = useState<"deskewed" | "ar">("deskewed");
 
   // Submissions State
   const [selectedSubmission, setSelectedSubmission] =
@@ -3059,6 +3060,10 @@ export default function App() {
                                       onSwitchToNormal={() => setExamCameraMode("normal")}
                                       title={`Grade Student Sheet (Live) — ${activeExam.name}`}
                                       subtitle={`Align the 4 black corner squares within the viewfinder. Scored instantly against ${activeExam.name}.`}
+                                      answerKey={activeExam.answer_key}
+                                      examName={activeExam.name}
+                                      passingScore={activeExam.passing_score}
+                                      numItems={activeExam.num_items}
                                     />
                                   )}
                                 </div>
@@ -3271,15 +3276,68 @@ export default function App() {
                                         display: "flex",
                                         alignItems: "center",
                                         justifyContent: "center",
-                                        cursor: "pointer",
                                       }}
-                                      onClick={() => setIsOverlayZoomOpen(true)}
-                                      title="Click to view full resolution sheet overlay"
                                     >
+                                      {latestGradeResult.ar_overlay_image && (
+                                        <div
+                                          style={{
+                                            position: "absolute",
+                                            top: "8px",
+                                            left: "8px",
+                                            zIndex: 10,
+                                            display: "flex",
+                                            gap: "4px",
+                                            background: "rgba(15, 23, 42, 0.75)",
+                                            backdropFilter: "blur(4px)",
+                                            padding: "3px",
+                                            borderRadius: "8px",
+                                          }}
+                                        >
+                                          <button
+                                            type="button"
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              setOverlayViewMode("deskewed");
+                                            }}
+                                            style={{
+                                              background: overlayViewMode === "deskewed" ? "#ffffff" : "transparent",
+                                              color: overlayViewMode === "deskewed" ? "#0f172a" : "#cbd5e1",
+                                              border: "none",
+                                              borderRadius: "6px",
+                                              padding: "3px 8px",
+                                              fontSize: "0.68rem",
+                                              fontWeight: 700,
+                                              cursor: "pointer",
+                                            }}
+                                          >
+                                            Deskewed Sheet
+                                          </button>
+                                          <button
+                                            type="button"
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              setOverlayViewMode("ar");
+                                            }}
+                                            style={{
+                                              background: overlayViewMode === "ar" ? "#ffffff" : "transparent",
+                                              color: overlayViewMode === "ar" ? "#0f172a" : "#cbd5e1",
+                                              border: "none",
+                                              borderRadius: "6px",
+                                              padding: "3px 8px",
+                                              fontSize: "0.68rem",
+                                              fontWeight: 700,
+                                              cursor: "pointer",
+                                            }}
+                                          >
+                                            AR Camera View
+                                          </button>
+                                        </div>
+                                      )}
                                       <img
-                                        src={`data:image/png;base64,${latestGradeResult.overlay_image}`}
+                                        src={`data:image/png;base64,${(overlayViewMode === "ar" && latestGradeResult.ar_overlay_image) ? latestGradeResult.ar_overlay_image : latestGradeResult.overlay_image}`}
                                         alt="Graded OMR Sheet"
-                                        style={{ width: "100%", height: "auto", display: "block" }}
+                                        style={{ width: "100%", height: "auto", display: "block", cursor: "pointer" }}
+                                        onClick={() => setIsOverlayZoomOpen(true)}
                                       />
                                       <div
                                         style={{
@@ -3295,7 +3353,9 @@ export default function App() {
                                           display: "flex",
                                           alignItems: "center",
                                           gap: "4px",
+                                          cursor: "pointer",
                                         }}
+                                        onClick={() => setIsOverlayZoomOpen(true)}
                                       >
                                         <Maximize2 size={12} /> Click to zoom
                                       </div>
@@ -3773,11 +3833,33 @@ export default function App() {
                                     background: "#f8fafc",
                                   }}
                                 >
-                                  <img
-                                    src={`data:image/png;base64,${latestGradeResult.overlay_image}`}
-                                    alt="Enlarged Graded OMR Sheet"
-                                    style={{ maxWidth: "100%", maxHeight: "72vh", objectFit: "contain", borderRadius: "8px", border: "1px solid #e2e8f0" }}
-                                  />
+                                  {latestGradeResult.ar_overlay_image && (
+                                    <div style={{ marginBottom: "0.75rem", display: "inline-flex", gap: "6px", background: "#e2e8f0", padding: "3px", borderRadius: "8px" }}>
+                                      <button
+                                        type="button"
+                                        onClick={() => setOverlayViewMode("deskewed")}
+                                        className={`btn btn-sm ${overlayViewMode === "deskewed" ? "btn-primary" : "btn-secondary"}`}
+                                        style={{ fontSize: "0.75rem", padding: "0.3rem 0.8rem", borderRadius: "6px" }}
+                                      >
+                                        Deskewed Sheet Overlay
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onClick={() => setOverlayViewMode("ar")}
+                                        className={`btn btn-sm ${overlayViewMode === "ar" ? "btn-primary" : "btn-secondary"}`}
+                                        style={{ fontSize: "0.75rem", padding: "0.3rem 0.8rem", borderRadius: "6px" }}
+                                      >
+                                        AR Live Perspective Photo
+                                      </button>
+                                    </div>
+                                  )}
+                                  <div>
+                                    <img
+                                      src={`data:image/png;base64,${(overlayViewMode === "ar" && latestGradeResult.ar_overlay_image) ? latestGradeResult.ar_overlay_image : latestGradeResult.overlay_image}`}
+                                      alt="Enlarged Graded OMR Sheet"
+                                      style={{ maxWidth: "100%", maxHeight: "70vh", objectFit: "contain", borderRadius: "8px", border: "1px solid #e2e8f0" }}
+                                    />
+                                  </div>
                                 </div>
                               </div>
                             </div>
