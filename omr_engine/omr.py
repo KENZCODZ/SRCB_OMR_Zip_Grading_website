@@ -15,6 +15,11 @@ class OMRCornerDetectionError(Exception):
     pass
 
 
+class OMRTemplateVerificationError(Exception):
+    """Exception raised when the warped sheet does not match the expected template or orientation."""
+    pass
+
+
 class OMREngine:
     def __init__(self, normalizer: Optional[ImageNormalizer] = None):
         self.normalizer = normalizer or ImageNormalizer()
@@ -131,13 +136,13 @@ class OMREngine:
                 and h_left >= min_dim * 0.35
                 and h_right >= min_dim * 0.35
             ):
-                return [tl, tr, bl, br]
+                return self.identify_template_corners(image, [tl, tr, bl, br])
 
         # Tier 4 Fallback: Canny Edge Detection + 4-Corner Polygon Approximation
         # (Isolates the structural rectangular boundaries of the MCQ paper, following the live OMR methodology)
         canny_corners = self._detect_sheet_contour_canny(blurred, min_dim, img_area)
         if canny_corners is not None:
-            return canny_corners
+            return self.identify_template_corners(image, canny_corners)
 
         raise OMRCornerDetectionError(
             "Failed to find all 4 corner markers. "
@@ -188,6 +193,79 @@ class OMREngine:
                     return [tl, tr, bl, br]
         return None
 
+    def identify_template_corners(self, image: np.ndarray, raw_corners: List[List[float]]) -> List[List[float]]:
+        """
+        Identifies which marker corresponds to each template corner
+        [Top-Left, Top-Right, Bottom-Left, Bottom-Right] by checking the quad's
+        geometric aspect ratio and printed asymmetric template features (header text,
+        Student ID block, bottom fiducials/track), rather than rotating blindly by 180 degrees.
+        """
+        pts = np.array(raw_corners, dtype=np.float32)
+        if len(pts) != 4:
+            return raw_corners
+
+        # 1. Order points cyclically (clockwise) around their centroid
+        center = np.mean(pts, axis=0)
+        angles = np.arctan2(pts[:, 1] - center[1], pts[:, 0] - center[0])
+        cw_pts = pts[np.argsort(angles)]
+
+        # 2. Measure perimeter edge lengths
+        # Template width between markers is 750, height is 1000.
+        # Height is ~1.33x Width, so the shorter pair is Top/Bottom and longer pair is Left/Right.
+        l0 = float(np.linalg.norm(cw_pts[1] - cw_pts[0]))
+        l1 = float(np.linalg.norm(cw_pts[2] - cw_pts[1]))
+        l2 = float(np.linalg.norm(cw_pts[3] - cw_pts[2]))
+        l3 = float(np.linalg.norm(cw_pts[0] - cw_pts[3]))
+
+        avg_02 = (l0 + l2) / 2.0
+        avg_13 = (l1 + l3) / 2.0
+
+        candidates = [0, 2] if avg_02 <= avg_13 else [1, 3]
+
+        dst_pts = np.array([[50, 50], [800, 50], [800, 1050], [50, 1050]], dtype=np.float32)
+        gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY) if len(image.shape) == 3 else image
+
+        start_idx = candidates[0]
+        cand_pts = [
+            cw_pts[start_idx].tolist(),
+            cw_pts[(start_idx + 1) % 4].tolist(),
+            cw_pts[(start_idx + 2) % 4].tolist(),
+            cw_pts[(start_idx + 3) % 4].tolist(),
+        ]
+        M = cv2.getPerspectiveTransform(np.array(cand_pts, dtype=np.float32), dst_pts)
+        warped_test = cv2.warpPerspective(gray, M, (850, 1100), flags=cv2.INTER_LINEAR)
+        _, th = cv2.threshold(warped_test, 128, 255, cv2.THRESH_BINARY_INV)
+
+        # Asymmetric feature checks on the single warped candidate:
+        # 1. Top header strip (Title, Name, Date) vs Bottom strip
+        top_strip = float(np.mean(th[60:160, 100:750])) / 255.0
+        bot_strip = float(np.mean(th[940:1040, 100:750])) / 255.0
+
+        # 2. Student ID header
+        sid_hdr = float(np.mean(th[150:230, 80:400])) / 255.0
+
+        # 3. EduAssess bottom divider squares at y=1056
+        r = 14
+        edu_m1 = float(np.mean(th[1056 - r:1056 + r, 314 - r:314 + r])) / 255.0
+        edu_m2 = float(np.mean(th[1056 - r:1056 + r, 538 - r:538 + r])) / 255.0
+        edu_bot = (edu_m1 + edu_m2) / 2.0
+
+        # 4. ZipGrade bottom timing track vs clean top margin
+        bot_track = float(np.mean(th[1055:1085, 400:720])) / 255.0
+        top_track = float(np.mean(th[15:45, 400:720])) / 255.0
+
+        score = (
+            (top_strip - bot_strip) * 3.5
+            + sid_hdr * 2.0
+            + (edu_bot if edu_bot > 0.25 else 0.0)
+            + (bot_track - top_track)
+        )
+
+        if score >= 0:
+            return [cand_pts[0], cand_pts[1], cand_pts[3], cand_pts[2]]
+        else:
+            return [cand_pts[2], cand_pts[3], cand_pts[1], cand_pts[0]]
+
     def warp_image(self, image: np.ndarray, corners: List[List[float]]) -> np.ndarray:
         """Warps the source image to a standardized 850x1100 view using detected corners."""
         src_pts = np.array(corners, dtype=np.float32)
@@ -202,78 +280,85 @@ class OMREngine:
         warped = cv2.warpPerspective(image, M, (850, 1100))
         return warped
 
+    def verify_template(self, warped_image: np.ndarray) -> Dict[str, Any]:
+        """
+        Checks the resulting warped image against the expected template:
+        1. 4 corner registration fiducials at (50, 50), (800, 50), (50, 1050), (800, 1050)
+        2. Upright orientation verified (top header ink vs footer)
+        3. Sheet layout classification ('zipgrade_50' or 'eduassess_6980')
+        """
+        gray = cv2.cvtColor(warped_image, cv2.COLOR_BGR2GRAY) if len(warped_image.shape) == 3 else warped_image
+        bg = cv2.GaussianBlur(gray, (51, 51), 0)
+        norm = cv2.divide(gray, bg, scale=255)
+        _, thresh = cv2.threshold(norm, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)
+
+        r = 14
+        fid_densities = [
+            float(np.mean(thresh[50 - r:50 + r, 50 - r:50 + r])) / 255.0,
+            float(np.mean(thresh[50 - r:50 + r, 800 - r:800 + r])) / 255.0,
+            float(np.mean(thresh[1050 - r:1050 + r, 50 - r:50 + r])) / 255.0,
+            float(np.mean(thresh[1050 - r:1050 + r, 800 - r:800 + r])) / 255.0,
+        ]
+        fiducials_found = sum(1 for d in fid_densities if d >= 0.50)
+
+        # Orientation check
+        top_strip = float(np.mean(thresh[60:160, 100:750])) / 255.0
+        bot_strip = float(np.mean(thresh[940:1040, 100:750])) / 255.0
+        is_upright = top_strip >= bot_strip
+
+        # Layout detection
+        edu_m1 = float(np.mean(thresh[638 - 15:638 + 15, 314 - 15:314 + 15])) / 255.0
+        edu_m2 = float(np.mean(thresh[638 - 15:638 + 15, 538 - 15:538 + 15])) / 255.0
+        edu_b1 = float(np.mean(thresh[1056 - 15:1056 + 15, 314 - 15:314 + 15])) / 255.0
+        edu_b2 = float(np.mean(thresh[1056 - 15:1056 + 15, 538 - 15:538 + 15])) / 255.0
+        edu_score = (edu_m1 + edu_m2 + edu_b1 + edu_b2) / 4.0
+        layout = "eduassess_6980" if edu_score >= 0.25 else "zipgrade_50"
+
+        gradable = fiducials_found >= 4 and is_upright
+        reason = None
+        if fiducials_found < 4:
+            reason = f"Corner fiducial markers not aligned ({fiducials_found}/4 detected, min density: {min(fid_densities):.2f})"
+        elif not is_upright:
+            reason = "Sheet orientation inverted (header is upside-down)"
+
+        return {
+            "gradable": gradable,
+            "fiducials_found": fiducials_found,
+            "fiducial_densities": fid_densities,
+            "is_upright": is_upright,
+            "layout": layout,
+            "reason": reason,
+        }
+
     def detect_template_type(self, warped_image: np.ndarray) -> str:
         """
         Classifies whether the warped sheet is EduAssess (6980) or ZipGrade (50 Question).
         Returns 'eduassess_6980' or 'zipgrade_50'.
         """
-        gray = cv2.cvtColor(warped_image, cv2.COLOR_BGR2GRAY)
-        bg = cv2.GaussianBlur(gray, (51, 51), 0)
-        norm = cv2.divide(gray, bg, scale=255)
-        _, thresh = cv2.threshold(norm, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)
-
-        def get_density(cx: int, cy: int, half: int = 15) -> float:
-            roi = thresh[max(0, cy - half):min(1100, cy + half), max(0, cx - half):min(850, cx + half)]
-            return float(np.mean(roi)) / 255.0 if roi.size > 0 else 0.0
-
-        # EduAssess has 4 internal column divider squares at (314, 638), (538, 638), (314, 1056), (538, 1056)
-        edu_mid1 = get_density(314, 638)
-        edu_mid2 = get_density(538, 638)
-        edu_bot1 = get_density(314, 1056)
-        edu_bot2 = get_density(538, 1056)
-        edu_score = (edu_mid1 + edu_mid2 + edu_bot1 + edu_bot2) / 4.0
-
-        # Also check mid-level markers
-        edu_mid_score = (edu_mid1 + edu_mid2) / 2.0
-
-        if edu_score >= 0.20 or edu_mid_score >= 0.22:
-            return "eduassess_6980"
-        return "zipgrade_50"
+        verified = self.verify_template(warped_image)
+        return verified["layout"]
 
     def check_and_correct_rotation(self, warped_image: np.ndarray, template_type: str = "auto") -> np.ndarray:
         """
-        Detects if the sheet is rotated 180° by checking alignment markers.
-        If markers are found at the top instead of bottom, rotates the image 180°.
+        Detects if the sheet is rotated 180° by checking asymmetric features & alignment markers.
+        If inverted, rotates the image 180°.
         """
-        gray = cv2.cvtColor(warped_image, cv2.COLOR_BGR2GRAY)
-        bg = cv2.GaussianBlur(gray, (51, 51), 0)
-        norm = cv2.divide(gray, bg, scale=255)
-        _, thresh = cv2.threshold(norm, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)
-
-        def get_roi_density(cx: int, cy: int, size: int = 30) -> float:
-            half = size // 2
-            x1 = max(0, cx - half)
-            x2 = min(850, cx + half)
-            y1 = max(0, cy - half)
-            y2 = min(1100, cy + half)
-            roi = thresh[y1:y2, x1:x2]
-            return float(np.mean(roi)) / 255.0 if roi.size > 0 else 0.0
-
-        if template_type == "eduassess_6980":
-            # In EduAssess, bottom markers are at (308, 1045) and (528, 1045).
-            # If rotated 180°, they appear at (850 - 308 = 542, 1100 - 1045 = 55) and (322, 55).
-            bottom_density = (get_roi_density(308, 1045) + get_roi_density(528, 1045)) / 2.0
-            top_density = (get_roi_density(542, 55) + get_roi_density(322, 55)) / 2.0
-
-            if top_density > 0.35 and bottom_density < 0.20:
-                print("Detected 180-degree rotation (EduAssess). Auto-rotating image...")
-                return cv2.rotate(warped_image, cv2.ROTATE_180)
-        else:
-            # ZipGrade alignment markers
-            bottom_density = (get_roi_density(375, 1004) + get_roi_density(515, 1004)) / 2.0
-            top_density = (get_roi_density(475, 96) + get_roi_density(335, 96)) / 2.0
-
-            if top_density > 0.35 and bottom_density < 0.20:
-                print("Detected 180-degree rotation (ZipGrade). Auto-rotating image...")
-                return cv2.rotate(warped_image, cv2.ROTATE_180)
-
+        verified = self.verify_template(warped_image)
+        if not verified["is_upright"]:
+            rotated = cv2.rotate(warped_image, cv2.ROTATE_180)
+            verified_rot = self.verify_template(rotated)
+            if verified_rot["is_upright"]:
+                print("Corrected 180-degree rotation based on asymmetric template pattern.")
+                return rotated
         return warped_image
 
     def grade_sheet(
         self,
         image: np.ndarray,
         answer_key: Dict[str, str],
-        template_type: Optional[str] = None
+        template_type: Optional[str] = None,
+        pre_warped: Optional[np.ndarray] = None,
+        pre_corners: Optional[List[List[float]]] = None,
     ) -> Dict[str, Any]:
         """
         Processes image, aligns/warps, detects template, detects filled bubbles, and grades them.
@@ -286,24 +371,39 @@ class OMREngine:
             "overlay_base64": str
         }
         """
-        # 0. Image normalization
-        image = self.normalizer.normalize(image)
+        corners: List[List[float]] = []
+        if pre_warped is not None:
+            warped = pre_warped
+            template_check = self.verify_template(warped)
+            if not template_check["is_upright"]:
+                warped = cv2.rotate(warped, cv2.ROTATE_180)
+                template_check = self.verify_template(warped)
+            if not template_type or template_type == "auto":
+                template_type = str(template_check.get("layout", "zipgrade_50"))
+            corners = pre_corners if pre_corners is not None else [[50.0, 50.0], [800.0, 50.0], [50.0, 1050.0], [800.0, 1050.0]]
+        else:
+            # 0. Image normalization
+            image = self.normalizer.normalize(image)
 
-        # 1. Corner detection
-        corners = self.detect_corners(image)
+            # 1. Detect all four registration markers & identify which corresponds to each template corner
+            corners = self.detect_corners(image)
 
-        # 2. Warp image
-        warped = self.warp_image(image, corners)
+            # 2. Compute perspective transform with consistent corner ordering
+            warped = self.warp_image(image, corners)
 
-        # 3. Detect template if not specified
-        if not template_type or template_type == "auto":
-            template_type = self.detect_template_type(warped)
+            # 3. Check resulting warped image against expected template
+            template_check = self.verify_template(warped)
+            if not template_check["is_upright"]:
+                warped = cv2.rotate(warped, cv2.ROTATE_180)
+                template_check = self.verify_template(warped)
 
-        # 4. Rotation sanity check & correction
-        warped = self.check_and_correct_rotation(warped, template_type)
+            if not template_type or template_type == "auto":
+                template_type = str(template_check.get("layout", "zipgrade_50"))
 
-        # 5. Load coordinates for detected template
-        coordinates = self._load_coordinates(template_type)
+        resolved_template_type: str = template_type if template_type else "zipgrade_50"
+
+        # 4. Only then load coordinates and run bubble detection & grading
+        coordinates = self._load_coordinates(resolved_template_type)
 
         # 6. Illumination-normalized binarization (removes paper shadows & bleed-through)
         gray = cv2.cvtColor(warped, cv2.COLOR_BGR2GRAY)
@@ -319,7 +419,7 @@ class OMREngine:
         # A. Parse Student ID
         student_id_digits: List[str] = []
         student_id_coords = coordinates.get("student_id", [])
-        is_eduassess = (template_type == "eduassess_6980")
+        is_eduassess = (resolved_template_type == "eduassess_6980")
 
         for col_idx, col in enumerate(student_id_coords):
             column_ratios = []
@@ -473,7 +573,7 @@ class OMREngine:
             score=score,
             total_questions=total_questions,
             student_id=student_id_str,
-            template_type=template_type,
+            template_type=resolved_template_type,
         )
         _, ar_buffer = cv2.imencode(".png", ar_overlay)
         ar_overlay_base64 = base64.b64encode(ar_buffer).decode("utf-8")
@@ -484,7 +584,7 @@ class OMREngine:
             "score": score,
             "total_questions": total_questions,
             "answers": student_answers,
-            "template_type": template_type,
+            "template_type": resolved_template_type,
             "overlay_base64": overlay_base64,
             "ar_overlay_base64": ar_overlay_base64,
         }

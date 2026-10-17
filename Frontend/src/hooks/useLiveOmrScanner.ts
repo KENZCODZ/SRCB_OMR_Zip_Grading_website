@@ -77,7 +77,7 @@ export interface SessionCounters {
 // Configurable Tuning Constants
 export const DEFAULT_CONSECUTIVE_LOCK_FRAMES = 3; // Frames required to settle an answer
 export const DEFAULT_MIN_LOCK_THRESHOLD_ON_REMOVAL = 5; // Minimum answers to auto-submit when sheet pulled away
-export const DEFAULT_BLUR_THRESHOLD = 35; // Laplacian blur threshold
+export const DEFAULT_BLUR_THRESHOLD = 20; // Laplacian blur threshold (tuned for real webcams)
 
 export interface UseLiveOmrScannerOptions {
   onCapture: (file: File, previewUrl: string, liveSummary?: LiveScanResult) => Promise<void> | void;
@@ -174,7 +174,7 @@ export function useLiveOmrScanner({
 
   // Performance throttling & adaptive interval
   const lastProcessedTimeRef = useRef<number>(0);
-  const targetFrameIntervalRef = useRef<number>(140); // 140ms ~ 7 FPS
+  const targetFrameIntervalRef = useRef<number>(90); // 90ms ~ 11 FPS
   const isWorkerBusyRef = useRef<boolean>(false);
   const isSubmittingRef = useRef<boolean>(false);
   const detectedCornersRef = useRef<CornerPoint[] | null>(null);
@@ -182,6 +182,7 @@ export function useLiveOmrScanner({
 
   // Stability detection references (calculates corner movement delta)
   const prevNormalizedCornersRef = useRef<CornerPoint[] | null>(null);
+  const smoothedNormalizedCornersRef = useRef<CornerPoint[] | null>(null);
   const stabilityStreakRef = useRef<number>(0);
 
   // Session Grace Decay: retains detected state across momentary 1-2 frame blur/occlusion
@@ -303,6 +304,8 @@ export function useLiveOmrScanner({
     lostSheetFramesRef.current = 0;
     sessionGraceFramesRef.current = 0;
     stabilityStreakRef.current = 0;
+    prevNormalizedCornersRef.current = null;
+    smoothedNormalizedCornersRef.current = null;
     setIsSheetStable(false);
   }, []);
 
@@ -528,6 +531,21 @@ export function useLiveOmrScanner({
           };
 
           if (isNowLocked) totalLocked++;
+        } else if (prev.count > 1 && currentReadVal === null) {
+          // Momentary dropped reading on a single frame: retain candidate reading with soft decay
+          buffer[qStr] = {
+            ...prev,
+            count: prev.count - 1,
+          };
+
+          updatedQuestions[qStr] = {
+            questionNumber: qStr,
+            state: 'reading',
+            lockedAnswer: null,
+            currentReading: prev.lastRead === 'EMPTY' ? null : prev.lastRead,
+            isMultiMark: prev.isMulti,
+            consecutiveMatches: prev.count - 1,
+          };
         } else {
           // New candidate reading
           buffer[qStr] = {
@@ -552,10 +570,16 @@ export function useLiveOmrScanner({
       setQuestionsState(updatedQuestions);
       if (studentId) setDetectedStudentId(studentId);
 
-      // Completion = every question 1..N has SETTLED (answered, multi-mark or blank) on a
-      // stable, template-verified sheet. It does not mean every question was answered.
+      // Completion:
+      // 1. All questions 1..N have settled (answered, multi-mark or blank), OR
+      // 2. High-confidence hold: sheet held stable for >= 5 frames, at least 80% of items locked,
+      //    and at least minLockThresholdToFinalizeOnRemoval answers locked.
+      const highConfidenceSettle =
+        stabilityStreakRef.current >= 5 &&
+        totalLocked >= Math.max(minLockThresholdToFinalizeOnRemoval, Math.floor(targetQuestions * 0.8));
+
       if (
-        totalLocked >= targetQuestions &&
+        (totalLocked >= targetQuestions || highConfidenceSettle) &&
         isSheetStable &&
         !isSubmittingRef.current &&
         scanMode === 'auto-lock'
@@ -563,7 +587,7 @@ export function useLiveOmrScanner({
         finalizeAndSubmit('all_locked');
       }
     },
-    [lockThresholdConsecutive, scanMode, isSheetStable, finalizeAndSubmit, totalItems]
+    [lockThresholdConsecutive, scanMode, isSheetStable, finalizeAndSubmit, totalItems, minLockThresholdToFinalizeOnRemoval]
   );
 
   // Main frame processing loop
@@ -600,8 +624,8 @@ export function useLiveOmrScanner({
         return;
       }
 
-      // Downscale frame (~720px width) for crisp fiducial square & bubble contour analysis
-      const scale = Math.min(1, 720 / vWidth);
+      // Downscale frame (~960px width) for crisp fiducial square & bubble contour analysis
+      const scale = Math.min(1, 960 / vWidth);
       const procW = Math.round(vWidth * scale);
       const procH = Math.round(vHeight * scale);
 
@@ -818,7 +842,7 @@ export function useLiveOmrScanner({
           lastProcessedFrameIdRef.current = frameResult.frameId;
 
           // Adaptive frame interval
-          targetFrameIntervalRef.current = trace.processingTimeMs > 110 ? 190 : 140;
+          targetFrameIntervalRef.current = trace.processingTimeMs > 60 ? 130 : 90;
 
           // Telemetry renders this exact object (same evalId/frameId as the log line below).
           setLatestTrace(trace);
@@ -845,11 +869,10 @@ export function useLiveOmrScanner({
           if (frameResult.sheetDetected && frameResult.corners && frameResult.normalizedCorners) {
             sessionGraceFramesRef.current = 0;
             setIsSheetDetected(true);
-            setDetectedCorners(frameResult.corners);
-            setNormalizedCorners(frameResult.normalizedCorners);
             consecutiveSheetDetectedRef.current++;
 
-            // Measure corner drift across consecutive frames (Sheet Stability detector)
+            // Measure corner drift across consecutive raw frames (Movement detector)
+            let avgDrift = 0;
             if (prevNormalizedCornersRef.current && prevNormalizedCornersRef.current.length === 4) {
               const prev = prevNormalizedCornersRef.current;
               const cur = frameResult.normalizedCorners;
@@ -857,16 +880,39 @@ export function useLiveOmrScanner({
               for (let i = 0; i < 4; i++) {
                 driftSum += Math.hypot(cur[i].x - prev[i].x, cur[i].y - prev[i].y);
               }
-              const avgDrift = driftSum / 4;
-
-              // Stable = corner drift < 1.5% of frame AND template verified on this frame
-              if (avgDrift < 0.015 && frameResult.templateGradable && !blurry) {
-                stabilityStreakRef.current = Math.min(10, stabilityStreakRef.current + 1);
-              } else {
-                stabilityStreakRef.current = Math.max(0, stabilityStreakRef.current - 1);
-              }
+              avgDrift = driftSum / 4;
             }
             prevNormalizedCornersRef.current = frameResult.normalizedCorners;
+
+            // Temporal EMA smoothing to eliminate camera sensor micro-jitter:
+            // When paper is stationary, this keeps the overlay rock-solid.
+            // When paper is moved (>6% of frame), snap immediately with zero lag.
+            let smoothedCorners: CornerPoint[];
+            if (
+              !smoothedNormalizedCornersRef.current ||
+              smoothedNormalizedCornersRef.current.length !== 4 ||
+              avgDrift > 0.06
+            ) {
+              smoothedCorners = frameResult.normalizedCorners;
+            } else {
+              const alpha = 0.35;
+              const prevSmoothed = smoothedNormalizedCornersRef.current;
+              smoothedCorners = frameResult.normalizedCorners.map((pt, i) => ({
+                x: pt.x * alpha + prevSmoothed[i].x * (1 - alpha),
+                y: pt.y * alpha + prevSmoothed[i].y * (1 - alpha),
+              }));
+            }
+            smoothedNormalizedCornersRef.current = smoothedCorners;
+
+            setDetectedCorners(frameResult.corners);
+            setNormalizedCorners(smoothedCorners);
+
+            // Stable = corner drift < 2.0% of frame AND template verified on this frame
+            if (avgDrift < 0.020 && frameResult.templateGradable && !blurry) {
+              stabilityStreakRef.current = Math.min(10, stabilityStreakRef.current + 1);
+            } else {
+              stabilityStreakRef.current = Math.max(0, stabilityStreakRef.current - 1);
+            }
             setIsSheetStable(stabilityStreakRef.current >= 3);
 
             // Only template-verified frames carry answers; rejected frames never touch votes.
@@ -880,15 +926,17 @@ export function useLiveOmrScanner({
           } else {
             // Sheet not detected in this frame
             sessionGraceFramesRef.current++;
-            stabilityStreakRef.current = 0;
-            setIsSheetStable(false);
+            // Gently decay stability streak instead of violently zeroing on a single dropped frame
+            stabilityStreakRef.current = Math.max(0, stabilityStreakRef.current - 1);
+            setIsSheetStable(stabilityStreakRef.current >= 3);
 
-            // Grace Decay: Only clear outline after 8 consecutive missing frames (~1.2s)
+            // Grace Decay: Only clear outline after 6 consecutive missing frames (~0.8s)
             // This prevents the outline and detection count from flickering wildly
-            if (sessionGraceFramesRef.current >= 8) {
+            if (sessionGraceFramesRef.current >= 6) {
               setIsSheetDetected(false);
               setDetectedCorners(null);
               setNormalizedCorners(null);
+              smoothedNormalizedCornersRef.current = null;
               prevNormalizedCornersRef.current = null;
             }
 

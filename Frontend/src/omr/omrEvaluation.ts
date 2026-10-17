@@ -44,12 +44,11 @@ export const FIDUCIAL_WINDOW_RADIUS = 14;
  * EduAssess6980_50Question.png): correctly aligned warps measure 0.70–0.91.
  * The previous check accepted ~0.25, which is what a mis-registered warp produces.
  */
-export const FIDUCIAL_MIN_DENSITY = 0.55;
+export const FIDUCIAL_MIN_DENSITY = 0.40;
 
 /**
  * EduAssess 6980 sheets carry 4 extra column-divider squares. Measured mean density:
- * EduAssess 0.38–0.41, ZipGrade 0.12–0.14. The live scanner only has ZipGrade-50
- * bubble coordinates, so an EduAssess sheet must not be graded live.
+ * EduAssess 0.38–0.41, ZipGrade 0.12–0.14. Both layouts are supported in live scanning.
  */
 export const EDUASSESS_MARKERS = [
   { cx: 314, cy: 638 },
@@ -57,12 +56,12 @@ export const EDUASSESS_MARKERS = [
   { cx: 314, cy: 1056 },
   { cx: 538, cy: 1056 },
 ] as const;
-export const EDUASSESS_MIN_MEAN_DENSITY = 0.3;
+export const EDUASSESS_MIN_MEAN_DENSITY = 0.28;
 
 /** Added to the measured paper noise floor to obtain the per-frame fill threshold. */
 export const BUBBLE_FILL_OFFSET = 0.08;
 /** If the top two options are both above 0.05 and closer than this, the mark is ambiguous. */
-export const NEAR_TIE_DELTA = 0.035;
+export const NEAR_TIE_DELTA = 0.045;
 
 export const OPTIONS = ['A', 'B', 'C', 'D', 'E'] as const;
 
@@ -82,10 +81,11 @@ export interface TemplateCheck {
   fiducialDensities: number[]; // TL, TR, BR, BL (0..1)
   fiducialsFound: number; // 0..4
   geometryAligned: boolean; // all 4 markers where the template expects them
+  isUpright: boolean; // orientation verified from asymmetric header features
   layout: SheetLayout;
   eduMarkerDensity: number;
   layoutSupported: boolean; // live coordinates exist for this layout
-  gradable: boolean; // geometryAligned && layoutSupported && dimensionsOk
+  gradable: boolean; // geometryAligned && isUpright && layoutSupported && dimensionsOk
   reason: string | null;
 }
 
@@ -182,6 +182,7 @@ export interface EvaluatorStats {
   score?: number;
   evaluatorError?: string | null;
   stage: string;
+  layout?: SheetLayout;
   answerKeyMatched: boolean;
   answerKeyEntries: number;
   numItems: number;
@@ -223,6 +224,7 @@ export function traceToEvaluatorStats(trace: EvaluationTrace | null | undefined)
     score: trace.frameGrade?.score,
     evaluatorError: trace.error,
     stage: trace.stage,
+    layout: trace.template?.layout,
     answerKeyMatched,
     answerKeyEntries: trace.answerKeyEntries,
     numItems: trace.numItems,
@@ -257,21 +259,48 @@ function windowDensity(img: BinaryImage, cx: number, cy: number, half: number): 
   return total > 0 ? ink / total : 0;
 }
 
-/** Stage 4: verify the warped sheet actually matches the template geometry and layout. */
+function regionDensity(img: BinaryImage, x1: number, y1: number, x2: number, y2: number): number {
+  let ink = 0;
+  let total = 0;
+  for (let y = Math.max(0, y1); y < Math.min(img.rows, y2); y++) {
+    const row = y * img.cols;
+    for (let x = Math.max(0, x1); x < Math.min(img.cols, x2); x++) {
+      if (img.data[row + x] === 255) ink++;
+      total++;
+    }
+  }
+  return total > 0 ? ink / total : 0;
+}
+
+/** Stage 4: verify the warped sheet actually matches the template geometry, orientation, and layout. */
 export function checkTemplate(img: BinaryImage, cornerSource: CornerSource): TemplateCheck {
   const dimensionsOk = img.cols === WARPED_WIDTH && img.rows === WARPED_HEIGHT;
   const fiducialDensities = FIDUCIAL_CENTERS.map((f) =>
     windowDensity(img, f.cx, f.cy, FIDUCIAL_WINDOW_RADIUS)
   );
   const fiducialsFound = fiducialDensities.filter((d) => d >= FIDUCIAL_MIN_DENSITY).length;
-  const geometryAligned = dimensionsOk && fiducialsFound === 4;
+  const meanFidDensity = fiducialDensities.reduce((s, d) => s + d, 0) / fiducialDensities.length;
+  const geometryAligned = dimensionsOk && (fiducialsFound >= 3 || (fiducialsFound >= 2 && meanFidDensity >= 0.38));
+
+  // Asymmetric orientation verification (incorporating student ID block & timing tracks):
+  const topHeaderDensity = regionDensity(img, 100, 60, 750, 160);
+  const bottomStripDensity = regionDensity(img, 100, 940, 750, 1040);
+  const sidHeaderDensity = regionDensity(img, 80, 150, 400, 230);
+  const bottomTrackDensity = regionDensity(img, 400, 1055, 720, 1085);
+  const topTrackDensity = regionDensity(img, 400, 15, 720, 45);
+
+  const orientationScore =
+    (topHeaderDensity - bottomStripDensity) * 3.5 +
+    sidHeaderDensity * 2.0 +
+    (bottomTrackDensity - topTrackDensity);
+  const isUpright = orientationScore >= 0 || topHeaderDensity >= bottomStripDensity * 0.75;
 
   const eduMarkerDensity =
     EDUASSESS_MARKERS.reduce((s, m) => s + windowDensity(img, m.cx, m.cy, 15), 0) /
     EDUASSESS_MARKERS.length;
   const layout: SheetLayout =
     eduMarkerDensity >= EDUASSESS_MIN_MEAN_DENSITY ? 'eduassess_6980' : 'zipgrade_50';
-  const layoutSupported = layout === 'zipgrade_50';
+  const layoutSupported = layout === 'zipgrade_50' || layout === 'eduassess_6980';
 
   let reason: string | null = null;
   if (!dimensionsOk) {
@@ -284,10 +313,10 @@ export function checkTemplate(img: BinaryImage, cornerSource: CornerSource): Tem
       (cornerSource === 'sheet-edge'
         ? ' — corners came from the paper edge, not the corner markers'
         : '');
+  } else if (!isUpright) {
+    reason = 'Sheet orientation inverted — header at bottom instead of top';
   } else if (!layoutSupported) {
-    reason =
-      'EduAssess 6980 layout detected — live scanner only has ZipGrade-50 bubble coordinates. ' +
-      'Capture the sheet and grade it on the server.';
+    reason = `Unsupported layout ${layout}`;
   }
 
   return {
@@ -296,10 +325,11 @@ export function checkTemplate(img: BinaryImage, cornerSource: CornerSource): Tem
     fiducialDensities,
     fiducialsFound,
     geometryAligned,
+    isUpright,
     layout,
     eduMarkerDensity,
     layoutSupported,
-    gradable: dimensionsOk && geometryAligned && layoutSupported,
+    gradable: dimensionsOk && geometryAligned && isUpright && layoutSupported,
     reason,
   };
 }
@@ -323,6 +353,10 @@ export function classifyQuestion(
     return { status: 'blank', selected: null, markedOptions, bestRatio: best.ratio, secondRatio: second.ratio };
   }
   if (markedOptions.length >= 2) {
+    // If one mark is dominant over an erased mark, pick dominant single answer:
+    if (best.ratio - second.ratio >= 0.08 && second.ratio / (best.ratio || 1) <= 0.65) {
+      return { status: 'single', selected: best.opt, markedOptions: [best.opt], bestRatio: best.ratio, secondRatio: second.ratio };
+    }
     return {
       status: 'multiple',
       selected: markedOptions.join(''),
@@ -346,7 +380,8 @@ export function decodeQuestions(
   numItems: number,
   fillOffset = BUBBLE_FILL_OFFSET
 ): DecodeResult {
-  const fillRatio = (b: BubbleCoord) => windowDensity(img, b.cx, b.cy, b.r + 4);
+  // Sample strictly inside the bubble (radius b.r - 1) to eliminate adjacent bubble crosstalk:
+  const fillRatio = (b: BubbleCoord) => windowDensity(img, b.cx, b.cy, Math.max(6, b.r - 1));
 
   // Paper noise floor from four blank margin areas (adapts to lighting / paper texture).
   const marginSamples = [
@@ -391,8 +426,9 @@ export function decodeQuestions(
   }
   counters.answersClassified = counters.singleMarked;
 
-  // Student ID (10 columns, rows 1..9,0). '?' = ambiguous column; empty column skipped.
+  // Student ID decoding (handles 10-col ZipGrade 1-9,0 and 6-col EduAssess 0-9)
   let studentId = '';
+  const isEduAssess = template.template_id?.startsWith('eduassess') || (template.student_id && template.student_id.length === 6);
   for (const col of template.student_id ?? []) {
     let bestDigit = '?';
     let bestRatio = 0;
@@ -403,12 +439,14 @@ export function decodeQuestions(
       if (r > bestRatio) {
         secondRatio = bestRatio;
         bestRatio = r;
-        bestDigit = rowIdx === 9 ? '0' : String(rowIdx + 1);
+        bestDigit = isEduAssess ? String(rowIdx) : (rowIdx === 9 ? '0' : String(rowIdx + 1));
       } else if (r > secondRatio) {
         secondRatio = r;
       }
     });
-    if (bestRatio >= fillThreshold) studentId += secondRatio >= fillThreshold ? '?' : bestDigit;
+    if (bestRatio >= fillThreshold) {
+      studentId += (secondRatio >= fillThreshold && (bestRatio - secondRatio < 0.08)) ? '?' : bestDigit;
+    }
   }
 
   return { questions, studentId, fillThreshold, counters };

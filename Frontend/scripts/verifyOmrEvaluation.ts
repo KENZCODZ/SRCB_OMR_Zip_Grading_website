@@ -8,7 +8,7 @@
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
-import { OMR_TEMPLATE_COORDINATES } from '../src/data/omrCoordinates.ts';
+import { OMR_TEMPLATE_COORDINATES, EDUASSESS_TEMPLATE_COORDINATES } from '../src/data/omrCoordinates.ts';
 import {
   WARPED_WIDTH,
   WARPED_HEIGHT,
@@ -124,12 +124,19 @@ console.log('\n== Mis-registered warp ==');
 const shifted = checkTemplate(otsuBinary(shift(loadGray('zipgrade_blank'), 18, 14)), 'sheet-edge');
 check('shifted sheet NOT gradable', !shifted.gradable, shifted.reason ?? '');
 
-// ── 4. EduAssess sheet must be refused by the live (ZipGrade-only) decoder ───────────────
+// ── 4. EduAssess sheet is now fully supported live ─────────────────────────────────────
 console.log('\n== EduAssess 6980 sheet ==');
 const edu = checkTemplate(otsuBinary(loadGray('eduassess_marked')), 'fiducials');
 check('geometry aligned', edu.geometryAligned);
 check('layout detected as eduassess_6980', edu.layout === 'eduassess_6980', `edu density ${edu.eduMarkerDensity.toFixed(2)}`);
-check('NOT gradable live', !edu.gradable, edu.reason ?? '');
+check('gradable live', edu.gradable, edu.reason ?? '');
+
+const eduDec = decodeQuestions(otsuBinary(loadGray('eduassess_marked')), EDUASSESS_TEMPLATE_COORDINATES, N);
+check('Student ID 240032', eduDec.studentId === '240032', eduDec.studentId);
+check('Q1 decoded A', eduDec.questions['1']?.selected === 'A', eduDec.questions['1']?.selected ?? '');
+check('Q2 decoded B', eduDec.questions['2']?.selected === 'B', eduDec.questions['2']?.selected ?? '');
+check('Q3 decoded C', eduDec.questions['3']?.selected === 'C', eduDec.questions['3']?.selected ?? '');
+
 
 // ── 5. Answer-key problems are scoring errors, not wrong answers ─────────────────────────
 console.log('\n== Answer key coverage ==');
@@ -142,6 +149,21 @@ check('scoringErrors = 2 (Q10 missing, Q11 invalid)', gk.scoringErrors === 2 && 
 const gp = gradeAnswers({ '1': q['1'] }, key, N);
 check('unsettled questions are pending, not graded', gp.pending === 49 && gp.answersGraded === 1 && !gp.isFinal,
   `pending ${gp.pending}, graded ${gp.answersGraded}`);
+
+// ── 6. Inverted sheet (180° rotated) must be rejected by orientation verification ────────
+console.log('\n== Inverted sheet (180° rotation) ==');
+function rotate180(gray: Uint8Array): Uint8Array {
+  const out = new Uint8Array(gray.length);
+  const total = gray.length;
+  for (let i = 0; i < total; i++) out[i] = gray[total - 1 - i];
+  return out;
+}
+const inverted = checkTemplate(otsuBinary(rotate180(loadGray('zipgrade_blank'))), 'fiducials');
+check('fiducials aligned even when inverted (symmetrical markers)', inverted.geometryAligned);
+check('isUpright = false', !inverted.isUpright);
+check('inverted sheet NOT gradable', !inverted.gradable);
+check('correct rejection reason', inverted.reason === 'Sheet orientation inverted — header at bottom instead of top',
+  inverted.reason ?? '');
 
 console.log(`\n${failures === 0 ? 'ALL CHECKS PASSED' : `${failures} CHECK(S) FAILED`}`);
 process.exit(failures === 0 ? 0 : 1);

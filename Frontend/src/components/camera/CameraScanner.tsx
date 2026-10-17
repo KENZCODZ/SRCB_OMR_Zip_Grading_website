@@ -23,7 +23,7 @@ import {
 } from 'lucide-react';
 import { useLiveOmrScanner, type CornerPoint, type LiveScanResult } from '../../hooks/useLiveOmrScanner';
 import { LiveScanOverlay } from './LiveScanOverlay';
-import { OMR_TEMPLATE_COORDINATES } from '../../data/omrCoordinates';
+import { OMR_TEMPLATE_COORDINATES, EDUASSESS_TEMPLATE_COORDINATES } from '../../data/omrCoordinates';
 
 interface Point2D {
   x: number;
@@ -241,12 +241,29 @@ export const CameraScanner: React.FC<CameraScannerProps> = ({
         return;
       }
 
-      // 1. Draw Clean Subtle Alignment Frame
-      const guidePadding = Math.min(w, h) * 0.08;
-      const guideW = w - guidePadding * 2;
-      const guideH = h - guidePadding * 2;
-      const guideX = guidePadding;
-      const guideY = guidePadding;
+      // Compute exact object-fit: cover scaling and cropping to map video coordinates to canvas
+      const vW = video.videoWidth || 640;
+      const vH = video.videoHeight || 480;
+      const scale = Math.max(w / vW, h / vH);
+      const renderW = vW * scale;
+      const renderH = vH * scale;
+      const offsetX = (w - renderW) / 2;
+      const offsetY = (h - renderH) / 2;
+
+      const toCanvasX = (nx: number) => nx * renderW + offsetX;
+      const toCanvasY = (ny: number) => ny * renderH + offsetY;
+
+      // 1. Draw Clean Subtle Alignment Frame (Standard 8.5:11 sheet aspect ratio)
+      const maxGuideH = h * 0.84;
+      const maxGuideW = w * 0.84;
+      let guideW = maxGuideH * 0.772;
+      let guideH = maxGuideH;
+      if (guideW > maxGuideW) {
+        guideW = maxGuideW;
+        guideH = guideW / 0.772;
+      }
+      const guideX = (w - guideW) / 2;
+      const guideY = (h - guideH) / 2;
 
       const reticleLen = 32;
       ctx.lineWidth = 2.5;
@@ -296,8 +313,8 @@ export const CameraScanner: React.FC<CameraScannerProps> = ({
       // 2. Draw Detected Sheet Quad with clean "✓ Sheet Locked" state
       if (normalizedCorners && normalizedCorners.length === 4) {
         const pixelPoints: CornerPoint[] = normalizedCorners.map((p) => ({
-          x: p.x * w,
-          y: p.y * h,
+          x: toCanvasX(p.x),
+          y: toCanvasY(p.y),
         }));
 
         const isFullyLocked = lockedQuestionsCount >= totalQuestions;
@@ -342,7 +359,9 @@ export const CameraScanner: React.FC<CameraScannerProps> = ({
         const sheetWidthPx = Math.hypot(pixelPoints[1].x - pixelPoints[0].x, pixelPoints[1].y - pixelPoints[0].y);
         const scale = sheetWidthPx / 750;
 
-        const questionCoords = OMR_TEMPLATE_COORDINATES.questions;
+        const isEduAssess = evaluatorStats?.layout === 'eduassess_6980';
+        const activeTemplate = isEduAssess ? EDUASSESS_TEMPLATE_COORDINATES : OMR_TEMPLATE_COORDINATES;
+        const questionCoords = activeTemplate.questions;
         const targetTotal = totalQuestions || 50;
 
         for (let q = 1; q <= targetTotal; q++) {

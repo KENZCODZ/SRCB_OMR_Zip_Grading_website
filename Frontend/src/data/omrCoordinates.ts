@@ -12,10 +12,13 @@ export interface BubbleCoord {
 export interface OMRCoordinates {
   template_id?: string;
   total_questions?: number;
-  key_version: Record<string, BubbleCoord>;
+  key_version?: Record<string, BubbleCoord>;
+  key?: Record<string, BubbleCoord>;
   student_id: (BubbleCoord | null)[][];
   questions: Record<string, Record<string, BubbleCoord | null>>;
 }
+
+export { EDUASSESS_TEMPLATE_COORDINATES } from './eduassessCoordinates';
 
 export const OMR_TEMPLATE_COORDINATES: OMRCoordinates = {
   template_id: "zipgrade_50_v2",

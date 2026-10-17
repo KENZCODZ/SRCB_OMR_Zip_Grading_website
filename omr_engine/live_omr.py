@@ -150,17 +150,24 @@ class LiveOMRScanner:
         # Temporal corner stabilization
         corners = self._smooth_corners(raw_corners)
 
-        # 2. Bird's Eye Perspective Transform to 850x1100
+        # 2. Bird's Eye Perspective Transform to 850x1100 with consistent corner ordering
         warped = self.engine.warp_image(frame, corners)
-        template_type = self.engine.detect_template_type(warped)
-        warped = self.engine.check_and_correct_rotation(warped, template_type)
+        template_check = self.engine.verify_template(warped)
+        if not template_check["gradable"]:
+            # If not yet aligned or inverted, do not run bubble detection/grading
+            self._draw_reticle(output_frame, w_orig, h_orig)
+            return output_frame, None
 
-        # 3. Grade the deskewed sheet
+        template_type = template_check["layout"]
+
+        # 3. Grade the verified deskewed sheet
         try:
             grade_res = self.engine.grade_sheet(
                 frame,
                 self.answer_key,
                 template_type=template_type,
+                pre_warped=warped,
+                pre_corners=corners,
             )
         except Exception:
             return output_frame, None
