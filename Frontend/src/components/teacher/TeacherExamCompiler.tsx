@@ -40,12 +40,48 @@ export const TeacherExamCompiler: React.FC<TeacherExamCompilerProps> = ({
   exams,
   submissions,
   roster,
-  currentUser: _currentUser,
+  currentUser,
   onSelectSubmission,
   onInspectExam,
   addToast,
   formatDate,
 }) => {
+  // Scope exams strictly to logged-in teacher or programme head
+  const scopedExams = useMemo(() => {
+    if (!currentUser || currentUser.role === "admin" || currentUser.role === "dean") {
+      return exams;
+    }
+    if (currentUser.role === "teacher") {
+      const teacherName = currentUser.name.trim().toLowerCase();
+      const teacherId = currentUser.id;
+      return exams.filter((e) => {
+        const instName = (e.instructor_name || "").trim().toLowerCase();
+        const instId = (e as any).instructor_id;
+        return (
+          (instName && (instName.includes(teacherName) || teacherName.includes(instName))) ||
+          (instId && instId === teacherId)
+        );
+      });
+    }
+    if (currentUser.role === "programme-head") {
+      const prog = (currentUser.programme || "BSIT").trim().toLowerCase();
+      return exams.filter((e) => {
+        const examProg = (e.program || "").trim().toLowerCase();
+        return (
+          examProg === prog ||
+          ((examProg === "it" || examProg === "bsit") && (prog === "it" || prog === "bsit")) ||
+          ((examProg === "tep" || examProg === "bsed") && (prog === "tep" || prog === "bsed"))
+        );
+      });
+    }
+    return exams;
+  }, [exams, currentUser]);
+
+  const scopedExamIds = useMemo(() => new Set(scopedExams.map((e) => e.id)), [scopedExams]);
+  const scopedSubmissions = useMemo(() => {
+    return submissions.filter((s) => scopedExamIds.has(s.exam_id));
+  }, [submissions, scopedExamIds]);
+
   // Filters State (Results & Reports)
   const [selectedAcademicYear, setSelectedAcademicYear] = useState<string>("All");
   const [selectedSemester, setSelectedSemester] = useState<string>("All");
@@ -91,42 +127,42 @@ export const TeacherExamCompiler: React.FC<TeacherExamCompilerProps> = ({
     return map;
   }, [roster]);
 
-  // Extract unique filter options from exams
+  // Extract unique filter options from scoped exams
   const academicYears = useMemo(() => {
     const set = new Set<string>();
-    exams.forEach((e) => {
+    scopedExams.forEach((e) => {
       if (e.academic_year) set.add(e.academic_year);
     });
     return ["All", ...Array.from(set).sort()];
-  }, [exams]);
+  }, [scopedExams]);
 
   const semesters = useMemo(() => {
     const set = new Set<string>();
-    exams.forEach((e) => {
+    scopedExams.forEach((e) => {
       if (e.semester) set.add(e.semester);
     });
     return ["All", ...Array.from(set).sort()];
-  }, [exams]);
+  }, [scopedExams]);
 
   const examTypes = useMemo(() => {
     const set = new Set<string>();
-    exams.forEach((e) => {
+    scopedExams.forEach((e) => {
       if (e.exam_type) set.add(e.exam_type);
     });
     return ["All", ...Array.from(set).sort()];
-  }, [exams]);
+  }, [scopedExams]);
 
   const sections = useMemo(() => {
     const set = new Set<string>();
-    exams.forEach((e) => {
+    scopedExams.forEach((e) => {
       if (e.section) set.add(e.section);
     });
     return ["All", ...Array.from(set).sort()];
-  }, [exams]);
+  }, [scopedExams]);
 
   // Filter exams based on session and class criteria
   const filteredExams = useMemo(() => {
-    return exams.filter((exam) => {
+    return scopedExams.filter((exam) => {
       if (
         selectedAcademicYear !== "All" &&
         exam.academic_year !== selectedAcademicYear
@@ -257,7 +293,7 @@ export const TeacherExamCompiler: React.FC<TeacherExamCompilerProps> = ({
   // Export All Examination Files
   const handleExportAllExams = () => {
     try {
-      exportCompleteDatabaseExcel(exams, submissions, roster, {
+      exportCompleteDatabaseExcel(scopedExams, scopedSubmissions, roster, {
         examTypeFilter: selectedExamType === "All" ? undefined : selectedExamType,
         semesterFilter: selectedSemester === "All" ? undefined : selectedSemester,
       });

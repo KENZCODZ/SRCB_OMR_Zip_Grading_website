@@ -47,7 +47,8 @@ interface RoleDashboardProps {
 const getDashboardCards = (
   user: AuthUser,
   summary?: any,
-  studentStats?: { examsTaken: number; avgScore: string; latestScore: string }
+  studentStats?: { examsTaken: number; avgScore: string; latestScore: string },
+  liveMetrics?: { totalExams: number; totalSubmissions: number; avgScore: string; gradedExams: number }
 ): MetricCard[] => {
   if (user.role === "admin") {
     return [
@@ -108,16 +109,21 @@ const getDashboardCards = (
   }
 
   if (user.role === "programme-head") {
+    const totalExams = liveMetrics ? liveMetrics.totalExams.toString() : (summary ? summary.total_exams.toString() : "0");
+    const totalSubs = liveMetrics ? liveMetrics.totalSubmissions.toString() : (summary ? summary.total_submissions.toString() : "0");
+    const avgScore = liveMetrics && liveMetrics.totalSubmissions > 0
+      ? liveMetrics.avgScore
+      : (summary && summary.total_submissions > 0 ? `${summary.average_score}%` : "—");
     return [
       {
         title: "Program Exams",
-        value: summary ? summary.total_exams.toString() : "0",
+        value: totalExams,
         icon: BookOpen,
-        subtitle: "Oversight",
+        subtitle: `${user.programme || "BSIT"} Oversight`,
       },
       {
         title: "Total Submissions",
-        value: summary ? summary.total_submissions.toString() : "0",
+        value: totalSubs,
         icon: Sparkles,
         subtitle: "Received",
       },
@@ -125,40 +131,43 @@ const getDashboardCards = (
         title: "Program Faculty",
         value: summary ? summary.total_teachers.toString() : "0",
         icon: GraduationCap,
-        subtitle: "Department",
+        subtitle: "Instructors",
       },
       {
         title: "Average Score",
-        value: summary && summary.total_submissions > 0 ? `${summary.average_score}%` : "—",
+        value: avgScore,
         icon: TrendingUp,
-        subtitle: "Cumulative",
+        subtitle: "Department Mean",
       },
     ];
   }
 
   if (user.role === "teacher") {
+    const totalExams = liveMetrics ? liveMetrics.totalExams.toString() : (summary ? summary.total_exams.toString() : "0");
+    const totalSubs = liveMetrics ? liveMetrics.totalSubmissions.toString() : (summary ? summary.total_submissions.toString() : "0");
+    const gradedExams = liveMetrics ? liveMetrics.gradedExams.toString() : totalExams;
     return [
       {
         title: "Active Exams",
-        value: summary ? summary.total_exams.toString() : "0",
+        value: totalExams,
         icon: BookOpen,
-        subtitle: "Handling",
+        subtitle: "Assigned Courses",
       },
       {
         title: "Scanned Sheets",
-        value: summary ? summary.total_submissions.toString() : "0",
+        value: totalSubs,
         icon: Sparkles,
         subtitle: "Processed",
       },
       {
         title: "Item Analysis",
-        value: summary && summary.total_submissions > 0 ? "Ready" : "—",
+        value: Number(totalSubs) > 0 ? "Ready" : "—",
         icon: BarChart3,
         subtitle: "OBE Reports",
       },
       {
         title: "Graded Exams",
-        value: summary ? summary.total_exams.toString() : "0",
+        value: gradedExams,
         icon: Award,
         subtitle: "Released",
       },
@@ -388,7 +397,17 @@ export default function RoleDashboard({
     };
   }, [exams, submissions, summary]);
 
-  const cards = getDashboardCards(user, summary, studentStats);
+  const liveMetrics = useMemo(() => {
+    const totalExams = exams.length;
+    const totalSubmissions = submissions.length;
+    const avgScore = totalSubmissions > 0
+      ? `${Math.round(submissions.reduce((acc, s) => acc + (s.total_questions > 0 ? (s.score / s.total_questions) * 100 : 0), 0) / totalSubmissions)}%`
+      : "—";
+    const gradedExams = exams.filter((e) => submissions.some((s) => s.exam_id === e.id)).length;
+    return { totalExams, totalSubmissions, avgScore, gradedExams };
+  }, [exams, submissions]);
+
+  const cards = getDashboardCards(user, summary, studentStats, liveMetrics);
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>

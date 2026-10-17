@@ -59,12 +59,8 @@ export default function DeanProgressRecords({
   }, [exams, submissions, formatDate]);
 
   const availablePrograms = useMemo(() => {
-    const progSet = new Set<string>();
-    exams.forEach((e) => {
-      if (e.program && e.program.trim()) progSet.add(e.program.trim());
-    });
-    return Array.from(progSet).sort();
-  }, [exams]);
+    return ["BSIT", "BSCRIM", "BSHM", "BSBA", "TEP"];
+  }, []);
 
   const filteredRecords = useMemo(() => {
     if (selectedProgramFilter === "all") return displayRecords;
@@ -133,22 +129,11 @@ export default function DeanProgressRecords({
                 aria-label="Filter by academic program"
               >
                 <option value="all">All Academic Programs</option>
-                {availablePrograms.length > 0 ? (
-                  availablePrograms.map((p) => (
-                    <option key={p} value={p}>
-                      {p}
-                    </option>
-                  ))
-                ) : (
-                  <>
-                    <option value="BSIT">BS Information Tech (BSIT)</option>
-                    <option value="BSCS">BS Computer Science (BSCS)</option>
-                    <option value="BSBA">BS Business Admin (BSBA)</option>
-                    <option value="TEP">Teacher Education (TEP)</option>
-                    <option value="BSHM">Hospitality Management (BSHM)</option>
-                    <option value="BSCRIM">Criminology (BSCRIM)</option>
-                  </>
-                )}
+                {availablePrograms.map((p) => (
+                  <option key={p} value={p}>
+                    {p}
+                  </option>
+                ))}
               </select>
               <ChevronDown size={14} className="academic-select-arrow" />
             </div>

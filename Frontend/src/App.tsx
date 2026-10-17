@@ -383,6 +383,64 @@ export default function App() {
       }
   );
 
+  // Strictly role-scoped records:
+  // - Teachers only see their assigned courses/exams
+  // - Programme Heads only see their assigned academic programme
+  // - Admins and Deans have institutional access
+  const scopedExams = useMemo(() => {
+    if (!currentUser || currentUser.role === "admin" || currentUser.role === "dean") {
+      return exams;
+    }
+    if (currentUser.role === "teacher") {
+      const teacherName = currentUser.name.trim().toLowerCase();
+      const teacherId = currentUser.id;
+      return exams.filter((e) => {
+        const instName = (e.instructor_name || "").trim().toLowerCase();
+        const instId = (e as any).instructor_id;
+        return (
+          (instName && (instName.includes(teacherName) || teacherName.includes(instName))) ||
+          (instId && instId === teacherId)
+        );
+      });
+    }
+    if (currentUser.role === "programme-head") {
+      const phProg = (currentUser.programme || "BSIT").trim().toLowerCase();
+      return exams.filter((e) => {
+        const examProg = (e.program || "").trim().toLowerCase();
+        return (
+          examProg === phProg ||
+          ((examProg === "it" || examProg === "bsit") && (phProg === "it" || phProg === "bsit")) ||
+          ((examProg === "tep" || examProg === "bsed") && (phProg === "tep" || phProg === "bsed"))
+        );
+      });
+    }
+    return exams;
+  }, [exams, currentUser]);
+
+  const scopedExamIds = useMemo(() => new Set(scopedExams.map((e) => e.id)), [scopedExams]);
+
+  const scopedSubmissions = useMemo(() => {
+    if (!currentUser || currentUser.role === "admin" || currentUser.role === "dean") {
+      return submissions;
+    }
+    return submissions.filter((s) => scopedExamIds.has(s.exam_id));
+  }, [submissions, scopedExamIds, currentUser]);
+
+  const scopedRoster = useMemo(() => {
+    if (!currentUser || currentUser.role === "admin" || currentUser.role === "dean") {
+      return roster;
+    }
+    const studentIds = new Set(scopedSubmissions.map((s) => s.student_id));
+    if (currentUser.role === "programme-head") {
+      const phProg = (currentUser.programme || "BSIT").trim().toLowerCase();
+      return roster.filter((r) =>
+        studentIds.has(r.student_id) ||
+        (r.course_section && r.course_section.toLowerCase().includes(phProg))
+      );
+    }
+    return roster.filter((r) => studentIds.has(r.student_id));
+  }, [roster, scopedSubmissions, currentUser]);
+
   // Quick Scanner State
   const [quickScanMode, setQuickScanMode] = useState<"upload" | "normal-camera" | "live-camera">("upload");
   const [quickScanLoading, setQuickScanLoading] = useState(false);
@@ -401,20 +459,20 @@ export default function App() {
 
   const examAcademicYears = useMemo(() => {
     const set = new Set<string>();
-    exams.forEach((e) => {
+    scopedExams.forEach((e) => {
       if (e.academic_year) set.add(e.academic_year);
     });
     return ["All", ...Array.from(set).sort().reverse()];
-  }, [exams]);
+  }, [scopedExams]);
 
   const examPrograms = useMemo(() => {
     const set = new Set<string>();
-    exams.forEach((e) => {
+    scopedExams.forEach((e) => {
       if (e.program) set.add(e.program);
       else if (e.course_code) set.add(e.course_code);
     });
     return ["All", ...Array.from(set).sort()];
-  }, [exams]);
+  }, [scopedExams]);
 
   // Active Exam Inspection & Grading State
   const [selectedExamId, setSelectedExamId] = useState<string>("");
@@ -541,7 +599,9 @@ export default function App() {
 
   const loadDashboardSummary = useCallback(async (forceRefresh = false) => {
     try {
-      const data = await fetchDashboardSummary({ forceRefresh });
+      const program = currentUser?.role === "programme-head" ? (currentUser.programme || "BSIT") : undefined;
+      const instructorName = currentUser?.role === "teacher" ? currentUser.name : undefined;
+      const data = await fetchDashboardSummary({ forceRefresh, program, instructorName });
       if (data) {
         setDashboardSummary(data);
       }
@@ -557,8 +617,7 @@ export default function App() {
         });
       }
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [currentUser]);
 
   // Initial Data Fetch
   useEffect(() => {
@@ -566,6 +625,13 @@ export default function App() {
     loadSubmissions();
     loadDashboardSummary();
   }, [loadExams, loadSubmissions, loadDashboardSummary]);
+
+  // Reload scoped summary whenever currentUser changes
+  useEffect(() => {
+    if (currentUser) {
+      loadDashboardSummary(true);
+    }
+  }, [currentUser, loadDashboardSummary]);
 
   // Trigger Confetti Effect
   const triggerConfetti = () => {
@@ -1056,7 +1122,7 @@ export default function App() {
         },
         {
           key: "user-directory" as AppTab,
-          label: "Faculty",
+          label: "User Directory",
           icon: Users,
         },
         {
@@ -1197,7 +1263,7 @@ export default function App() {
         return currentUser?.role === "programme-head"
           ? `${currentUser.programme || "BSIT"} Student Access`
           : currentUser?.role === "dean"
-            ? "Faculty"
+            ? "User Accounts Directory"
             : "User Directory";
       case "settings":
         return "Settings";
@@ -1629,9 +1695,9 @@ export default function App() {
             <RoleDashboard
               user={currentUser}
               summary={dashboardSummary}
-              exams={exams}
-              submissions={submissions}
-              roster={roster}
+              exams={scopedExams}
+              submissions={scopedSubmissions}
+              roster={scopedRoster}
               onSelectSubmission={viewSubmissionDetails}
               onInspectExam={(exam) => setInspectExam(exam)}
               addToast={addToast}
@@ -1641,88 +1707,65 @@ export default function App() {
           )}
 
           {/* PROGRAMME-SCOPED OR INSTITUTION-WIDE WORKSPACE */}
-          {(() => {
-            const isPh = currentUser?.role === "programme-head";
-            const phProgram = (currentUser?.programme || "BSIT").toLowerCase();
-            const currentExams = isPh
-              ? exams.filter((e) => !e.program || e.program.toLowerCase() === phProgram)
-              : exams;
-            const currentExamIds = new Set(currentExams.map((e) => e.id));
-            const currentSubmissions = isPh
-              ? submissions.filter((s) => currentExamIds.has(s.exam_id))
-              : submissions;
-            const currentStudentIds = new Set(currentSubmissions.map((s) => s.student_id));
-            const currentRoster = isPh
-              ? roster.filter((r) =>
-                currentStudentIds.has(r.student_id) ||
-                (r.course_section && r.course_section.toLowerCase().includes(phProgram))
-              )
-              : roster;
+          {activeTab === "academic-management" && currentUser && (
+            <DeanAcademicManagement
+              currentUser={currentUser}
+              summary={dashboardSummary}
+              exams={scopedExams}
+              submissions={scopedSubmissions}
+              roster={scopedRoster}
+              onInspectExam={(exam) => setInspectExam(exam)}
+              addToast={addToast}
+            />
+          )}
 
-            return (
-              <>
-                {activeTab === "academic-management" && currentUser && (
-                  <DeanAcademicManagement
-                    currentUser={currentUser}
-                    summary={dashboardSummary}
-                    exams={currentExams}
-                    submissions={currentSubmissions}
-                    roster={currentRoster}
-                    onInspectExam={(exam) => setInspectExam(exam)}
-                    addToast={addToast}
-                  />
-                )}
+          {activeTab === "examinations" && currentUser && (
+            currentUser.role === "student" ? (
+              <StudentPortalView
+                currentUser={currentUser}
+                exams={exams}
+                submissions={submissions}
+                roster={roster}
+                formatDate={formatDate}
+              />
+            ) : (
+              <DeanExaminations
+                currentUser={currentUser}
+                exams={scopedExams}
+                submissions={scopedSubmissions}
+                roster={scopedRoster}
+                onInspectExam={(exam) => setInspectExam(exam)}
+                addToast={addToast}
+                formatDate={formatDate}
+              />
+            )
+          )}
 
-                {activeTab === "examinations" && currentUser && (
-                  currentUser.role === "student" ? (
-                    <StudentPortalView
-                      currentUser={currentUser}
-                      exams={exams}
-                      submissions={submissions}
-                      roster={roster}
-                      formatDate={formatDate}
-                    />
-                  ) : (
-                    <DeanExaminations
-                      currentUser={currentUser}
-                      exams={currentExams}
-                      submissions={currentSubmissions}
-                      roster={currentRoster}
-                      onInspectExam={(exam) => setInspectExam(exam)}
-                      addToast={addToast}
-                      formatDate={formatDate}
-                    />
-                  )
-                )}
-
-                {activeTab === "reports" && currentUser && (
-                  currentUser.role === "student" ? (
-                    <StudentPortalView
-                      currentUser={currentUser}
-                      exams={exams}
-                      submissions={submissions}
-                      roster={roster}
-                      formatDate={formatDate}
-                    />
-                  ) : (
-                    <DeanReportsAnalytics
-                      currentUser={currentUser}
-                      exams={currentExams}
-                      submissions={currentSubmissions}
-                      roster={currentRoster}
-                      summary={dashboardSummary}
-                      addToast={addToast}
-                    />
-                  )
-                )}
-              </>
-            );
-          })()}
+          {activeTab === "reports" && currentUser && (
+            currentUser.role === "student" ? (
+              <StudentPortalView
+                currentUser={currentUser}
+                exams={exams}
+                submissions={submissions}
+                roster={roster}
+                formatDate={formatDate}
+              />
+            ) : (
+              <DeanReportsAnalytics
+                currentUser={currentUser}
+                exams={scopedExams}
+                submissions={scopedSubmissions}
+                roster={scopedRoster}
+                summary={dashboardSummary}
+                addToast={addToast}
+              />
+            )
+          )}
 
           {activeTab === "progress-records" && currentUser && (
             <DeanProgressRecords
-              exams={exams}
-              submissions={submissions}
+              exams={scopedExams}
+              submissions={scopedSubmissions}
               onInspectExam={(exam) => setInspectExam(exam)}
               formatDate={formatDate}
               programFilter="all"
@@ -2321,11 +2364,11 @@ export default function App() {
                   {/* Grid of All Created Examination Containers */}
                   <SmoothContentTransition
                     isLoading={loadingExams}
-                    hasExistingData={exams.length > 0}
+                    hasExistingData={scopedExams.length > 0}
                     skeleton={<SkeletonExamList count={6} />}
                   >
                     {(() => {
-                      const filtered = exams.filter((ex) => {
+                      const filtered = scopedExams.filter((ex) => {
                         const q = examListSearch.toLowerCase().trim();
                         const matchesSearch =
                           !q ||
@@ -3876,9 +3919,9 @@ export default function App() {
           {/* EXAM RECORDS / GRADING AUDIT HISTORY TAB */}
           {activeTab === "history" && (
             <GradingHistoryView
-              exams={exams}
-              submissions={submissions}
-              roster={roster}
+              exams={scopedExams}
+              submissions={scopedSubmissions}
+              roster={scopedRoster}
               currentUser={currentUser}
               onSelectSubmission={viewSubmissionDetails}
               onDeleteGradingRecord={handleDeleteGradingRecord}
@@ -3890,9 +3933,9 @@ export default function App() {
           {/* OFFICIAL GRADEBOOK & ASSESSMENT RECORDS TAB (TEACHER) */}
           {(activeTab === "results-management" || activeTab === "compiler") && currentUser && (
             <TeacherExamCompiler
-              exams={exams}
-              submissions={submissions}
-              roster={roster}
+              exams={scopedExams}
+              submissions={scopedSubmissions}
+              roster={scopedRoster}
               currentUser={currentUser}
               onSelectSubmission={viewSubmissionDetails}
               onInspectExam={(exam) => setInspectExam(exam)}
@@ -3953,7 +3996,7 @@ export default function App() {
                         onChange={(e) => setSelectedExamId(e.target.value)}
                         aria-label="Select Examination to Evaluate"
                       >
-                        {exams.map((exam) => (
+                        {scopedExams.map((exam) => (
                           <option key={exam.id} value={exam.id}>
                             {exam.name} {exam.course_code ? `[${exam.course_code}]` : ""} {exam.section ? `• Sec ${exam.section}` : ""}
                           </option>

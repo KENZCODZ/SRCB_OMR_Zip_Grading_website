@@ -151,7 +151,7 @@ export async function adminCreateUser(payload: {
   name: string;
   email: string;
   password: string;
-  role: 'teacher' | 'student';
+  role: 'teacher' | 'student' | 'programme-head' | string;
   programme?: string;
   department?: string;
   student_id?: string;
@@ -222,30 +222,64 @@ export async function deleteUser(userId: string): Promise<{ status: string; mess
   }
 }
 
-export async function fetchDashboardSummary(options?: { forceRefresh?: boolean }): Promise<{ total_accounts: number; total_students: number; total_teachers: number; total_exams: number; average_score: number; total_submissions: number }> {
+export async function fetchDashboardSummary(options?: {
+  forceRefresh?: boolean;
+  program?: string;
+  instructorName?: string;
+}): Promise<{
+  total_accounts: number;
+  total_students: number;
+  total_teachers: number;
+  total_exams: number;
+  average_score: number;
+  total_submissions: number;
+}> {
+  const queryParams = new URLSearchParams();
+  if (options?.program) queryParams.set("program", options.program);
+  if (options?.instructorName) queryParams.set("instructor_name", options.instructorName);
+  const qStr = queryParams.toString() ? `?${queryParams.toString()}` : "";
+  const cacheKey = `dashboard_summary_${options?.program || options?.instructorName || "all"}`;
+
   return cacheManager.fetchWithCache(
-    'dashboard_summary',
+    cacheKey,
     async () => {
       try {
-        const response = await fetch(`${API_BASE}/api/dashboard/summary`);
-        return await handleResponse<{ total_accounts: number; total_students: number; total_teachers: number; total_exams: number; average_score: number; total_submissions: number }>(response, 'Failed to fetch dashboard summary');
+        const response = await fetch(`${API_BASE}/api/dashboard/summary${qStr}`);
+        return await handleResponse<{
+          total_accounts: number;
+          total_students: number;
+          total_teachers: number;
+          total_exams: number;
+          average_score: number;
+          total_submissions: number;
+        }>(response, "Failed to fetch dashboard summary");
       } catch (err) {
-        catchNetworkError(err, 'Failed to fetch dashboard summary');
+        catchNetworkError(err, "Failed to fetch dashboard summary");
       }
     },
     options
   );
 }
 
-export async function fetchExams(options?: { forceRefresh?: boolean }): Promise<Exam[]> {
+export async function fetchExams(options?: {
+  forceRefresh?: boolean;
+  program?: string;
+  instructorName?: string;
+}): Promise<Exam[]> {
+  const queryParams = new URLSearchParams();
+  if (options?.program) queryParams.set("program", options.program);
+  if (options?.instructorName) queryParams.set("instructor_name", options.instructorName);
+  const qStr = queryParams.toString() ? `?${queryParams.toString()}` : "";
+  const cacheKey = `exams_${options?.program || options?.instructorName || "all"}`;
+
   return cacheManager.fetchWithCache(
-    'exams',
+    cacheKey,
     async () => {
       try {
-        const response = await fetch(`${API_BASE}/api/exams`);
-        return await handleResponse<Exam[]>(response, 'Failed to fetch exams');
+        const response = await fetch(`${API_BASE}/api/exams${qStr}`);
+        return await handleResponse<Exam[]>(response, "Failed to fetch exams");
       } catch (err) {
-        catchNetworkError(err, 'Failed to fetch exams');
+        catchNetworkError(err, "Failed to fetch exams");
       }
     },
     options
