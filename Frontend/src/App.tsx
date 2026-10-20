@@ -373,6 +373,8 @@ export default function App() {
   );
   const [isRosterModalOpen, setIsRosterModalOpen] = useState(false);
   const [isUserGuideOpen, setIsUserGuideOpen] = useState(false);
+  const [examToDelete, setExamToDelete] = useState<Exam | null>(null);
+  const [isDeletingExam, setIsDeletingExam] = useState(false);
 
   const [loadingExams, setLoadingExams] = useState(false);
   const [loadingSubmissions, setLoadingSubmissions] = useState(false);
@@ -805,25 +807,36 @@ export default function App() {
     }
   };
 
-  const handleDeleteExam = async (examId: string) => {
-    if (
-      !window.confirm(
-        "Are you sure you want to delete this exam and all its grading submissions? This cannot be undone.",
-      )
-    ) {
-      return;
+  const handleDeleteExam = (examId: string) => {
+    const target = exams.find((e) => e.id === examId);
+    if (target) {
+      setExamToDelete(target);
+    } else {
+      setExamToDelete({
+        id: examId,
+        name: "Selected Examination",
+        answer_key: {},
+        created_at: new Date().toISOString(),
+      });
     }
+  };
+
+  const confirmDeleteExam = async () => {
+    if (!examToDelete) return;
+    setIsDeletingExam(true);
     try {
-      await deleteExam(examId);
-      addToast("success", "Exam and its submissions deleted successfully.");
+      await deleteExam(examToDelete.id);
+      addToast("success", `Exam "${examToDelete.name}" and its submissions deleted successfully.`);
 
       setSelectedExamId((prev) => {
-        if (prev === examId) {
-          const remaining = exams.filter((e) => e.id !== examId);
+        if (prev === examToDelete.id) {
+          const remaining = exams.filter((e) => e.id !== examToDelete.id);
           return remaining.length > 0 ? remaining[0].id : "";
         }
         return prev;
       });
+
+      setExamToDelete(null);
 
       await Promise.all([
         loadExams(true),
@@ -832,6 +845,8 @@ export default function App() {
       ]);
     } catch (err: any) {
       addToast("error", err.message || "Failed to delete exam.");
+    } finally {
+      setIsDeletingExam(false);
     }
   };
 
@@ -1384,6 +1399,229 @@ export default function App() {
             handleTabSelect(tab as AppTab);
           }}
         />
+
+        {/* Custom Institutional Delete Exam Confirmation Modal */}
+        {examToDelete && (
+          <div
+            className="modal-overlay"
+            style={{
+              position: "fixed",
+              inset: 0,
+              background: "rgba(15, 23, 42, 0.72)",
+              backdropFilter: "blur(10px)",
+              WebkitBackdropFilter: "blur(10px)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              zIndex: 100000,
+              padding: "1rem",
+              animation: "modalFadeIn 0.18s ease-out",
+            }}
+            onClick={(e) => {
+              if (e.target === e.currentTarget && !isDeletingExam) {
+                setExamToDelete(null);
+              }
+            }}
+          >
+            <div
+              style={{
+                background: "#ffffff",
+                borderRadius: "18px",
+                maxWidth: "480px",
+                width: "100%",
+                boxShadow: "0 25px 60px -15px rgba(15, 23, 42, 0.4), 0 0 0 1px rgba(239, 68, 68, 0.15)",
+                overflow: "hidden",
+                animation: "modalScaleIn 0.22s cubic-bezier(0.16, 1, 0.3, 1)",
+              }}
+            >
+              {/* Header Banner */}
+              <div
+                style={{
+                  padding: "1.25rem 1.5rem",
+                  background: "linear-gradient(135deg, #fef2f2 0%, #fff1f2 100%)",
+                  borderBottom: "1px solid #fee2e2",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                }}
+              >
+                <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                  <div
+                    style={{
+                      width: "42px",
+                      height: "42px",
+                      borderRadius: "12px",
+                      background: "#fee2e2",
+                      border: "1px solid #fecaca",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      color: "#ef4444",
+                    }}
+                  >
+                    <Trash2 size={20} />
+                  </div>
+                  <div>
+                    <h3 style={{ margin: 0, fontSize: "1.05rem", fontWeight: 800, color: "#991b1b" }}>
+                      Delete Examination
+                    </h3>
+                    <p style={{ margin: 0, fontSize: "0.76rem", color: "#b91c1c" }}>
+                      Destructive institutional action
+                    </p>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => !isDeletingExam && setExamToDelete(null)}
+                  disabled={isDeletingExam}
+                  style={{
+                    background: "none",
+                    border: "none",
+                    color: "#94a3b8",
+                    cursor: isDeletingExam ? "not-allowed" : "pointer",
+                    padding: "6px",
+                    borderRadius: "8px",
+                    display: "flex",
+                    alignItems: "center",
+                  }}
+                  title="Close"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+
+              {/* Body */}
+              <div style={{ padding: "1.4rem 1.5rem" }}>
+                <p style={{ margin: "0 0 1rem 0", fontSize: "0.88rem", color: "#334155", lineHeight: 1.5 }}>
+                  Are you sure you want to permanently delete this examination? All student submissions, grading answer keys, and audit logs will be permanently erased.
+                </p>
+
+                {/* Exam Details Card */}
+                <div
+                  style={{
+                    background: "#f8fafc",
+                    border: "1px solid #e2e8f0",
+                    borderRadius: "12px",
+                    padding: "1rem",
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: "0.5rem",
+                  }}
+                >
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "8px" }}>
+                    <span style={{ fontSize: "0.76rem", fontWeight: 700, color: "#64748b", textTransform: "uppercase" }}>
+                      Exam Subject
+                    </span>
+                    <span
+                      style={{
+                        fontSize: "0.72rem",
+                        fontWeight: 700,
+                        padding: "2px 8px",
+                        borderRadius: "9999px",
+                        background: "#ede9fe",
+                        color: "#4326b8",
+                      }}
+                    >
+                      {examToDelete.course_code || examToDelete.subject || "EXAM"}
+                    </span>
+                  </div>
+                  <div style={{ fontSize: "0.98rem", fontWeight: 800, color: "#0f172a" }}>
+                    {examToDelete.name}
+                  </div>
+                  <div style={{ display: "flex", alignItems: "center", gap: "14px", fontSize: "0.78rem", color: "#64748b", marginTop: "4px" }}>
+                    <span>
+                      Questions: <strong>{examToDelete.num_items || Object.keys(examToDelete.answer_key || {}).length || 50}</strong>
+                    </span>
+                    {(examToDelete.exam_type || examToDelete.semester) && (
+                      <span>
+                        Term: <strong>{examToDelete.exam_type || examToDelete.semester}</strong>
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                <div
+                  style={{
+                    marginTop: "1rem",
+                    padding: "0.75rem 0.9rem",
+                    borderRadius: "10px",
+                    background: "#fff1f2",
+                    border: "1px solid #ffe4e6",
+                    display: "flex",
+                    alignItems: "flex-start",
+                    gap: "8px",
+                    fontSize: "0.78rem",
+                    color: "#9f1239",
+                    lineHeight: 1.45,
+                  }}
+                >
+                  <AlertTriangle size={15} style={{ flexShrink: 0, marginTop: "2px" }} />
+                  <span>
+                    <strong>Warning:</strong> This cannot be undone. Any scanned sheets and verified student scores linked to this exam will be removed immediately.
+                  </span>
+                </div>
+              </div>
+
+              {/* Footer */}
+              <div
+                style={{
+                  padding: "1rem 1.5rem",
+                  background: "#f8fafc",
+                  borderTop: "1px solid #e2e8f0",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "flex-end",
+                  gap: "0.75rem",
+                }}
+              >
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={() => setExamToDelete(null)}
+                  disabled={isDeletingExam}
+                  style={{
+                    fontSize: "0.85rem",
+                    padding: "0.55rem 1.1rem",
+                    fontWeight: 600,
+                  }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={confirmDeleteExam}
+                  disabled={isDeletingExam}
+                  style={{
+                    background: isDeletingExam ? "#f87171" : "#ef4444",
+                    color: "#ffffff",
+                    border: "none",
+                    borderRadius: "10px",
+                    padding: "0.55rem 1.25rem",
+                    fontSize: "0.85rem",
+                    fontWeight: 700,
+                    cursor: isDeletingExam ? "not-allowed" : "pointer",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "6px",
+                    boxShadow: "0 4px 14px rgba(239, 68, 68, 0.35)",
+                    transition: "all 0.2s ease",
+                  }}
+                >
+                  {isDeletingExam ? (
+                    <>
+                      <Trash2 size={15} /> Deleting Exam...
+                    </>
+                  ) : (
+                    <>
+                      <Trash2 size={15} /> Delete Permanently
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Mobile Sticky Top App Bar (Visible on mobile/tablet <= 768px) */}
         <header className="mobile-app-bar">
