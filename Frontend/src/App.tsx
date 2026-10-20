@@ -1639,11 +1639,11 @@ export default function App() {
                   }}
                   title="Go to Home Dashboard"
                 >
-                  <Home size={14} style={{ color: "var(--primary, #28166f)", flexShrink: 0 }} />
+                  <Home size={13} className="breadcrumb-icon" aria-hidden="true" />
                   <span>SRCB EduAssess</span>
                 </button>
 
-                <ChevronRight size={14} className="breadcrumb-role-separator" style={{ color: "#94a3b8", flexShrink: 0 }} />
+                <ChevronRight size={12} className="breadcrumb-separator breadcrumb-role-separator" aria-hidden="true" />
 
                 <button
                   type="button"
@@ -1664,33 +1664,40 @@ export default function App() {
                   {currentUser.role.replace("-", " ")}
                 </button>
 
-                <ChevronRight size={14} style={{ color: "#94a3b8", flexShrink: 0 }} />
+                <ChevronRight size={12} className="breadcrumb-separator" aria-hidden="true" />
 
-                <button
-                  type="button"
-                  className="breadcrumb-current-btn"
-                  onClick={() => {
-                    if (inspectExam) setInspectExam(null);
-                    if (selectedExamId) {
-                      setSelectedExamId("");
-                      setLatestGradeResult(null);
-                    }
-                    handleTabSelect(activeTab);
-                    const container = document.querySelector(".main-content-reference");
-                    if (container) container.scrollTo({ top: 0, behavior: "smooth" });
-                    window.scrollTo({ top: 0, behavior: "smooth" });
-                  }}
-                  title={`Current Section: ${getActiveTabTitle(activeTab)} (click to view or scroll to top)`}
-                >
-                  {getActiveTabTitle(activeTab)}
-                </button>
+                {(() => {
+                  const hasSubCrumb = (activeTab === "exams" && Boolean(activeExam) && !inspectExam) || Boolean(inspectExam);
+                  return (
+                    <button
+                      type="button"
+                      className={hasSubCrumb ? "breadcrumb-btn" : "breadcrumb-current-btn"}
+                      aria-current={!hasSubCrumb ? "page" : undefined}
+                      onClick={() => {
+                        if (inspectExam) setInspectExam(null);
+                        if (selectedExamId) {
+                          setSelectedExamId("");
+                          setLatestGradeResult(null);
+                        }
+                        handleTabSelect(activeTab);
+                        const container = document.querySelector(".main-content-reference");
+                        if (container) container.scrollTo({ top: 0, behavior: "smooth" });
+                        window.scrollTo({ top: 0, behavior: "smooth" });
+                      }}
+                      title={hasSubCrumb ? `Return to ${getActiveTabTitle(activeTab)}` : `Current Section: ${getActiveTabTitle(activeTab)}`}
+                    >
+                      {getActiveTabTitle(activeTab)}
+                    </button>
+                  );
+                })()}
 
                 {activeTab === "exams" && activeExam && !inspectExam && (
                   <>
-                    <ChevronRight size={14} style={{ color: "#94a3b8", flexShrink: 0 }} />
+                    <ChevronRight size={12} className="breadcrumb-separator" aria-hidden="true" />
                     <button
                       type="button"
-                      className="breadcrumb-sub-badge"
+                      className="breadcrumb-current-btn breadcrumb-sub-item breadcrumb-sub-badge"
+                      aria-current="page"
                       title={`Active Exam Grading Studio: ${activeExam.name}`}
                       onClick={() => {
                         const container = document.querySelector(".main-content-reference");
@@ -1698,7 +1705,7 @@ export default function App() {
                         window.scrollTo({ top: 0, behavior: "smooth" });
                       }}
                     >
-                      <BookOpen size={13} style={{ color: "var(--primary, #28166f)", flexShrink: 0 }} />
+                      <BookOpen size={12} className="breadcrumb-icon" aria-hidden="true" />
                       <span>{activeExam.name}</span>
                     </button>
                   </>
@@ -1706,10 +1713,11 @@ export default function App() {
 
                 {inspectExam && (
                   <>
-                    <ChevronRight size={14} style={{ color: "#94a3b8", flexShrink: 0 }} />
+                    <ChevronRight size={12} className="breadcrumb-separator" aria-hidden="true" />
                     <button
                       type="button"
-                      className="breadcrumb-sub-badge"
+                      className="breadcrumb-current-btn breadcrumb-sub-item breadcrumb-sub-badge"
+                      aria-current="page"
                       title={`Inspecting: ${inspectExam.name}`}
                       onClick={() => {
                         const container = document.querySelector(".main-content-reference");
@@ -1717,7 +1725,7 @@ export default function App() {
                         window.scrollTo({ top: 0, behavior: "smooth" });
                       }}
                     >
-                      <Eye size={13} style={{ color: "var(--primary, #28166f)", flexShrink: 0 }} />
+                      <Eye size={12} className="breadcrumb-icon" aria-hidden="true" />
                       <span>{inspectExam.course_code ? `${inspectExam.course_code} Details` : inspectExam.name}</span>
                     </button>
                   </>

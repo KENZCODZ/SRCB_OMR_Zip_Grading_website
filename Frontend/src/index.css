@@ -3408,133 +3408,131 @@ input.login-minimal-input.with-toggle,
   min-width: 0;
 }
 
-/* Header Breadcrumbs */
+/* Header Breadcrumbs — Windows Settings Minimalist Style */
 .header-breadcrumbs {
   display: inline-flex;
   align-items: center;
-  gap: 0.4rem;
-  font-size: 0.9rem;
-  background: #ffffff;
-  padding: 0.35rem 0.75rem;
-  border-radius: 10px;
-  border: 1px solid #e2e8f0;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+  gap: 2px;
+  font-size: 0.825rem;
+  line-height: 1.35;
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  padding: 0;
+  margin: 0;
   flex-wrap: wrap;
 }
 
-.breadcrumb-btn {
+/* Base Breadcrumb Item Button */
+.breadcrumb-btn,
+.breadcrumb-role-btn,
+.breadcrumb-current-btn,
+.breadcrumb-sub-item,
+.breadcrumb-sub-badge {
   display: inline-flex;
   align-items: center;
   gap: 0.35rem;
   background: transparent;
   border: none;
-  padding: 0.22rem 0.5rem;
-  border-radius: 7px;
+  margin: 0;
+  padding: 0.2rem 0.45rem;
+  border-radius: 4px;
+  font-size: 0.825rem;
+  font-family: inherit;
+  font-weight: 500;
   color: #64748b;
-  font-size: 0.88rem;
+  cursor: pointer;
+  transition: background-color 0.12s cubic-bezier(0.4, 0, 0.2, 1),
+              color 0.12s cubic-bezier(0.4, 0, 0.2, 1);
+  line-height: 1.35;
+  text-decoration: none;
+  white-space: nowrap;
+  box-sizing: border-box;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Ancestor Hover & Active (Windows 11 Fluent subtle tint) */
+.breadcrumb-btn:hover,
+.breadcrumb-role-btn:hover {
+  color: #0f172a;
+  background-color: rgba(15, 23, 42, 0.05);
+}
+
+.breadcrumb-btn:active,
+.breadcrumb-role-btn:active {
+  background-color: rgba(15, 23, 42, 0.09);
+  transform: scale(0.985);
+}
+
+/* Breadcrumb Icons */
+.breadcrumb-icon {
+  flex-shrink: 0;
+  color: #64748b;
+  transition: color 0.12s ease;
+}
+
+.breadcrumb-btn:hover .breadcrumb-icon,
+.breadcrumb-current-btn .breadcrumb-icon,
+.breadcrumb-sub-item .breadcrumb-icon {
+  color: var(--primary, #28166f);
+}
+
+/* Role Segment: sleek minimalist breadcrumb item matching Windows hierarchy */
+.breadcrumb-role-btn {
+  text-transform: capitalize;
+}
+
+/* Current / Terminal Leaf Crumb */
+.breadcrumb-current-btn {
+  color: #0f172a;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.16s ease;
-  line-height: 1.3;
-  text-decoration: none;
-}
-
-.breadcrumb-btn:hover {
-  color: var(--primary, #28166f);
-  background: rgba(40, 22, 111, 0.07);
-}
-
-.breadcrumb-btn:focus-visible {
-  outline: 2px solid var(--primary, #28166f);
-  outline-offset: 1px;
-}
-
-.breadcrumb-btn:active {
-  transform: scale(0.97);
-}
-
-.breadcrumb-role-btn {
-  display: inline-flex;
-  align-items: center;
-  background: var(--primary-light-surface, #f5f3ff);
-  color: var(--primary, #28166f);
-  border: 1px solid var(--primary-light-border, #ddd6fe);
-  border-radius: 6px;
-  padding: 0.15rem 0.55rem;
-  font-size: 0.8rem;
-  font-weight: 700;
-  text-transform: capitalize;
-  cursor: pointer;
-  transition: all 0.18s ease;
-  line-height: 1.3;
-}
-
-.breadcrumb-role-btn:hover {
-  background: #ede9fe;
-  border-color: #c4b5fd;
-  color: #1e1055;
-  transform: translateY(-1px);
-  box-shadow: 0 2px 5px rgba(40, 22, 111, 0.12);
-}
-
-.breadcrumb-role-btn:focus-visible {
-  outline: 2px solid var(--primary, #28166f);
-  outline-offset: 1px;
-}
-
-.breadcrumb-role-btn:active {
-  transform: translateY(0);
-}
-
-.breadcrumb-current-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.3rem;
-  background: transparent;
-  border: none;
-  padding: 0.22rem 0.5rem;
-  border-radius: 7px;
-  color: #0f172a;
-  font-size: 0.88rem;
-  font-weight: 800;
-  cursor: pointer;
-  transition: all 0.16s ease;
-  line-height: 1.3;
 }
 
 .breadcrumb-current-btn:hover {
-  color: var(--primary, #28166f);
-  background: rgba(40, 22, 111, 0.05);
-}
-
-.breadcrumb-current-btn:focus-visible {
-  outline: 2px solid var(--primary, #28166f);
-  outline-offset: 1px;
-}
-
-.breadcrumb-sub-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.3rem;
   color: #0f172a;
-  font-weight: 700;
-  font-size: 0.83rem;
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
-  padding: 0.18rem 0.55rem;
-  border-radius: 6px;
+  background-color: rgba(15, 23, 42, 0.04);
+}
+
+.breadcrumb-current-btn:active {
+  background-color: rgba(15, 23, 42, 0.08);
+}
+
+/* Sub-Item / Sub-Badge (Active Exam / Inspect Exam) */
+.breadcrumb-sub-item,
+.breadcrumb-sub-badge {
   max-width: 240px;
-  white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  cursor: pointer;
-  transition: all 0.16s ease;
+  white-space: nowrap;
+  color: #0f172a;
+  font-weight: 600;
 }
 
+.breadcrumb-sub-item:hover,
 .breadcrumb-sub-badge:hover {
-  background: #f1f5f9;
-  border-color: #cbd5e1;
-  color: var(--primary, #28166f);
+  color: #0f172a;
+  background-color: rgba(15, 23, 42, 0.04);
+}
+
+/* Minimalist Separator (Windows 11 Settings Chevron) */
+.breadcrumb-separator {
+  color: #94a3b8;
+  flex-shrink: 0;
+  margin: 0 1px;
+  pointer-events: none;
+  user-select: none;
+  opacity: 0.85;
+}
+
+/* Accessible Fluent Focus Ring */
+.breadcrumb-btn:focus-visible,
+.breadcrumb-role-btn:focus-visible,
+.breadcrumb-current-btn:focus-visible,
+.breadcrumb-sub-item:focus-visible,
+.breadcrumb-sub-badge:focus-visible {
+  outline: 2px solid var(--primary, #28166f);
+  outline-offset: 1px;
 }
 
 .reference-header-left h1 {
@@ -5071,7 +5069,7 @@ input.login-minimal-input.with-toggle,
     min-width: 0;
   }
 
-  /* Breadcrumbs: touch-scrollable single-line strip */
+  /* Breadcrumbs: touch-scrollable single-line minimalist strip */
   .header-breadcrumbs {
     display: flex !important;
     flex-wrap: nowrap !important;
@@ -5079,8 +5077,12 @@ input.login-minimal-input.with-toggle,
     -webkit-overflow-scrolling: touch !important;
     max-width: 100% !important;
     scrollbar-width: none !important;
-    font-size: 0.82rem !important;
-    padding: 0.3rem 0.6rem !important;
+    font-size: 0.8rem !important;
+    padding: 0.15rem 0 !important;
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    gap: 1px !important;
   }
 
   .header-breadcrumbs::-webkit-scrollbar {
@@ -5088,9 +5090,14 @@ input.login-minimal-input.with-toggle,
   }
 
   .breadcrumb-btn,
-  .breadcrumb-current {
+  .breadcrumb-current-btn,
+  .breadcrumb-current,
+  .breadcrumb-sub-item,
+  .breadcrumb-sub-badge {
     white-space: nowrap !important;
     flex-shrink: 0 !important;
+    font-size: 0.8rem !important;
+    padding: 0.18rem 0.35rem !important;
   }
 
   /* On mobile <= 768px, hide desktop reference header right actions */
