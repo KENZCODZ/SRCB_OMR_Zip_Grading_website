@@ -40,3 +40,25 @@ npm run dev
 ```
 
 → Web App running at: **http://localhost:5173** (auto-proxies API calls to :8000)
+
+---
+
+# Terminal 3 — Live OMR Camera Feed (OpenCV & Python)
+
+Run the real-time Augmented Reality OMR webcam grader:
+
+```powershell
+cd omr_engine
+.\.venv\Scripts\python.exe live_omr.py
+```
+
+*Options:*
+- `.\.venv\Scripts\python.exe live_omr.py --camera 0` (select webcam index)
+- `.\.venv\Scripts\python.exe live_omr.py --exam-id <EXAM_UUID>` (grade against a specific exam in MySQL)
+- `.\.venv\Scripts\python.exe live_omr.py --demo` (run with 50-item demo key)
+
+*Interactive Keyboard Controls in Video Window:*
+- **S** — Save graded sheet submission to Database & snapshot to disk
+- **C** — Freeze / unfreeze current camera frame
+- **R** — Reset corner tracking buffer
+- **Q / ESC** — Exit live feed

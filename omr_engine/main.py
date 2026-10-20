@@ -678,6 +678,7 @@ async def grade_exam_sheet(
         "answers": results["answers"],
         "template_type": results.get("template_type"),
         "overlay_image": results["overlay_base64"],
+        "ar_overlay_image": results.get("ar_overlay_base64"),
     }
 
 

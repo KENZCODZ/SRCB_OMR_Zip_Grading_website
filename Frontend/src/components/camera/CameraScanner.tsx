@@ -23,6 +23,59 @@ import {
 } from 'lucide-react';
 import { useLiveOmrScanner, type CornerPoint, type LiveScanResult } from '../../hooks/useLiveOmrScanner';
 import { LiveScanOverlay } from './LiveScanOverlay';
+import { OMR_TEMPLATE_COORDINATES, EDUASSESS_TEMPLATE_COORDINATES } from '../../data/omrCoordinates';
+
+interface Point2D {
+  x: number;
+  y: number;
+}
+
+/**
+ * Creates a 2D projective mapping function from standard sheet space (850x1100)
+ * to screen canvas quadrilateral [TL, TR, BR, BL] (Paul Heckbert projective mapping).
+ */
+function createSheetToCanvasProjector(
+  quad: [Point2D, Point2D, Point2D, Point2D]
+): (u: number, v: number) => Point2D {
+  const [d0, d1, d2, d3] = quad;
+
+  const dx1 = d1.x - d2.x;
+  const dx2 = d3.x - d2.x;
+  const sumX = d0.x - d1.x + d2.x - d3.x;
+
+  const dy1 = d1.y - d2.y;
+  const dy2 = d3.y - d2.y;
+  const sumY = d0.y - d1.y + d2.y - d3.y;
+
+  const denom = dx1 * dy2 - dy1 * dx2;
+  const isAffine = Math.abs(denom) < 1e-7 || (Math.abs(sumX) < 1e-4 && Math.abs(sumY) < 1e-4);
+
+  let g = 0, h = 0, a = 0, b = 0, c = d0.x, d = 0, e = 0, f = d0.y;
+
+  if (isAffine) {
+    a = d1.x - d0.x;
+    b = d3.x - d0.x;
+    d = d1.y - d0.y;
+    e = d3.y - d0.y;
+  } else {
+    g = (sumX * dy2 - sumY * dx2) / denom;
+    h = (dx1 * sumY - dy1 * sumX) / denom;
+    a = d1.x - d0.x + g * d1.x;
+    b = d3.x - d0.x + h * d3.x;
+    d = d1.y - d0.y + g * d1.y;
+    e = d3.y - d0.y + h * d3.y;
+  }
+
+  return (u: number, v: number): Point2D => {
+    const s = (u - 50) / 750;
+    const t = (v - 50) / 1000;
+    const w = g * s + h * t + 1;
+    return {
+      x: (a * s + b * t + c) / w,
+      y: (d * s + e * t + f) / w,
+    };
+  };
+}
 
 export interface CameraScannerProps {
   onCapture: (file: File) => Promise<void> | void;
@@ -32,6 +85,10 @@ export interface CameraScannerProps {
   title?: string;
   subtitle?: string;
   defaultMode?: 'auto-lock' | 'single-shot';
+  answerKey?: Record<string, string>;
+  examName?: string;
+  passingScore?: number;
+  numItems?: number;
 }
 
 export const CameraScanner: React.FC<CameraScannerProps> = ({
@@ -42,6 +99,10 @@ export const CameraScanner: React.FC<CameraScannerProps> = ({
   title = 'OMR Grading Studio',
   subtitle = 'Align the student answer sheet inside the frame for automatic bubble detection.',
   defaultMode = 'auto-lock',
+  answerKey,
+  examName,
+  passingScore,
+  numItems,
 }) => {
 
   const [previewCaptured, setPreviewCaptured] = useState<{ file: File; url: string } | null>(null);
@@ -76,6 +137,7 @@ export const CameraScanner: React.FC<CameraScannerProps> = ({
     scanMode,
     setScanMode,
     isSheetDetected,
+    isSheetStable,
     normalizedCorners,
     isBlurry,
     questionsState,
@@ -84,6 +146,12 @@ export const CameraScanner: React.FC<CameraScannerProps> = ({
     needsReviewList,
     totalQuestions,
     lockedPercentage,
+    liveScore,
+    livePercentage,
+    isPassing,
+    passingThreshold,
+    hasAnswerKey,
+    evaluatorStats,
     isSmartDetectionAvailable,
     hasTorch,
     isTorchOn,
@@ -94,13 +162,17 @@ export const CameraScanner: React.FC<CameraScannerProps> = ({
     toggleTorch,
     switchCamera,
     resetVoteBuffer,
+    retake,
     finalizeAndSubmit,
   } = useLiveOmrScanner({
     onCapture: handleCapturedImage,
     initialMode: defaultMode,
-    lockThresholdConsecutive: 4,
+    lockThresholdConsecutive: 3,
     minLockThresholdToFinalizeOnRemoval: 5,
-    blurThreshold: 45,
+    blurThreshold: 35,
+    answerKey,
+    numItems,
+    passingScore,
   });
 
   // Start camera on mount
@@ -169,12 +241,29 @@ export const CameraScanner: React.FC<CameraScannerProps> = ({
         return;
       }
 
-      // 1. Draw Clean Subtle Alignment Frame
-      const guidePadding = Math.min(w, h) * 0.08;
-      const guideW = w - guidePadding * 2;
-      const guideH = h - guidePadding * 2;
-      const guideX = guidePadding;
-      const guideY = guidePadding;
+      // Compute exact object-fit: cover scaling and cropping to map video coordinates to canvas
+      const vW = video.videoWidth || 640;
+      const vH = video.videoHeight || 480;
+      const scale = Math.max(w / vW, h / vH);
+      const renderW = vW * scale;
+      const renderH = vH * scale;
+      const offsetX = (w - renderW) / 2;
+      const offsetY = (h - renderH) / 2;
+
+      const toCanvasX = (nx: number) => nx * renderW + offsetX;
+      const toCanvasY = (ny: number) => ny * renderH + offsetY;
+
+      // 1. Draw Clean Subtle Alignment Frame (Standard 8.5:11 sheet aspect ratio)
+      const maxGuideH = h * 0.84;
+      const maxGuideW = w * 0.84;
+      let guideW = maxGuideH * 0.772;
+      let guideH = maxGuideH;
+      if (guideW > maxGuideW) {
+        guideW = maxGuideW;
+        guideH = guideW / 0.772;
+      }
+      const guideX = (w - guideW) / 2;
+      const guideY = (h - guideH) / 2;
 
       const reticleLen = 32;
       ctx.lineWidth = 2.5;
@@ -224,17 +313,21 @@ export const CameraScanner: React.FC<CameraScannerProps> = ({
       // 2. Draw Detected Sheet Quad with clean "✓ Sheet Locked" state
       if (normalizedCorners && normalizedCorners.length === 4) {
         const pixelPoints: CornerPoint[] = normalizedCorners.map((p) => ({
-          x: p.x * w,
-          y: p.y * h,
+          x: toCanvasX(p.x),
+          y: toCanvasY(p.y),
         }));
 
-        const isFullyLocked = lockedQuestionsCount >= 50;
-        const strokeColor = isFullyLocked ? '#10b981' : '#38bdf8';
+        const isFullyLocked = lockedQuestionsCount >= totalQuestions;
+        const strokeColor = hasAnswerKey
+          ? (isPassing ? '#10b981' : isSheetStable ? '#059669' : '#f59e0b')
+          : (isFullyLocked ? '#10b981' : isSheetStable ? '#059669' : '#38bdf8');
 
         ctx.save();
         ctx.strokeStyle = strokeColor;
         ctx.lineWidth = 2.5;
-        ctx.fillStyle = isFullyLocked ? 'rgba(16, 185, 129, 0.12)' : 'rgba(56, 189, 248, 0.08)';
+        ctx.fillStyle = hasAnswerKey
+          ? (isPassing ? 'rgba(16, 185, 129, 0.10)' : isSheetStable ? 'rgba(5, 150, 105, 0.09)' : 'rgba(245, 158, 11, 0.08)')
+          : (isFullyLocked ? 'rgba(16, 185, 129, 0.10)' : isSheetStable ? 'rgba(5, 150, 105, 0.09)' : 'rgba(56, 189, 248, 0.08)');
 
         ctx.beginPath();
         ctx.moveTo(pixelPoints[0].x, pixelPoints[0].y);
@@ -256,27 +349,160 @@ export const CameraScanner: React.FC<CameraScannerProps> = ({
           ctx.stroke();
         });
 
-        // Clean state badge: "✓ Sheet Locked"
-        const badgeText = isFullyLocked ? '✓ 100% Locked' : '✓ Sheet Locked';
-        ctx.font = 'bold 12px Inter, -apple-system, sans-serif';
-        const textMetrics = ctx.measureText(badgeText);
-        const badgeW = textMetrics.width + 24;
-        const badgeH = 26;
+        // 3. Augmented Reality Live Bubble Projection (Inverse Perspective Transform)
+        const project = createSheetToCanvasProjector([
+          pixelPoints[0],
+          pixelPoints[1],
+          pixelPoints[2],
+          pixelPoints[3],
+        ]);
+        const sheetWidthPx = Math.hypot(pixelPoints[1].x - pixelPoints[0].x, pixelPoints[1].y - pixelPoints[0].y);
+        const scale = sheetWidthPx / 750;
 
-        // Position badge above top center of sheet
+        const isEduAssess = evaluatorStats?.layout === 'eduassess_6980';
+        const activeTemplate = isEduAssess ? EDUASSESS_TEMPLATE_COORDINATES : OMR_TEMPLATE_COORDINATES;
+        const questionCoords = activeTemplate.questions;
+        const targetTotal = totalQuestions || 50;
+
+        for (let q = 1; q <= targetTotal; q++) {
+          const qStr = String(q);
+          const qStatus = questionsState[qStr];
+          const selected = qStatus?.lockedAnswer || qStatus?.currentReading;
+          const correctAns = answerKey ? answerKey[qStr] : null;
+          const qOptions = questionCoords[qStr];
+          if (!qOptions) continue;
+
+          if (answerKey) {
+            if (selected && qOptions[selected]) {
+              const bubble = qOptions[selected];
+              const pt = project(bubble.cx, bubble.cy);
+              const rad = Math.max(3, Math.min(22, bubble.r * scale));
+
+              if (selected === correctAns) {
+                // Correct mark: Translucent green halo + solid green ring
+                ctx.save();
+                ctx.fillStyle = 'rgba(16, 185, 129, 0.40)';
+                ctx.strokeStyle = '#10b981';
+                ctx.lineWidth = 2.2;
+                ctx.beginPath();
+                ctx.arc(pt.x, pt.y, rad + 2.5, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.stroke();
+                ctx.restore();
+              } else {
+                // Wrong mark: Translucent red halo + solid red ring + small 'x'
+                ctx.save();
+                ctx.fillStyle = 'rgba(239, 68, 68, 0.45)';
+                ctx.strokeStyle = '#ef4444';
+                ctx.lineWidth = 2.2;
+                ctx.beginPath();
+                ctx.arc(pt.x, pt.y, rad + 2.5, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.stroke();
+
+                const xs = rad * 0.5;
+                ctx.beginPath();
+                ctx.moveTo(pt.x - xs, pt.y - xs);
+                ctx.lineTo(pt.x + xs, pt.y + xs);
+                ctx.moveTo(pt.x - xs, pt.y + xs);
+                ctx.lineTo(pt.x + xs, pt.y - xs);
+                ctx.stroke();
+                ctx.restore();
+
+                // Show correct key in dashed cyan
+                if (correctAns && qOptions[correctAns]) {
+                  const cBubble = qOptions[correctAns];
+                  const cPt = project(cBubble.cx, cBubble.cy);
+                  ctx.save();
+                  ctx.strokeStyle = '#06b6d4';
+                  ctx.lineWidth = 1.8;
+                  ctx.setLineDash([3, 3]);
+                  ctx.beginPath();
+                  ctx.arc(cPt.x, cPt.y, rad + 2.5, 0, Math.PI * 2);
+                  ctx.stroke();
+                  ctx.restore();
+                }
+              }
+            } else if (correctAns && qOptions[correctAns]) {
+              // Omitted mark: Dashed cyan ring around correct key
+              const cBubble = qOptions[correctAns];
+              const cPt = project(cBubble.cx, cBubble.cy);
+              const rad = Math.max(3, Math.min(22, cBubble.r * scale));
+              ctx.save();
+              ctx.strokeStyle = 'rgba(6, 182, 212, 0.7)';
+              ctx.lineWidth = 1.5;
+              ctx.setLineDash([2, 3]);
+              ctx.beginPath();
+              ctx.arc(cPt.x, cPt.y, rad + 2, 0, Math.PI * 2);
+              ctx.stroke();
+              ctx.restore();
+            }
+          } else if (selected && qOptions[selected]) {
+            // Unkeyed scan: highlight detected filled bubble in cyan
+            const bubble = qOptions[selected];
+            const pt = project(bubble.cx, bubble.cy);
+            const rad = Math.max(3, Math.min(22, bubble.r * scale));
+            ctx.save();
+            ctx.fillStyle = 'rgba(56, 189, 248, 0.35)';
+            ctx.strokeStyle = '#38bdf8';
+            ctx.lineWidth = 2.0;
+            ctx.beginPath();
+            ctx.arc(pt.x, pt.y, rad + 2, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.stroke();
+            ctx.restore();
+          }
+        }
+
+        // 4. Floating Augmented Reality Score HUD Banner
         const topCenterX = (pixelPoints[0].x + pixelPoints[1].x) / 2;
-        const topCenterY = Math.max(20, Math.min(pixelPoints[0].y, pixelPoints[1].y) - 18);
+        const topCenterY = Math.max(22, Math.min(pixelPoints[0].y, pixelPoints[1].y) - 20);
 
-        ctx.fillStyle = isFullyLocked ? '#059669' : '#0284c7';
-        ctx.beginPath();
-        ctx.roundRect(topCenterX - badgeW / 2, topCenterY - badgeH / 2, badgeW, badgeH, 6);
-        ctx.fill();
+        ctx.save();
+        if (hasAnswerKey) {
+          const passLabel = isPassing ? 'PASSED' : 'FAILING';
+          const bannerText = `Score: ${liveScore}/${totalQuestions} (${livePercentage}%) • ${passLabel}`;
+          const badgeBorderColor = isPassing ? '#10b981' : '#ef4444';
 
-        ctx.fillStyle = '#ffffff';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillText(badgeText, topCenterX, topCenterY);
+          ctx.font = 'bold 13px Inter, -apple-system, sans-serif';
+          const textMetrics = ctx.measureText(bannerText);
+          const badgeW = textMetrics.width + 30;
+          const badgeH = 28;
 
+          ctx.fillStyle = 'rgba(15, 23, 42, 0.90)';
+          ctx.beginPath();
+          ctx.roundRect(topCenterX - badgeW / 2, topCenterY - badgeH / 2, badgeW, badgeH, 6);
+          ctx.fill();
+
+          ctx.strokeStyle = badgeBorderColor;
+          ctx.lineWidth = 2;
+          ctx.stroke();
+
+          ctx.fillStyle = '#ffffff';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText(bannerText, topCenterX, topCenterY);
+        } else {
+          const badgeText = isFullyLocked
+            ? `✓ 100% Locked (${lockedQuestionsCount}/${totalQuestions})`
+            : isSheetStable
+            ? `✓ Sheet Stable & Locked • ${lockedQuestionsCount}/${totalQuestions}`
+            : `Aligning Sheet • ${lockedQuestionsCount}/${totalQuestions}`;
+          ctx.font = 'bold 12px Inter, -apple-system, sans-serif';
+          const textMetrics = ctx.measureText(badgeText);
+          const badgeW = textMetrics.width + 24;
+          const badgeH = 26;
+
+          ctx.fillStyle = isFullyLocked ? '#059669' : isSheetStable ? '#059669' : '#0284c7';
+          ctx.beginPath();
+          ctx.roundRect(topCenterX - badgeW / 2, topCenterY - badgeH / 2, badgeW, badgeH, 6);
+          ctx.fill();
+
+          ctx.fillStyle = '#ffffff';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText(badgeText, topCenterX, topCenterY);
+        }
         ctx.restore();
       }
 
@@ -288,7 +514,22 @@ export const CameraScanner: React.FC<CameraScannerProps> = ({
     return () => {
       cancelAnimationFrame(animId);
     };
-  }, [status, isSheetDetected, normalizedCorners, lockedQuestionsCount, previewCaptured, videoRef]);
+  }, [
+    status,
+    isSheetDetected,
+    isSheetStable,
+    normalizedCorners,
+    lockedQuestionsCount,
+    previewCaptured,
+    videoRef,
+    questionsState,
+    hasAnswerKey,
+    answerKey,
+    liveScore,
+    livePercentage,
+    isPassing,
+    totalQuestions,
+  ]);
 
   // Confirm and Submit Captured Image
   const handleConfirmSubmit = async () => {
@@ -304,15 +545,14 @@ export const CameraScanner: React.FC<CameraScannerProps> = ({
     }
   };
 
-  // Retake Image
+  // Retake Image (Keeps camera stream running smoothly without black flash)
   const handleRetake = () => {
     if (previewCaptured?.url) {
       URL.revokeObjectURL(previewCaptured.url);
     }
     setPreviewCaptured(null);
     setCountdownActive(null);
-    resetVoteBuffer();
-    startCamera();
+    retake();
   };
 
   return (
@@ -666,10 +906,19 @@ export const CameraScanner: React.FC<CameraScannerProps> = ({
               needsReviewList={needsReviewList}
               studentId={detectedStudentId}
               isSheetDetected={isSheetDetected}
+              isSheetStable={isSheetStable}
               isBlurry={isBlurry}
               onResetScan={resetVoteBuffer}
               onManualCapture={() => finalizeAndSubmit('manual')}
               isSubmitting={isSubmitting}
+              answerKey={answerKey}
+              examName={examName}
+              passingScore={passingScore}
+              liveScore={liveScore}
+              livePercentage={livePercentage}
+              isPassing={isPassing}
+              passingThreshold={passingThreshold}
+              evaluatorStats={evaluatorStats}
             />
           </div>
         </div>
