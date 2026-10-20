@@ -230,10 +230,11 @@ export const ItemAnalysisTable: React.FC<ItemAnalysisTableProps> = ({
           </button>
         </div>
 
-        <div style={{ maxHeight: '460px', overflowY: 'auto' }}>
+        <div style={{ maxHeight: '460px', overflowY: 'auto', overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
           <table
             style={{
               width: '100%',
+              minWidth: '780px',
               borderCollapse: 'collapse',
               fontSize: '0.82rem',
               textAlign: 'left',

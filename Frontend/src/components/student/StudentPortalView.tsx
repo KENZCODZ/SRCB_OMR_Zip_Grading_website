@@ -202,7 +202,7 @@ export const StudentPortalView: React.FC<StudentPortalViewProps> = ({
           boxShadow: "0 1px 3px rgba(0, 0, 0, 0.02)",
         }}
       >
-        <div style={{ position: "relative", minWidth: "240px", flex: 1, maxWidth: "400px" }}>
+        <div style={{ position: "relative", minWidth: "min(100%, 200px)", flex: 1, maxWidth: "400px" }}>
           <Search
             size={15}
             style={{

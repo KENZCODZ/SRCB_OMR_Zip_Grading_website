@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import {
+  LayoutDashboard,
   BarChart3,
   UploadCloud,
   History,
@@ -27,7 +28,6 @@ import {
   Activity,
   Menu,
   X,
-  Home,
   Eye,
   CheckCircle2,
   Key,
@@ -281,10 +281,29 @@ export default function App() {
     if (user?.role === "programme-head") return "academic-management";
     return "dashboard";
   });
+  const [navOrigin, setNavOrigin] = useState<"dashboard" | null>(null);
 
 
   // Mobile Sidebar State
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
+
+  // Lock body scroll and dismiss on Escape when mobile drawer is open
+  useEffect(() => {
+    if (!isMobileSidebarOpen) return;
+    const originalOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setIsMobileSidebarOpen(false);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.body.style.overflow = originalOverflow;
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [isMobileSidebarOpen]);
+
   const [selectedAuthUserId, setSelectedAuthUserId] = useState(mockUsers[0]?.id || "");
   const [loginEmail, setLoginEmail] = useState("");
   const [loginPassword, setLoginPassword] = useState("");
@@ -354,6 +373,8 @@ export default function App() {
   );
   const [isRosterModalOpen, setIsRosterModalOpen] = useState(false);
   const [isUserGuideOpen, setIsUserGuideOpen] = useState(false);
+  const [examToDelete, setExamToDelete] = useState<Exam | null>(null);
+  const [isDeletingExam, setIsDeletingExam] = useState(false);
 
   const [loadingExams, setLoadingExams] = useState(false);
   const [loadingSubmissions, setLoadingSubmissions] = useState(false);
@@ -501,23 +522,17 @@ export default function App() {
   >("all");
   const [isOverlayZoomOpen, setIsOverlayZoomOpen] = useState(false);
 
-  // Profile Menu State & Click-Outside Handling
-  const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
+  // Modals & Click-Outside Handling
   const [isSignOutModalOpen, setIsSignOutModalOpen] = useState(false);
-  const profileMenuRef = useRef<HTMLDivElement>(null);
+  const mobileNotificationRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (
-        profileMenuRef.current &&
-        !profileMenuRef.current.contains(event.target as Node)
-      ) {
-        setIsProfileMenuOpen(false);
-      }
-      if (
-        notificationMenuRef.current &&
-        !notificationMenuRef.current.contains(event.target as Node)
-      ) {
+      const target = event.target as Node;
+      const isInsideNotification =
+        (notificationMenuRef.current && notificationMenuRef.current.contains(target)) ||
+        (mobileNotificationRef.current && mobileNotificationRef.current.contains(target));
+      if (!isInsideNotification) {
         setIsNotificationMenuOpen(false);
       }
     };
@@ -792,25 +807,36 @@ export default function App() {
     }
   };
 
-  const handleDeleteExam = async (examId: string) => {
-    if (
-      !window.confirm(
-        "Are you sure you want to delete this exam and all its grading submissions? This cannot be undone.",
-      )
-    ) {
-      return;
+  const handleDeleteExam = (examId: string) => {
+    const target = exams.find((e) => e.id === examId);
+    if (target) {
+      setExamToDelete(target);
+    } else {
+      setExamToDelete({
+        id: examId,
+        name: "Selected Examination",
+        answer_key: {},
+        created_at: new Date().toISOString(),
+      });
     }
+  };
+
+  const confirmDeleteExam = async () => {
+    if (!examToDelete) return;
+    setIsDeletingExam(true);
     try {
-      await deleteExam(examId);
-      addToast("success", "Exam and its submissions deleted successfully.");
+      await deleteExam(examToDelete.id);
+      addToast("success", `Exam "${examToDelete.name}" and its submissions deleted successfully.`);
 
       setSelectedExamId((prev) => {
-        if (prev === examId) {
-          const remaining = exams.filter((e) => e.id !== examId);
+        if (prev === examToDelete.id) {
+          const remaining = exams.filter((e) => e.id !== examToDelete.id);
           return remaining.length > 0 ? remaining[0].id : "";
         }
         return prev;
       });
+
+      setExamToDelete(null);
 
       await Promise.all([
         loadExams(true),
@@ -819,6 +845,8 @@ export default function App() {
       ]);
     } catch (err: any) {
       addToast("error", err.message || "Failed to delete exam.");
+    } finally {
+      setIsDeletingExam(false);
     }
   };
 
@@ -1195,6 +1223,11 @@ export default function App() {
     ];
   })();
 
+  const homeTab: AppTab =
+    currentUser?.role === "programme-head"
+      ? "academic-management"
+      : "dashboard";
+
   const handleTabSelect = (tab: AppTab) => {
     const target = navigationItems.some((item) => item.key === tab)
       ? tab
@@ -1214,61 +1247,65 @@ export default function App() {
     return (cleaned || name).slice(0, 2).toUpperCase();
   };
 
-  const getDashboardDisplayName = (user: AuthUser | null) => {
-    if (!user) return "Dashboard";
-    if (user.role === "admin") return "System Administrator Dashboard";
-    const name = user.name.trim();
-    return name.endsWith("s") || name.endsWith("S")
-      ? `${name}' Dashboard`
-      : `${name}'s Dashboard`;
-  };
-
-  const getActiveTabTitle = (tab: AppTab) => {
+  const getBreadcrumbTabLabel = (tab: AppTab): string => {
     switch (tab) {
       case "dashboard":
-        return currentUser?.role === "dean"
-          ? "Dashboard"
-          : getDashboardDisplayName(currentUser);
-      case "examinations":
+        return currentUser?.role === "student" ? "My Progress" : "Dashboard";
+      case "history":
+        return "Exam Records";
       case "exams":
-        return currentUser?.role === "teacher"
-          ? "Examinations & Grading Studio"
-          : "Examinations";
+      case "examinations":
+        return currentUser?.role === "student" ? "My Exam Records" : "Examinations";
       case "results-management":
       case "compiler":
-        return currentUser?.role === "teacher"
-          ? "Official Gradebook & Results"
-          : "Examination Results Management";
+        return "Gradebook";
+      case "item-analysis":
+        return "Item Analysis";
       case "quick-scan":
-        return "Quick OMR Scanner";
-      case "history":
-        return currentUser?.role === "teacher"
-          ? "Exam Records & Grading History"
-          : "Grading History";
+        return "Quick Scanner";
       case "academic-management":
-        return currentUser?.role === "dean"
-          ? "Departments"
-          : "Programme Overview";
+        return currentUser?.role === "dean" ? "Departments" : "Programme Overview";
       case "reports":
         return "Reports";
       case "progress-records":
-        return currentUser?.role === "dean"
-          ? "Records"
-          : "Progress & Records";
-      case "item-analysis":
-        return "Item Analysis";
-      case "user-management":
-        return "User Account Management";
+        return "Records";
       case "user-directory":
-        return currentUser?.role === "programme-head"
-          ? `${currentUser.programme || "BSIT"} Student Access`
-          : currentUser?.role === "dean"
-            ? "User Accounts Directory"
-            : "User Directory";
+        return currentUser?.role === "programme-head" ? "Student Access" : "User Directory";
       case "settings":
         return "Settings";
+      default: {
+        const item = navigationItems.find((n) => n.key === tab);
+        return item ? item.label : String(tab).replace("-", " ");
+      }
+    }
+  };
+
+  const getBreadcrumbTabIcon = (tab: AppTab) => {
+    switch (tab) {
+      case "dashboard":
+        return <LayoutDashboard size={13} className="breadcrumb-icon" aria-hidden="true" />;
+      case "history":
+        return <History size={13} className="breadcrumb-icon" aria-hidden="true" />;
+      case "exams":
+      case "examinations":
+        return <BookOpen size={13} className="breadcrumb-icon" aria-hidden="true" />;
+      case "results-management":
+      case "compiler":
+        return <Award size={13} className="breadcrumb-icon" aria-hidden="true" />;
+      case "item-analysis":
+        return <BarChart2 size={13} className="breadcrumb-icon" aria-hidden="true" />;
+      case "quick-scan":
+        return <Camera size={13} className="breadcrumb-icon" aria-hidden="true" />;
+      case "academic-management":
+        return <GraduationCap size={13} className="breadcrumb-icon" aria-hidden="true" />;
+      case "reports":
+        return <BarChart3 size={13} className="breadcrumb-icon" aria-hidden="true" />;
+      case "user-directory":
+        return <Users size={13} className="breadcrumb-icon" aria-hidden="true" />;
+      case "settings":
+        return <Sliders size={13} className="breadcrumb-icon" aria-hidden="true" />;
       default:
-        return "Dashboard";
+        return null;
     }
   };
 
@@ -1363,15 +1400,296 @@ export default function App() {
           }}
         />
 
-        {/* Mobile Hamburger Button */}
-        <button
-          type="button"
-          className="mobile-menu-btn"
-          onClick={() => setIsMobileSidebarOpen(true)}
-          aria-label="Open navigation menu"
-        >
-          <Menu size={24} />
-        </button>
+        {/* Custom Institutional Delete Exam Confirmation Modal */}
+        {examToDelete && (
+          <div
+            className="modal-overlay"
+            style={{
+              position: "fixed",
+              inset: 0,
+              background: "rgba(15, 23, 42, 0.72)",
+              backdropFilter: "blur(10px)",
+              WebkitBackdropFilter: "blur(10px)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              zIndex: 100000,
+              padding: "1rem",
+              animation: "modalFadeIn 0.18s ease-out",
+            }}
+            onClick={(e) => {
+              if (e.target === e.currentTarget && !isDeletingExam) {
+                setExamToDelete(null);
+              }
+            }}
+          >
+            <div
+              style={{
+                background: "#ffffff",
+                borderRadius: "18px",
+                maxWidth: "480px",
+                width: "100%",
+                boxShadow: "0 25px 60px -15px rgba(15, 23, 42, 0.4), 0 0 0 1px rgba(239, 68, 68, 0.15)",
+                overflow: "hidden",
+                animation: "modalScaleIn 0.22s cubic-bezier(0.16, 1, 0.3, 1)",
+              }}
+            >
+              {/* Header Banner */}
+              <div
+                style={{
+                  padding: "1.25rem 1.5rem",
+                  background: "linear-gradient(135deg, #fef2f2 0%, #fff1f2 100%)",
+                  borderBottom: "1px solid #fee2e2",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                }}
+              >
+                <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                  <div
+                    style={{
+                      width: "42px",
+                      height: "42px",
+                      borderRadius: "12px",
+                      background: "#fee2e2",
+                      border: "1px solid #fecaca",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      color: "#ef4444",
+                    }}
+                  >
+                    <Trash2 size={20} />
+                  </div>
+                  <div>
+                    <h3 style={{ margin: 0, fontSize: "1.05rem", fontWeight: 800, color: "#991b1b" }}>
+                      Delete Examination
+                    </h3>
+                    <p style={{ margin: 0, fontSize: "0.76rem", color: "#b91c1c" }}>
+                      Destructive institutional action
+                    </p>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => !isDeletingExam && setExamToDelete(null)}
+                  disabled={isDeletingExam}
+                  style={{
+                    background: "none",
+                    border: "none",
+                    color: "#94a3b8",
+                    cursor: isDeletingExam ? "not-allowed" : "pointer",
+                    padding: "6px",
+                    borderRadius: "8px",
+                    display: "flex",
+                    alignItems: "center",
+                  }}
+                  title="Close"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+
+              {/* Body */}
+              <div style={{ padding: "1.4rem 1.5rem" }}>
+                <p style={{ margin: "0 0 1rem 0", fontSize: "0.88rem", color: "#334155", lineHeight: 1.5 }}>
+                  Are you sure you want to permanently delete this examination? All student submissions, grading answer keys, and audit logs will be permanently erased.
+                </p>
+
+                {/* Exam Details Card */}
+                <div
+                  style={{
+                    background: "#f8fafc",
+                    border: "1px solid #e2e8f0",
+                    borderRadius: "12px",
+                    padding: "1rem",
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: "0.5rem",
+                  }}
+                >
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "8px" }}>
+                    <span style={{ fontSize: "0.76rem", fontWeight: 700, color: "#64748b", textTransform: "uppercase" }}>
+                      Exam Subject
+                    </span>
+                    <span
+                      style={{
+                        fontSize: "0.72rem",
+                        fontWeight: 700,
+                        padding: "2px 8px",
+                        borderRadius: "9999px",
+                        background: "#ede9fe",
+                        color: "#4326b8",
+                      }}
+                    >
+                      {examToDelete.course_code || examToDelete.subject || "EXAM"}
+                    </span>
+                  </div>
+                  <div style={{ fontSize: "0.98rem", fontWeight: 800, color: "#0f172a" }}>
+                    {examToDelete.name}
+                  </div>
+                  <div style={{ display: "flex", alignItems: "center", gap: "14px", fontSize: "0.78rem", color: "#64748b", marginTop: "4px" }}>
+                    <span>
+                      Questions: <strong>{examToDelete.num_items || Object.keys(examToDelete.answer_key || {}).length || 50}</strong>
+                    </span>
+                    {(examToDelete.exam_type || examToDelete.semester) && (
+                      <span>
+                        Term: <strong>{examToDelete.exam_type || examToDelete.semester}</strong>
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                <div
+                  style={{
+                    marginTop: "1rem",
+                    padding: "0.75rem 0.9rem",
+                    borderRadius: "10px",
+                    background: "#fff1f2",
+                    border: "1px solid #ffe4e6",
+                    display: "flex",
+                    alignItems: "flex-start",
+                    gap: "8px",
+                    fontSize: "0.78rem",
+                    color: "#9f1239",
+                    lineHeight: 1.45,
+                  }}
+                >
+                  <AlertTriangle size={15} style={{ flexShrink: 0, marginTop: "2px" }} />
+                  <span>
+                    <strong>Warning:</strong> This cannot be undone. Any scanned sheets and verified student scores linked to this exam will be removed immediately.
+                  </span>
+                </div>
+              </div>
+
+              {/* Footer */}
+              <div
+                style={{
+                  padding: "1rem 1.5rem",
+                  background: "#f8fafc",
+                  borderTop: "1px solid #e2e8f0",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "flex-end",
+                  gap: "0.75rem",
+                }}
+              >
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={() => setExamToDelete(null)}
+                  disabled={isDeletingExam}
+                  style={{
+                    fontSize: "0.85rem",
+                    padding: "0.55rem 1.1rem",
+                    fontWeight: 600,
+                  }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={confirmDeleteExam}
+                  disabled={isDeletingExam}
+                  style={{
+                    background: isDeletingExam ? "#f87171" : "#ef4444",
+                    color: "#ffffff",
+                    border: "none",
+                    borderRadius: "10px",
+                    padding: "0.55rem 1.25rem",
+                    fontSize: "0.85rem",
+                    fontWeight: 700,
+                    cursor: isDeletingExam ? "not-allowed" : "pointer",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "6px",
+                    boxShadow: "0 4px 14px rgba(239, 68, 68, 0.35)",
+                    transition: "all 0.2s ease",
+                  }}
+                >
+                  {isDeletingExam ? (
+                    <>
+                      <Trash2 size={15} /> Deleting Exam...
+                    </>
+                  ) : (
+                    <>
+                      <Trash2 size={15} /> Delete Permanently
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Mobile Sticky Top App Bar (Visible on mobile/tablet <= 768px) */}
+        <header className="mobile-app-bar">
+          <div className="mobile-app-bar-left">
+            <button
+              type="button"
+              className="mobile-app-bar-hamburger"
+              onClick={() => {
+                setIsNotificationMenuOpen(false);
+                setIsMobileSidebarOpen(true);
+              }}
+              aria-label="Open navigation menu"
+            >
+              <Menu size={22} />
+            </button>
+            <div
+              className="mobile-app-bar-brand"
+              onClick={() => {
+                const homeTab: AppTab =
+                  currentUser.role === "programme-head"
+                    ? "academic-management"
+                    : "dashboard";
+                handleTabSelect(homeTab);
+              }}
+              style={{ cursor: "pointer" }}
+            >
+              <img
+                src="/srcb-logo.png"
+                alt="SRCB Logo"
+                className="mobile-app-bar-logo"
+              />
+              <span className="mobile-app-bar-title">SRCB EduAssess</span>
+            </div>
+          </div>
+
+          <div className="mobile-app-bar-right">
+            {/* Mobile Notification Bell */}
+            <div style={{ position: "relative" }} ref={mobileNotificationRef}>
+              <button
+                type="button"
+                className={`mobile-bar-icon-btn ${isNotificationMenuOpen ? "active" : ""}`}
+                onClick={() => {
+                  setIsMobileSidebarOpen(false);
+                  setIsNotificationMenuOpen((prev) => !prev);
+                }}
+                aria-label="Notifications"
+                title="Notifications & System Alerts"
+              >
+                <Bell size={18} />
+                {notifications.some((n) => !n.read) && (
+                  <span className="mobile-notif-dot" />
+                )}
+              </button>
+
+              <NotificationDropdown
+                isOpen={isNotificationMenuOpen}
+                onClose={() => setIsNotificationMenuOpen(false)}
+                notifications={notifications}
+                onMarkAsRead={handleMarkAsRead}
+                onMarkAllAsRead={handleMarkAllAsRead}
+                onClearAll={handleClearAll}
+                onDeleteNotification={handleDeleteNotification}
+                onSelectNotification={handleSelectNotification}
+              />
+            </div>
+
+          </div>
+        </header>
 
         {/* Mobile Sidebar Backdrop */}
         {isMobileSidebarOpen && (
@@ -1411,6 +1729,7 @@ export default function App() {
                   <div
                     className={`sidebar-curved-item ${isActive ? "active" : ""}`}
                     onClick={() => {
+                      setIsMobileSidebarOpen(false);
                       if (item.key === "user-guide") {
                         setIsUserGuideOpen(true);
                         return;
@@ -1419,6 +1738,7 @@ export default function App() {
                         setSelectedExamId("");
                         setLatestGradeResult(null);
                       }
+                      setNavOrigin(null);
                       handleTabSelect(item.key);
                     }}
                     style={{
@@ -1459,6 +1779,36 @@ export default function App() {
               );
             })}
           </ul>
+
+          {/* Sidebar User Profile & Log Out Footer */}
+          <div className="sidebar-profile-footer">
+            <div className="sidebar-user-card">
+              <div className="sidebar-user-avatar">
+                {getUserInitials(currentUser?.name)}
+              </div>
+              <div className="sidebar-user-info">
+                <span className="sidebar-user-name" title={currentUser?.name}>
+                  {currentUser?.name ?? "User"}
+                </span>
+                <span className="sidebar-user-role-badge">
+                  {currentUser?.role ? currentUser.role.replace("-", " ") : "User"}
+                </span>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              className="sidebar-signout-btn"
+              onClick={() => {
+                setIsMobileSidebarOpen(false);
+                setIsSignOutModalOpen(true);
+              }}
+              title="Sign out of SRCB EduAssess"
+            >
+              <LogOut size={16} />
+              <span>Log Out</span>
+            </button>
+          </div>
         </aside>
 
         {/* Main Content Area */}
@@ -1481,105 +1831,198 @@ export default function App() {
                 className="header-breadcrumbs"
                 aria-label="Breadcrumb"
               >
-                <button
-                  type="button"
-                  className="breadcrumb-btn"
-                  onClick={() => {
-                    if (inspectExam) setInspectExam(null);
-                    const homeTab: AppTab =
-                      currentUser.role === "programme-head"
-                        ? "academic-management"
-                        : "dashboard";
-                    handleTabSelect(homeTab);
+                {(() => {
+                  const homeLabel = currentUser.role === "student" ? "My Progress" : "Dashboard";
+                  const isCurrentTabHome = activeTab === homeTab;
+                  const fromDashboard = navOrigin === "dashboard" && !isCurrentTabHome;
+                  const currentTabLabel = getBreadcrumbTabLabel(activeTab);
+                  const currentTabIcon = getBreadcrumbTabIcon(activeTab);
+
+                  // Determine active sub-crumb (if any)
+                  let subCrumb: { label: string; icon: React.ReactNode; title: string } | null = null;
+                  if (inspectExam) {
+                    subCrumb = {
+                      label: inspectExam.course_code ? `${inspectExam.course_code} Details` : inspectExam.name,
+                      icon: <Eye size={12} className="breadcrumb-icon" aria-hidden="true" />,
+                      title: `Inspecting: ${inspectExam.name}`,
+                    };
+                  } else if ((activeTab === "exams" || activeTab === "examinations") && activeExam) {
+                    subCrumb = {
+                      label: activeExam.name,
+                      icon: <BookOpen size={12} className="breadcrumb-icon" aria-hidden="true" />,
+                      title: `Active Exam Grading Studio: ${activeExam.name}`,
+                    };
+                  } else if (
+                    (activeTab === "results-management" || activeTab === "compiler" || activeTab === "item-analysis") &&
+                    selectedExamId
+                  ) {
+                    const selExam = exams.find((e) => e.id === selectedExamId);
+                    if (selExam) {
+                      subCrumb = {
+                        label: selExam.name,
+                        icon: <Award size={12} className="breadcrumb-icon" aria-hidden="true" />,
+                        title: `Selected Exam: ${selExam.name}`,
+                      };
+                    }
+                  }
+
+                  const hasSubCrumb = Boolean(subCrumb);
+
+                  const scrollToTop = () => {
                     const container = document.querySelector(".main-content-reference");
                     if (container) container.scrollTo({ top: 0, behavior: "smooth" });
                     window.scrollTo({ top: 0, behavior: "smooth" });
-                  }}
-                  title="Go to Home Dashboard"
-                >
-                  <Home size={14} style={{ color: "var(--primary, #28166f)", flexShrink: 0 }} />
-                  <span>SRCB EduAssess</span>
-                </button>
+                  };
 
-                <ChevronRight size={14} style={{ color: "#94a3b8", flexShrink: 0 }} />
-
-                <button
-                  type="button"
-                  className="breadcrumb-role-btn"
-                  onClick={() => {
+                  const goToHome = () => {
+                    setNavOrigin(null);
                     if (inspectExam) setInspectExam(null);
-                    const homeTab: AppTab =
-                      currentUser.role === "programme-head"
-                        ? "academic-management"
-                        : "dashboard";
+                    if (selectedExamId) {
+                      setSelectedExamId("");
+                      setLatestGradeResult(null);
+                    }
                     handleTabSelect(homeTab);
-                    const container = document.querySelector(".main-content-reference");
-                    if (container) container.scrollTo({ top: 0, behavior: "smooth" });
-                    window.scrollTo({ top: 0, behavior: "smooth" });
-                  }}
-                  title={`Go to ${currentUser.role.replace("-", " ")} Home Overview`}
-                >
-                  {currentUser.role.replace("-", " ")}
-                </button>
+                    scrollToTop();
+                  };
 
-                <ChevronRight size={14} style={{ color: "#94a3b8", flexShrink: 0 }} />
-
-                <button
-                  type="button"
-                  className="breadcrumb-current-btn"
-                  onClick={() => {
+                  const goToCurrentTabList = () => {
                     if (inspectExam) setInspectExam(null);
                     if (selectedExamId) {
                       setSelectedExamId("");
                       setLatestGradeResult(null);
                     }
                     handleTabSelect(activeTab);
-                    const container = document.querySelector(".main-content-reference");
-                    if (container) container.scrollTo({ top: 0, behavior: "smooth" });
-                    window.scrollTo({ top: 0, behavior: "smooth" });
-                  }}
-                  title={`Current Section: ${getActiveTabTitle(activeTab)} (click to view or scroll to top)`}
-                >
-                  {getActiveTabTitle(activeTab)}
-                </button>
+                    scrollToTop();
+                  };
 
-                {activeTab === "exams" && activeExam && !inspectExam && (
-                  <>
-                    <ChevronRight size={14} style={{ color: "#94a3b8", flexShrink: 0 }} />
-                    <button
-                      type="button"
-                      className="breadcrumb-sub-badge"
-                      title={`Active Exam Grading Studio: ${activeExam.name}`}
-                      onClick={() => {
-                        const container = document.querySelector(".main-content-reference");
-                        if (container) container.scrollTo({ top: 0, behavior: "smooth" });
-                        window.scrollTo({ top: 0, behavior: "smooth" });
-                      }}
-                    >
-                      <BookOpen size={13} style={{ color: "var(--primary, #28166f)", flexShrink: 0 }} />
-                      <span>{activeExam.name}</span>
-                    </button>
-                  </>
-                )}
+                  // 1) When on Dashboard / Home Tab
+                  if (isCurrentTabHome) {
+                    if (!hasSubCrumb) {
+                      return (
+                        <button
+                          type="button"
+                          className="breadcrumb-current-btn"
+                          aria-current="page"
+                          onClick={scrollToTop}
+                          title={`Current Location: ${homeLabel}`}
+                        >
+                          <LayoutDashboard size={13} className="breadcrumb-icon" aria-hidden="true" />
+                          <span>{homeLabel}</span>
+                        </button>
+                      );
+                    }
 
-                {inspectExam && (
-                  <>
-                    <ChevronRight size={14} style={{ color: "#94a3b8", flexShrink: 0 }} />
-                    <button
-                      type="button"
-                      className="breadcrumb-sub-badge"
-                      title={`Inspecting: ${inspectExam.name}`}
-                      onClick={() => {
-                        const container = document.querySelector(".main-content-reference");
-                        if (container) container.scrollTo({ top: 0, behavior: "smooth" });
-                        window.scrollTo({ top: 0, behavior: "smooth" });
-                      }}
-                    >
-                      <Eye size={13} style={{ color: "var(--primary, #28166f)", flexShrink: 0 }} />
-                      <span>{inspectExam.course_code ? `${inspectExam.course_code} Details` : inspectExam.name}</span>
-                    </button>
-                  </>
-                )}
+                    return (
+                      <>
+                        <button
+                          type="button"
+                          className="breadcrumb-btn"
+                          onClick={goToHome}
+                          title={`Go to ${homeLabel}`}
+                        >
+                          <LayoutDashboard size={13} className="breadcrumb-icon" aria-hidden="true" />
+                          <span>{homeLabel}</span>
+                        </button>
+
+                        <ChevronRight size={12} className="breadcrumb-separator" aria-hidden="true" />
+
+                        {subCrumb && (
+                          <button
+                            type="button"
+                            className="breadcrumb-current-btn breadcrumb-sub-item breadcrumb-sub-badge"
+                            aria-current="page"
+                            onClick={scrollToTop}
+                            title={subCrumb.title}
+                          >
+                            {subCrumb.icon}
+                            <span>{subCrumb.label}</span>
+                          </button>
+                        )}
+                      </>
+                    );
+                  }
+
+                  // 2) If navigated from Dashboard function (e.g. clicked "View All Audit Records" in Dashboard)
+                  // Shows: Dashboard > Exam Records [> sub-crumb]
+                  if (fromDashboard) {
+                    return (
+                      <>
+                        <button
+                          type="button"
+                          className="breadcrumb-btn"
+                          onClick={goToHome}
+                          title={`Go to ${homeLabel}`}
+                        >
+                          <LayoutDashboard size={13} className="breadcrumb-icon" aria-hidden="true" />
+                          <span>{homeLabel}</span>
+                        </button>
+
+                        <ChevronRight size={12} className="breadcrumb-separator" aria-hidden="true" />
+
+                        <button
+                          type="button"
+                          className={hasSubCrumb ? "breadcrumb-btn" : "breadcrumb-current-btn"}
+                          aria-current={!hasSubCrumb ? "page" : undefined}
+                          onClick={hasSubCrumb ? goToCurrentTabList : scrollToTop}
+                          title={hasSubCrumb ? `Return to ${currentTabLabel}` : `Current Section: ${currentTabLabel}`}
+                        >
+                          {currentTabIcon}
+                          <span>{currentTabLabel}</span>
+                        </button>
+
+                        {hasSubCrumb && subCrumb && (
+                          <>
+                            <ChevronRight size={12} className="breadcrumb-separator" aria-hidden="true" />
+                            <button
+                              type="button"
+                              className="breadcrumb-current-btn breadcrumb-sub-item breadcrumb-sub-badge"
+                              aria-current="page"
+                              onClick={scrollToTop}
+                              title={subCrumb.title}
+                            >
+                              {subCrumb.icon}
+                              <span>{subCrumb.label}</span>
+                            </button>
+                          </>
+                        )}
+                      </>
+                    );
+                  }
+
+                  // 3) Default Sidebar Direct Navigation (e.g. user clicked "Gradebook" in sidebar)
+                  // Dashboard is NOT included!
+                  // Shows: Gradebook [> sub-crumb]
+                  return (
+                    <>
+                      <button
+                        type="button"
+                        className={hasSubCrumb ? "breadcrumb-btn" : "breadcrumb-current-btn"}
+                        aria-current={!hasSubCrumb ? "page" : undefined}
+                        onClick={hasSubCrumb ? goToCurrentTabList : scrollToTop}
+                        title={hasSubCrumb ? `Return to ${currentTabLabel}` : `Current Section: ${currentTabLabel}`}
+                      >
+                        {currentTabIcon}
+                        <span>{currentTabLabel}</span>
+                      </button>
+
+                      {hasSubCrumb && subCrumb && (
+                        <>
+                          <ChevronRight size={12} className="breadcrumb-separator" aria-hidden="true" />
+                          <button
+                            type="button"
+                            className="breadcrumb-current-btn breadcrumb-sub-item breadcrumb-sub-badge"
+                            aria-current="page"
+                            onClick={scrollToTop}
+                            title={subCrumb.title}
+                          >
+                            {subCrumb.icon}
+                            <span>{subCrumb.label}</span>
+                          </button>
+                        </>
+                      )}
+                    </>
+                  );
+                })()}
               </nav>
             </div>
 
@@ -1628,65 +2071,6 @@ export default function App() {
                 />
               </div>
 
-              <div className="header-profile-container" ref={profileMenuRef}>
-                <div
-                  className={`header-user-profile ${isProfileMenuOpen ? "active" : ""}`}
-                  onClick={() => setIsProfileMenuOpen((prev) => !prev)}
-                  title="Account Profile & Sign Out"
-                >
-                  <div className="header-user-avatar">
-                    {getUserInitials(currentUser?.name)}
-                  </div>
-                  <div>
-                    <div className="header-user-name">
-                      {currentUser?.name ?? "Admin"}
-                    </div>
-                    <div className="header-user-role">
-                      {currentUser?.role.replace("-", " ") ?? "Administrator"}
-                    </div>
-                  </div>
-                  <ChevronDown
-                    size={14}
-                    style={{
-                      color: "#94a3b8",
-                      marginLeft: "2px",
-                      transform: isProfileMenuOpen ? "rotate(180deg)" : "rotate(0deg)",
-                      transition: "transform 0.2s ease",
-                    }}
-                  />
-                </div>
-
-                {isProfileMenuOpen && (
-                  <div className="header-profile-dropdown">
-                    <div className="profile-dropdown-header">
-                      <div className="profile-dropdown-avatar">
-                        {getUserInitials(currentUser?.name)}
-                      </div>
-                      <div className="profile-dropdown-info">
-                        <div className="profile-dropdown-name">{currentUser?.name}</div>
-                        <div className="profile-dropdown-email">{currentUser?.email}</div>
-                        <span className="profile-dropdown-role-badge">
-                          {currentUser?.role.replace("-", " ").toUpperCase()}
-                        </span>
-                      </div>
-                    </div>
-
-                    <div className="profile-dropdown-actions" style={{ padding: "0.5rem" }}>
-                      <button
-                        type="button"
-                        className="profile-dropdown-btn logout"
-                        onClick={() => {
-                          setIsProfileMenuOpen(false);
-                          setIsSignOutModalOpen(true);
-                        }}
-                      >
-                        <LogOut size={16} />
-                        <span>Sign Out</span>
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </div>
             </div>
           </div>
 
@@ -1701,8 +2085,10 @@ export default function App() {
               onSelectSubmission={viewSubmissionDetails}
               onInspectExam={(exam) => setInspectExam(exam)}
               addToast={addToast}
-              formatDate={formatDate}
-              onNavigateTab={(tab) => handleTabSelect(tab as AppTab)}
+              onNavigateTab={(tab) => {
+                setNavOrigin("dashboard");
+                handleTabSelect(tab as AppTab);
+              }}
             />
           )}
 

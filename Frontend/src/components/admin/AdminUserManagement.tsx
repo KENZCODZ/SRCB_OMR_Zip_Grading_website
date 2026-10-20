@@ -29,6 +29,7 @@ import {
   ArrowUpDown,
   RotateCcw,
   BookOpen,
+  Copy,
 } from "lucide-react";
 import * as XLSX from "xlsx";
 import type { AuthUser, PendingUser } from "../../types";
@@ -174,6 +175,39 @@ export default function AdminUserManagement({
   const [department, setDepartment] = useState("College of Computing Studies");
   const [idSuffix, setIdSuffix] = useState("");
   const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  // Custom Modal States (Institutional UI replacing browser-native dialogs)
+  const [userToDelete, setUserToDelete] = useState<{
+    id: string;
+    name: string;
+    email?: string;
+    role?: string;
+    student_id?: string;
+  } | null>(null);
+
+  const [createdAccountModal, setCreatedAccountModal] = useState<{
+    name: string;
+    email: string;
+    password: string;
+    role: string;
+    programme?: string;
+    department?: string;
+    student_id?: string;
+  } | null>(null);
+  const [showCreatedPassword, setShowCreatedPassword] = useState(false);
+  const [copiedField, setCopiedField] = useState<string | null>(null);
+
+  const [isBatchEnrollModalOpen, setIsBatchEnrollModalOpen] = useState(false);
+  const [isClearBatchModalOpen, setIsClearBatchModalOpen] = useState(false);
+
+  const copyToClipboard = (text: string, fieldId: string) => {
+    if (!text) return;
+    navigator.clipboard.writeText(text);
+    setCopiedField(fieldId);
+    setTimeout(() => {
+      setCopiedField(null);
+    }, 2000);
+  };
 
   // Bulk Enrollment State
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -345,6 +379,17 @@ export default function AdminUserManagement({
 
       addToast("success", res.message || `Successfully created ${targetRole} account for ${cleanFullName}.`);
 
+      // Display Institutional Credentials Modal with 1-click Copy
+      setCreatedAccountModal({
+        name: cleanFullName,
+        email: cleanEmail,
+        password: cleanPass,
+        role: targetRole,
+        programme,
+        department,
+        student_id: finalId || undefined,
+      });
+
       // Reset form
       setFirstName("");
       setMiddleName("");
@@ -364,16 +409,20 @@ export default function AdminUserManagement({
     }
   };
 
-  const handleDeleteUser = async (userId: string, userName: string) => {
-    if (!window.confirm(`Are you sure you want to delete the account for "${userName}"?`)) {
-      return;
-    }
+  const handleOpenDeleteUser = (user: { id: string; name: string; email?: string; role?: string; student_id?: string }) => {
+    setUserToDelete(user);
+  };
+
+  const handleConfirmDeleteUser = async () => {
+    if (!userToDelete) return;
+    const { id: userId, name: userName } = userToDelete;
 
     setDeletingId(userId);
     try {
       await deleteUser(userId);
       addToast("success", `Account for ${userName} has been removed.`);
       setUsers((prev) => prev.filter((u) => u.id !== userId));
+      setUserToDelete(null);
     } catch (err: any) {
       addToast("error", err.message || "Failed to delete user account.");
     } finally {
@@ -578,18 +627,28 @@ export default function AdminUserManagement({
     setParsedStudents((prev) => prev.filter((r) => r.id !== rowId));
   };
 
-  const handleExecuteBatchEnrollment = async () => {
+  const handleRequestBatchEnrollment = () => {
     const readyList = parsedStudents.filter((s) => s.status === "ready");
     if (readyList.length === 0) {
       addToast("error", "No valid students are ready for enrollment.");
       return;
     }
+    setIsBatchEnrollModalOpen(true);
+  };
 
-    if (
-      !window.confirm(
-        `Are you ready to enroll ${readyList.length} student accounts into the official institutional directory?`
-      )
-    ) {
+  const handleConfirmClearBatch = () => {
+    setParsedStudents([]);
+    setBulkFile(null);
+    setEnrolledSummary(null);
+    setIsClearBatchModalOpen(false);
+    addToast("info", "Staged enrollment batch cleared.");
+  };
+
+  const handleConfirmBatchEnrollment = async () => {
+    setIsBatchEnrollModalOpen(false);
+    const readyList = parsedStudents.filter((s) => s.status === "ready");
+    if (readyList.length === 0) {
+      addToast("error", "No valid students are ready for enrollment.");
       return;
     }
 
@@ -939,7 +998,15 @@ export default function AdminUserManagement({
                     Full Legal Name <span style={{ color: "#ef4444" }}>*</span>
                   </label>
 
-                  <div style={{ display: "grid", gridTemplateColumns: (targetRole === "teacher" || targetRole === "programme-head") ? "90px 1fr 1fr" : "1fr 1fr", gap: "0.5rem", marginBottom: "0.5rem" }}>
+                  <div
+                    className="admin-name-fields-grid"
+                    style={{
+                      gridTemplateColumns:
+                        targetRole === "teacher" || targetRole === "programme-head"
+                          ? undefined
+                          : "1fr 1fr",
+                    }}
+                  >
                     {(targetRole === "teacher" || targetRole === "programme-head") && (
                       <select
                         className="input"
@@ -975,7 +1042,7 @@ export default function AdminUserManagement({
                     />
                   </div>
 
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 90px", gap: "0.5rem" }}>
+                  <div className="admin-name-subfields-grid">
                     <input
                       type="text"
                       className="input"
@@ -1673,9 +1740,13 @@ export default function AdminUserManagement({
                       type="button"
                       className="btn btn-secondary"
                       onClick={() => {
-                        setParsedStudents([]);
-                        setBulkFile(null);
-                        setEnrolledSummary(null);
+                        if (parsedStudents.length > 0) {
+                          setIsClearBatchModalOpen(true);
+                        } else {
+                          setParsedStudents([]);
+                          setBulkFile(null);
+                          setEnrolledSummary(null);
+                        }
                       }}
                       disabled={isEnrolling || isUploading}
                       style={{ fontSize: "0.82rem", padding: "0.45rem 0.85rem" }}
@@ -1686,7 +1757,7 @@ export default function AdminUserManagement({
                     <button
                       type="button"
                       className="btn btn-primary"
-                      onClick={handleExecuteBatchEnrollment}
+                      onClick={handleRequestBatchEnrollment}
                       disabled={isEnrolling || isUploading || validParsedCount === 0}
                       style={{
                         fontSize: "0.85rem",
@@ -2308,6 +2379,8 @@ export default function AdminUserManagement({
                   position: "relative",
                   maxHeight: "520px",
                   overflowY: "auto",
+                  overflowX: "auto",
+                  WebkitOverflowScrolling: "touch",
                   border: "1px solid #e2e8f0",
                   borderRadius: "12px",
                   background: "#ffffff",
@@ -2334,7 +2407,7 @@ export default function AdminUserManagement({
                     )}
                   </div>
                 ) : (
-                  <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.82rem" }}>
+                  <table style={{ width: "100%", minWidth: "680px", borderCollapse: "collapse", fontSize: "0.82rem" }}>
                     <thead>
                       <tr style={{ borderBottom: "1px solid #e2e8f0", background: "#f8fafc", textAlign: "left" }}>
                         <th style={{ padding: "0.75rem 1rem", color: "#475569" }}>User Profile</th>
@@ -2485,7 +2558,15 @@ export default function AdminUserManagement({
                                 {isCurrentUserAdmin && !isAdmin && (
                                   <button
                                     type="button"
-                                    onClick={() => handleDeleteUser(u.id, u.name)}
+                                    onClick={() =>
+                                      handleOpenDeleteUser({
+                                        id: u.id,
+                                        name: u.name,
+                                        email: u.email,
+                                        role: u.role,
+                                        student_id: u.student_id,
+                                      })
+                                    }
                                     disabled={deletingId === u.id}
                                     title="Permanently remove account"
                                     style={{
@@ -2513,6 +2594,988 @@ export default function AdminUserManagement({
                 )}
               </div>
             </SmoothContentTransition>
+          </div>
+        )}
+
+        {/* ========================================================= */}
+        {/* MODAL 1: DELETE USER ACCOUNT CONFIRMATION MODAL           */}
+        {/* ========================================================= */}
+        {userToDelete && (
+          <div
+            className="modal-overlay"
+            style={{
+              position: "fixed",
+              inset: 0,
+              background: "rgba(15, 23, 42, 0.72)",
+              backdropFilter: "blur(10px)",
+              WebkitBackdropFilter: "blur(10px)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              zIndex: 100000,
+              padding: "1rem",
+              animation: "modalFadeIn 0.18s ease-out",
+            }}
+            onClick={(e) => {
+              if (e.target === e.currentTarget && !deletingId) {
+                setUserToDelete(null);
+              }
+            }}
+          >
+            <div
+              style={{
+                background: "#ffffff",
+                borderRadius: "18px",
+                maxWidth: "460px",
+                width: "100%",
+                boxShadow: "0 25px 60px -15px rgba(15, 23, 42, 0.4), 0 0 0 1px rgba(239, 68, 68, 0.15)",
+                overflow: "hidden",
+                animation: "modalScaleIn 0.22s cubic-bezier(0.16, 1, 0.3, 1)",
+              }}
+            >
+              {/* Header */}
+              <div
+                style={{
+                  padding: "1.25rem 1.5rem",
+                  background: "linear-gradient(135deg, #fef2f2 0%, #fff1f2 100%)",
+                  borderBottom: "1px solid #fee2e2",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                }}
+              >
+                <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                  <div
+                    style={{
+                      width: "42px",
+                      height: "42px",
+                      borderRadius: "12px",
+                      background: "#fee2e2",
+                      border: "1px solid #fecaca",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      color: "#ef4444",
+                    }}
+                  >
+                    <Trash2 size={20} />
+                  </div>
+                  <div>
+                    <h3 style={{ margin: 0, fontSize: "1.05rem", fontWeight: 800, color: "#991b1b" }}>
+                      Delete User Account
+                    </h3>
+                    <p style={{ margin: 0, fontSize: "0.76rem", color: "#b91c1c" }}>
+                      Permanent Directory Removal
+                    </p>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => !deletingId && setUserToDelete(null)}
+                  disabled={Boolean(deletingId)}
+                  style={{
+                    background: "none",
+                    border: "none",
+                    color: "#94a3b8",
+                    cursor: deletingId ? "not-allowed" : "pointer",
+                    padding: "6px",
+                    borderRadius: "8px",
+                    display: "flex",
+                    alignItems: "center",
+                  }}
+                  title="Close"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+
+              {/* Body */}
+              <div style={{ padding: "1.4rem 1.5rem" }}>
+                <p style={{ margin: "0 0 1rem 0", fontSize: "0.88rem", color: "#334155", lineHeight: 1.5 }}>
+                  Are you sure you want to permanently delete this user account from the official directory?
+                </p>
+
+                {/* Target User Info Card */}
+                <div
+                  style={{
+                    background: "#f8fafc",
+                    border: "1px solid #e2e8f0",
+                    borderRadius: "12px",
+                    padding: "1rem",
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: "0.45rem",
+                  }}
+                >
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "8px" }}>
+                    <span style={{ fontSize: "0.76rem", fontWeight: 700, color: "#64748b", textTransform: "uppercase" }}>
+                      Target Account
+                    </span>
+                    <span
+                      style={{
+                        fontSize: "0.72rem",
+                        fontWeight: 700,
+                        padding: "2px 8px",
+                        borderRadius: "9999px",
+                        background: "#ede9fe",
+                        color: "#4326b8",
+                        textTransform: "capitalize",
+                      }}
+                    >
+                      {userToDelete.role || "user"}
+                    </span>
+                  </div>
+                  <div style={{ fontSize: "1rem", fontWeight: 800, color: "#0f172a" }}>
+                    {userToDelete.name}
+                  </div>
+                  {userToDelete.email && (
+                    <div style={{ fontSize: "0.8rem", color: "#64748b" }}>
+                      {userToDelete.email}
+                    </div>
+                  )}
+                  {userToDelete.student_id && (
+                    <div style={{ fontSize: "0.76rem", color: "#475569", fontWeight: 600 }}>
+                      ID Number: <strong>{userToDelete.student_id}</strong>
+                    </div>
+                  )}
+                </div>
+
+                <div
+                  style={{
+                    marginTop: "1rem",
+                    padding: "0.75rem 0.9rem",
+                    borderRadius: "10px",
+                    background: "#fff1f2",
+                    border: "1px solid #ffe4e6",
+                    display: "flex",
+                    alignItems: "flex-start",
+                    gap: "8px",
+                    fontSize: "0.78rem",
+                    color: "#9f1239",
+                    lineHeight: 1.45,
+                  }}
+                >
+                  <AlertTriangle size={15} style={{ flexShrink: 0, marginTop: "2px" }} />
+                  <span>
+                    <strong>Warning:</strong> This cannot be undone. All active sessions, student examination answers, and directory records associated with this account will be removed.
+                  </span>
+                </div>
+              </div>
+
+              {/* Footer */}
+              <div
+                style={{
+                  padding: "1rem 1.5rem",
+                  background: "#f8fafc",
+                  borderTop: "1px solid #e2e8f0",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "flex-end",
+                  gap: "0.75rem",
+                }}
+              >
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={() => setUserToDelete(null)}
+                  disabled={Boolean(deletingId)}
+                  style={{
+                    fontSize: "0.85rem",
+                    padding: "0.55rem 1.1rem",
+                    fontWeight: 600,
+                  }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleConfirmDeleteUser}
+                  disabled={Boolean(deletingId)}
+                  style={{
+                    background: deletingId ? "#f87171" : "#ef4444",
+                    color: "#ffffff",
+                    border: "none",
+                    borderRadius: "10px",
+                    padding: "0.55rem 1.25rem",
+                    fontSize: "0.85rem",
+                    fontWeight: 700,
+                    cursor: deletingId ? "not-allowed" : "pointer",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "6px",
+                    boxShadow: "0 4px 14px rgba(239, 68, 68, 0.35)",
+                    transition: "all 0.2s ease",
+                  }}
+                >
+                  {deletingId ? (
+                    <>
+                      <RefreshCw size={14} className="spin" /> Deleting...
+                    </>
+                  ) : (
+                    <>
+                      <Trash2 size={14} /> Delete Account
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ========================================================= */}
+        {/* MODAL 2: CREATED ACCOUNT PROVISIONED CREDENTIALS MODAL    */}
+        {/* ========================================================= */}
+        {createdAccountModal && (
+          <div
+            className="modal-overlay"
+            style={{
+              position: "fixed",
+              inset: 0,
+              background: "rgba(15, 23, 42, 0.72)",
+              backdropFilter: "blur(10px)",
+              WebkitBackdropFilter: "blur(10px)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              zIndex: 100000,
+              padding: "1rem",
+              animation: "modalFadeIn 0.18s ease-out",
+            }}
+            onClick={(e) => {
+              if (e.target === e.currentTarget) {
+                setCreatedAccountModal(null);
+                setShowCreatedPassword(false);
+              }
+            }}
+          >
+            <div
+              style={{
+                background: "#ffffff",
+                borderRadius: "18px",
+                maxWidth: "520px",
+                width: "100%",
+                boxShadow: "0 25px 60px -15px rgba(15, 23, 42, 0.4), 0 0 0 1px rgba(67, 38, 184, 0.15)",
+                overflow: "hidden",
+                animation: "modalScaleIn 0.22s cubic-bezier(0.16, 1, 0.3, 1)",
+              }}
+            >
+              {/* Header Banner */}
+              <div
+                style={{
+                  padding: "1.25rem 1.5rem",
+                  background: "linear-gradient(135deg, #ede9fe 0%, #e0e7ff 100%)",
+                  borderBottom: "1px solid #ddd6fe",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                }}
+              >
+                <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                  <div
+                    style={{
+                      width: "42px",
+                      height: "42px",
+                      borderRadius: "12px",
+                      background: "#ffffff",
+                      border: "1.5px solid #c4b5fd",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      color: "#4326b8",
+                      boxShadow: "0 4px 10px rgba(67, 38, 184, 0.15)",
+                    }}
+                  >
+                    <UserCheck size={22} />
+                  </div>
+                  <div>
+                    <h3 style={{ margin: 0, fontSize: "1.08rem", fontWeight: 800, color: "#1e0f59" }}>
+                      Account Provisioned
+                    </h3>
+                    <p style={{ margin: 0, fontSize: "0.76rem", color: "#4326b8", fontWeight: 600 }}>
+                      Institutional credentials active & ready
+                    </p>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCreatedAccountModal(null);
+                    setShowCreatedPassword(false);
+                  }}
+                  style={{
+                    background: "none",
+                    border: "none",
+                    color: "#6b7280",
+                    cursor: "pointer",
+                    padding: "6px",
+                    borderRadius: "8px",
+                    display: "flex",
+                    alignItems: "center",
+                  }}
+                  title="Close"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+
+              {/* Body */}
+              <div style={{ padding: "1.4rem 1.5rem" }}>
+                {/* Account Details Header Box */}
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    padding: "0.85rem 1rem",
+                    borderRadius: "12px",
+                    background: "#f8fafc",
+                    border: "1px solid #e2e8f0",
+                    marginBottom: "1rem",
+                  }}
+                >
+                  <div>
+                    <div style={{ fontSize: "1.05rem", fontWeight: 800, color: "#0f172a" }}>
+                      {createdAccountModal.name}
+                    </div>
+                    {(createdAccountModal.programme || createdAccountModal.department) && (
+                      <div style={{ fontSize: "0.76rem", color: "#64748b", marginTop: "2px" }}>
+                        {createdAccountModal.programme} {createdAccountModal.department && createdAccountModal.department !== "N/A" ? `• ${createdAccountModal.department}` : ""}
+                      </div>
+                    )}
+                  </div>
+                  <span
+                    style={{
+                      fontSize: "0.72rem",
+                      fontWeight: 800,
+                      padding: "4px 10px",
+                      borderRadius: "9999px",
+                      background: "#ede9fe",
+                      color: "#4326b8",
+                      textTransform: "uppercase",
+                      letterSpacing: "0.04em",
+                    }}
+                  >
+                    {createdAccountModal.role}
+                  </span>
+                </div>
+
+                {/* Credentials Copy List */}
+                <div style={{ display: "flex", flexDirection: "column", gap: "0.65rem" }}>
+                  {/* Email Field */}
+                  <div
+                    style={{
+                      background: "#ffffff",
+                      border: "1px solid #e2e8f0",
+                      borderRadius: "10px",
+                      padding: "0.6rem 0.85rem",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      gap: "8px",
+                    }}
+                  >
+                    <div style={{ minWidth: 0, flex: 1 }}>
+                      <div style={{ fontSize: "0.7rem", fontWeight: 700, color: "#64748b", textTransform: "uppercase" }}>
+                        Institutional Email
+                      </div>
+                      <div style={{ fontSize: "0.85rem", fontWeight: 700, color: "#0f172a", wordBreak: "break-all" }}>
+                        {createdAccountModal.email}
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => copyToClipboard(createdAccountModal.email, "email")}
+                      style={{
+                        background: copiedField === "email" ? "#ecfdf5" : "#f1f5f9",
+                        border: `1px solid ${copiedField === "email" ? "#a7f3d0" : "#cbd5e1"}`,
+                        color: copiedField === "email" ? "#059669" : "#475569",
+                        borderRadius: "8px",
+                        padding: "0.35rem 0.65rem",
+                        fontSize: "0.75rem",
+                        fontWeight: 700,
+                        cursor: "pointer",
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: "4px",
+                        flexShrink: 0,
+                      }}
+                    >
+                      {copiedField === "email" ? (
+                        <>
+                          <Check size={13} /> Copied!
+                        </>
+                      ) : (
+                        <>
+                          <Copy size={13} /> Copy
+                        </>
+                      )}
+                    </button>
+                  </div>
+
+                  {/* Password Field */}
+                  <div
+                    style={{
+                      background: "#ffffff",
+                      border: "1px solid #e2e8f0",
+                      borderRadius: "10px",
+                      padding: "0.6rem 0.85rem",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      gap: "8px",
+                    }}
+                  >
+                    <div style={{ minWidth: 0, flex: 1 }}>
+                      <div style={{ fontSize: "0.7rem", fontWeight: 700, color: "#64748b", textTransform: "uppercase" }}>
+                        Initial Password
+                      </div>
+                      <div style={{ fontSize: "0.88rem", fontWeight: 700, fontFamily: "monospace", color: "#0f172a" }}>
+                        {showCreatedPassword ? createdAccountModal.password : "••••••••••••"}
+                      </div>
+                    </div>
+                    <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                      <button
+                        type="button"
+                        onClick={() => setShowCreatedPassword(!showCreatedPassword)}
+                        style={{
+                          background: "#f8fafc",
+                          border: "1px solid #cbd5e1",
+                          color: "#64748b",
+                          borderRadius: "8px",
+                          padding: "0.35rem 0.5rem",
+                          fontSize: "0.75rem",
+                          cursor: "pointer",
+                          display: "inline-flex",
+                          alignItems: "center",
+                        }}
+                        title={showCreatedPassword ? "Hide password" : "Show password"}
+                      >
+                        {showCreatedPassword ? <EyeOff size={14} /> : <Eye size={14} />}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => copyToClipboard(createdAccountModal.password, "password")}
+                        style={{
+                          background: copiedField === "password" ? "#ecfdf5" : "#f1f5f9",
+                          border: `1px solid ${copiedField === "password" ? "#a7f3d0" : "#cbd5e1"}`,
+                          color: copiedField === "password" ? "#059669" : "#475569",
+                          borderRadius: "8px",
+                          padding: "0.35rem 0.65rem",
+                          fontSize: "0.75rem",
+                          fontWeight: 700,
+                          cursor: "pointer",
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: "4px",
+                          flexShrink: 0,
+                        }}
+                      >
+                        {copiedField === "password" ? (
+                          <>
+                            <Check size={13} /> Copied!
+                          </>
+                        ) : (
+                          <>
+                            <Copy size={13} /> Copy
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Student/Employee ID Field */}
+                  {createdAccountModal.student_id && (
+                    <div
+                      style={{
+                        background: "#ffffff",
+                        border: "1px solid #e2e8f0",
+                        borderRadius: "10px",
+                        padding: "0.6rem 0.85rem",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        gap: "8px",
+                      }}
+                    >
+                      <div style={{ minWidth: 0, flex: 1 }}>
+                        <div style={{ fontSize: "0.7rem", fontWeight: 700, color: "#64748b", textTransform: "uppercase" }}>
+                          {createdAccountModal.role === "student" ? "Institutional Student ID" : "Employee ID"}
+                        </div>
+                        <div style={{ fontSize: "0.85rem", fontWeight: 700, color: "#0f172a" }}>
+                          {createdAccountModal.student_id}
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => copyToClipboard(createdAccountModal.student_id!, "id")}
+                        style={{
+                          background: copiedField === "id" ? "#ecfdf5" : "#f1f5f9",
+                          border: `1px solid ${copiedField === "id" ? "#a7f3d0" : "#cbd5e1"}`,
+                          color: copiedField === "id" ? "#059669" : "#475569",
+                          borderRadius: "8px",
+                          padding: "0.35rem 0.65rem",
+                          fontSize: "0.75rem",
+                          fontWeight: 700,
+                          cursor: "pointer",
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: "4px",
+                          flexShrink: 0,
+                        }}
+                      >
+                        {copiedField === "id" ? (
+                          <>
+                            <Check size={13} /> Copied!
+                          </>
+                        ) : (
+                          <>
+                            <Copy size={13} /> Copy
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Footer */}
+              <div
+                style={{
+                  padding: "1rem 1.5rem",
+                  background: "#f8fafc",
+                  borderTop: "1px solid #e2e8f0",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  gap: "0.75rem",
+                }}
+              >
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={() => {
+                    const lines = [
+                      "========================================",
+                      "   SRCB INSTITUTIONAL ACCOUNT CREDENTIALS",
+                      "========================================",
+                      `Account Name: ${createdAccountModal.name}`,
+                      `Assigned Role: ${createdAccountModal.role.toUpperCase()}`,
+                      `Institutional Email: ${createdAccountModal.email}`,
+                      `Temporary Password: ${createdAccountModal.password}`,
+                    ];
+                    if (createdAccountModal.student_id) {
+                      lines.push(`Institutional ID: ${createdAccountModal.student_id}`);
+                    }
+                    if (createdAccountModal.programme) {
+                      lines.push(`Academic Program: ${createdAccountModal.programme}`);
+                    }
+                    lines.push("----------------------------------------");
+                    lines.push("Please sign in to the SRCB EduAssess Portal and update your password.");
+                    lines.push("========================================");
+                    copyToClipboard(lines.join("\n"), "all_creds");
+                  }}
+                  style={{
+                    fontSize: "0.82rem",
+                    padding: "0.5rem 0.9rem",
+                    fontWeight: 700,
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "6px",
+                  }}
+                >
+                  {copiedField === "all_creds" ? (
+                    <>
+                      <Check size={14} style={{ color: "#059669" }} /> Full Card Copied!
+                    </>
+                  ) : (
+                    <>
+                      <Copy size={14} /> Copy All Credentials
+                    </>
+                  )}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCreatedAccountModal(null);
+                    setShowCreatedPassword(false);
+                  }}
+                  style={{
+                    background: "var(--primary, #28166f)",
+                    color: "#ffffff",
+                    border: "none",
+                    borderRadius: "10px",
+                    padding: "0.55rem 1.25rem",
+                    fontSize: "0.85rem",
+                    fontWeight: 700,
+                    cursor: "pointer",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "6px",
+                    boxShadow: "0 4px 14px rgba(40, 22, 111, 0.25)",
+                  }}
+                >
+                  <Check size={15} /> Done & Close
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ========================================================= */}
+        {/* MODAL 3: BATCH ENROLLMENT CONFIRMATION MODAL               */}
+        {/* ========================================================= */}
+        {isBatchEnrollModalOpen && (
+          <div
+            className="modal-overlay"
+            style={{
+              position: "fixed",
+              inset: 0,
+              background: "rgba(15, 23, 42, 0.72)",
+              backdropFilter: "blur(10px)",
+              WebkitBackdropFilter: "blur(10px)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              zIndex: 100000,
+              padding: "1rem",
+              animation: "modalFadeIn 0.18s ease-out",
+            }}
+            onClick={(e) => {
+              if (e.target === e.currentTarget && !isEnrolling) {
+                setIsBatchEnrollModalOpen(false);
+              }
+            }}
+          >
+            <div
+              style={{
+                background: "#ffffff",
+                borderRadius: "18px",
+                maxWidth: "480px",
+                width: "100%",
+                boxShadow: "0 25px 60px -15px rgba(15, 23, 42, 0.4), 0 0 0 1px rgba(67, 38, 184, 0.15)",
+                overflow: "hidden",
+                animation: "modalScaleIn 0.22s cubic-bezier(0.16, 1, 0.3, 1)",
+              }}
+            >
+              {/* Header */}
+              <div
+                style={{
+                  padding: "1.25rem 1.5rem",
+                  background: "linear-gradient(135deg, #ede9fe 0%, #e0e7ff 100%)",
+                  borderBottom: "1px solid #ddd6fe",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                }}
+              >
+                <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                  <div
+                    style={{
+                      width: "42px",
+                      height: "42px",
+                      borderRadius: "12px",
+                      background: "#ffffff",
+                      border: "1px solid #c4b5fd",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      color: "#4326b8",
+                    }}
+                  >
+                    <UploadCloud size={20} />
+                  </div>
+                  <div>
+                    <h3 style={{ margin: 0, fontSize: "1.05rem", fontWeight: 800, color: "#1e0f59" }}>
+                      Confirm Batch Enrollment
+                    </h3>
+                    <p style={{ margin: 0, fontSize: "0.76rem", color: "#4326b8" }}>
+                      Institutional Directory Provisioning
+                    </p>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => !isEnrolling && setIsBatchEnrollModalOpen(false)}
+                  disabled={isEnrolling}
+                  style={{
+                    background: "none",
+                    border: "none",
+                    color: "#94a3b8",
+                    cursor: isEnrolling ? "not-allowed" : "pointer",
+                    padding: "6px",
+                    borderRadius: "8px",
+                    display: "flex",
+                    alignItems: "center",
+                  }}
+                  title="Close"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+
+              {/* Body */}
+              <div style={{ padding: "1.4rem 1.5rem" }}>
+                <p style={{ margin: "0 0 1rem 0", fontSize: "0.88rem", color: "#334155", lineHeight: 1.5 }}>
+                  Are you ready to enroll student accounts into the official institutional directory?
+                </p>
+
+                {/* Batch Summary Card */}
+                <div
+                  style={{
+                    background: "#f8fafc",
+                    border: "1px solid #e2e8f0",
+                    borderRadius: "12px",
+                    padding: "1rem",
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: "0.6rem",
+                  }}
+                >
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <span style={{ fontSize: "0.82rem", color: "#64748b" }}>Validated Ready Students:</span>
+                    <strong style={{ fontSize: "1rem", color: "#059669" }}>
+                      {parsedStudents.filter((s) => s.status === "ready").length} Students
+                    </strong>
+                  </div>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <span style={{ fontSize: "0.82rem", color: "#64748b" }}>Default Program:</span>
+                    <strong style={{ fontSize: "0.82rem", color: "#0f172a" }}>{bulkDefaultProgram}</strong>
+                  </div>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <span style={{ fontSize: "0.82rem", color: "#64748b" }}>Password Assignment:</span>
+                    <strong style={{ fontSize: "0.82rem", color: "#0f172a" }}>
+                      {bulkPasswordPolicy === "student_id"
+                        ? "Institutional Student ID"
+                        : bulkPasswordPolicy === "random"
+                        ? "Random Secure String"
+                        : "Custom Default"}
+                    </strong>
+                  </div>
+                </div>
+
+                <div
+                  style={{
+                    marginTop: "1rem",
+                    padding: "0.75rem 0.9rem",
+                    borderRadius: "10px",
+                    background: "#f0fdf4",
+                    border: "1px solid #bbf7d0",
+                    display: "flex",
+                    alignItems: "flex-start",
+                    gap: "8px",
+                    fontSize: "0.78rem",
+                    color: "#166534",
+                    lineHeight: 1.45,
+                  }}
+                >
+                  <CheckCircle2 size={15} style={{ flexShrink: 0, marginTop: "2px" }} />
+                  <span>
+                    Each student will be provisioned with institutional portal access and can be exported after enrollment.
+                  </span>
+                </div>
+              </div>
+
+              {/* Footer */}
+              <div
+                style={{
+                  padding: "1rem 1.5rem",
+                  background: "#f8fafc",
+                  borderTop: "1px solid #e2e8f0",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "flex-end",
+                  gap: "0.75rem",
+                }}
+              >
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={() => setIsBatchEnrollModalOpen(false)}
+                  disabled={isEnrolling}
+                  style={{
+                    fontSize: "0.85rem",
+                    padding: "0.55rem 1.1rem",
+                    fontWeight: 600,
+                  }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleConfirmBatchEnrollment}
+                  disabled={isEnrolling}
+                  style={{
+                    background: "var(--primary, #28166f)",
+                    color: "#ffffff",
+                    border: "none",
+                    borderRadius: "10px",
+                    padding: "0.55rem 1.25rem",
+                    fontSize: "0.85rem",
+                    fontWeight: 700,
+                    cursor: "pointer",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "6px",
+                    boxShadow: "0 4px 14px rgba(40, 22, 111, 0.25)",
+                  }}
+                >
+                  <Check size={15} /> Confirm & Enroll All
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ========================================================= */}
+        {/* MODAL 4: CLEAR STAGED BATCH CONFIRMATION MODAL            */}
+        {/* ========================================================= */}
+        {isClearBatchModalOpen && (
+          <div
+            className="modal-overlay"
+            style={{
+              position: "fixed",
+              inset: 0,
+              background: "rgba(15, 23, 42, 0.72)",
+              backdropFilter: "blur(10px)",
+              WebkitBackdropFilter: "blur(10px)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              zIndex: 100000,
+              padding: "1rem",
+              animation: "modalFadeIn 0.18s ease-out",
+            }}
+            onClick={(e) => {
+              if (e.target === e.currentTarget) {
+                setIsClearBatchModalOpen(false);
+              }
+            }}
+          >
+            <div
+              style={{
+                background: "#ffffff",
+                borderRadius: "18px",
+                maxWidth: "440px",
+                width: "100%",
+                boxShadow: "0 25px 60px -15px rgba(15, 23, 42, 0.4)",
+                overflow: "hidden",
+                animation: "modalScaleIn 0.22s cubic-bezier(0.16, 1, 0.3, 1)",
+              }}
+            >
+              {/* Header */}
+              <div
+                style={{
+                  padding: "1.25rem 1.5rem",
+                  background: "linear-gradient(135deg, #fef2f2 0%, #fff1f2 100%)",
+                  borderBottom: "1px solid #fee2e2",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                }}
+              >
+                <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                  <div
+                    style={{
+                      width: "42px",
+                      height: "42px",
+                      borderRadius: "12px",
+                      background: "#fee2e2",
+                      border: "1px solid #fecaca",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      color: "#ef4444",
+                    }}
+                  >
+                    <Trash2 size={20} />
+                  </div>
+                  <div>
+                    <h3 style={{ margin: 0, fontSize: "1.05rem", fontWeight: 800, color: "#991b1b" }}>
+                      Clear Staged Batch?
+                    </h3>
+                    <p style={{ margin: 0, fontSize: "0.76rem", color: "#b91c1c" }}>
+                      Discard uncommitted file rows
+                    </p>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setIsClearBatchModalOpen(false)}
+                  style={{
+                    background: "none",
+                    border: "none",
+                    color: "#94a3b8",
+                    cursor: "pointer",
+                    padding: "6px",
+                    borderRadius: "8px",
+                    display: "flex",
+                    alignItems: "center",
+                  }}
+                  title="Close"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+
+              {/* Body */}
+              <div style={{ padding: "1.4rem 1.5rem" }}>
+                <p style={{ margin: 0, fontSize: "0.88rem", color: "#334155", lineHeight: 1.5 }}>
+                  Are you sure you want to discard the uploaded file? All{" "}
+                  <strong>{parsedStudents.length} staged student records</strong> will be cleared from memory.
+                </p>
+              </div>
+
+              {/* Footer */}
+              <div
+                style={{
+                  padding: "1rem 1.5rem",
+                  background: "#f8fafc",
+                  borderTop: "1px solid #e2e8f0",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "flex-end",
+                  gap: "0.75rem",
+                }}
+              >
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={() => setIsClearBatchModalOpen(false)}
+                  style={{
+                    fontSize: "0.85rem",
+                    padding: "0.55rem 1.1rem",
+                    fontWeight: 600,
+                  }}
+                >
+                  Keep Records
+                </button>
+                <button
+                  type="button"
+                  onClick={handleConfirmClearBatch}
+                  style={{
+                    background: "#ef4444",
+                    color: "#ffffff",
+                    border: "none",
+                    borderRadius: "10px",
+                    padding: "0.55rem 1.25rem",
+                    fontSize: "0.85rem",
+                    fontWeight: 700,
+                    cursor: "pointer",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "6px",
+                    boxShadow: "0 4px 14px rgba(239, 68, 68, 0.35)",
+                  }}
+                >
+                  <Trash2 size={14} /> Discard Batch
+                </button>
+              </div>
+            </div>
           </div>
         )}
       </div>
