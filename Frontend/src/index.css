@@ -3196,7 +3196,7 @@ input.login-minimal-input.with-toggle,
   max-width: 255px;
   background: #28166f;
   background: linear-gradient(180deg, #160a45 0%, #28166f 100%);
-  padding: 1.75rem 0.85rem 1.5rem 0.85rem;
+  padding: 1.5rem 0.85rem 1.25rem 0.85rem;
   display: flex;
   flex-direction: column;
   color: #ffffff;
@@ -3208,8 +3208,7 @@ input.login-minimal-input.with-toggle,
   flex-shrink: 0;
   z-index: 20;
   box-sizing: border-box;
-  overflow-y: auto;
-  overflow-x: hidden;
+  overflow: hidden;
 }
 
 .sidebar-brand-header {
@@ -3224,6 +3223,7 @@ input.login-minimal-input.with-toggle,
   gap: 0.75rem;
   padding: 0 0.5rem;
   box-sizing: border-box;
+  flex-shrink: 0;
 }
 
 .sidebar-brand-logo-frame {
@@ -3256,6 +3256,8 @@ input.login-minimal-input.with-toggle,
   overflow: hidden;
   text-overflow: ellipsis;
   font-family: 'Plus Jakarta Sans', sans-serif;
+  flex: 1;
+  min-width: 0;
 }
 
 .sidebar-brand-badge {
@@ -3288,6 +3290,19 @@ input.login-minimal-input.with-toggle,
   width: 100%;
   box-sizing: border-box;
   flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
+}
+
+.sidebar-curved-menu::-webkit-scrollbar {
+  width: 4px;
+}
+
+.sidebar-curved-menu::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 4px;
 }
 
 .sidebar-curved-item {
@@ -3356,29 +3371,131 @@ input.login-minimal-input.with-toggle,
   content: none !important;
 }
 
-.sidebar-bottom-links {
+/* ==========================================================================
+   SIDEBAR USER PROFILE & LOG OUT FOOTER
+   ========================================================================== */
+.sidebar-profile-footer {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  padding: 0.85rem 0.25rem 0.25rem 0.25rem;
   margin-top: auto;
-  padding-top: 1.5rem;
-  padding-right: 1.5rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.14);
+  background: transparent;
+  flex-shrink: 0;
+  box-sizing: border-box;
+  width: 100%;
+}
+
+.sidebar-user-card {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
-  font-size: 0.78rem;
-  color: rgba(255, 255, 255, 0.6);
-  border-top: 1px solid rgba(255, 255, 255, 0.15);
+  gap: 0.7rem;
+  padding: 0.55rem 0.65rem;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  transition: all 0.2s ease;
 }
 
-.sidebar-bottom-links a,
-.sidebar-bottom-links span {
-  color: rgba(255, 255, 255, 0.65);
-  text-decoration: none;
-  cursor: pointer;
-  transition: color 0.15s ease;
+.sidebar-user-card:hover {
+  background: rgba(255, 255, 255, 0.13);
+  border-color: rgba(255, 255, 255, 0.24);
 }
 
-.sidebar-bottom-links a:hover,
-.sidebar-bottom-links span:hover {
+.sidebar-user-avatar {
+  width: 38px;
+  height: 38px;
+  min-width: 38px;
+  min-height: 38px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
   color: #ffffff;
+  font-weight: 800;
+  font-size: 0.85rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid rgba(255, 255, 255, 0.7);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+  flex-shrink: 0;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  user-select: none;
+}
+
+.sidebar-user-info {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1;
+  overflow: hidden;
+  gap: 0.18rem;
+}
+
+.sidebar-user-name {
+  font-weight: 700;
+  font-size: 0.86rem;
+  color: #ffffff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.2;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+}
+
+.sidebar-user-role-badge {
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: #fef08a;
+  text-transform: capitalize;
+  line-height: 1;
+  letter-spacing: 0.02em;
+  background: rgba(245, 158, 11, 0.22);
+  border: 1px solid rgba(245, 158, 11, 0.38);
+  border-radius: 9999px;
+  padding: 0.15rem 0.5rem;
+  width: fit-content;
+  max-width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sidebar-signout-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  width: 100%;
+  min-height: 38px;
+  padding: 0.55rem 0.75rem;
+  border-radius: 10px;
+  background: rgba(239, 68, 68, 0.16);
+  border: 1px solid rgba(239, 68, 68, 0.32);
+  color: #fca5a5;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.18s ease;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.sidebar-signout-btn:hover {
+  background: rgba(239, 68, 68, 0.28);
+  border-color: rgba(239, 68, 68, 0.55);
+  color: #ffffff;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.25);
+}
+
+.sidebar-signout-btn:active {
+  background: rgba(239, 68, 68, 0.42);
+  transform: scale(0.98);
 }
 
 /* Main Content Area - Full width filling edge-to-edge naturally */
@@ -5120,45 +5237,37 @@ input.login-minimal-input.with-toggle,
     color: #28166f !important;
   }
 
-  /* Bottom Actions (Sign Out) pinned to bottom of drawer */
-  .sidebar-drawer-bottom-actions {
+  /* Sidebar Profile & Sign Out Footer pinned to bottom of drawer */
+  .sidebar-profile-footer {
     display: flex !important;
     flex-direction: column !important;
-    gap: 0.5rem !important;
+    gap: 0.6rem !important;
     padding: 0.75rem 0.25rem 0 0.25rem !important;
     margin-top: auto !important;
-    border-top: 1px solid rgba(255, 255, 255, 0.12) !important;
+    border-top: 1px solid rgba(255, 255, 255, 0.14) !important;
     background: transparent !important;
     flex-shrink: 0 !important;
   }
 
-  .sidebar-drawer-signout-btn {
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    gap: 0.5rem !important;
-    width: 100% !important;
-    min-height: 42px !important;
-    padding: 0.65rem !important;
-    border-radius: 10px !important;
-    background: rgba(239, 68, 68, 0.18) !important;
-    border: 1px solid rgba(239, 68, 68, 0.35) !important;
-    color: #fca5a5 !important;
+  .sidebar-user-card {
+    padding: 0.5rem 0.6rem !important;
+  }
+
+  .sidebar-user-avatar {
+    width: 36px !important;
+    height: 36px !important;
+    min-width: 36px !important;
+    min-height: 36px !important;
+    font-size: 0.82rem !important;
+  }
+
+  .sidebar-user-name {
     font-size: 0.84rem !important;
-    font-weight: 600 !important;
-    cursor: pointer !important;
-    transition: all 0.18s ease !important;
-    -webkit-tap-highlight-color: transparent !important;
   }
 
-  .sidebar-drawer-signout-btn:hover {
-    background: rgba(239, 68, 68, 0.28) !important;
-    color: #ffffff !important;
-  }
-
-  .sidebar-drawer-signout-btn:active {
-    background: rgba(239, 68, 68, 0.4) !important;
-    transform: scale(0.98) !important;
+  .sidebar-signout-btn {
+    min-height: 42px !important;
+    font-size: 0.84rem !important;
   }
 
   /* Main app layout adjustments */

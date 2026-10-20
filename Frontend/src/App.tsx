@@ -1461,76 +1461,6 @@ export default function App() {
               />
             </div>
 
-            {/* Mobile User Profile Avatar & Sheet */}
-            <div style={{ position: "relative" }} ref={mobileProfileRef}>
-              <button
-                type="button"
-                className={`mobile-bar-avatar-btn ${isProfileMenuOpen ? "active" : ""}`}
-                onClick={() => {
-                  setIsMobileSidebarOpen(false);
-                  setIsNotificationMenuOpen(false);
-                  setIsProfileMenuOpen((prev) => !prev);
-                }}
-                aria-label="Profile and account actions"
-                title={`${currentUser.name} (${currentUser.role})`}
-              >
-                {getUserInitials(currentUser?.name)}
-              </button>
-
-              {isProfileMenuOpen && (
-                <div className="header-profile-dropdown mobile-profile-sheet">
-                  <div className="profile-sheet-handle-bar" />
-                  <div className="profile-dropdown-header">
-                    <div className="profile-dropdown-avatar">
-                      {getUserInitials(currentUser?.name)}
-                    </div>
-                    <div className="profile-dropdown-info">
-                      <div className="profile-dropdown-name">{currentUser?.name}</div>
-                      <div className="profile-dropdown-email">{currentUser?.email}</div>
-                      <span className="profile-dropdown-role-badge">
-                        {currentUser?.role.replace("-", " ").toUpperCase()}
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="profile-dropdown-personas-section">
-                    <div className="profile-dropdown-personas-label">Switch Persona / Test Role:</div>
-                    <div className="profile-dropdown-personas-grid">
-                      {mockUsers.map((u) => {
-                        const isSelected = currentUser.id === u.id;
-                        return (
-                          <button
-                            key={u.id}
-                            type="button"
-                            className={`profile-persona-chip ${isSelected ? "active" : ""}`}
-                            onClick={() => {
-                              handleSignIn(u.id);
-                              setIsProfileMenuOpen(false);
-                            }}
-                          >
-                            <span>{u.role.replace("-", " ")}</span>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-
-                  <div className="profile-dropdown-actions" style={{ padding: "0.5rem" }}>
-                    <button
-                      type="button"
-                      className="profile-dropdown-btn logout"
-                      onClick={() => {
-                        setIsProfileMenuOpen(false);
-                        setIsSignOutModalOpen(true);
-                      }}
-                    >
-                      <LogOut size={16} />
-                      <span>Sign Out</span>
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
           </div>
         </header>
 
@@ -1623,18 +1553,33 @@ export default function App() {
             })}
           </ul>
 
-          {/* Bottom Sign Out for mobile drawer */}
-          <div className="sidebar-drawer-bottom-actions">
+          {/* Sidebar User Profile & Log Out Footer */}
+          <div className="sidebar-profile-footer">
+            <div className="sidebar-user-card">
+              <div className="sidebar-user-avatar">
+                {getUserInitials(currentUser?.name)}
+              </div>
+              <div className="sidebar-user-info">
+                <span className="sidebar-user-name" title={currentUser?.name}>
+                  {currentUser?.name ?? "User"}
+                </span>
+                <span className="sidebar-user-role-badge">
+                  {currentUser?.role ? currentUser.role.replace("-", " ") : "User"}
+                </span>
+              </div>
+            </div>
+
             <button
               type="button"
-              className="sidebar-drawer-signout-btn"
+              className="sidebar-signout-btn"
               onClick={() => {
                 setIsMobileSidebarOpen(false);
                 setIsSignOutModalOpen(true);
               }}
+              title="Sign out of SRCB EduAssess"
             >
-              <LogOut size={15} />
-              <span>Sign Out</span>
+              <LogOut size={16} />
+              <span>Log Out</span>
             </button>
           </div>
         </aside>
