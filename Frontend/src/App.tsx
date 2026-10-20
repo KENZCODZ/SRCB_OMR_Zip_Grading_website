@@ -520,22 +520,13 @@ export default function App() {
   >("all");
   const [isOverlayZoomOpen, setIsOverlayZoomOpen] = useState(false);
 
-  // Profile Menu State & Click-Outside Handling
-  const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
+  // Modals & Click-Outside Handling
   const [isSignOutModalOpen, setIsSignOutModalOpen] = useState(false);
-  const profileMenuRef = useRef<HTMLDivElement>(null);
-  const mobileProfileRef = useRef<HTMLDivElement>(null);
   const mobileNotificationRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       const target = event.target as Node;
-      const isInsideProfile =
-        (profileMenuRef.current && profileMenuRef.current.contains(target)) ||
-        (mobileProfileRef.current && mobileProfileRef.current.contains(target));
-      if (!isInsideProfile) {
-        setIsProfileMenuOpen(false);
-      }
       const isInsideNotification =
         (notificationMenuRef.current && notificationMenuRef.current.contains(target)) ||
         (mobileNotificationRef.current && mobileNotificationRef.current.contains(target));
@@ -1402,7 +1393,6 @@ export default function App() {
               className="mobile-app-bar-hamburger"
               onClick={() => {
                 setIsNotificationMenuOpen(false);
-                setIsProfileMenuOpen(false);
                 setIsMobileSidebarOpen(true);
               }}
               aria-label="Open navigation menu"
@@ -1437,7 +1427,6 @@ export default function App() {
                 className={`mobile-bar-icon-btn ${isNotificationMenuOpen ? "active" : ""}`}
                 onClick={() => {
                   setIsMobileSidebarOpen(false);
-                  setIsProfileMenuOpen(false);
                   setIsNotificationMenuOpen((prev) => !prev);
                 }}
                 aria-label="Notifications"
@@ -1844,65 +1833,6 @@ export default function App() {
                 />
               </div>
 
-              <div className="header-profile-container" ref={profileMenuRef}>
-                <div
-                  className={`header-user-profile ${isProfileMenuOpen ? "active" : ""}`}
-                  onClick={() => setIsProfileMenuOpen((prev) => !prev)}
-                  title="Account Profile & Sign Out"
-                >
-                  <div className="header-user-avatar">
-                    {getUserInitials(currentUser?.name)}
-                  </div>
-                  <div>
-                    <div className="header-user-name">
-                      {currentUser?.name ?? "Admin"}
-                    </div>
-                    <div className="header-user-role">
-                      {currentUser?.role.replace("-", " ") ?? "Administrator"}
-                    </div>
-                  </div>
-                  <ChevronDown
-                    size={14}
-                    style={{
-                      color: "#94a3b8",
-                      marginLeft: "2px",
-                      transform: isProfileMenuOpen ? "rotate(180deg)" : "rotate(0deg)",
-                      transition: "transform 0.2s ease",
-                    }}
-                  />
-                </div>
-
-                {isProfileMenuOpen && (
-                  <div className="header-profile-dropdown">
-                    <div className="profile-dropdown-header">
-                      <div className="profile-dropdown-avatar">
-                        {getUserInitials(currentUser?.name)}
-                      </div>
-                      <div className="profile-dropdown-info">
-                        <div className="profile-dropdown-name">{currentUser?.name}</div>
-                        <div className="profile-dropdown-email">{currentUser?.email}</div>
-                        <span className="profile-dropdown-role-badge">
-                          {currentUser?.role.replace("-", " ").toUpperCase()}
-                        </span>
-                      </div>
-                    </div>
-
-                    <div className="profile-dropdown-actions" style={{ padding: "0.5rem" }}>
-                      <button
-                        type="button"
-                        className="profile-dropdown-btn logout"
-                        onClick={() => {
-                          setIsProfileMenuOpen(false);
-                          setIsSignOutModalOpen(true);
-                        }}
-                      >
-                        <LogOut size={16} />
-                        <span>Sign Out</span>
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </div>
             </div>
           </div>
 

@@ -3282,16 +3282,17 @@ input.login-minimal-input.with-toggle,
 
 .sidebar-curved-menu {
   list-style: none;
-  display: flex;
-  flex-direction: column;
+  display: flex !important;
+  flex-direction: column !important;
   gap: 0.35rem;
   padding: 0;
   margin: 0;
   width: 100%;
   box-sizing: border-box;
-  flex: 1;
-  overflow-y: auto;
-  overflow-x: hidden;
+  flex: 1 1 0% !important;
+  min-height: 0 !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
   scrollbar-width: thin;
   scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
 }
@@ -3412,15 +3413,15 @@ input.login-minimal-input.with-toggle,
   min-width: 38px;
   min-height: 38px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+  background: linear-gradient(135deg, #4326b8 0%, #1e0f59 100%);
   color: #ffffff;
   font-weight: 800;
   font-size: 0.85rem;
   display: flex;
   align-items: center;
   justify-content: center;
-  border: 2px solid rgba(255, 255, 255, 0.7);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+  border: 2px solid rgba(255, 255, 255, 0.45);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
   flex-shrink: 0;
   font-family: 'Plus Jakarta Sans', sans-serif;
   user-select: none;
@@ -3449,12 +3450,12 @@ input.login-minimal-input.with-toggle,
 .sidebar-user-role-badge {
   font-size: 0.68rem;
   font-weight: 700;
-  color: #fef08a;
+  color: #e0e7ff;
   text-transform: capitalize;
   line-height: 1;
   letter-spacing: 0.02em;
-  background: rgba(245, 158, 11, 0.22);
-  border: 1px solid rgba(245, 158, 11, 0.38);
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.22);
   border-radius: 9999px;
   padding: 0.15rem 0.5rem;
   width: fit-content;
