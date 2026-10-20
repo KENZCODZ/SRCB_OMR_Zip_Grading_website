@@ -939,7 +939,15 @@ export default function AdminUserManagement({
                     Full Legal Name <span style={{ color: "#ef4444" }}>*</span>
                   </label>
 
-                  <div style={{ display: "grid", gridTemplateColumns: (targetRole === "teacher" || targetRole === "programme-head") ? "90px 1fr 1fr" : "1fr 1fr", gap: "0.5rem", marginBottom: "0.5rem" }}>
+                  <div
+                    className="admin-name-fields-grid"
+                    style={{
+                      gridTemplateColumns:
+                        targetRole === "teacher" || targetRole === "programme-head"
+                          ? undefined
+                          : "1fr 1fr",
+                    }}
+                  >
                     {(targetRole === "teacher" || targetRole === "programme-head") && (
                       <select
                         className="input"
@@ -975,7 +983,7 @@ export default function AdminUserManagement({
                     />
                   </div>
 
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 90px", gap: "0.5rem" }}>
+                  <div className="admin-name-subfields-grid">
                     <input
                       type="text"
                       className="input"
@@ -2308,6 +2316,8 @@ export default function AdminUserManagement({
                   position: "relative",
                   maxHeight: "520px",
                   overflowY: "auto",
+                  overflowX: "auto",
+                  WebkitOverflowScrolling: "touch",
                   border: "1px solid #e2e8f0",
                   borderRadius: "12px",
                   background: "#ffffff",
@@ -2334,7 +2344,7 @@ export default function AdminUserManagement({
                     )}
                   </div>
                 ) : (
-                  <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.82rem" }}>
+                  <table style={{ width: "100%", minWidth: "680px", borderCollapse: "collapse", fontSize: "0.82rem" }}>
                     <thead>
                       <tr style={{ borderBottom: "1px solid #e2e8f0", background: "#f8fafc", textAlign: "left" }}>
                         <th style={{ padding: "0.75rem 1rem", color: "#475569" }}>User Profile</th>

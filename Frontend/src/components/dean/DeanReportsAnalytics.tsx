@@ -192,7 +192,7 @@ export default function DeanReportsAnalytics({
       <div
         style={{
           display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
+          gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 150px), 1fr))",
           gap: "1.25rem",
         }}
       >
@@ -408,8 +408,8 @@ export default function DeanReportsAnalytics({
             No registered degree programs found in the database.
           </div>
         ) : (
-          <div style={{ overflowX: "auto", borderRadius: "10px", border: "1px solid #e2e8f0" }}>
-            <table style={{ width: "100%", fontSize: "0.85rem", borderCollapse: "collapse", textAlign: "left" }}>
+          <div style={{ overflowX: "auto", WebkitOverflowScrolling: "touch", borderRadius: "10px", border: "1px solid #e2e8f0" }}>
+            <table style={{ width: "100%", minWidth: "680px", fontSize: "0.85rem", borderCollapse: "collapse", textAlign: "left" }}>
               <thead>
                 <tr style={{ background: "#f8fafc", borderBottom: "1px solid #e2e8f0" }}>
                   <th style={{ padding: "0.85rem 1rem", color: "#475569" }}>College / Degree Program</th>

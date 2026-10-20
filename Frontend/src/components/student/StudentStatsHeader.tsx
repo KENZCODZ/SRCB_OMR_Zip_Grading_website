@@ -16,7 +16,7 @@ export const StudentStatsHeader: React.FC<StudentStatsHeaderProps> = ({
     <div
       style={{
         display: "grid",
-        gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+        gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 140px), 1fr))",
         gap: "0.85rem",
       }}
     >

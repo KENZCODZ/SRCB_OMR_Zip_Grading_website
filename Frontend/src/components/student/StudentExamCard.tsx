@@ -282,7 +282,7 @@ export const StudentExamCard: React.FC<StudentExamCardProps> = ({
             <div
               style={{
                 display: "grid",
-                gridTemplateColumns: "repeat(auto-fill, minmax(110px, 1fr))",
+                gridTemplateColumns: "repeat(auto-fill, minmax(75px, 1fr))",
                 gap: "0.5rem",
               }}
             >

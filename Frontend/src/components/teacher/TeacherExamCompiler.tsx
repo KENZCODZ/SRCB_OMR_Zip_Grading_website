@@ -856,7 +856,7 @@ export const TeacherExamCompiler: React.FC<TeacherExamCompilerProps> = ({
                         background: isExpanded ? "#f5f9ff" : "#f8fafc",
                         borderTop: "1px solid #e2e8f0",
                         display: "grid",
-                        gridTemplateColumns: "repeat(auto-fit, minmax(170px, 1fr))",
+                        gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 140px), 1fr))",
                         gap: "0.85rem",
                         cursor: "pointer",
                       }}
@@ -1189,13 +1189,15 @@ export const TeacherExamCompiler: React.FC<TeacherExamCompilerProps> = ({
                               background: "#ffffff",
                               borderRadius: "14px",
                               border: "1px solid #e2e8f0",
-                              overflow: "hidden",
+                              overflowX: "auto",
+                              WebkitOverflowScrolling: "touch",
                               boxShadow: "0 1px 3px rgba(0, 0, 0, 0.02)",
                             }}
                           >
                             <table
                               style={{
                                 width: "100%",
+                                minWidth: "620px",
                                 borderCollapse: "collapse",
                                 textAlign: "left",
                                 fontSize: "0.85rem",

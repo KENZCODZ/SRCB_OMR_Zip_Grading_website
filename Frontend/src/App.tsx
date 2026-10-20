@@ -505,19 +505,22 @@ export default function App() {
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
   const [isSignOutModalOpen, setIsSignOutModalOpen] = useState(false);
   const profileMenuRef = useRef<HTMLDivElement>(null);
+  const mobileProfileRef = useRef<HTMLDivElement>(null);
+  const mobileNotificationRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (
-        profileMenuRef.current &&
-        !profileMenuRef.current.contains(event.target as Node)
-      ) {
+      const target = event.target as Node;
+      const isInsideProfile =
+        (profileMenuRef.current && profileMenuRef.current.contains(target)) ||
+        (mobileProfileRef.current && mobileProfileRef.current.contains(target));
+      if (!isInsideProfile) {
         setIsProfileMenuOpen(false);
       }
-      if (
-        notificationMenuRef.current &&
-        !notificationMenuRef.current.contains(event.target as Node)
-      ) {
+      const isInsideNotification =
+        (notificationMenuRef.current && notificationMenuRef.current.contains(target)) ||
+        (mobileNotificationRef.current && mobileNotificationRef.current.contains(target));
+      if (!isInsideNotification) {
         setIsNotificationMenuOpen(false);
       }
     };
@@ -1363,15 +1366,139 @@ export default function App() {
           }}
         />
 
-        {/* Mobile Hamburger Button */}
-        <button
-          type="button"
-          className="mobile-menu-btn"
-          onClick={() => setIsMobileSidebarOpen(true)}
-          aria-label="Open navigation menu"
-        >
-          <Menu size={24} />
-        </button>
+        {/* Mobile Sticky Top App Bar (Visible on mobile/tablet <= 768px) */}
+        <header className="mobile-app-bar">
+          <div className="mobile-app-bar-left">
+            <button
+              type="button"
+              className="mobile-app-bar-hamburger"
+              onClick={() => setIsMobileSidebarOpen(true)}
+              aria-label="Open navigation menu"
+            >
+              <Menu size={22} />
+            </button>
+            <div
+              className="mobile-app-bar-brand"
+              onClick={() => {
+                const homeTab: AppTab =
+                  currentUser.role === "programme-head"
+                    ? "academic-management"
+                    : "dashboard";
+                handleTabSelect(homeTab);
+              }}
+              style={{ cursor: "pointer" }}
+            >
+              <img
+                src="/srcb-logo.png"
+                alt="SRCB Logo"
+                className="mobile-app-bar-logo"
+              />
+              <span className="mobile-app-bar-title">SRCB EduAssess</span>
+            </div>
+          </div>
+
+          <div className="mobile-app-bar-right">
+            {/* Mobile Notification Bell */}
+            <div style={{ position: "relative" }} ref={mobileNotificationRef}>
+              <button
+                type="button"
+                className={`mobile-bar-icon-btn ${isNotificationMenuOpen ? "active" : ""}`}
+                onClick={() => {
+                  setIsProfileMenuOpen(false);
+                  setIsNotificationMenuOpen((prev) => !prev);
+                }}
+                aria-label="Notifications"
+                title="Notifications & System Alerts"
+              >
+                <Bell size={18} />
+                {notifications.some((n) => !n.read) && (
+                  <span className="mobile-notif-dot" />
+                )}
+              </button>
+
+              <NotificationDropdown
+                isOpen={isNotificationMenuOpen}
+                onClose={() => setIsNotificationMenuOpen(false)}
+                notifications={notifications}
+                onMarkAsRead={handleMarkAsRead}
+                onMarkAllAsRead={handleMarkAllAsRead}
+                onClearAll={handleClearAll}
+                onDeleteNotification={handleDeleteNotification}
+                onSelectNotification={handleSelectNotification}
+              />
+            </div>
+
+            {/* Mobile User Profile Avatar & Sheet */}
+            <div style={{ position: "relative" }} ref={mobileProfileRef}>
+              <button
+                type="button"
+                className={`mobile-bar-avatar-btn ${isProfileMenuOpen ? "active" : ""}`}
+                onClick={() => {
+                  setIsNotificationMenuOpen(false);
+                  setIsProfileMenuOpen((prev) => !prev);
+                }}
+                aria-label="Profile and account actions"
+                title={`${currentUser.name} (${currentUser.role})`}
+              >
+                {getUserInitials(currentUser?.name)}
+              </button>
+
+              {isProfileMenuOpen && (
+                <div className="header-profile-dropdown mobile-profile-sheet">
+                  <div className="profile-sheet-handle-bar" />
+                  <div className="profile-dropdown-header">
+                    <div className="profile-dropdown-avatar">
+                      {getUserInitials(currentUser?.name)}
+                    </div>
+                    <div className="profile-dropdown-info">
+                      <div className="profile-dropdown-name">{currentUser?.name}</div>
+                      <div className="profile-dropdown-email">{currentUser?.email}</div>
+                      <span className="profile-dropdown-role-badge">
+                        {currentUser?.role.replace("-", " ").toUpperCase()}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="profile-dropdown-personas-section">
+                    <div className="profile-dropdown-personas-label">Switch Persona / Test Role:</div>
+                    <div className="profile-dropdown-personas-grid">
+                      {mockUsers.map((u) => {
+                        const isSelected = currentUser.id === u.id;
+                        return (
+                          <button
+                            key={u.id}
+                            type="button"
+                            className={`profile-persona-chip ${isSelected ? "active" : ""}`}
+                            onClick={() => {
+                              handleSignIn(u.id);
+                              setIsProfileMenuOpen(false);
+                            }}
+                          >
+                            <span>{u.role.replace("-", " ")}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  <div className="profile-dropdown-actions" style={{ padding: "0.5rem" }}>
+                    <button
+                      type="button"
+                      className="profile-dropdown-btn logout"
+                      onClick={() => {
+                        setIsProfileMenuOpen(false);
+                        setIsSignOutModalOpen(true);
+                      }}
+                    >
+                      <LogOut size={16} />
+                      <span>Sign Out</span>
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </header>
 
         {/* Mobile Sidebar Backdrop */}
         {isMobileSidebarOpen && (
@@ -1459,6 +1586,21 @@ export default function App() {
               );
             })}
           </ul>
+
+          {/* Bottom Sign Out for mobile drawer */}
+          <div className="sidebar-drawer-bottom-actions">
+            <button
+              type="button"
+              className="sidebar-drawer-signout-btn"
+              onClick={() => {
+                setIsMobileSidebarOpen(false);
+                setIsSignOutModalOpen(true);
+              }}
+            >
+              <LogOut size={15} />
+              <span>Sign Out</span>
+            </button>
+          </div>
         </aside>
 
         {/* Main Content Area */}
@@ -1501,7 +1643,7 @@ export default function App() {
                   <span>SRCB EduAssess</span>
                 </button>
 
-                <ChevronRight size={14} style={{ color: "#94a3b8", flexShrink: 0 }} />
+                <ChevronRight size={14} className="breadcrumb-role-separator" style={{ color: "#94a3b8", flexShrink: 0 }} />
 
                 <button
                   type="button"

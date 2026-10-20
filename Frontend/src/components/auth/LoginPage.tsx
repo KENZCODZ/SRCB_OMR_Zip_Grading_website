@@ -222,6 +222,32 @@ export default function LoginPage({
             </button>
           </form>
 
+          {/* Quick Role Demo Access for Mobile & Testing */}
+          <div className="login-quick-personas-section">
+            <div className="login-quick-personas-header">
+              <Sparkles size={13} style={{ color: "#d97706" }} />
+              <span>Quick Role Demo Access (1-Tap Sign In):</span>
+            </div>
+            <div className="login-quick-personas-grid">
+              {mockUsers.map((user) => {
+                const badge = getRoleBadge(user.role);
+                const isSelected = selectedAuthUserId === user.id;
+                return (
+                  <button
+                    key={user.id}
+                    type="button"
+                    className={`login-quick-persona-btn ${isSelected ? "selected" : ""}`}
+                    onClick={() => handleDevRoleClick(user)}
+                    title={`Sign in as ${user.name} (${badge.label})`}
+                  >
+                    <span className="persona-btn-icon">{getRoleIcon(user.role)}</span>
+                    <span className="persona-btn-role">{badge.label}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
           {/* Minimal Institutional Footer */}
           <div className="login-minimal-footer">
             <div className="login-security-tag">

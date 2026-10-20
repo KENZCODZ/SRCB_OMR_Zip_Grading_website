@@ -377,7 +377,7 @@ export default function DeanAcademicManagement({
       <div
         style={{
           display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(210px, 1fr))",
+          gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 150px), 1fr))",
           gap: "1rem",
         }}
       >
@@ -518,8 +518,8 @@ export default function DeanAcademicManagement({
           paddingBottom: "1rem",
         }}
       >
-        <div style={{ display: "flex", gap: "0.75rem", alignItems: "center" }}>
-          <div style={{ position: "relative", minWidth: "260px" }}>
+        <div style={{ display: "flex", gap: "0.75rem", alignItems: "center", flex: "1 1 240px", minWidth: "min(100%, 200px)" }}>
+          <div style={{ position: "relative", width: "100%" }}>
             <Search
               size={15}
               style={{
@@ -630,7 +630,7 @@ export default function DeanAcademicManagement({
           <div
             style={{
               display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(440px, 1fr))",
+              gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 340px), 1fr))",
               gap: "1.25rem",
             }}
           >

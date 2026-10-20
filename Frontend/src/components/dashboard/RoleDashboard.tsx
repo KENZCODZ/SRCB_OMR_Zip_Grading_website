@@ -562,7 +562,7 @@ export default function RoleDashboard({
                         </span>
                       </div>
 
-                      <div style={{ display: "flex", alignItems: "center", gap: "1.25rem", fontSize: "0.78rem" }}>
+                      <div style={{ display: "flex", alignItems: "center", flexWrap: "wrap", gap: "0.5rem 1.25rem", fontSize: "0.78rem" }}>
                         <span style={{ color: "#64748b" }}>
                           Exams: <strong>{prog.completedExams} / {prog.totalExams}</strong>
                         </span>
@@ -1092,8 +1092,8 @@ export default function RoleDashboard({
                   No recent graded student answer sheets found.
                 </div>
               ) : (
-                <div style={{ overflowX: "auto" }}>
-                  <table style={{ width: "100%", borderCollapse: "collapse", textAlign: "left", fontSize: "0.82rem" }}>
+                <div style={{ overflowX: "auto", WebkitOverflowScrolling: "touch" }}>
+                  <table style={{ width: "100%", minWidth: "680px", borderCollapse: "collapse", textAlign: "left", fontSize: "0.82rem" }}>
                     <thead>
                       <tr style={{ background: "#f8fafc", borderBottom: "1px solid #e2e8f0" }}>
                         <th style={{ padding: "0.65rem 1rem", color: "#334155", fontWeight: 800, fontSize: "0.75rem", textTransform: "uppercase" }}>Student Name / ID</th>
