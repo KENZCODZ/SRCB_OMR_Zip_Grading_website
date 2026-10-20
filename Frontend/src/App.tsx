@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import {
+  LayoutDashboard,
   BarChart3,
   UploadCloud,
   History,
@@ -27,7 +28,6 @@ import {
   Activity,
   Menu,
   X,
-  Home,
   Eye,
   CheckCircle2,
   Key,
@@ -281,10 +281,29 @@ export default function App() {
     if (user?.role === "programme-head") return "academic-management";
     return "dashboard";
   });
+  const [navOrigin, setNavOrigin] = useState<"dashboard" | null>(null);
 
 
   // Mobile Sidebar State
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
+
+  // Lock body scroll and dismiss on Escape when mobile drawer is open
+  useEffect(() => {
+    if (!isMobileSidebarOpen) return;
+    const originalOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setIsMobileSidebarOpen(false);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.body.style.overflow = originalOverflow;
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [isMobileSidebarOpen]);
+
   const [selectedAuthUserId, setSelectedAuthUserId] = useState(mockUsers[0]?.id || "");
   const [loginEmail, setLoginEmail] = useState("");
   const [loginPassword, setLoginPassword] = useState("");
@@ -1198,6 +1217,11 @@ export default function App() {
     ];
   })();
 
+  const homeTab: AppTab =
+    currentUser?.role === "programme-head"
+      ? "academic-management"
+      : "dashboard";
+
   const handleTabSelect = (tab: AppTab) => {
     const target = navigationItems.some((item) => item.key === tab)
       ? tab
@@ -1217,61 +1241,65 @@ export default function App() {
     return (cleaned || name).slice(0, 2).toUpperCase();
   };
 
-  const getDashboardDisplayName = (user: AuthUser | null) => {
-    if (!user) return "Dashboard";
-    if (user.role === "admin") return "System Administrator Dashboard";
-    const name = user.name.trim();
-    return name.endsWith("s") || name.endsWith("S")
-      ? `${name}' Dashboard`
-      : `${name}'s Dashboard`;
-  };
-
-  const getActiveTabTitle = (tab: AppTab) => {
+  const getBreadcrumbTabLabel = (tab: AppTab): string => {
     switch (tab) {
       case "dashboard":
-        return currentUser?.role === "dean"
-          ? "Dashboard"
-          : getDashboardDisplayName(currentUser);
-      case "examinations":
+        return currentUser?.role === "student" ? "My Progress" : "Dashboard";
+      case "history":
+        return "Exam Records";
       case "exams":
-        return currentUser?.role === "teacher"
-          ? "Examinations & Grading Studio"
-          : "Examinations";
+      case "examinations":
+        return currentUser?.role === "student" ? "My Exam Records" : "Examinations";
       case "results-management":
       case "compiler":
-        return currentUser?.role === "teacher"
-          ? "Official Gradebook & Results"
-          : "Examination Results Management";
+        return "Gradebook";
+      case "item-analysis":
+        return "Item Analysis";
       case "quick-scan":
-        return "Quick OMR Scanner";
-      case "history":
-        return currentUser?.role === "teacher"
-          ? "Exam Records & Grading History"
-          : "Grading History";
+        return "Quick Scanner";
       case "academic-management":
-        return currentUser?.role === "dean"
-          ? "Departments"
-          : "Programme Overview";
+        return currentUser?.role === "dean" ? "Departments" : "Programme Overview";
       case "reports":
         return "Reports";
       case "progress-records":
-        return currentUser?.role === "dean"
-          ? "Records"
-          : "Progress & Records";
-      case "item-analysis":
-        return "Item Analysis";
-      case "user-management":
-        return "User Account Management";
+        return "Records";
       case "user-directory":
-        return currentUser?.role === "programme-head"
-          ? `${currentUser.programme || "BSIT"} Student Access`
-          : currentUser?.role === "dean"
-            ? "User Accounts Directory"
-            : "User Directory";
+        return currentUser?.role === "programme-head" ? "Student Access" : "User Directory";
       case "settings":
         return "Settings";
+      default: {
+        const item = navigationItems.find((n) => n.key === tab);
+        return item ? item.label : String(tab).replace("-", " ");
+      }
+    }
+  };
+
+  const getBreadcrumbTabIcon = (tab: AppTab) => {
+    switch (tab) {
+      case "dashboard":
+        return <LayoutDashboard size={13} className="breadcrumb-icon" aria-hidden="true" />;
+      case "history":
+        return <History size={13} className="breadcrumb-icon" aria-hidden="true" />;
+      case "exams":
+      case "examinations":
+        return <BookOpen size={13} className="breadcrumb-icon" aria-hidden="true" />;
+      case "results-management":
+      case "compiler":
+        return <Award size={13} className="breadcrumb-icon" aria-hidden="true" />;
+      case "item-analysis":
+        return <BarChart2 size={13} className="breadcrumb-icon" aria-hidden="true" />;
+      case "quick-scan":
+        return <Camera size={13} className="breadcrumb-icon" aria-hidden="true" />;
+      case "academic-management":
+        return <GraduationCap size={13} className="breadcrumb-icon" aria-hidden="true" />;
+      case "reports":
+        return <BarChart3 size={13} className="breadcrumb-icon" aria-hidden="true" />;
+      case "user-directory":
+        return <Users size={13} className="breadcrumb-icon" aria-hidden="true" />;
+      case "settings":
+        return <Sliders size={13} className="breadcrumb-icon" aria-hidden="true" />;
       default:
-        return "Dashboard";
+        return null;
     }
   };
 
@@ -1372,7 +1400,11 @@ export default function App() {
             <button
               type="button"
               className="mobile-app-bar-hamburger"
-              onClick={() => setIsMobileSidebarOpen(true)}
+              onClick={() => {
+                setIsNotificationMenuOpen(false);
+                setIsProfileMenuOpen(false);
+                setIsMobileSidebarOpen(true);
+              }}
               aria-label="Open navigation menu"
             >
               <Menu size={22} />
@@ -1404,6 +1436,7 @@ export default function App() {
                 type="button"
                 className={`mobile-bar-icon-btn ${isNotificationMenuOpen ? "active" : ""}`}
                 onClick={() => {
+                  setIsMobileSidebarOpen(false);
                   setIsProfileMenuOpen(false);
                   setIsNotificationMenuOpen((prev) => !prev);
                 }}
@@ -1434,6 +1467,7 @@ export default function App() {
                 type="button"
                 className={`mobile-bar-avatar-btn ${isProfileMenuOpen ? "active" : ""}`}
                 onClick={() => {
+                  setIsMobileSidebarOpen(false);
                   setIsNotificationMenuOpen(false);
                   setIsProfileMenuOpen((prev) => !prev);
                 }}
@@ -1538,6 +1572,7 @@ export default function App() {
                   <div
                     className={`sidebar-curved-item ${isActive ? "active" : ""}`}
                     onClick={() => {
+                      setIsMobileSidebarOpen(false);
                       if (item.key === "user-guide") {
                         setIsUserGuideOpen(true);
                         return;
@@ -1546,6 +1581,7 @@ export default function App() {
                         setSelectedExamId("");
                         setLatestGradeResult(null);
                       }
+                      setNavOrigin(null);
                       handleTabSelect(item.key);
                     }}
                     style={{
@@ -1623,113 +1659,198 @@ export default function App() {
                 className="header-breadcrumbs"
                 aria-label="Breadcrumb"
               >
-                <button
-                  type="button"
-                  className="breadcrumb-btn"
-                  onClick={() => {
-                    if (inspectExam) setInspectExam(null);
-                    const homeTab: AppTab =
-                      currentUser.role === "programme-head"
-                        ? "academic-management"
-                        : "dashboard";
-                    handleTabSelect(homeTab);
-                    const container = document.querySelector(".main-content-reference");
-                    if (container) container.scrollTo({ top: 0, behavior: "smooth" });
-                    window.scrollTo({ top: 0, behavior: "smooth" });
-                  }}
-                  title="Go to Home Dashboard"
-                >
-                  <Home size={13} className="breadcrumb-icon" aria-hidden="true" />
-                  <span>SRCB EduAssess</span>
-                </button>
-
-                <ChevronRight size={12} className="breadcrumb-separator breadcrumb-role-separator" aria-hidden="true" />
-
-                <button
-                  type="button"
-                  className="breadcrumb-role-btn"
-                  onClick={() => {
-                    if (inspectExam) setInspectExam(null);
-                    const homeTab: AppTab =
-                      currentUser.role === "programme-head"
-                        ? "academic-management"
-                        : "dashboard";
-                    handleTabSelect(homeTab);
-                    const container = document.querySelector(".main-content-reference");
-                    if (container) container.scrollTo({ top: 0, behavior: "smooth" });
-                    window.scrollTo({ top: 0, behavior: "smooth" });
-                  }}
-                  title={`Go to ${currentUser.role.replace("-", " ")} Home Overview`}
-                >
-                  {currentUser.role.replace("-", " ")}
-                </button>
-
-                <ChevronRight size={12} className="breadcrumb-separator" aria-hidden="true" />
-
                 {(() => {
-                  const hasSubCrumb = (activeTab === "exams" && Boolean(activeExam) && !inspectExam) || Boolean(inspectExam);
+                  const homeLabel = currentUser.role === "student" ? "My Progress" : "Dashboard";
+                  const isCurrentTabHome = activeTab === homeTab;
+                  const fromDashboard = navOrigin === "dashboard" && !isCurrentTabHome;
+                  const currentTabLabel = getBreadcrumbTabLabel(activeTab);
+                  const currentTabIcon = getBreadcrumbTabIcon(activeTab);
+
+                  // Determine active sub-crumb (if any)
+                  let subCrumb: { label: string; icon: React.ReactNode; title: string } | null = null;
+                  if (inspectExam) {
+                    subCrumb = {
+                      label: inspectExam.course_code ? `${inspectExam.course_code} Details` : inspectExam.name,
+                      icon: <Eye size={12} className="breadcrumb-icon" aria-hidden="true" />,
+                      title: `Inspecting: ${inspectExam.name}`,
+                    };
+                  } else if ((activeTab === "exams" || activeTab === "examinations") && activeExam) {
+                    subCrumb = {
+                      label: activeExam.name,
+                      icon: <BookOpen size={12} className="breadcrumb-icon" aria-hidden="true" />,
+                      title: `Active Exam Grading Studio: ${activeExam.name}`,
+                    };
+                  } else if (
+                    (activeTab === "results-management" || activeTab === "compiler" || activeTab === "item-analysis") &&
+                    selectedExamId
+                  ) {
+                    const selExam = exams.find((e) => e.id === selectedExamId);
+                    if (selExam) {
+                      subCrumb = {
+                        label: selExam.name,
+                        icon: <Award size={12} className="breadcrumb-icon" aria-hidden="true" />,
+                        title: `Selected Exam: ${selExam.name}`,
+                      };
+                    }
+                  }
+
+                  const hasSubCrumb = Boolean(subCrumb);
+
+                  const scrollToTop = () => {
+                    const container = document.querySelector(".main-content-reference");
+                    if (container) container.scrollTo({ top: 0, behavior: "smooth" });
+                    window.scrollTo({ top: 0, behavior: "smooth" });
+                  };
+
+                  const goToHome = () => {
+                    setNavOrigin(null);
+                    if (inspectExam) setInspectExam(null);
+                    if (selectedExamId) {
+                      setSelectedExamId("");
+                      setLatestGradeResult(null);
+                    }
+                    handleTabSelect(homeTab);
+                    scrollToTop();
+                  };
+
+                  const goToCurrentTabList = () => {
+                    if (inspectExam) setInspectExam(null);
+                    if (selectedExamId) {
+                      setSelectedExamId("");
+                      setLatestGradeResult(null);
+                    }
+                    handleTabSelect(activeTab);
+                    scrollToTop();
+                  };
+
+                  // 1) When on Dashboard / Home Tab
+                  if (isCurrentTabHome) {
+                    if (!hasSubCrumb) {
+                      return (
+                        <button
+                          type="button"
+                          className="breadcrumb-current-btn"
+                          aria-current="page"
+                          onClick={scrollToTop}
+                          title={`Current Location: ${homeLabel}`}
+                        >
+                          <LayoutDashboard size={13} className="breadcrumb-icon" aria-hidden="true" />
+                          <span>{homeLabel}</span>
+                        </button>
+                      );
+                    }
+
+                    return (
+                      <>
+                        <button
+                          type="button"
+                          className="breadcrumb-btn"
+                          onClick={goToHome}
+                          title={`Go to ${homeLabel}`}
+                        >
+                          <LayoutDashboard size={13} className="breadcrumb-icon" aria-hidden="true" />
+                          <span>{homeLabel}</span>
+                        </button>
+
+                        <ChevronRight size={12} className="breadcrumb-separator" aria-hidden="true" />
+
+                        {subCrumb && (
+                          <button
+                            type="button"
+                            className="breadcrumb-current-btn breadcrumb-sub-item breadcrumb-sub-badge"
+                            aria-current="page"
+                            onClick={scrollToTop}
+                            title={subCrumb.title}
+                          >
+                            {subCrumb.icon}
+                            <span>{subCrumb.label}</span>
+                          </button>
+                        )}
+                      </>
+                    );
+                  }
+
+                  // 2) If navigated from Dashboard function (e.g. clicked "View All Audit Records" in Dashboard)
+                  // Shows: Dashboard > Exam Records [> sub-crumb]
+                  if (fromDashboard) {
+                    return (
+                      <>
+                        <button
+                          type="button"
+                          className="breadcrumb-btn"
+                          onClick={goToHome}
+                          title={`Go to ${homeLabel}`}
+                        >
+                          <LayoutDashboard size={13} className="breadcrumb-icon" aria-hidden="true" />
+                          <span>{homeLabel}</span>
+                        </button>
+
+                        <ChevronRight size={12} className="breadcrumb-separator" aria-hidden="true" />
+
+                        <button
+                          type="button"
+                          className={hasSubCrumb ? "breadcrumb-btn" : "breadcrumb-current-btn"}
+                          aria-current={!hasSubCrumb ? "page" : undefined}
+                          onClick={hasSubCrumb ? goToCurrentTabList : scrollToTop}
+                          title={hasSubCrumb ? `Return to ${currentTabLabel}` : `Current Section: ${currentTabLabel}`}
+                        >
+                          {currentTabIcon}
+                          <span>{currentTabLabel}</span>
+                        </button>
+
+                        {hasSubCrumb && subCrumb && (
+                          <>
+                            <ChevronRight size={12} className="breadcrumb-separator" aria-hidden="true" />
+                            <button
+                              type="button"
+                              className="breadcrumb-current-btn breadcrumb-sub-item breadcrumb-sub-badge"
+                              aria-current="page"
+                              onClick={scrollToTop}
+                              title={subCrumb.title}
+                            >
+                              {subCrumb.icon}
+                              <span>{subCrumb.label}</span>
+                            </button>
+                          </>
+                        )}
+                      </>
+                    );
+                  }
+
+                  // 3) Default Sidebar Direct Navigation (e.g. user clicked "Gradebook" in sidebar)
+                  // Dashboard is NOT included!
+                  // Shows: Gradebook [> sub-crumb]
                   return (
-                    <button
-                      type="button"
-                      className={hasSubCrumb ? "breadcrumb-btn" : "breadcrumb-current-btn"}
-                      aria-current={!hasSubCrumb ? "page" : undefined}
-                      onClick={() => {
-                        if (inspectExam) setInspectExam(null);
-                        if (selectedExamId) {
-                          setSelectedExamId("");
-                          setLatestGradeResult(null);
-                        }
-                        handleTabSelect(activeTab);
-                        const container = document.querySelector(".main-content-reference");
-                        if (container) container.scrollTo({ top: 0, behavior: "smooth" });
-                        window.scrollTo({ top: 0, behavior: "smooth" });
-                      }}
-                      title={hasSubCrumb ? `Return to ${getActiveTabTitle(activeTab)}` : `Current Section: ${getActiveTabTitle(activeTab)}`}
-                    >
-                      {getActiveTabTitle(activeTab)}
-                    </button>
+                    <>
+                      <button
+                        type="button"
+                        className={hasSubCrumb ? "breadcrumb-btn" : "breadcrumb-current-btn"}
+                        aria-current={!hasSubCrumb ? "page" : undefined}
+                        onClick={hasSubCrumb ? goToCurrentTabList : scrollToTop}
+                        title={hasSubCrumb ? `Return to ${currentTabLabel}` : `Current Section: ${currentTabLabel}`}
+                      >
+                        {currentTabIcon}
+                        <span>{currentTabLabel}</span>
+                      </button>
+
+                      {hasSubCrumb && subCrumb && (
+                        <>
+                          <ChevronRight size={12} className="breadcrumb-separator" aria-hidden="true" />
+                          <button
+                            type="button"
+                            className="breadcrumb-current-btn breadcrumb-sub-item breadcrumb-sub-badge"
+                            aria-current="page"
+                            onClick={scrollToTop}
+                            title={subCrumb.title}
+                          >
+                            {subCrumb.icon}
+                            <span>{subCrumb.label}</span>
+                          </button>
+                        </>
+                      )}
+                    </>
                   );
                 })()}
-
-                {activeTab === "exams" && activeExam && !inspectExam && (
-                  <>
-                    <ChevronRight size={12} className="breadcrumb-separator" aria-hidden="true" />
-                    <button
-                      type="button"
-                      className="breadcrumb-current-btn breadcrumb-sub-item breadcrumb-sub-badge"
-                      aria-current="page"
-                      title={`Active Exam Grading Studio: ${activeExam.name}`}
-                      onClick={() => {
-                        const container = document.querySelector(".main-content-reference");
-                        if (container) container.scrollTo({ top: 0, behavior: "smooth" });
-                        window.scrollTo({ top: 0, behavior: "smooth" });
-                      }}
-                    >
-                      <BookOpen size={12} className="breadcrumb-icon" aria-hidden="true" />
-                      <span>{activeExam.name}</span>
-                    </button>
-                  </>
-                )}
-
-                {inspectExam && (
-                  <>
-                    <ChevronRight size={12} className="breadcrumb-separator" aria-hidden="true" />
-                    <button
-                      type="button"
-                      className="breadcrumb-current-btn breadcrumb-sub-item breadcrumb-sub-badge"
-                      aria-current="page"
-                      title={`Inspecting: ${inspectExam.name}`}
-                      onClick={() => {
-                        const container = document.querySelector(".main-content-reference");
-                        if (container) container.scrollTo({ top: 0, behavior: "smooth" });
-                        window.scrollTo({ top: 0, behavior: "smooth" });
-                      }}
-                    >
-                      <Eye size={12} className="breadcrumb-icon" aria-hidden="true" />
-                      <span>{inspectExam.course_code ? `${inspectExam.course_code} Details` : inspectExam.name}</span>
-                    </button>
-                  </>
-                )}
               </nav>
             </div>
 
@@ -1851,8 +1972,10 @@ export default function App() {
               onSelectSubmission={viewSubmissionDetails}
               onInspectExam={(exam) => setInspectExam(exam)}
               addToast={addToast}
-              formatDate={formatDate}
-              onNavigateTab={(tab) => handleTabSelect(tab as AppTab)}
+              onNavigateTab={(tab) => {
+                setNavOrigin("dashboard");
+                handleTabSelect(tab as AppTab);
+              }}
             />
           )}
 
