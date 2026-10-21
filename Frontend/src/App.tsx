@@ -1088,6 +1088,9 @@ export default function App() {
     setLoginPassword("");
     setLoginError("");
     setActiveTab("dashboard");
+    if (window.location.hash) {
+      history.replaceState(null, "", " ");
+    }
     setAuthMessage(message);
   };
 
@@ -2640,35 +2643,35 @@ export default function App() {
                           examTypeFilter !== "All" ||
                           examProgramFilter !== "All" ||
                           examListSearch.trim().length > 0) && (
-                          <button
-                            type="button"
-                            className="btn btn-secondary btn-sm"
-                            onClick={() => {
-                              setExamAcademicYearFilter("All");
-                              setExamSemesterFilter("All");
-                              setExamTypeFilter("All");
-                              setExamProgramFilter("All");
-                              setExamListSearch("");
-                            }}
-                            style={{
-                              height: "38px",
-                              padding: "0 0.85rem",
-                              fontSize: "0.8rem",
-                              fontWeight: 600,
-                              color: "#64748b",
-                              borderRadius: "8px",
-                              display: "inline-flex",
-                              alignItems: "center",
-                              gap: "4px",
-                              flexShrink: 0,
-                              background: "#ffffff",
-                              border: "1px solid #e2e8f0",
-                            }}
-                            title="Reset all examination filters and search query to defaults"
-                          >
-                            <X size={14} /> Clear Filters
-                          </button>
-                        )}
+                            <button
+                              type="button"
+                              className="btn btn-secondary btn-sm"
+                              onClick={() => {
+                                setExamAcademicYearFilter("All");
+                                setExamSemesterFilter("All");
+                                setExamTypeFilter("All");
+                                setExamProgramFilter("All");
+                                setExamListSearch("");
+                              }}
+                              style={{
+                                height: "38px",
+                                padding: "0 0.85rem",
+                                fontSize: "0.8rem",
+                                fontWeight: 600,
+                                color: "#64748b",
+                                borderRadius: "8px",
+                                display: "inline-flex",
+                                alignItems: "center",
+                                gap: "4px",
+                                flexShrink: 0,
+                                background: "#ffffff",
+                                border: "1px solid #e2e8f0",
+                              }}
+                              title="Reset all examination filters and search query to defaults"
+                            >
+                              <X size={14} /> Clear Filters
+                            </button>
+                          )}
                       </div>
                     </div>
 
