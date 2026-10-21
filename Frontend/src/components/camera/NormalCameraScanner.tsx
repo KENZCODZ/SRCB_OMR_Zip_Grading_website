@@ -53,6 +53,7 @@ export const NormalCameraScanner: React.FC<NormalCameraScannerProps> = ({
   const [flashActive, setFlashActive] = useState(false);
   const [isCapturing, setIsCapturing] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [captureWarning, setCaptureWarning] = useState<string | null>(null);
 
   const [previewCaptured, setPreviewCaptured] = useState<{
     file: File;
@@ -357,7 +358,7 @@ export const NormalCameraScanner: React.FC<NormalCameraScannerProps> = ({
 
     // Check if video is loaded and ready
     if (video.readyState < 2 && (!video.videoWidth || !video.videoHeight)) {
-      alert('Camera is still loading. Please wait for the video preview to display before taking a photo.');
+      setCaptureWarning('Camera is still loading. Please wait for the video preview to display before taking a photo.');
       return;
     }
 
@@ -398,7 +399,7 @@ export const NormalCameraScanner: React.FC<NormalCameraScannerProps> = ({
         height: fullH,
       });
     } catch (err: any) {
-      alert(`Could not capture photo: ${err?.message || 'Unknown error'}`);
+      setCaptureWarning(`Could not capture photo: ${err?.message || 'Unknown error'}`);
     } finally {
       setIsCapturing(false);
     }
@@ -627,6 +628,41 @@ export const NormalCameraScanner: React.FC<NormalCameraScannerProps> = ({
                 }
               }}
             />
+
+            {/* Warning / Error Toast Banner */}
+            {captureWarning && (
+              <div
+                style={{
+                  position: 'absolute',
+                  top: '16px',
+                  left: '50%',
+                  transform: 'translateX(-50%)',
+                  zIndex: 30,
+                  background: 'rgba(220, 38, 38, 0.95)',
+                  backdropFilter: 'blur(8px)',
+                  color: '#ffffff',
+                  padding: '0.6rem 1rem',
+                  borderRadius: '10px',
+                  boxShadow: '0 8px 24px rgba(0,0,0,0.3)',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  fontSize: '0.82rem',
+                  fontWeight: 600,
+                  maxWidth: '90%',
+                }}
+              >
+                <AlertCircle size={16} />
+                <span>{captureWarning}</span>
+                <button
+                  type="button"
+                  onClick={() => setCaptureWarning(null)}
+                  style={{ background: 'none', border: 'none', color: '#fff', cursor: 'pointer', marginLeft: '6px', display: 'flex', alignItems: 'center' }}
+                >
+                  <X size={14} />
+                </button>
+              </div>
+            )}
 
             {/* Connecting Spinner / Initializing Banner */}
             {status === 'initializing' && (

@@ -1,0 +1,563 @@
+/* ==========================================================================
+   St. Rita's College of Balingasag (SRCB)
+   Official Institutional Login Page Styles
+   Minimalist · Aesthetic · 100% Consistent with School Portal & Landing Page
+   ========================================================================== */
+
+/* Root Page Wrapper */
+.login-sync-root {
+  min-height: 100vh;
+  width: 100%;
+  background-color: #f8fafc;
+  color: #0f172a;
+  font-family: 'Plus Jakarta Sans', 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  box-sizing: border-box;
+}
+
+/* Subtle, stationary, institutional ambient illumination without yellow tint */
+.login-sync-ambient {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(60% 40% at 50% 0%, rgba(40, 22, 111, 0.04) 0%, transparent 100%);
+  z-index: 0;
+}
+
+/* ==========================================================================
+   Top Institutional Header Bar (Synchronized with Landing Page Navbar)
+   ========================================================================== */
+
+.login-sync-topbar {
+  position: relative;
+  z-index: 10;
+  width: 100%;
+  background: #ffffff;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.login-sync-topbar-inner {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0.85rem 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.login-sync-brand {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  text-decoration: none;
+  color: inherit;
+  cursor: pointer;
+}
+
+.login-sync-crest {
+  width: 42px;
+  height: 42px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
+.login-sync-brand-text {
+  display: flex;
+  flex-direction: column;
+}
+
+.login-sync-school-name {
+  font-size: 0.98rem;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  color: #120a3a;
+  line-height: 1.2;
+  text-transform: uppercase;
+}
+
+.login-sync-portal-label {
+  font-size: 0.74rem;
+  font-weight: 600;
+  color: #64748b;
+  letter-spacing: 0.02em;
+}
+
+.login-sync-topbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+}
+
+.login-sync-back-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.5rem 0.95rem;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #334155;
+  background: transparent;
+  border: 1px solid #cbd5e1;
+  border-radius: 9px;
+  cursor: pointer;
+  transition: all 0.18s ease;
+  font-family: inherit;
+  text-decoration: none;
+}
+
+.login-sync-back-btn:hover {
+  background: #f1f5f9;
+  color: #120a3a;
+  border-color: #94a3b8;
+  transform: translateX(-1px);
+}
+
+.login-sync-year-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.35rem 0.75rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #1e1352;
+  background: rgba(40, 22, 111, 0.08);
+  border: 1px solid rgba(40, 22, 111, 0.16);
+  border-radius: 999px;
+  letter-spacing: 0.02em;
+}
+
+/* ==========================================================================
+   Main Center Body & Card Container
+   ========================================================================== */
+
+.login-sync-body {
+  position: relative;
+  z-index: 1;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2.5rem 1.25rem 3rem;
+  box-sizing: border-box;
+}
+
+.login-sync-card-container {
+  width: 100%;
+  max-width: 450px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+/* Minimalist Institutional Card */
+.login-sync-card {
+  width: 100%;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 20px;
+  box-shadow:
+    0 20px 45px -15px rgba(18, 10, 58, 0.08),
+    0 1px 3px rgba(0, 0, 0, 0.03);
+  padding: 2.25rem 2.25rem 2rem;
+  box-sizing: border-box;
+}
+
+/* Card Header */
+.login-card-header {
+  text-align: center;
+  margin-bottom: 1.75rem;
+}
+
+.login-card-seal-ring {
+  width: 62px;
+  height: 62px;
+  border-radius: 50%;
+  background: #ffffff;
+  border: 2px solid #28166f;
+  margin: 0 auto 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 3px;
+  box-shadow: 0 8px 20px -4px rgba(40, 22, 111, 0.22);
+  transition: transform 0.2s ease;
+}
+
+.login-card-seal-ring:hover {
+  transform: scale(1.04);
+}
+
+.login-card-seal-img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  border-radius: 50%;
+}
+
+.login-card-title {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 1.45rem;
+  font-weight: 800;
+  color: #0f172a;
+  letter-spacing: -0.015em;
+  margin: 0 0 0.35rem 0;
+  line-height: 1.25;
+}
+
+.login-card-subtitle {
+  font-size: 0.82rem;
+  color: #64748b;
+  margin: 0;
+  line-height: 1.45;
+}
+
+/* ==========================================================================
+   Form Fields & Controls
+   ========================================================================== */
+
+.login-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.15rem;
+}
+
+.login-field-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.38rem;
+}
+
+.login-field-label {
+  font-size: 0.79rem;
+  font-weight: 600;
+  color: #334155;
+  display: block;
+}
+
+.login-password-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.login-password-header .login-field-label {
+  margin-bottom: 0;
+}
+
+.login-forgot-link {
+  font-size: 0.75rem;
+  color: #28166f;
+  font-weight: 600;
+  cursor: pointer;
+  background: none;
+  border: none;
+  padding: 0;
+  text-decoration: none;
+  font-family: inherit;
+  transition: color 0.15s ease;
+}
+
+.login-forgot-link:hover {
+  text-decoration: underline;
+  color: #1e0f59;
+}
+
+.login-input-container {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+.login-input-icon {
+  position: absolute;
+  left: 0.95rem;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 17px;
+  height: 17px;
+  color: #94a3b8;
+  pointer-events: none;
+  transition: color 0.2s ease;
+  z-index: 2;
+}
+
+.login-input {
+  width: 100%;
+  padding: 0.75rem 1rem 0.75rem 2.65rem !important;
+  font-size: 0.88rem;
+  line-height: 1.45;
+  border-radius: 11px;
+  border: 1px solid #cbd5e1;
+  background: #ffffff;
+  color: #0f172a;
+  outline: none;
+  font-family: inherit;
+  box-sizing: border-box;
+  transition: border-color 0.18s ease, box-shadow 0.18s ease;
+}
+
+.login-input:focus {
+  border-color: #28166f;
+  box-shadow: 0 0 0 3.5px rgba(40, 22, 111, 0.11);
+}
+
+.login-input::placeholder {
+  color: #94a3b8;
+  font-size: 0.85rem;
+}
+
+.login-input-container:focus-within .login-input-icon {
+  color: #28166f;
+}
+
+.login-input.has-toggle {
+  padding-right: 2.85rem !important;
+}
+
+.login-toggle-visibility-btn {
+  position: absolute;
+  right: 0.65rem;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 30px;
+  height: 30px;
+  background: transparent;
+  border: none;
+  border-radius: 7px;
+  color: #94a3b8;
+  cursor: pointer;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.15s ease, background-color 0.15s ease;
+  z-index: 2;
+}
+
+.login-toggle-visibility-btn:hover {
+  color: #0f172a;
+  background-color: #f1f5f9;
+}
+
+/* Error message banner */
+.login-error-banner {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.65rem 0.85rem;
+  border-radius: 10px;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #b91c1c;
+  font-size: 0.8rem;
+  font-weight: 500;
+  line-height: 1.4;
+  animation: loginShake 0.3s ease-out;
+}
+
+@keyframes loginShake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-4px); }
+  75% { transform: translateX(4px); }
+}
+
+/* Primary Submit Button - matches portal's royal indigo */
+.login-submit-btn {
+  width: 100%;
+  padding: 0.82rem 1.25rem;
+  font-size: 0.92rem;
+  font-weight: 700;
+  border-radius: 11px;
+  background: linear-gradient(135deg, #28166f 0%, #1e0f59 100%);
+  color: #ffffff;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  box-shadow: 0 8px 20px -4px rgba(40, 22, 111, 0.32);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  font-family: inherit;
+  margin-top: 0.25rem;
+}
+
+.login-submit-btn:hover {
+  background: linear-gradient(135deg, #22125f 0%, #170b47 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 10px 24px -4px rgba(40, 22, 111, 0.42);
+}
+
+.login-submit-btn:active {
+  transform: scale(0.99);
+}
+
+/* ==========================================================================
+   Integrated Persona Quick Selector (Clean & Aesthetic)
+   ========================================================================== */
+
+.login-divider {
+  display: flex;
+  align-items: center;
+  text-align: center;
+  margin: 1.6rem 0 1.15rem;
+  color: #94a3b8;
+  font-size: 0.73rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.login-divider::before,
+.login-divider::after {
+  content: "";
+  flex: 1;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.login-divider span {
+  padding: 0 0.85rem;
+}
+
+.login-personas-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.55rem;
+}
+
+.login-persona-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.55rem 0.75rem;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.18s ease;
+  font-family: inherit;
+}
+
+.login-persona-btn:hover {
+  background: #f8fafc;
+  border-color: #cbd5e1;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px -2px rgba(18, 10, 58, 0.06);
+}
+
+.login-persona-btn.selected {
+  border-color: #28166f;
+  background: rgba(40, 22, 111, 0.03);
+}
+
+.login-persona-btn.full-width {
+  grid-column: span 2;
+}
+
+.login-persona-icon-frame {
+  width: 28px;
+  height: 28px;
+  border-radius: 7px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.login-persona-meta {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1;
+}
+
+.login-persona-role {
+  font-size: 0.76rem;
+  font-weight: 700;
+  color: #0f172a;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.login-persona-name {
+  font-size: 0.68rem;
+  color: #64748b;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ==========================================================================
+   Institutional Security & Trust Footer
+   ========================================================================== */
+
+.login-trust-footer {
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.74rem;
+  color: #64748b;
+}
+
+.login-trust-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-weight: 500;
+}
+
+.login-trust-subtext {
+  font-size: 0.7rem;
+  color: #94a3b8;
+}
+
+/* ==========================================================================
+   Responsive Adaptations
+   ========================================================================== */
+
+@media (max-width: 640px) {
+  .login-sync-topbar-inner {
+    padding: 0.75rem 1rem;
+  }
+
+  .login-sync-portal-label {
+    display: none;
+  }
+
+  .login-sync-school-name {
+    font-size: 0.88rem;
+  }
+
+  .login-sync-crest {
+    width: 36px;
+    height: 36px;
+  }
+
+  .login-sync-card {
+    padding: 1.75rem 1.25rem;
+    border-radius: 16px;
+  }
+
+  .login-personas-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .login-persona-btn.full-width {
+    grid-column: span 1;
+  }
+}

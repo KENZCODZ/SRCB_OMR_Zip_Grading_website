@@ -1066,10 +1066,9 @@ export const ExamCreationModal: React.FC<ExamCreationModalProps> = ({
                 }}
               >
                 <div
+                  className="exam-key-bubbles-grid"
                   style={{
-                    display: "grid",
-                    gridTemplateColumns: numItems > 25 ? "1fr 1fr" : "1fr",
-                    gap: "1.25rem",
+                    gridTemplateColumns: numItems > 25 ? undefined : "1fr",
                   }}
                 >
                   {/* First Column */}
