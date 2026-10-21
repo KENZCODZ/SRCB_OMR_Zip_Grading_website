@@ -20,14 +20,12 @@
   box-sizing: border-box;
 }
 
-/* Subtle, stationary, institutional ambient illumination (No chaotic moving stripes) */
+/* Subtle, stationary, institutional ambient illumination without yellow tint */
 .login-sync-ambient {
   position: absolute;
   inset: 0;
   pointer-events: none;
-  background:
-    radial-gradient(60% 40% at 50% 0%, rgba(40, 22, 111, 0.055) 0%, transparent 100%),
-    radial-gradient(40% 30% at 85% 100%, rgba(217, 119, 6, 0.035) 0%, transparent 100%);
+  background: radial-gradient(60% 40% at 50% 0%, rgba(40, 22, 111, 0.04) 0%, transparent 100%);
   z-index: 0;
 }
 
