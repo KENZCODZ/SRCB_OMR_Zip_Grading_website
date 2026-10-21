@@ -1,3 +1,4 @@
+/// <reference types="node" />
 // verifyOmrEvaluation.ts
 // Runs the exact browser evaluation module (src/omr/omrEvaluation.ts) against real warped
 // sheets exported by omr_engine/scripts/export_live_fixtures.py.
