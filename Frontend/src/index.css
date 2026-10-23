@@ -1285,18 +1285,27 @@ button.bubble-btn.active {
   color: #dc2626;
 }
 
-/* Two-Panel Layout (Camera ~62% | Detection ~38%) */
+/* Two-Panel Layout (Camera ~60% | Detection ~40%) */
 .omr-workspace-layout {
   display: grid;
-  grid-template-columns: 62% 38%;
+  grid-template-columns: 60% 40%;
   background: #ffffff;
-  min-height: 540px;
+  min-height: 560px;
 }
 
 @media (max-width: 1024px) {
   .omr-workspace-layout {
     grid-template-columns: 1fr;
   }
+}
+
+.omr-detection-panel-container {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  height: 100%;
 }
 
 /* LEFT PANEL: CAMERA WORKSPACE */
@@ -1412,16 +1421,16 @@ button.bubble-btn.active {
 }
 
 .omr-bar-btn.active-timer {
-  background: #fffbeb;
-  border-color: #fde68a;
-  color: #b45309;
+  background: var(--primary-light-surface, #f5f3ff);
+  border-color: var(--primary-light-border, #ddd6fe);
+  color: var(--primary, #28166f);
   font-weight: 700;
 }
 
 .omr-bar-btn.active-torch {
-  background: #fefce8;
-  border-color: #fef08a;
-  color: #ca8a04;
+  background: #ecfdf5;
+  border-color: #a7f3d0;
+  color: #065f46;
   font-weight: 700;
 }
 
@@ -1488,12 +1497,12 @@ button.bubble-btn.active {
   height: 96px;
   border-radius: 50%;
   background: #ffffff;
-  border: 3.5px solid var(--srcb-gold-light, #f59e0b);
+  border: 3.5px solid var(--primary, #28166f);
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 0 25px rgba(245, 158, 11, 0.4);
+  box-shadow: 0 0 25px rgba(40, 22, 111, 0.35);
 }
 
 .omr-countdown-digit {
@@ -1506,7 +1515,7 @@ button.bubble-btn.active {
 .omr-countdown-caption {
   font-size: 0.62rem;
   font-weight: 700;
-  color: #b45309;
+  color: var(--primary, #28166f);
   text-transform: uppercase;
   letter-spacing: 0.05em;
   margin-top: 2px;
@@ -1656,7 +1665,8 @@ button.bubble-btn.active {
   display: flex;
   flex-direction: column;
   height: 100%;
-  min-height: 500px;
+  min-height: 0;
+  overflow: hidden;
 }
 
 .omr-detection-header {
@@ -5820,7 +5830,7 @@ button.bubble-btn.active {
   position: absolute;
   top: -4px;
   right: -4px;
-  background: #f59e0b;
+  background: var(--primary, #28166f);
   color: #ffffff;
   font-size: 0.65rem;
   font-weight: 800;
@@ -5830,6 +5840,1003 @@ button.bubble-btn.active {
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
 }
 
+/* ==========================================================================
+   ADVANCED OMR LIVE CAMERA SCANNER & TELEMETRY UI STYLES
+   ========================================================================== */
 
+/* Dynamic Corner Alignment Guide Reticles (Live Camera) */
+.omr-camera-sheet-guide-container {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+  z-index: 10;
+}
 
+.omr-camera-sheet-frame {
+  position: relative;
+  width: 86%;
+  max-width: 480px;
+  aspect-ratio: 1 / 1.35;
+  box-shadow: 0 0 0 9999px rgba(7, 11, 20, 0.45);
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+}
 
+.omr-camera-sheet-frame.is-detected {
+  box-shadow: 0 0 0 9999px rgba(7, 11, 20, 0.35);
+}
+
+.omr-camera-sheet-frame.is-stable {
+  box-shadow: 0 0 0 9999px rgba(7, 11, 20, 0.25);
+}
+
+/* 4 Corner HUD Reticles */
+.omr-hud-corner {
+  position: absolute;
+  width: 36px;
+  height: 36px;
+  border-color: #38bdf8;
+  border-style: solid;
+  filter: drop-shadow(0 0 8px rgba(56, 189, 248, 0.6));
+  transition: border-color 0.25s ease, filter 0.25s ease;
+}
+
+.omr-hud-corner.is-stable {
+  border-color: #10b981;
+  filter: drop-shadow(0 0 10px rgba(16, 185, 129, 0.8));
+}
+
+.omr-hud-corner.top-left {
+  top: 0;
+  left: 0;
+  border-width: 3.5px 0 0 3.5px;
+  border-top-left-radius: 8px;
+}
+
+.omr-hud-corner.top-right {
+  top: 0;
+  right: 0;
+  border-width: 3.5px 3.5px 0 0;
+  border-top-right-radius: 8px;
+}
+
+.omr-hud-corner.bottom-left {
+  bottom: 0;
+  left: 0;
+  border-width: 0 0 3.5px 3.5px;
+  border-bottom-left-radius: 8px;
+}
+
+.omr-hud-corner.bottom-right {
+  bottom: 0;
+  right: 0;
+  border-width: 0 3.5px 3.5px 0;
+  border-bottom-right-radius: 8px;
+}
+
+/* Floating Viewfinder HUD Pill (Top Center) */
+.omr-viewfinder-hud-pill {
+  position: absolute;
+  top: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(15, 23, 42, 0.82);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: #f8fafc;
+  padding: 0.4rem 1rem;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  z-index: 15;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+  white-space: nowrap;
+  transition: all 0.25s ease;
+}
+
+.omr-viewfinder-hud-pill.state-stable {
+  background: rgba(6, 78, 59, 0.9);
+  border-color: rgba(52, 211, 153, 0.4);
+  color: #ecfdf5;
+  box-shadow: 0 4px 20px rgba(16, 185, 129, 0.4);
+}
+
+.omr-viewfinder-hud-pill.state-detected {
+  background: rgba(30, 58, 138, 0.88);
+  border-color: rgba(96, 165, 250, 0.4);
+  color: #eff6ff;
+}
+
+/* Compact Evaluator Telemetry Accordion */
+.omr-telemetry-chip-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  background: var(--bg-base, #f8fafc);
+  border: 1px solid var(--border, #e2e8f0);
+  border-radius: 8px;
+  padding: 0.35rem 0.65rem;
+  margin-top: 0.4rem;
+}
+
+.omr-telemetry-toggle-btn {
+  background: #ffffff;
+  border: 1px solid var(--border, #e2e8f0);
+  color: var(--primary, #28166f);
+  font-size: 0.68rem;
+  font-weight: 700;
+  border-radius: 6px;
+  padding: 0.2rem 0.5rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: all 0.15s ease;
+}
+
+.omr-telemetry-toggle-btn:hover {
+  background: var(--primary-light-surface, #f5f3ff);
+  border-color: var(--primary-light-border, #ddd6fe);
+}
+
+/* Dual Column Layout (Q1-25 & Q26-50 side-by-side) */
+.omr-dual-columns-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  padding: 6px 8px;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+@media (max-width: 600px) {
+  .omr-dual-columns-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.omr-subcolumn {
+  display: flex;
+  flex-direction: column;
+  background: #ffffff;
+  border: 1px solid var(--border, #e2e8f0);
+  border-radius: 8px;
+  overflow: hidden;
+  min-height: 0;
+}
+
+.omr-subcolumn-header {
+  display: grid;
+  grid-template-columns: 32px 34px 1fr 38px;
+  padding: 0.35rem 0.5rem;
+  background: var(--bg-base, #f8fafc);
+  border-bottom: 1px solid var(--border, #e2e8f0);
+  font-size: 0.65rem;
+  font-weight: 800;
+  color: var(--text-secondary, #64748b);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.omr-compact-row {
+  display: grid;
+  grid-template-columns: 32px 34px 1fr 38px;
+  padding: 0.28rem 0.5rem;
+  align-items: center;
+  border-bottom: 1px solid #f1f5f9;
+  font-size: 0.74rem;
+  cursor: pointer;
+  transition: background 0.12s ease;
+}
+
+.omr-compact-row:hover {
+  background: var(--bg-base, #f8fafc);
+}
+
+.omr-compact-row.is-selected-row {
+  background: var(--primary-light-surface, #f5f3ff);
+  border-left: 3px solid var(--primary, #28166f);
+}
+
+.omr-compact-row .col-num {
+  font-weight: 700;
+  color: var(--text-secondary, #64748b);
+  font-size: 0.72rem;
+}
+
+.omr-compact-row .col-answer {
+  font-weight: 800;
+  font-size: 0.85rem;
+  color: #94a3b8;
+}
+
+.omr-compact-row .col-answer.has-answer {
+  color: var(--text-primary, #0f172a);
+}
+
+.omr-compact-row .col-status {
+  font-size: 0.68rem;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.omr-compact-row .col-conf {
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-align: right;
+  color: #64748b;
+}
+
+/* Bubble Matrix View */
+.omr-matrix-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 6px;
+  padding: 8px;
+  overflow-y: auto;
+  max-height: 320px;
+}
+
+@media (max-width: 480px) {
+  .omr-matrix-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+.omr-matrix-chip {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 4px;
+  border-radius: 8px;
+  background: #ffffff;
+  border: 1px solid var(--border, #e2e8f0);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  user-select: none;
+}
+
+.omr-matrix-chip:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+}
+
+.omr-matrix-chip.is-selected {
+  outline: 2px solid var(--primary, #28166f);
+  outline-offset: 1px;
+}
+
+.omr-matrix-chip.state-locked {
+  background: #f0fdf4;
+  border-color: #bbf7d0;
+  color: #166534;
+}
+
+.omr-matrix-chip.state-review {
+  background: #fef2f2;
+  border-color: #fecaca;
+  color: #991b1b;
+}
+
+.omr-matrix-chip.state-reading {
+  background: var(--primary-light-surface, #f5f3ff);
+  border-color: var(--primary-light-border, #ddd6fe);
+  color: var(--primary, #28166f);
+}
+
+.omr-matrix-chip.state-pending {
+  background: #f8fafc;
+  color: #64748b;
+}
+
+/* Mode Switcher Tabs */
+.scan-mode-tabs {
+  display: inline-flex;
+  align-items: center;
+  background: #f1f5f9;
+  padding: 4px;
+  border-radius: 12px;
+  border: 1px solid var(--border, #e2e8f0);
+  gap: 4px;
+  margin-bottom: 1.5rem;
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+.scan-mode-tab-btn {
+  background: transparent;
+  border: none;
+  border-radius: 8px;
+  padding: 0.55rem 1.15rem;
+  font-size: 0.84rem;
+  font-weight: 600;
+  color: var(--text-secondary, #475569);
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.scan-mode-tab-btn:hover {
+  background: rgba(255, 255, 255, 0.6);
+  color: var(--text-primary, #0f172a);
+}
+
+.scan-mode-tab-btn.active {
+  background: #ffffff;
+  color: var(--primary, #28166f);
+  font-weight: 700;
+  box-shadow: 0 2px 8px rgba(40, 22, 111, 0.12), 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+/* Enhanced Dropzone UI Components */
+.dropzone-icon-wrapper {
+  width: 64px;
+  height: 64px;
+  border-radius: 18px;
+  background: var(--primary-light-surface, #f5f3ff);
+  color: var(--primary, #28166f);
+  border: 1px solid var(--primary-light-border, #ddd6fe);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 1rem;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 14px rgba(40, 22, 111, 0.08);
+}
+
+.dropzone:hover .dropzone-icon-wrapper {
+  transform: scale(1.08);
+  background: var(--primary, #28166f);
+  color: #ffffff;
+}
+
+.dropzone-tags {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin-top: 1rem;
+  flex-wrap: wrap;
+}
+
+.dropzone-tag {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--text-secondary, #64748b);
+  background: #ffffff;
+  border: 1px solid var(--border, #e2e8f0);
+  border-radius: 6px;
+  padding: 0.2rem 0.55rem;
+}
+
+.dropzone-browse-btn {
+  margin-top: 1.15rem;
+  padding: 0.55rem 1.4rem;
+  font-size: 0.84rem;
+  font-weight: 700;
+  border-radius: 10px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* ================================================================
+   MOBILE-FIRST OMR CAMERA & LIVE SCANNER RESPONSIVE STYLES
+   Tailored native mobile experience for phones vs desktop PC workstations
+   ================================================================ */
+
+/* Wrapper Mobile Adaptation (Phone full-screen immersive view) */
+.omr-workspace-wrapper.omr-mobile-mode {
+  position: relative;
+  width: 100%;
+  height: 85vh;
+  min-height: 520px;
+  max-height: 100dvh;
+  margin: 0 0 1.5rem 0;
+  border-radius: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: #070b14;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.35);
+}
+
+@media (max-width: 768px) {
+  .omr-workspace-wrapper.omr-mobile-mode:not(.omr-fullscreen) {
+    height: calc(100dvh - 90px);
+    border-radius: 16px;
+    margin-bottom: 1rem;
+  }
+}
+
+/* Layout Container on Mobile */
+.omr-workspace-layout.is-mobile-layout {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  width: 100%;
+  position: relative;
+  overflow: hidden;
+  min-height: 0;
+}
+
+.omr-workspace-layout.is-mobile-layout .omr-camera-panel {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  width: 100%;
+  position: relative;
+  background: #070b14;
+  border: none;
+  min-height: 0;
+}
+
+.omr-workspace-layout.is-mobile-layout .omr-viewport-wrapper {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  background: #000000;
+  overflow: hidden;
+}
+
+.omr-workspace-layout.is-mobile-layout .omr-video-feed {
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  object-fit: cover;
+}
+
+/* Normal Camera Container on Mobile */
+.omr-mobile-mode .normal-camera-container {
+  position: relative;
+  flex: 1;
+  height: 100%;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.omr-mobile-mode .normal-camera-viewport {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  background: #000000;
+  overflow: hidden;
+}
+
+.omr-mobile-mode .normal-camera-video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* 1. Mobile Floating Top Bar (Glassmorphism HUD) */
+.omr-mobile-top-bar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 25;
+  padding: 0.65rem 0.85rem;
+  padding-top: max(0.65rem, env(safe-area-inset-top, 0.65rem));
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  background: linear-gradient(180deg, rgba(7, 11, 20, 0.88) 0%, rgba(7, 11, 20, 0.45) 75%, transparent 100%);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+.omr-mobile-icon-btn {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.16);
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  color: #ffffff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  flex-shrink: 0;
+}
+
+.omr-mobile-icon-btn:active {
+  transform: scale(0.92);
+  background: rgba(255, 255, 255, 0.32);
+}
+
+.omr-mobile-icon-btn.omr-close-glass {
+  background: rgba(239, 68, 68, 0.22);
+  border-color: rgba(239, 68, 68, 0.45);
+}
+
+.omr-mobile-icon-btn.active-torch {
+  background: #ecfdf5;
+  border-color: #34d399;
+  color: #065f46;
+}
+
+.omr-mobile-icon-btn.active-timer {
+  background: #f5f3ff;
+  border-color: #a78bfa;
+  color: #28166f;
+  position: relative;
+}
+
+.omr-timer-badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  background: #8b5cf6;
+  color: #ffffff;
+  font-size: 0.6rem;
+  font-weight: 800;
+  border-radius: 8px;
+  padding: 1px 4px;
+  line-height: 1;
+}
+
+.omr-mobile-top-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Mobile Live Status Pill (Top Center) */
+.omr-mobile-status-pill {
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 0.3rem 0.65rem;
+  border-radius: 20px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  white-space: nowrap;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.omr-mobile-status-pill.state-stable {
+  background: rgba(6, 78, 59, 0.88);
+  border-color: #34d399;
+  color: #ecfdf5;
+}
+
+.omr-mobile-status-pill.state-detected {
+  background: rgba(30, 58, 138, 0.88);
+  border-color: #60a5fa;
+  color: #eff6ff;
+}
+
+.omr-mobile-status-pill.state-searching {
+  background: rgba(15, 23, 42, 0.85);
+  border-color: rgba(255, 255, 255, 0.2);
+  color: #cbd5e1;
+}
+
+/* Mobile Live Score Banner (Floating under Top Bar) */
+.omr-mobile-score-banner {
+  position: absolute;
+  top: max(48px, calc(env(safe-area-inset-top, 0px) + 48px));
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 24;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0.28rem 0.85rem;
+  border-radius: 20px;
+  background: rgba(18, 10, 58, 0.88);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(167, 139, 250, 0.38);
+  color: #ffffff;
+  font-size: 0.72rem;
+  white-space: nowrap;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
+  animation: fadeIn 0.2s ease-out;
+}
+
+.omr-mobile-score-tag {
+  color: #c4b5fd;
+  font-weight: 600;
+}
+
+.omr-mobile-score-result {
+  font-weight: 700;
+  color: #ffffff;
+}
+
+.omr-mobile-score-result.pass {
+  color: #34d399;
+}
+
+.omr-mobile-score-result.fail {
+  color: #f87171;
+}
+
+/* 2. Floating Mobile Docked Peek Card */
+.omr-mobile-peek-card {
+  position: absolute;
+  bottom: calc(82px + env(safe-area-inset-bottom, 0px));
+  left: 12px;
+  right: 12px;
+  z-index: 21;
+  background: rgba(15, 23, 42, 0.88);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 14px;
+  padding: 0.55rem 0.85rem 0.45rem;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  transition: transform 0.15s ease, background 0.15s ease;
+}
+
+.omr-mobile-peek-card:active {
+  transform: scale(0.98);
+  background: rgba(15, 23, 42, 0.95);
+}
+
+.omr-mobile-peek-handle {
+  width: 32px;
+  height: 3.5px;
+  background: rgba(255, 255, 255, 0.35);
+  border-radius: 2px;
+  margin: 0 auto 2px;
+}
+
+.omr-mobile-peek-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.omr-mobile-peek-metrics {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.omr-mobile-settled-group {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+}
+
+.omr-mobile-settled-num {
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: #ffffff;
+}
+
+.omr-mobile-settled-label {
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: #94a3b8;
+  text-transform: uppercase;
+}
+
+.omr-mobile-review-badge {
+  background: rgba(245, 158, 11, 0.25);
+  border: 1px solid #f59e0b;
+  color: #fbbf24;
+  font-size: 0.68rem;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 6px;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.omr-mobile-peek-score {
+  background: rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #ffffff;
+  font-size: 0.68rem;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 6px;
+}
+
+.omr-mobile-peek-score.pass {
+  background: rgba(16, 185, 129, 0.25);
+  border-color: #10b981;
+  color: #34d399;
+}
+
+.omr-mobile-peek-cta {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #c4b5fd;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.omr-mobile-peek-progress {
+  height: 3px;
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 2px;
+  overflow: hidden;
+  margin-top: 2px;
+}
+
+.omr-mobile-peek-progress-bar {
+  height: 100%;
+  background: linear-gradient(90deg, #818cf8 0%, #34d399 100%);
+  border-radius: 2px;
+  transition: width 0.2s ease-out;
+}
+
+/* 3. Mobile Thumb Shutter Bar */
+.omr-mobile-shutter-bar {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 22;
+  padding: 0.65rem 1.25rem;
+  padding-bottom: max(0.85rem, env(safe-area-inset-bottom, 0.85rem));
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: linear-gradient(0deg, rgba(7, 11, 20, 0.95) 0%, rgba(7, 11, 20, 0.72) 65%, transparent 100%);
+}
+
+.omr-mobile-mode-pill {
+  background: rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  color: #ffffff;
+  border-radius: 20px;
+  padding: 0.4rem 0.75rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  cursor: pointer;
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  transition: all 0.15s ease;
+}
+
+.omr-mobile-mode-pill:active {
+  transform: scale(0.94);
+}
+
+.omr-mobile-mode-pill.mode-auto {
+  background: rgba(67, 38, 184, 0.65);
+  border-color: #a78bfa;
+  color: #ffffff;
+}
+
+/* Native iOS/Android Style Circular Shutter Button */
+.omr-mobile-shutter-center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.omr-mobile-shutter-button {
+  width: 70px;
+  height: 70px;
+  border-radius: 50%;
+  background: transparent;
+  border: 4px solid #ffffff;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: transform 0.1s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.45);
+}
+
+.omr-mobile-shutter-button:active {
+  transform: scale(0.92);
+}
+
+.omr-mobile-shutter-button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.omr-mobile-shutter-inner {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.15);
+}
+
+.omr-mobile-shutter-timer-digit {
+  font-size: 1.15rem;
+  font-weight: 900;
+  color: #28166f;
+}
+
+.omr-mobile-shutter-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* 4. Mobile Bottom Sheet Drawer */
+.omr-mobile-drawer-sheet {
+  position: fixed;
+  inset: 0;
+  z-index: 99999;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+}
+
+.omr-mobile-drawer-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(7, 11, 20, 0.65);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  animation: modalFadeIn 0.2s ease-out;
+}
+
+.omr-mobile-drawer-content {
+  position: relative;
+  z-index: 2;
+  width: 100%;
+  max-height: 86vh;
+  background: #ffffff;
+  border-radius: 20px 20px 0 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.35);
+  animation: mobileDrawerSlideUp 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes mobileDrawerSlideUp {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+.omr-mobile-drawer-handle-bar {
+  padding: 0.55rem 1rem 0.35rem;
+  background: #ffffff;
+  border-bottom: 1px solid var(--border, #e2e8f0);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.omr-mobile-drawer-grabber {
+  width: 38px;
+  height: 4px;
+  background: #cbd5e1;
+  border-radius: 2px;
+  margin: 0 auto;
+}
+
+.omr-mobile-drawer-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.omr-mobile-drawer-count-badge {
+  font-size: 0.72rem;
+  font-weight: 700;
+  background: #f1f5f9;
+  border: 1px solid #cbd5e1;
+  color: #334155;
+  padding: 1px 7px;
+  border-radius: 12px;
+}
+
+.omr-mobile-drawer-close-btn {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 0.35rem 0.75rem;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #475569;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.omr-mobile-drawer-close-btn:active {
+  background: #f1f5f9;
+}
+
+/* Touch & Mobile View optimizations for LiveScanOverlay */
+@media (max-width: 768px) {
+  .omr-workspace-wrapper:not(.omr-fullscreen) {
+    border-radius: 0;
+    margin-bottom: 0;
+  }
+
+  .omr-detection-panel {
+    max-height: 84vh;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .omr-matrix-grid {
+    grid-template-columns: repeat(4, 1fr) !important;
+    gap: 6px;
+    padding: 8px;
+  }
+
+  .omr-latest-detection-card {
+    margin: 0.5rem 0.75rem;
+    padding: 0.65rem 0.75rem;
+  }
+
+  .omr-detection-header {
+    padding: 0.65rem 0.75rem 0.5rem;
+  }
+
+  .omr-answer-list-section {
+    margin: 0 0.75rem 0.5rem;
+  }
+
+  .omr-detection-footer {
+    padding: 0.6rem 0.85rem;
+  }
+}

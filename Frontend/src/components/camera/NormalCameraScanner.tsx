@@ -48,6 +48,18 @@ export const NormalCameraScanner: React.FC<NormalCameraScannerProps> = ({
   const [videoDevices, setVideoDevices] = useState<MediaDeviceInfo[]>([]);
   const [selectedDeviceId, setSelectedDeviceId] = useState<string | null>(null);
 
+  // Mobile detection
+  const [isMobile, setIsMobile] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return false;
+    return window.innerWidth <= 768;
+  });
+
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth <= 768);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
   const [shutterTimer, setShutterTimer] = useState<number>(0); // 0s (instant), 2s, 3s, 5s
   const [countdownActive, setCountdownActive] = useState<number | null>(null);
   const [flashActive, setFlashActive] = useState(false);
@@ -468,88 +480,90 @@ export const NormalCameraScanner: React.FC<NormalCameraScannerProps> = ({
   };
 
   return (
-    <div className={`omr-workspace-wrapper ${isFullscreen ? 'omr-fullscreen' : ''}`}>
-      {/* 1. HEADER */}
-      <div className="omr-workspace-header">
-        <div className="omr-header-left">
-          <div className="omr-title-group">
-            <div className="omr-header-icon-badge" style={{ background: '#eff6ff', color: '#1d4ed8', borderColor: '#bfdbfe' }}>
-              <Camera size={18} />
-            </div>
-            <div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                <h3 className="omr-title">{title}</h3>
-                <span
-                  style={{
-                    background: '#f1f5f9',
-                    color: '#475569',
-                    border: '1px solid #cbd5e1',
-                    borderRadius: '20px',
-                    fontSize: '0.7rem',
-                    fontWeight: 700,
-                    padding: '2px 8px',
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.04em',
-                  }}
-                >
-                  Manual Shutter Mode
-                </span>
+    <div className={`omr-workspace-wrapper ${isFullscreen ? 'omr-fullscreen' : ''} ${isMobile ? 'omr-mobile-mode' : 'omr-desktop-mode'}`}>
+      {/* 1. DESKTOP HEADER (PC only) */}
+      {!isMobile && (
+        <div className="omr-workspace-header">
+          <div className="omr-header-left">
+            <div className="omr-title-group">
+              <div className="omr-header-icon-badge" style={{ background: '#eff6ff', color: '#1d4ed8', borderColor: '#bfdbfe' }}>
+                <Camera size={18} />
               </div>
-              <p className="omr-subtitle">{subtitle}</p>
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                  <h3 className="omr-title">{title}</h3>
+                  <span
+                    style={{
+                      background: '#f1f5f9',
+                      color: '#475569',
+                      border: '1px solid #cbd5e1',
+                      borderRadius: '20px',
+                      fontSize: '0.7rem',
+                      fontWeight: 700,
+                      padding: '2px 8px',
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.04em',
+                    }}
+                  >
+                    Manual Shutter Mode
+                  </span>
+                </div>
+                <p className="omr-subtitle">{subtitle}</p>
+              </div>
             </div>
           </div>
-        </div>
 
-        <div className="omr-header-actions" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          {/* Quick link to Live Auto-Scanner if available */}
-          {onSwitchToLive && (
+          <div className="omr-header-actions" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            {/* Quick link to Live Auto-Scanner if available */}
+            {onSwitchToLive && (
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={() => {
+                  stopCamera();
+                  onSwitchToLive();
+                }}
+                style={{
+                  fontSize: '0.78rem',
+                  padding: '0.4rem 0.75rem',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '5px',
+                  borderRadius: '8px',
+                }}
+                title="Switch to Live Auto-Detection Scanner"
+              >
+                <Sparkles size={14} style={{ color: 'var(--primary, #28166f)' }} />
+                <span>Switch to Live Scanner</span>
+              </button>
+            )}
+
+            {/* Theater / Fullscreen Toggle */}
             <button
               type="button"
-              className="btn btn-secondary"
-              onClick={() => {
-                stopCamera();
-                onSwitchToLive();
-              }}
-              style={{
-                fontSize: '0.78rem',
-                padding: '0.4rem 0.75rem',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '5px',
-                borderRadius: '8px',
-              }}
-              title="Switch to Live Auto-Detection Scanner"
+              className="omr-action-btn"
+              onClick={() => setIsFullscreen(!isFullscreen)}
+              title={isFullscreen ? 'Exit Fullscreen (Esc)' : 'Expand Viewfinder'}
             >
-              <Sparkles size={14} style={{ color: 'var(--primary, #28166f)' }} />
-              <span>Switch to Live Scanner</span>
+              {isFullscreen ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
             </button>
-          )}
 
-          {/* Theater / Fullscreen Toggle */}
-          <button
-            type="button"
-            className="omr-action-btn"
-            onClick={() => setIsFullscreen(!isFullscreen)}
-            title={isFullscreen ? 'Exit Fullscreen (Esc)' : 'Expand Viewfinder'}
-          >
-            {isFullscreen ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
-          </button>
-
-          {onClose && (
-            <button
-              type="button"
-              className="omr-action-btn omr-close-btn"
-              onClick={() => {
-                stopCamera();
-                onClose();
-              }}
-              title="Close Scanner"
-            >
-              <X size={18} />
-            </button>
-          )}
+            {onClose && (
+              <button
+                type="button"
+                className="omr-action-btn omr-close-btn"
+                onClick={() => {
+                  stopCamera();
+                  onClose();
+                }}
+                title="Close Scanner"
+              >
+                <X size={18} />
+              </button>
+            )}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* 2. ERROR STATE */}
       {status === 'error' && (
@@ -615,6 +629,84 @@ export const NormalCameraScanner: React.FC<NormalCameraScannerProps> = ({
         <div className="normal-camera-container">
           {/* VIEWFINDER SCREEN */}
           <div className="normal-camera-viewport">
+            {/* MOBILE FLOATING TOP BAR */}
+            {isMobile && (
+              <div className="omr-mobile-top-bar">
+                {onClose ? (
+                  <button
+                    type="button"
+                    className="omr-mobile-icon-btn omr-close-glass"
+                    onClick={() => {
+                      stopCamera();
+                      onClose();
+                    }}
+                    title="Close Scanner"
+                  >
+                    <X size={18} />
+                  </button>
+                ) : (
+                  <div style={{ width: 38 }} />
+                )}
+
+                <div className="omr-mobile-status-pill state-searching">
+                  <Camera size={13} style={{ color: '#60a5fa' }} />
+                  <span>Manual Shutter</span>
+                </div>
+
+                <div className="omr-mobile-top-actions">
+                  {hasTorch && (
+                    <button
+                      type="button"
+                      className={`omr-mobile-icon-btn ${isTorchOn ? 'active-torch' : ''}`}
+                      onClick={toggleTorch}
+                      title="Toggle Flashlight"
+                    >
+                      {isTorchOn ? <Zap size={16} /> : <ZapOff size={16} />}
+                    </button>
+                  )}
+
+                  {videoDevices.length > 1 && (
+                    <button
+                      type="button"
+                      className="omr-mobile-icon-btn"
+                      onClick={switchCamera}
+                      title="Switch camera device"
+                    >
+                      <RotateCw size={16} />
+                    </button>
+                  )}
+
+                  <button
+                    type="button"
+                    className={`omr-mobile-icon-btn ${shutterTimer > 0 ? 'active-timer' : ''}`}
+                    onClick={() => {
+                      const delays = [0, 2, 3, 5];
+                      const next = delays[(delays.indexOf(shutterTimer) + 1) % delays.length];
+                      setShutterTimer(next);
+                    }}
+                    title="Set shutter timer delay"
+                  >
+                    <Timer size={16} />
+                    {shutterTimer > 0 && <span className="omr-timer-badge">{shutterTimer}s</span>}
+                  </button>
+
+                  {onSwitchToLive && (
+                    <button
+                      type="button"
+                      className="omr-mobile-icon-btn"
+                      onClick={() => {
+                        stopCamera();
+                        onSwitchToLive();
+                      }}
+                      title="Switch to Live Auto-Scanner"
+                    >
+                      <Sparkles size={16} style={{ color: '#a78bfa' }} />
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
+
             {/* Live Video Element */}
             <video
               ref={videoRef}
@@ -827,93 +919,162 @@ export const NormalCameraScanner: React.FC<NormalCameraScannerProps> = ({
             )}
           </div>
 
-          {/* DEDICATED CAMERA BOTTOM CONTROL BAR */}
-          <div className="normal-camera-control-bar">
-            {/* Left Options: Timer & Torch */}
-            <div className="normal-camera-control-group left">
-              {/* Timer Delay Selector */}
+          {/* MOBILE BOTTOM SHUTTER BAR */}
+          {isMobile && !previewCaptured && (
+            <div className="omr-mobile-shutter-bar">
               <button
                 type="button"
-                className={`omr-bar-btn ${shutterTimer > 0 ? 'active-timer' : ''}`}
+                className={`omr-mobile-mode-pill ${shutterTimer > 0 ? 'mode-auto' : 'mode-manual'}`}
                 onClick={() => {
                   const delays = [0, 2, 3, 5];
                   const next = delays[(delays.indexOf(shutterTimer) + 1) % delays.length];
                   setShutterTimer(next);
                 }}
-                title="Set shutter timer delay"
+                title="Timer delay"
               >
-                <Timer size={15} />
-                <span>Timer: <strong>{shutterTimer === 0 ? 'Off' : `${shutterTimer}s`}</strong></span>
+                <Timer size={13} />
+                <span>{shutterTimer === 0 ? 'Instant' : `${shutterTimer}s`}</span>
               </button>
 
-              {/* Torch / Flashlight Toggle */}
-              {hasTorch && (
+              <div className="omr-mobile-shutter-center">
                 <button
                   type="button"
-                  className={`omr-bar-btn ${isTorchOn ? 'active-torch' : ''}`}
-                  onClick={toggleTorch}
-                  title="Toggle Flashlight"
+                  className="omr-mobile-shutter-button"
+                  onClick={handleShutterClick}
+                  disabled={status !== 'ready' || isCapturing || !!previewCaptured || countdownActive !== null}
+                  title="Take photo of sheet"
                 >
-                  {isTorchOn ? <Zap size={15} /> : <ZapOff size={15} />}
-                  <span>Flash</span>
+                  <div className="omr-mobile-shutter-inner">
+                    {shutterTimer > 0 ? (
+                      <span className="omr-mobile-shutter-timer-digit">{shutterTimer}s</span>
+                    ) : (
+                      <Camera size={26} style={{ color: '#28166f' }} />
+                    )}
+                  </div>
                 </button>
-              )}
-            </div>
+              </div>
 
-            {/* Center: Prominent Circular Shutter Button */}
-            <div className="normal-camera-control-group center">
-              <button
-                type="button"
-                className="normal-shutter-btn"
-                onClick={handleShutterClick}
-                disabled={status !== 'ready' || isCapturing || !!previewCaptured || countdownActive !== null}
-                title={
-                  status !== 'ready'
-                    ? 'Camera is loading...'
-                    : shutterTimer > 0
-                    ? `Take picture in ${shutterTimer}s`
-                    : 'Take picture of answer sheet'
-                }
-              >
-                <div className="normal-shutter-inner">
-                  <Camera size={24} />
-                </div>
-                {shutterTimer > 0 && (
-                  <span className="normal-shutter-timer-badge">{shutterTimer}s</span>
+              <div className="omr-mobile-shutter-right">
+                {onSwitchToUpload ? (
+                  <button
+                    type="button"
+                    className="omr-mobile-icon-btn"
+                    onClick={() => {
+                      stopCamera();
+                      onSwitchToUpload();
+                    }}
+                    title="Switch to file upload mode"
+                  >
+                    <UploadCloud size={18} />
+                  </button>
+                ) : onSwitchToLive ? (
+                  <button
+                    type="button"
+                    className="omr-mobile-icon-btn"
+                    onClick={() => {
+                      stopCamera();
+                      onSwitchToLive();
+                    }}
+                    title="Switch to Live Auto-Scanner"
+                  >
+                    <Sparkles size={18} style={{ color: '#a78bfa' }} />
+                  </button>
+                ) : (
+                  <div style={{ width: 38 }} />
                 )}
-              </button>
+              </div>
             </div>
+          )}
 
-            {/* Right: Camera Flip & Upload Switch */}
-            <div className="normal-camera-control-group right">
-              {videoDevices.length > 1 && (
+          {/* DEDICATED DESKTOP CAMERA BOTTOM CONTROL BAR */}
+          {!isMobile && (
+            <div className="normal-camera-control-bar">
+              {/* Left Options: Timer & Torch */}
+              <div className="normal-camera-control-group left">
+                {/* Timer Delay Selector */}
                 <button
                   type="button"
-                  className="omr-bar-btn"
-                  onClick={switchCamera}
-                  title="Switch camera device"
-                >
-                  <RotateCw size={15} />
-                  <span>Flip Camera</span>
-                </button>
-              )}
-
-              {onSwitchToUpload && (
-                <button
-                  type="button"
-                  className="omr-bar-btn upload-opt"
+                  className={`omr-bar-btn ${shutterTimer > 0 ? 'active-timer' : ''}`}
                   onClick={() => {
-                    stopCamera();
-                    onSwitchToUpload();
+                    const delays = [0, 2, 3, 5];
+                    const next = delays[(delays.indexOf(shutterTimer) + 1) % delays.length];
+                    setShutterTimer(next);
                   }}
-                  title="Switch to file upload mode"
+                  title="Set shutter timer delay"
                 >
-                  <UploadCloud size={15} />
-                  <span>Upload File</span>
+                  <Timer size={15} />
+                  <span>Timer: <strong>{shutterTimer === 0 ? 'Off' : `${shutterTimer}s`}</strong></span>
                 </button>
-              )}
+
+                {/* Torch / Flashlight Toggle */}
+                {hasTorch && (
+                  <button
+                    type="button"
+                    className={`omr-bar-btn ${isTorchOn ? 'active-torch' : ''}`}
+                    onClick={toggleTorch}
+                    title="Toggle Flashlight"
+                  >
+                    {isTorchOn ? <Zap size={15} /> : <ZapOff size={15} />}
+                    <span>Flash</span>
+                  </button>
+                )}
+              </div>
+
+              {/* Center: Prominent Circular Shutter Button */}
+              <div className="normal-camera-control-group center">
+                <button
+                  type="button"
+                  className="normal-shutter-btn"
+                  onClick={handleShutterClick}
+                  disabled={status !== 'ready' || isCapturing || !!previewCaptured || countdownActive !== null}
+                  title={
+                    status !== 'ready'
+                      ? 'Camera is loading...'
+                      : shutterTimer > 0
+                      ? `Take picture in ${shutterTimer}s`
+                      : 'Take picture of answer sheet'
+                  }
+                >
+                  <div className="normal-shutter-inner">
+                    <Camera size={24} />
+                  </div>
+                  {shutterTimer > 0 && (
+                    <span className="normal-shutter-timer-badge">{shutterTimer}s</span>
+                  )}
+                </button>
+              </div>
+
+              {/* Right: Camera Flip & Upload Switch */}
+              <div className="normal-camera-control-group right">
+                {videoDevices.length > 1 && (
+                  <button
+                    type="button"
+                    className="omr-bar-btn"
+                    onClick={switchCamera}
+                    title="Switch camera device"
+                  >
+                    <RotateCw size={15} />
+                    <span>Flip Camera</span>
+                  </button>
+                )}
+
+                {onSwitchToUpload && (
+                  <button
+                    type="button"
+                    className="omr-bar-btn upload-opt"
+                    onClick={() => {
+                      stopCamera();
+                      onSwitchToUpload();
+                    }}
+                    title="Switch to file upload mode"
+                  >
+                    <UploadCloud size={15} />
+                    <span>Upload File</span>
+                  </button>
+                )}
+              </div>
             </div>
-          </div>
+          )}
         </div>
       )}
     </div>

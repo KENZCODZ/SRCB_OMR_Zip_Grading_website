@@ -20,6 +20,8 @@ import {
   Timer,
   Maximize2,
   Minimize2,
+  FileCheck,
+  ChevronUp,
 } from 'lucide-react';
 import { useLiveOmrScanner, type CornerPoint, type LiveScanResult } from '../../hooks/useLiveOmrScanner';
 import { LiveScanOverlay } from './LiveScanOverlay';
@@ -110,6 +112,27 @@ export const CameraScanner: React.FC<CameraScannerProps> = ({
   const [shutterTimer, setShutterTimer] = useState<number>(3); // 0s, 2s, 3s, 5s countdown
   const [countdownActive, setCountdownActive] = useState<number | null>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
+
+  // Responsive Mobile View Detection
+  const [isMobile, setIsMobile] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return false;
+    return window.innerWidth <= 768;
+  });
+  const [mobileSheetOpen, setMobileSheetOpen] = useState(false);
+
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth <= 768);
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  const cycleShutterTimer = () => {
+    const delays = [0, 2, 3, 5];
+    const next = delays[(delays.indexOf(shutterTimer) + 1) % delays.length];
+    setShutterTimer(next);
+  };
 
   const overlayCanvasRef = useRef<HTMLCanvasElement | null>(null);
 
@@ -556,78 +579,79 @@ export const CameraScanner: React.FC<CameraScannerProps> = ({
   };
 
   return (
-    <div className={`omr-workspace-wrapper ${isFullscreen ? 'omr-fullscreen' : ''}`}>
-      {/* 1. WORKSPACE HEADER BAR */}
-      <div className="omr-workspace-header">
-        <div className="omr-header-left">
-          <div className="omr-title-group">
-            <div className="omr-header-icon-badge">
-              <Camera size={18} />
-            </div>
-            <div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                <h3 className="omr-title">{title}</h3>
-                {isSmartDetectionAvailable && (
-                  <span className="omr-opencv-pill">
-                    OpenCV 4.x Active
-                  </span>
-                )}
+    <div className={`omr-workspace-wrapper ${isFullscreen ? 'omr-fullscreen' : ''} ${isMobile ? 'omr-mobile-mode' : 'omr-desktop-mode'}`}>
+      {/* 1. DESKTOP WORKSPACE HEADER BAR (Rendered on PC workstations only) */}
+      {!isMobile && (
+        <div className="omr-workspace-header">
+          <div className="omr-header-left">
+            <div className="omr-title-group">
+              <div className="omr-header-icon-badge">
+                <Camera size={18} />
               </div>
-              <p className="omr-subtitle">{subtitle}</p>
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                  <h3 className="omr-title">{title}</h3>
+                  {isSmartDetectionAvailable && (
+                    <span className="omr-opencv-pill">
+                      OpenCV 4.x Active
+                    </span>
+                  )}
+                </div>
+                <p className="omr-subtitle">{subtitle}</p>
+              </div>
             </div>
           </div>
-        </div>
 
-        <div className="omr-header-actions" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          {onSwitchToNormal && (
+          <div className="omr-header-actions" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            {onSwitchToNormal && (
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={() => {
+                  stopCamera();
+                  onSwitchToNormal();
+                }}
+                style={{
+                  fontSize: '0.78rem',
+                  padding: '0.4rem 0.75rem',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '5px',
+                  borderRadius: '8px',
+                }}
+                title="Switch to Standard Camera with Manual Shutter"
+              >
+                <Camera size={14} style={{ color: '#1d4ed8' }} />
+                <span>Normal Camera (Shutter)</span>
+              </button>
+            )}
+
+            {/* Fullscreen / Theater Mode Toggle */}
             <button
               type="button"
-              className="btn btn-secondary"
-              onClick={() => {
-                stopCamera();
-                onSwitchToNormal();
-              }}
-              style={{
-                fontSize: '0.78rem',
-                padding: '0.4rem 0.75rem',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '5px',
-                borderRadius: '8px',
-              }}
-              title="Switch to Standard Camera with Manual Shutter"
+              className="omr-action-btn"
+              onClick={() => setIsFullscreen(!isFullscreen)}
+              title={isFullscreen ? 'Exit Fullscreen (Esc)' : 'Expand Fullscreen Workspace'}
             >
-              <Camera size={14} style={{ color: '#1d4ed8' }} />
-              <span>Normal Camera (Shutter)</span>
+              {isFullscreen ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
             </button>
-          )}
 
-          {/* Fullscreen / Theater Mode Toggle */}
-          <button
-            type="button"
-            className="omr-action-btn"
-            onClick={() => setIsFullscreen(!isFullscreen)}
-            title={isFullscreen ? 'Exit Fullscreen (Esc)' : 'Expand Fullscreen Workspace'}
-          >
-            {isFullscreen ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
-          </button>
-
-
-          {onClose && (
-            <button
-              type="button"
-              className="omr-action-btn omr-close-btn"
-              onClick={() => {
-                stopCamera();
-                onClose();
-              }}
-              title="Close Scanner"
-            >
-              <X size={18} />
-            </button>
-          )}
+            {onClose && (
+              <button
+                type="button"
+                className="omr-action-btn omr-close-btn"
+                onClick={() => {
+                  stopCamera();
+                  onClose();
+                }}
+                title="Close Scanner"
+              >
+                <X size={18} />
+              </button>
+            )}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* 2. CAMERA ERROR STATE */}
       {status === 'error' && (
@@ -689,11 +713,123 @@ export const CameraScanner: React.FC<CameraScannerProps> = ({
         </div>
       )}
 
-      {/* 3. TWO-PANEL OMR WORKSPACE (Camera ~62% | Detection ~38%) */}
+      {/* 3. OMR WORKSPACE (PC: Two-panel side-by-side | Mobile: Full-bleed camera with slide-up results drawer) */}
       {status !== 'error' && (
-        <div className="omr-workspace-layout">
+        <div className={`omr-workspace-layout ${isMobile ? 'is-mobile-layout' : ''}`}>
           {/* LEFT PANEL: CAMERA WORKSPACE (~62% width) */}
           <div className="omr-camera-panel">
+            {/* MOBILE FLOATING TOP BAR (Rendered on mobile only) */}
+            {isMobile && (
+              <div className="omr-mobile-top-bar">
+                {onClose ? (
+                  <button
+                    type="button"
+                    className="omr-mobile-icon-btn omr-close-glass"
+                    onClick={() => {
+                      stopCamera();
+                      onClose();
+                    }}
+                    title="Close Scanner"
+                  >
+                    <X size={18} />
+                  </button>
+                ) : (
+                  <div style={{ width: 38 }} />
+                )}
+
+                <div
+                  className={`omr-mobile-status-pill ${
+                    isSheetStable
+                      ? 'state-stable'
+                      : isSheetDetected
+                      ? 'state-detected'
+                      : 'state-searching'
+                  }`}
+                >
+                  {isSheetStable ? (
+                    <>
+                      <CheckCircle2 size={13} style={{ color: '#34d399' }} />
+                      <span>Sheet Locked</span>
+                    </>
+                  ) : isSheetDetected ? (
+                    <>
+                      <Sparkles size={13} style={{ color: '#60a5fa' }} />
+                      <span>Hold Steady</span>
+                    </>
+                  ) : (
+                    <>
+                      <FileCheck size={13} style={{ color: '#94a3b8' }} />
+                      <span>Align Sheet</span>
+                    </>
+                  )}
+                </div>
+
+                <div className="omr-mobile-top-actions">
+                  {hasTorch && (
+                    <button
+                      type="button"
+                      className={`omr-mobile-icon-btn ${isTorchOn ? 'active-torch' : ''}`}
+                      onClick={toggleTorch}
+                      title="Toggle Flashlight"
+                    >
+                      {isTorchOn ? <Zap size={16} /> : <ZapOff size={16} />}
+                    </button>
+                  )}
+
+                  {videoDevices.length > 1 && (
+                    <button
+                      type="button"
+                      className="omr-mobile-icon-btn"
+                      onClick={() => switchCamera()}
+                      title="Switch camera device"
+                    >
+                      <RotateCw size={16} />
+                    </button>
+                  )}
+
+                  <button
+                    type="button"
+                    className={`omr-mobile-icon-btn ${shutterTimer > 0 ? 'active-timer' : ''}`}
+                    onClick={cycleShutterTimer}
+                    title="Shutter Delay Timer"
+                  >
+                    <Timer size={16} />
+                    {shutterTimer > 0 && <span className="omr-timer-badge">{shutterTimer}s</span>}
+                  </button>
+
+                  {onSwitchToNormal && (
+                    <button
+                      type="button"
+                      className="omr-mobile-icon-btn"
+                      onClick={() => {
+                        stopCamera();
+                        onSwitchToNormal();
+                      }}
+                      title="Switch to Normal Camera"
+                    >
+                      <Camera size={16} />
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* MOBILE FLOATING SCORE / ID BANNER */}
+            {isMobile && (detectedStudentId || (answerKey && Object.keys(answerKey).length > 0)) && (
+              <div className="omr-mobile-score-banner">
+                {detectedStudentId && (
+                  <span className="omr-mobile-score-tag">
+                    ID: <strong>{detectedStudentId}</strong>
+                  </span>
+                )}
+                {answerKey && Object.keys(answerKey).length > 0 && (
+                  <span className={`omr-mobile-score-result ${isPassing ? 'pass' : 'fail'}`}>
+                    Score: <strong>{liveScore}/{totalQuestions}</strong> ({livePercentage}%) {isPassing ? '✓' : ''}
+                  </span>
+                )}
+              </div>
+            )}
+
             <div className="omr-viewport-wrapper">
               <video
                 ref={videoRef}
@@ -704,6 +840,53 @@ export const CameraScanner: React.FC<CameraScannerProps> = ({
               />
 
               <canvas ref={overlayCanvasRef} className="omr-overlay-canvas" />
+
+              {/* Dynamic Corner Alignment Guide Reticles */}
+              {!previewCaptured && status === 'scanning' && (
+                <div className="omr-camera-sheet-guide-container">
+                  <div
+                    className={`omr-camera-sheet-frame ${
+                      isSheetStable ? 'is-stable' : isSheetDetected ? 'is-detected' : ''
+                    }`}
+                  >
+                    <div className={`omr-hud-corner top-left ${isSheetStable ? 'is-stable' : ''}`} />
+                    <div className={`omr-hud-corner top-right ${isSheetStable ? 'is-stable' : ''}`} />
+                    <div className={`omr-hud-corner bottom-left ${isSheetStable ? 'is-stable' : ''}`} />
+                    <div className={`omr-hud-corner bottom-right ${isSheetStable ? 'is-stable' : ''}`} />
+                    <div className="normal-sheet-crosshair" />
+                  </div>
+                </div>
+              )}
+
+              {/* Floating Top Viewfinder HUD Pill */}
+              {!previewCaptured && status === 'scanning' && (
+                <div
+                  className={`omr-viewfinder-hud-pill ${
+                    isSheetStable
+                      ? 'state-stable'
+                      : isSheetDetected
+                      ? 'state-detected'
+                      : 'state-searching'
+                  }`}
+                >
+                  {isSheetStable ? (
+                    <>
+                      <CheckCircle2 size={13} style={{ color: '#34d399' }} />
+                      <span>Sheet Locked &amp; Aligned — Processing...</span>
+                    </>
+                  ) : isSheetDetected ? (
+                    <>
+                      <Sparkles size={13} style={{ color: '#60a5fa' }} />
+                      <span>Sheet Detected — Hold Camera Steady</span>
+                    </>
+                  ) : (
+                    <>
+                      <FileCheck size={13} style={{ color: '#94a3b8' }} />
+                      <span>Align ZipGrade 50-Item Sheet in Frame</span>
+                    </>
+                  )}
+                </div>
+              )}
 
               {/* Prominent Motion Blur Warning (Shown ONLY when blur is detected) */}
               {isBlurry && (
@@ -804,123 +987,276 @@ export const CameraScanner: React.FC<CameraScannerProps> = ({
               )}
             </div>
 
-            {/* DEDICATED BOTTOM CONTROL BAR (Under the video, not floating awkwardly over it) */}
-            <div className="omr-bottom-control-bar">
-              <div className="omr-control-group left">
-                {/* Auto Lock Toggle / Status */}
+            {/* MOBILE FLOATING DOCKED PEEK CARD (Only on Mobile) */}
+            {isMobile && !previewCaptured && (
+              <div
+                className="omr-mobile-peek-card"
+                onClick={() => setMobileSheetOpen(true)}
+                role="button"
+                tabIndex={0}
+              >
+                <div className="omr-mobile-peek-handle" />
+                <div className="omr-mobile-peek-row">
+                  <div className="omr-mobile-peek-metrics">
+                    <div className="omr-mobile-settled-group">
+                      <span className="omr-mobile-settled-num">
+                        {lockedQuestionsCount}/{totalQuestions}
+                      </span>
+                      <span className="omr-mobile-settled-label">settled</span>
+                    </div>
+
+                    {needsReviewList.length > 0 && (
+                      <span className="omr-mobile-review-badge">
+                        <AlertCircle size={11} />
+                        <span>{needsReviewList.length} review</span>
+                      </span>
+                    )}
+
+                    {hasAnswerKey && (
+                      <span className={`omr-mobile-peek-score ${isPassing ? 'pass' : ''}`}>
+                        {livePercentage}% {isPassing ? 'Pass' : ''}
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="omr-mobile-peek-cta">
+                    <span>Inspect Answers</span>
+                    <ChevronUp size={14} />
+                  </div>
+                </div>
+
+                <div className="omr-mobile-peek-progress">
+                  <div
+                    className="omr-mobile-peek-progress-bar"
+                    style={{ width: `${lockedPercentage}%` }}
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* MOBILE BOTTOM SHUTTER BAR (Only on Mobile) */}
+            {isMobile && !previewCaptured && (
+              <div className="omr-mobile-shutter-bar">
                 <button
                   type="button"
-                  className={`omr-bar-btn ${scanMode === 'auto-lock' ? 'active-toggle' : ''}`}
+                  className={`omr-mobile-mode-pill ${scanMode === 'auto-lock' ? 'mode-auto' : 'mode-manual'}`}
                   onClick={() => setScanMode(scanMode === 'auto-lock' ? 'single-shot' : 'auto-lock')}
                   title="Toggle continuous auto-lock bubble scanning"
                 >
-                  <Sparkles size={14} />
-                  <span>Auto-Lock: <strong>{scanMode === 'auto-lock' ? 'ON' : 'OFF'}</strong></span>
-                </button>
-
-                {/* Countdown Delay Selector */}
-                <button
-                  type="button"
-                  className={`omr-bar-btn ${shutterTimer > 0 ? 'active-timer' : ''}`}
-                  onClick={() => {
-                    const delays = [0, 2, 3, 5];
-                    const next = delays[(delays.indexOf(shutterTimer) + 1) % delays.length];
-                    setShutterTimer(next);
-                  }}
-                  title="Set shutter timer hold delay"
-                >
-                  <Timer size={14} />
-                  <span>Delay: <strong>{shutterTimer === 0 ? 'Off' : `${shutterTimer}s`}</strong></span>
-                </button>
-
-                {hasTorch && (
-                  <button
-                    type="button"
-                    className={`omr-bar-btn ${isTorchOn ? 'active-torch' : ''}`}
-                    onClick={toggleTorch}
-                    title="Toggle Flashlight"
-                  >
-                    {isTorchOn ? <Zap size={14} /> : <ZapOff size={14} />}
-                    <span>Flash</span>
-                  </button>
-                )}
-              </div>
-
-              {/* PRIMARY ACTION: Large Central Capture Button */}
-              <div className="omr-control-group center">
-                <button
-                  type="button"
-                  className="omr-primary-capture-btn"
-                  onClick={handleShutterClick}
-                  disabled={isSubmitting || !!previewCaptured}
-                  title={shutterTimer > 0 ? `Capture sheet in ${shutterTimer}s` : 'Capture sheet immediately'}
-                >
-                  <Camera size={19} />
-                  <span>Capture Sheet</span>
-                  {shutterTimer > 0 && (
-                    <span className="omr-capture-timer-tag">{shutterTimer}s</span>
+                  {scanMode === 'auto-lock' ? (
+                    <>
+                      <Sparkles size={13} />
+                      <span>Auto</span>
+                    </>
+                  ) : (
+                    <>
+                      <Camera size={13} />
+                      <span>Manual</span>
+                    </>
                   )}
                 </button>
+
+                <div className="omr-mobile-shutter-center">
+                  <button
+                    type="button"
+                    className="omr-mobile-shutter-button"
+                    onClick={handleShutterClick}
+                    disabled={isSubmitting || !!previewCaptured}
+                    title={shutterTimer > 0 ? `Capture sheet in ${shutterTimer}s` : 'Capture sheet immediately'}
+                  >
+                    <div className="omr-mobile-shutter-inner">
+                      {shutterTimer > 0 ? (
+                        <span className="omr-mobile-shutter-timer-digit">{shutterTimer}s</span>
+                      ) : (
+                        <Camera size={26} style={{ color: '#28166f' }} />
+                      )}
+                    </div>
+                  </button>
+                </div>
+
+                <div className="omr-mobile-shutter-right">
+                  {onSwitchToUpload ? (
+                    <button
+                      type="button"
+                      className="omr-mobile-icon-btn"
+                      onClick={() => {
+                        stopCamera();
+                        onSwitchToUpload();
+                      }}
+                      title="Switch to file upload mode"
+                    >
+                      <UploadCloud size={18} />
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      className="omr-mobile-icon-btn"
+                      onClick={() => setMobileSheetOpen(true)}
+                      title="Inspect 50 Answers"
+                    >
+                      <span style={{ fontSize: '0.75rem', fontWeight: 800 }}>50</span>
+                    </button>
+                  )}
+                </div>
               </div>
+            )}
 
-              <div className="omr-control-group right">
-                {/* Flip Camera Button (if multiple devices) */}
-                {videoDevices.length > 1 && (
+            {/* DESKTOP BOTTOM CONTROL BAR (Rendered on PC workstations only) */}
+            {!isMobile && (
+              <div className="omr-bottom-control-bar">
+                <div className="omr-control-group left">
+                  {/* Auto Lock Toggle / Status */}
                   <button
                     type="button"
-                    className="omr-bar-btn"
-                    onClick={() => switchCamera()}
-                    title="Switch camera device"
+                    className={`omr-bar-btn ${scanMode === 'auto-lock' ? 'active-toggle' : ''}`}
+                    onClick={() => setScanMode(scanMode === 'auto-lock' ? 'single-shot' : 'auto-lock')}
+                    title="Toggle continuous auto-lock bubble scanning"
                   >
-                    <RotateCw size={14} />
-                    <span>Flip</span>
+                    <Sparkles size={14} />
+                    <span>Auto-Lock: <strong>{scanMode === 'auto-lock' ? 'ON' : 'OFF'}</strong></span>
                   </button>
-                )}
 
-                {/* Upload Sheet Option */}
-                {onSwitchToUpload && (
+                  {/* Countdown Delay Selector */}
                   <button
                     type="button"
-                    className="omr-bar-btn upload-opt"
-                    onClick={() => {
-                      stopCamera();
-                      onSwitchToUpload();
-                    }}
-                    title="Switch to file upload for scanned sheets"
+                    className={`omr-bar-btn ${shutterTimer > 0 ? 'active-timer' : ''}`}
+                    onClick={cycleShutterTimer}
+                    title="Set shutter timer hold delay"
                   >
-                    <UploadCloud size={14} />
-                    <span>Upload Sheet</span>
+                    <Timer size={14} />
+                    <span>Delay: <strong>{shutterTimer === 0 ? 'Off' : `${shutterTimer}s`}</strong></span>
                   </button>
-                )}
+
+                  {hasTorch && (
+                    <button
+                      type="button"
+                      className={`omr-bar-btn ${isTorchOn ? 'active-torch' : ''}`}
+                      onClick={toggleTorch}
+                      title="Toggle Flashlight"
+                    >
+                      {isTorchOn ? <Zap size={14} /> : <ZapOff size={14} />}
+                      <span>Flash</span>
+                    </button>
+                  )}
+                </div>
+
+                {/* PRIMARY ACTION: Large Central Capture Button */}
+                <div className="omr-control-group center">
+                  <button
+                    type="button"
+                    className="omr-primary-capture-btn"
+                    onClick={handleShutterClick}
+                    disabled={isSubmitting || !!previewCaptured}
+                    title={shutterTimer > 0 ? `Capture sheet in ${shutterTimer}s` : 'Capture sheet immediately'}
+                  >
+                    <Camera size={19} />
+                    <span>Capture Sheet</span>
+                    {shutterTimer > 0 && (
+                      <span className="omr-capture-timer-tag">{shutterTimer}s</span>
+                    )}
+                  </button>
+                </div>
+
+                <div className="omr-control-group right">
+                  {/* Flip Camera Button (if multiple devices) */}
+                  {videoDevices.length > 1 && (
+                    <button
+                      type="button"
+                      className="omr-bar-btn"
+                      onClick={() => switchCamera()}
+                      title="Switch camera device"
+                    >
+                      <RotateCw size={14} />
+                      <span>Flip</span>
+                    </button>
+                  )}
+
+                  {/* Upload Sheet Option */}
+                  {onSwitchToUpload && (
+                    <button
+                      type="button"
+                      className="omr-bar-btn upload-opt"
+                      onClick={() => {
+                        stopCamera();
+                        onSwitchToUpload();
+                      }}
+                      title="Switch to file upload for scanned sheets"
+                    >
+                      <UploadCloud size={14} />
+                      <span>Upload Sheet</span>
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* RIGHT PANEL: DETECTION DASHBOARD (PC Desktop Workstation) */}
+          {!isMobile && (
+            <div className="omr-detection-panel-container">
+              <LiveScanOverlay
+                questions={questionsState}
+                lockedCount={lockedQuestionsCount}
+                totalQuestions={totalQuestions}
+                lockedPercentage={lockedPercentage}
+                needsReviewList={needsReviewList}
+                studentId={detectedStudentId}
+                isSheetDetected={isSheetDetected}
+                isSheetStable={isSheetStable}
+                isBlurry={isBlurry}
+                onResetScan={resetVoteBuffer}
+                onManualCapture={() => finalizeAndSubmit('manual')}
+                isSubmitting={isSubmitting}
+                answerKey={answerKey}
+                examName={examName}
+                passingScore={passingScore}
+                liveScore={liveScore}
+                livePercentage={livePercentage}
+                isPassing={isPassing}
+                passingThreshold={passingThreshold}
+                evaluatorStats={evaluatorStats}
+              />
+            </div>
+          )}
+
+          {/* MOBILE SLIDE-UP BOTTOM SHEET DRAWER (Mobile View) */}
+          {isMobile && mobileSheetOpen && (
+            <div className="omr-mobile-drawer-sheet">
+              <div
+                className="omr-mobile-drawer-backdrop"
+                onClick={() => setMobileSheetOpen(false)}
+              />
+              <div className="omr-mobile-drawer-content">
+                <LiveScanOverlay
+                  questions={questionsState}
+                  lockedCount={lockedQuestionsCount}
+                  totalQuestions={totalQuestions}
+                  lockedPercentage={lockedPercentage}
+                  needsReviewList={needsReviewList}
+                  studentId={detectedStudentId}
+                  isSheetDetected={isSheetDetected}
+                  isSheetStable={isSheetStable}
+                  isBlurry={isBlurry}
+                  onResetScan={resetVoteBuffer}
+                  onManualCapture={() => {
+                    setMobileSheetOpen(false);
+                    finalizeAndSubmit('manual');
+                  }}
+                  isSubmitting={isSubmitting}
+                  answerKey={answerKey}
+                  examName={examName}
+                  passingScore={passingScore}
+                  liveScore={liveScore}
+                  livePercentage={livePercentage}
+                  isPassing={isPassing}
+                  passingThreshold={passingThreshold}
+                  evaluatorStats={evaluatorStats}
+                  isMobileDrawer={true}
+                  onCloseMobileDrawer={() => setMobileSheetOpen(false)}
+                />
               </div>
             </div>
-          </div>
-
-          {/* RIGHT PANEL: DETECTION DASHBOARD (~38% width) */}
-          <div className="omr-detection-panel-container">
-            <LiveScanOverlay
-              questions={questionsState}
-              lockedCount={lockedQuestionsCount}
-              totalQuestions={totalQuestions}
-              lockedPercentage={lockedPercentage}
-              needsReviewList={needsReviewList}
-              studentId={detectedStudentId}
-              isSheetDetected={isSheetDetected}
-              isSheetStable={isSheetStable}
-              isBlurry={isBlurry}
-              onResetScan={resetVoteBuffer}
-              onManualCapture={() => finalizeAndSubmit('manual')}
-              isSubmitting={isSubmitting}
-              answerKey={answerKey}
-              examName={examName}
-              passingScore={passingScore}
-              liveScore={liveScore}
-              livePercentage={livePercentage}
-              isPassing={isPassing}
-              passingThreshold={passingThreshold}
-              evaluatorStats={evaluatorStats}
-            />
-          </div>
+          )}
         </div>
       )}
     </div>

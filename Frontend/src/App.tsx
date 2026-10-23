@@ -2285,7 +2285,7 @@ export default function App() {
                 />
               ) : (
 
-                <div className="card" style={{ marginBottom: "2rem" }}>
+                <div className="card" style={{ marginBottom: "2rem", padding: "1.5rem" }}>
                   <input
                     type="file"
                     ref={quickScanInputRef}
@@ -2308,19 +2308,50 @@ export default function App() {
                         handleQuickScanUpload(e.dataTransfer.files[0]);
                       }
                     }}
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        quickScanInputRef.current?.click();
+                      }
+                    }}
                   >
-                    <UploadCloud size={48} className="dropzone-icon" />
-                    <h3>Drag & drop a ZipGrade sheet image here</h3>
+                    <div className="dropzone-icon-wrapper">
+                      <UploadCloud size={30} />
+                    </div>
+                    <h3 style={{ fontSize: "1.15rem", fontWeight: 800, color: "#0f172a", margin: "0 0 0.35rem 0" }}>
+                      Drag &amp; drop a ZipGrade sheet image here
+                    </h3>
                     <p
                       style={{
                         color: "var(--text-secondary)",
-                        fontSize: "0.85rem",
-                        marginTop: "0.5rem",
+                        fontSize: "0.86rem",
+                        maxWidth: "480px",
+                        margin: "0 auto",
+                        lineHeight: 1.5,
                       }}
                     >
-                      or click to browse from local computer files (Supports JPG,
-                      PNG up to 10MB)
+                      Position a clean scan or smartphone photo of the 50-item answer sheet. The OpenCV OMR engine will detect alignment markers and score marks automatically.
                     </p>
+
+                    <div className="dropzone-tags">
+                      <span className="dropzone-tag">JPG / JPEG</span>
+                      <span className="dropzone-tag">PNG</span>
+                      <span className="dropzone-tag">WEBP</span>
+                      <span className="dropzone-tag">Up to 15MB</span>
+                      <span className="dropzone-tag">50-Question Standard</span>
+                    </div>
+
+                    <button
+                      type="button"
+                      className="btn btn-primary dropzone-browse-btn"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        quickScanInputRef.current?.click();
+                      }}
+                    >
+                      <UploadCloud size={16} /> Browse Local Files
+                    </button>
                   </div>
                 </div>
               )}
@@ -3923,29 +3954,27 @@ export default function App() {
                               ) : (
                                 /* Guidance Placeholder before first scan */
                                 <div
+                                  className="dropzone"
+                                  onClick={() => studentScanInputRef.current?.click()}
+                                  onDragOver={(e) => e.preventDefault()}
+                                  onDrop={(e) => {
+                                    e.preventDefault();
+                                    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+                                      handleGradeSheetsSubmit(Array.from(e.dataTransfer.files));
+                                    }
+                                  }}
                                   style={{
                                     background: "#ffffff",
-                                    border: "1px solid #e2e8f0",
+                                    border: "2px dashed #cbd5e1",
                                     borderRadius: "16px",
                                     padding: "2rem 1.5rem",
                                     textAlign: "center",
                                     boxShadow: "0 2px 8px rgba(0, 0, 0, 0.02)",
+                                    cursor: "pointer",
                                   }}
                                 >
-                                  <div
-                                    style={{
-                                      width: "56px",
-                                      height: "56px",
-                                      borderRadius: "16px",
-                                      background: "var(--primary-light-surface, #f5f3ff)",
-                                      color: "var(--primary, #28166f)",
-                                      display: "inline-flex",
-                                      alignItems: "center",
-                                      justifyContent: "center",
-                                      marginBottom: "0.85rem",
-                                    }}
-                                  >
-                                    <Sparkles size={28} />
+                                  <div className="dropzone-icon-wrapper">
+                                    <UploadCloud size={30} />
                                   </div>
                                   <h3
                                     style={{
@@ -3959,14 +3988,22 @@ export default function App() {
                                   </h3>
                                   <p
                                     style={{
-                                      fontSize: "0.82rem",
+                                      fontSize: "0.85rem",
                                       color: "#64748b",
-                                      maxWidth: "460px",
-                                      margin: "0 auto 1.25rem auto",
+                                      maxWidth: "480px",
+                                      margin: "0 auto 1rem auto",
+                                      lineHeight: 1.5,
                                     }}
                                   >
-                                    Drag & drop scanned OMR answer sheets or launch the Live Camera Scanner above to compute student raw scores and transmutation curves in real-time.
+                                    Drag &amp; drop student ZipGrade sheets or choose a scanning method below to evaluate and compute student grades instantly.
                                   </p>
+
+                                  <div className="dropzone-tags" style={{ marginBottom: "1.25rem" }}>
+                                    <span className="dropzone-tag">Batch Multi-Sheet Upload</span>
+                                    <span className="dropzone-tag">JPG / PNG / WEBP</span>
+                                    <span className="dropzone-tag">Auto-Graded against Key</span>
+                                  </div>
+
                                   <div
                                     style={{
                                       display: "flex",
@@ -3974,6 +4011,7 @@ export default function App() {
                                       gap: "0.75rem",
                                       flexWrap: "wrap",
                                     }}
+                                    onClick={(e) => e.stopPropagation()}
                                   >
                                     <button
                                       type="button"
@@ -3983,6 +4021,9 @@ export default function App() {
                                         fontSize: "0.82rem",
                                         fontWeight: 700,
                                         borderRadius: "10px",
+                                        display: "inline-flex",
+                                        alignItems: "center",
+                                        gap: "6px",
                                       }}
                                     >
                                       <UploadCloud size={15} /> Upload Sheets
@@ -3999,6 +4040,9 @@ export default function App() {
                                         fontSize: "0.82rem",
                                         fontWeight: 700,
                                         borderRadius: "10px",
+                                        display: "inline-flex",
+                                        alignItems: "center",
+                                        gap: "6px",
                                       }}
                                     >
                                       <Camera size={15} /> Normal Camera (Shutter)
@@ -4015,11 +4059,13 @@ export default function App() {
                                         fontSize: "0.82rem",
                                         fontWeight: 700,
                                         borderRadius: "10px",
+                                        display: "inline-flex",
+                                        alignItems: "center",
+                                        gap: "6px",
                                       }}
                                     >
                                       <Sparkles size={15} /> Live Auto-Scanner
                                     </button>
-
                                   </div>
                                 </div>
                               )}
