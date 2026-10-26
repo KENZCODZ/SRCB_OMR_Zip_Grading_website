@@ -154,7 +154,6 @@ export default function AdminUserManagement({
   const [roleFilter, setRoleFilter] = useState<"all" | "teacher" | "student" | "programme-head" | "admin">("all");
   const [programFilter, setProgramFilter] = useState<string>("all");
   const [deptFilter, setDeptFilter] = useState<string>("all");
-  const [statusFilter, setStatusFilter] = useState<string>("all");
   const [sortBy, setSortBy] = useState<"name_asc" | "name_desc" | "date_desc" | "date_asc" | "role">("name_asc");
 
   // Mode state within creation tab
@@ -807,10 +806,6 @@ export default function AdminUserManagement({
         if ((u.department || "").toLowerCase() !== deptFilter.toLowerCase()) return false;
       }
 
-      if (statusFilter !== "all") {
-        if ((u.status || "active").toLowerCase() !== statusFilter.toLowerCase()) return false;
-      }
-
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase();
         const matchName = (u.name || "").toLowerCase().includes(q);
@@ -834,21 +829,19 @@ export default function AdminUserManagement({
     });
 
     return result;
-  }, [users, isProgrammeHead, phProgram, roleFilter, programFilter, deptFilter, statusFilter, searchQuery, sortBy]);
+  }, [users, isProgrammeHead, phProgram, roleFilter, programFilter, deptFilter, searchQuery, sortBy]);
 
   const hasActiveFilters =
     searchQuery.trim() !== "" ||
     roleFilter !== "all" ||
     programFilter !== "all" ||
-    deptFilter !== "all" ||
-    statusFilter !== "all";
+    deptFilter !== "all";
 
   const handleResetFilters = () => {
     setSearchQuery("");
     setRoleFilter("all");
     setProgramFilter("all");
     setDeptFilter("all");
-    setStatusFilter("all");
     setSortBy("name_asc");
   };
 
@@ -1324,8 +1317,8 @@ export default function AdminUserManagement({
                       {targetRole === "teacher"
                         ? "Faculty Teacher"
                         : targetRole === "programme-head"
-                        ? "Programme Head"
-                        : "Student"}{" "}
+                          ? "Programme Head"
+                          : "Student"}{" "}
                       Account
                     </>
                   )}
@@ -2182,33 +2175,6 @@ export default function AdminUserManagement({
                     <ChevronDown size={13} style={{ position: "absolute", right: "8px", top: "50%", transform: "translateY(-50%)", color: "#64748b", pointerEvents: "none" }} />
                   </div>
 
-                  {/* Status Select */}
-                  <div style={{ position: "relative" }}>
-                    <select
-                      value={statusFilter}
-                      onChange={(e) => setStatusFilter(e.target.value)}
-                      style={{
-                        width: "100%",
-                        height: "34px",
-                        fontSize: "0.8rem",
-                        padding: "0 1.8rem 0 0.75rem",
-                        borderRadius: "8px",
-                        border: "1px solid #cbd5e1",
-                        background: "#ffffff",
-                        color: "#0f172a",
-                        fontWeight: 600,
-                        appearance: "none",
-                      }}
-                      aria-label="Filter by account status"
-                    >
-                      <option value="all">All Statuses</option>
-                      <option value="active">Active</option>
-                      <option value="pending">Pending Approval</option>
-                      <option value="rejected">Rejected</option>
-                    </select>
-                    <ChevronDown size={13} style={{ position: "absolute", right: "8px", top: "50%", transform: "translateY(-50%)", color: "#64748b", pointerEvents: "none" }} />
-                  </div>
-
                   {/* Sort By Select */}
                   <div style={{ position: "relative" }}>
                     <select
@@ -2346,25 +2312,6 @@ export default function AdminUserManagement({
                       <X size={11} style={{ cursor: "pointer" }} onClick={() => setDeptFilter("all")} />
                     </span>
                   )}
-                  {statusFilter !== "all" && (
-                    <span
-                      style={{
-                        fontSize: "0.72rem",
-                        background: "#fffbeb",
-                        border: "1px solid #fde68a",
-                        padding: "0.15rem 0.5rem",
-                        borderRadius: "14px",
-                        color: "#b45309",
-                        display: "inline-flex",
-                        alignItems: "center",
-                        gap: "4px",
-                        fontWeight: 700,
-                      }}
-                    >
-                      Status: {statusFilter.toUpperCase()}
-                      <X size={11} style={{ cursor: "pointer" }} onClick={() => setStatusFilter("all")} />
-                    </span>
-                  )}
                 </div>
               )}
             </div>
@@ -2431,12 +2378,12 @@ export default function AdminUserManagement({
                         const roleBadgeConfig = isDean
                           ? { label: "DEAN", bg: "#fef3c7", color: "#b45309", border: "#fde68a", icon: <Award size={12} /> }
                           : isPh
-                          ? { label: "PROG HEAD", bg: "#f0f9ff", color: "#0284c7", border: "#bae6fd", icon: <BookOpen size={12} /> }
-                          : isTeacher
-                          ? { label: "FACULTY", bg: "#ecfdf5", color: "#059669", border: "#a7f3d0", icon: <ShieldCheck size={12} /> }
-                          : isStudent
-                          ? { label: "STUDENT", bg: "var(--primary-light-surface, #f5f3ff)", color: "var(--primary, #28166f)", border: "var(--primary-light-border, #ddd6fe)", icon: <GraduationCap size={12} /> }
-                          : { label: "ADMIN", bg: "#f5f3ff", color: "#7c3aed", border: "#ddd6fe", icon: <Shield size={12} /> };
+                            ? { label: "PROG HEAD", bg: "#f0f9ff", color: "#0284c7", border: "#bae6fd", icon: <BookOpen size={12} /> }
+                            : isTeacher
+                              ? { label: "FACULTY", bg: "#ecfdf5", color: "#059669", border: "#a7f3d0", icon: <ShieldCheck size={12} /> }
+                              : isStudent
+                                ? { label: "STUDENT", bg: "var(--primary-light-surface, #f5f3ff)", color: "var(--primary, #28166f)", border: "var(--primary-light-border, #ddd6fe)", icon: <GraduationCap size={12} /> }
+                                : { label: "ADMIN", bg: "#f5f3ff", color: "#7c3aed", border: "#ddd6fe", icon: <Shield size={12} /> };
 
                         const initials = (u.name || "U")
                           .replace(/^(Dr\.|Prof\.|Ms\.|Mr\.)\s+/i, "")
@@ -2530,21 +2477,20 @@ export default function AdminUserManagement({
                                     u.status === "active"
                                       ? "#ecfdf5"
                                       : u.status === "rejected"
-                                      ? "#fef2f2"
-                                      : "#fffbeb",
+                                        ? "#fef2f2"
+                                        : "#fffbeb",
                                   color:
                                     u.status === "active"
                                       ? "#059669"
                                       : u.status === "rejected"
-                                      ? "#dc2626"
-                                      : "#b45309",
-                                  border: `1px solid ${
-                                    u.status === "active"
+                                        ? "#dc2626"
+                                        : "#b45309",
+                                  border: `1px solid ${u.status === "active"
                                       ? "#a7f3d0"
                                       : u.status === "rejected"
-                                      ? "#fecaca"
-                                      : "#fde68a"
-                                  }`,
+                                        ? "#fecaca"
+                                        : "#fde68a"
+                                    }`,
                                 }}
                               >
                                 {u.status || "active"}
@@ -3355,8 +3301,8 @@ export default function AdminUserManagement({
                       {bulkPasswordPolicy === "student_id"
                         ? "Institutional Student ID"
                         : bulkPasswordPolicy === "random"
-                        ? "Random Secure String"
-                        : "Custom Default"}
+                          ? "Random Secure String"
+                          : "Custom Default"}
                     </strong>
                   </div>
                 </div>

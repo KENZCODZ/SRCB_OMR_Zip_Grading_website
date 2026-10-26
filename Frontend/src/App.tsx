@@ -35,6 +35,7 @@ import {
   Check,
   Calendar,
   Clock,
+  RefreshCw,
 } from "lucide-react";
 import confetti from "canvas-confetti";
 import type {
@@ -497,8 +498,7 @@ export default function App() {
 
   // Active Exam Inspection & Grading State
   const [selectedExamId, setSelectedExamId] = useState<string>("");
-  const [isCameraActive, setIsCameraActive] = useState(false);
-  const [examCameraMode, setExamCameraMode] = useState<"normal" | "live">("normal");
+  const [teacherScanMode, setTeacherScanMode] = useState<"upload" | "normal-camera" | "live-camera">("upload");
 
 
   const [gradingProgress, setGradingProgress] = useState<{
@@ -2926,7 +2926,7 @@ export default function App() {
                       onClick={() => {
                         setSelectedExamId("");
                         setLatestGradeResult(null);
-                        setIsCameraActive(false);
+                        setTeacherScanMode("upload");
                       }}
                       style={{
                         display: "inline-flex",
@@ -2948,11 +2948,14 @@ export default function App() {
                       <button
                         type="button"
                         className="btn btn-secondary"
-                        onClick={() => setIsCameraActive((prev) => !prev)}
+                        onClick={() => {
+                          setActiveExamStudioTab("grading");
+                          setTeacherScanMode((prev) => (prev === "upload" ? "live-camera" : "upload"));
+                        }}
                         style={{
-                          background: isCameraActive ? "var(--primary-light-surface, #f5f3ff)" : "#ffffff",
-                          border: isCameraActive ? "1px solid var(--primary-light-border, #ddd6fe)" : "1px solid #cbd5e1",
-                          color: isCameraActive ? "var(--primary, #28166f)" : "#0f172a",
+                          background: teacherScanMode !== "upload" ? "var(--primary-light-surface, #f5f3ff)" : "#ffffff",
+                          border: teacherScanMode !== "upload" ? "1px solid var(--primary-light-border, #ddd6fe)" : "1px solid #cbd5e1",
+                          color: teacherScanMode !== "upload" ? "var(--primary, #28166f)" : "#0f172a",
                           fontWeight: 600,
                           borderRadius: "8px",
                           fontSize: "0.82rem",
@@ -2960,9 +2963,9 @@ export default function App() {
                           alignItems: "center",
                           gap: "6px",
                         }}
-                        title="Launch or close the live camera sheet scanner"
+                        title="Launch or close the camera sheet scanner"
                       >
-                        <Camera size={14} /> {isCameraActive ? "Close Camera" : "Live Camera"}
+                        <Camera size={14} /> {teacherScanMode !== "upload" ? "Close Camera" : "Live Camera"}
                       </button>
                       <button
                         type="button"
@@ -3493,48 +3496,139 @@ export default function App() {
                                 </div>
                               )}
 
-                              {/* Camera Scanner (Only rendered on-demand when activated) */}
-                              {isCameraActive && (
+                              {/* Mode Switcher Tabs (Upload Sheets / Normal Camera / Live Auto-Scanner) */}
+                              <div className="scan-mode-tabs" style={{ marginBottom: "1.25rem" }}>
+                                <button
+                                  type="button"
+                                  className={`scan-mode-tab-btn ${teacherScanMode === "upload" ? "active" : ""}`}
+                                  onClick={() => setTeacherScanMode("upload")}
+                                >
+                                  <UploadCloud size={16} /> Upload Sheets
+                                </button>
+                                <button
+                                  type="button"
+                                  className={`scan-mode-tab-btn ${teacherScanMode === "normal-camera" ? "active" : ""}`}
+                                  onClick={() => setTeacherScanMode("normal-camera")}
+                                >
+                                  <Camera size={16} /> Normal Camera (Shutter)
+                                </button>
+                                <button
+                                  type="button"
+                                  className={`scan-mode-tab-btn ${teacherScanMode === "live-camera" ? "active" : ""}`}
+                                  onClick={() => setTeacherScanMode("live-camera")}
+                                >
+                                  <Sparkles size={16} /> Live Auto-Scanner
+                                </button>
+                              </div>
+
+                              {/* Active Scanning Feature Area */}
+                              {teacherScanMode === "normal-camera" ? (
                                 <div style={{ marginBottom: "1.5rem" }}>
-                                  {examCameraMode === "normal" ? (
-                                    <NormalCameraScanner
-                                      onCapture={async (file) => {
-                                        await handleGradeSheetsSubmit([file]);
-                                      }}
-                                      onClose={() => setIsCameraActive(false)}
-                                      onSwitchToUpload={() => {
-                                        setIsCameraActive(false);
-                                        studentScanInputRef.current?.click();
-                                      }}
-                                      onSwitchToLive={() => setExamCameraMode("live")}
-                                      title={`Grade Student Sheet — ${activeExam.name}`}
-                                      subtitle={`Position student sheet inside the frame and press Shutter to score against ${activeExam.name}.`}
-                                    />
-                                  ) : (
-                                    <CameraScanner
-                                      onCapture={async (file) => {
-                                        await handleGradeSheetsSubmit([file]);
-                                      }}
-                                      onClose={() => setIsCameraActive(false)}
-                                      onSwitchToUpload={() => {
-                                        setIsCameraActive(false);
-                                        studentScanInputRef.current?.click();
-                                      }}
-                                      onSwitchToNormal={() => setExamCameraMode("normal")}
-                                      title={`Grade Student Sheet (Live) — ${activeExam.name}`}
-                                      subtitle={`Align the 4 black corner squares within the viewfinder. Scored instantly against ${activeExam.name}.`}
-                                      answerKey={activeExam.answer_key}
-                                      examName={activeExam.name}
-                                      passingScore={activeExam.passing_score}
-                                      numItems={activeExam.num_items}
-                                    />
-                                  )}
+                                  <NormalCameraScanner
+                                    onCapture={async (file) => {
+                                      await handleGradeSheetsSubmit([file]);
+                                    }}
+                                    onClose={() => setTeacherScanMode("upload")}
+                                    onSwitchToUpload={() => setTeacherScanMode("upload")}
+                                    onSwitchToLive={() => setTeacherScanMode("live-camera")}
+                                    title={`Grade Student Sheet — ${activeExam.name}`}
+                                    subtitle={`Position student sheet inside the frame and press Shutter to score against ${activeExam.name}.`}
+                                  />
+                                </div>
+                              ) : teacherScanMode === "live-camera" ? (
+                                <div style={{ marginBottom: "1.5rem" }}>
+                                  <CameraScanner
+                                    onCapture={async (file) => {
+                                      await handleGradeSheetsSubmit([file]);
+                                    }}
+                                    onClose={() => setTeacherScanMode("upload")}
+                                    onSwitchToUpload={() => setTeacherScanMode("upload")}
+                                    onSwitchToNormal={() => setTeacherScanMode("normal-camera")}
+                                    title={`Grade Student Sheet (Live) — ${activeExam.name}`}
+                                    subtitle={`Align the 4 black corner squares within the viewfinder. Scored instantly against ${activeExam.name}.`}
+                                    answerKey={activeExam.answer_key}
+                                    examName={activeExam.name}
+                                    passingScore={activeExam.passing_score}
+                                    numItems={activeExam.num_items}
+                                  />
+                                </div>
+                              ) : (
+                                <div
+                                  className="dropzone"
+                                  onClick={() => studentScanInputRef.current?.click()}
+                                  onDragOver={(e) => e.preventDefault()}
+                                  onDrop={(e) => {
+                                    e.preventDefault();
+                                    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+                                      handleGradeSheetsSubmit(Array.from(e.dataTransfer.files));
+                                    }
+                                  }}
+                                  style={{
+                                    background: "#ffffff",
+                                    border: "2px dashed #cbd5e1",
+                                    borderRadius: "16px",
+                                    padding: "2.25rem 1.5rem",
+                                    textAlign: "center",
+                                    boxShadow: "0 2px 8px rgba(0, 0, 0, 0.02)",
+                                    cursor: "pointer",
+                                    marginBottom: "1.5rem",
+                                  }}
+                                >
+                                  <div className="dropzone-icon-wrapper">
+                                    <UploadCloud size={30} />
+                                  </div>
+                                  <h3
+                                    style={{
+                                      fontSize: "1.1rem",
+                                      fontWeight: 800,
+                                      color: "#0f172a",
+                                      margin: "0 0 0.35rem 0",
+                                    }}
+                                  >
+                                    Ready to Scan Student Answer Sheets
+                                  </h3>
+                                  <p
+                                    style={{
+                                      fontSize: "0.85rem",
+                                      color: "#64748b",
+                                      maxWidth: "480px",
+                                      margin: "0 auto 1rem auto",
+                                      lineHeight: 1.5,
+                                    }}
+                                  >
+                                    Drag &amp; drop student ZipGrade sheets or browse files to evaluate and compute student grades instantly.
+                                  </p>
+
+                                  <div className="dropzone-tags" style={{ marginBottom: "1.25rem" }}>
+                                    <span className="dropzone-tag">Batch Multi-Sheet Upload</span>
+                                    <span className="dropzone-tag">JPG / PNG / WEBP</span>
+                                    <span className="dropzone-tag">Auto-Graded against Key</span>
+                                  </div>
+
+                                  <button
+                                    type="button"
+                                    className="btn btn-primary"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      studentScanInputRef.current?.click();
+                                    }}
+                                    style={{
+                                      fontSize: "0.82rem",
+                                      fontWeight: 700,
+                                      borderRadius: "10px",
+                                      display: "inline-flex",
+                                      alignItems: "center",
+                                      gap: "6px",
+                                    }}
+                                  >
+                                    <UploadCloud size={15} /> Select Answer Sheet Images
+                                  </button>
                                 </div>
                               )}
 
 
                               {/* Latest Grade Result Showcase */}
-                              {latestGradeResult ? (
+                              {latestGradeResult && (
                                 <div
                                   className="card"
                                   style={{
@@ -3708,21 +3802,42 @@ export default function App() {
                                       )}
                                     </div>
 
-                                    <button
-                                      type="button"
-                                      className="btn btn-secondary"
-                                      style={{
-                                        fontSize: "0.75rem",
-                                        padding: "0.3rem 0.65rem",
-                                        borderRadius: "8px",
-                                        display: "inline-flex",
-                                        alignItems: "center",
-                                        gap: "4px",
-                                      }}
-                                      onClick={() => setIsOverlayZoomOpen(true)}
-                                    >
-                                      <Maximize2 size={13} /> Enlarged Preview
-                                    </button>
+                                    <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
+                                      <button
+                                        type="button"
+                                        className="btn btn-secondary"
+                                        style={{
+                                          fontSize: "0.75rem",
+                                          padding: "0.3rem 0.65rem",
+                                          borderRadius: "8px",
+                                          display: "inline-flex",
+                                          alignItems: "center",
+                                          gap: "4px",
+                                          fontWeight: 700,
+                                        }}
+                                        onClick={() => {
+                                          window.scrollTo({ top: 0, behavior: "smooth" });
+                                        }}
+                                        title="Scroll to scanner to evaluate another sheet or retake"
+                                      >
+                                        <RefreshCw size={12} /> Scan Another Sheet
+                                      </button>
+                                      <button
+                                        type="button"
+                                        className="btn btn-secondary"
+                                        style={{
+                                          fontSize: "0.75rem",
+                                          padding: "0.3rem 0.65rem",
+                                          borderRadius: "8px",
+                                          display: "inline-flex",
+                                          alignItems: "center",
+                                          gap: "4px",
+                                        }}
+                                        onClick={() => setIsOverlayZoomOpen(true)}
+                                      >
+                                        <Maximize2 size={13} /> Enlarged Preview
+                                      </button>
+                                    </div>
                                   </div>
 
                                   {/* Split Layout: Annotated Image Preview & Answers Check */}
@@ -3949,123 +4064,6 @@ export default function App() {
                                         })
                                       )}
                                     </div>
-                                  </div>
-                                </div>
-                              ) : (
-                                /* Guidance Placeholder before first scan */
-                                <div
-                                  className="dropzone"
-                                  onClick={() => studentScanInputRef.current?.click()}
-                                  onDragOver={(e) => e.preventDefault()}
-                                  onDrop={(e) => {
-                                    e.preventDefault();
-                                    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-                                      handleGradeSheetsSubmit(Array.from(e.dataTransfer.files));
-                                    }
-                                  }}
-                                  style={{
-                                    background: "#ffffff",
-                                    border: "2px dashed #cbd5e1",
-                                    borderRadius: "16px",
-                                    padding: "2rem 1.5rem",
-                                    textAlign: "center",
-                                    boxShadow: "0 2px 8px rgba(0, 0, 0, 0.02)",
-                                    cursor: "pointer",
-                                  }}
-                                >
-                                  <div className="dropzone-icon-wrapper">
-                                    <UploadCloud size={30} />
-                                  </div>
-                                  <h3
-                                    style={{
-                                      fontSize: "1.1rem",
-                                      fontWeight: 800,
-                                      color: "#0f172a",
-                                      margin: "0 0 0.35rem 0",
-                                    }}
-                                  >
-                                    Ready to Scan Student Answer Sheets
-                                  </h3>
-                                  <p
-                                    style={{
-                                      fontSize: "0.85rem",
-                                      color: "#64748b",
-                                      maxWidth: "480px",
-                                      margin: "0 auto 1rem auto",
-                                      lineHeight: 1.5,
-                                    }}
-                                  >
-                                    Drag &amp; drop student ZipGrade sheets or choose a scanning method below to evaluate and compute student grades instantly.
-                                  </p>
-
-                                  <div className="dropzone-tags" style={{ marginBottom: "1.25rem" }}>
-                                    <span className="dropzone-tag">Batch Multi-Sheet Upload</span>
-                                    <span className="dropzone-tag">JPG / PNG / WEBP</span>
-                                    <span className="dropzone-tag">Auto-Graded against Key</span>
-                                  </div>
-
-                                  <div
-                                    style={{
-                                      display: "flex",
-                                      justifyContent: "center",
-                                      gap: "0.75rem",
-                                      flexWrap: "wrap",
-                                    }}
-                                    onClick={(e) => e.stopPropagation()}
-                                  >
-                                    <button
-                                      type="button"
-                                      className="btn btn-primary"
-                                      onClick={() => studentScanInputRef.current?.click()}
-                                      style={{
-                                        fontSize: "0.82rem",
-                                        fontWeight: 700,
-                                        borderRadius: "10px",
-                                        display: "inline-flex",
-                                        alignItems: "center",
-                                        gap: "6px",
-                                      }}
-                                    >
-                                      <UploadCloud size={15} /> Upload Sheets
-                                    </button>
-                                    <button
-                                      type="button"
-                                      className="btn btn-secondary"
-                                      onClick={() => {
-                                        setActiveExamStudioTab("grading");
-                                        setExamCameraMode("normal");
-                                        setIsCameraActive(true);
-                                      }}
-                                      style={{
-                                        fontSize: "0.82rem",
-                                        fontWeight: 700,
-                                        borderRadius: "10px",
-                                        display: "inline-flex",
-                                        alignItems: "center",
-                                        gap: "6px",
-                                      }}
-                                    >
-                                      <Camera size={15} /> Normal Camera (Shutter)
-                                    </button>
-                                    <button
-                                      type="button"
-                                      className="btn btn-secondary"
-                                      onClick={() => {
-                                        setActiveExamStudioTab("grading");
-                                        setExamCameraMode("live");
-                                        setIsCameraActive(true);
-                                      }}
-                                      style={{
-                                        fontSize: "0.82rem",
-                                        fontWeight: 700,
-                                        borderRadius: "10px",
-                                        display: "inline-flex",
-                                        alignItems: "center",
-                                        gap: "6px",
-                                      }}
-                                    >
-                                      <Sparkles size={15} /> Live Auto-Scanner
-                                    </button>
                                   </div>
                                 </div>
                               )}

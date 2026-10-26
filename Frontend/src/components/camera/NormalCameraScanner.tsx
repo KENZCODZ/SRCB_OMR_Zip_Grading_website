@@ -466,9 +466,8 @@ export const NormalCameraScanner: React.FC<NormalCameraScannerProps> = ({
         URL.revokeObjectURL(previewCaptured.url);
       }
       setPreviewCaptured(null);
-      if (onClose) {
-        onClose();
-      }
+      // Restart camera stream ready for next sheet or retake
+      startCamera();
     } catch (err: any) {
       setSubmitError(
         err?.message ||
@@ -827,22 +826,46 @@ export const NormalCameraScanner: React.FC<NormalCameraScannerProps> = ({
               <div className="omr-preview-modal-overlay">
                 <div className="omr-preview-modal-card">
                   <div className="omr-preview-header">
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '6px' }}>
                       <span className="omr-preview-badge" style={{ background: '#eff6ff', color: '#1d4ed8', borderColor: '#bfdbfe' }}>
                         <CheckCircle2 size={13} /> Photo Captured
                       </span>
-                      <span
-                        style={{
-                          fontSize: '0.72rem',
-                          color: '#64748b',
-                          fontWeight: 700,
-                          background: '#f1f5f9',
-                          padding: '2px 8px',
-                          borderRadius: '6px',
-                        }}
-                      >
-                        {previewCaptured.width} × {previewCaptured.height} px
-                      </span>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <span
+                          style={{
+                            fontSize: '0.72rem',
+                            color: '#64748b',
+                            fontWeight: 700,
+                            background: '#f1f5f9',
+                            padding: '2px 8px',
+                            borderRadius: '6px',
+                          }}
+                        >
+                          {previewCaptured.width} × {previewCaptured.height} px
+                        </span>
+                        <button
+                          type="button"
+                          className="btn btn-secondary"
+                          onClick={handleRetake}
+                          disabled={isSubmitting}
+                          style={{
+                            padding: '3px 8px',
+                            fontSize: '0.74rem',
+                            fontWeight: 700,
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '4px',
+                            borderRadius: '6px',
+                            border: '1px solid #cbd5e1',
+                            background: '#ffffff',
+                            color: '#334155',
+                            cursor: 'pointer',
+                          }}
+                          title="Discard current photo and retake"
+                        >
+                          <RefreshCw size={12} /> Retake
+                        </button>
+                      </div>
                     </div>
                     <h4 className="omr-preview-title">Review Captured Sheet</h4>
                     <p className="omr-preview-subtitle">
@@ -886,13 +909,23 @@ export const NormalCameraScanner: React.FC<NormalCameraScannerProps> = ({
                     </div>
                   )}
 
-                  <div className="omr-preview-actions">
+                  <div className="omr-preview-actions" style={{ marginTop: '0.25rem', flexShrink: 0 }}>
                     <button
                       type="button"
                       className="btn btn-secondary"
                       onClick={handleRetake}
                       disabled={isSubmitting}
-                      style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
+                      style={{
+                        flex: 1,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '6px',
+                        padding: '0.65rem 0.85rem',
+                        fontWeight: 700,
+                        fontSize: '0.85rem',
+                        borderRadius: '10px',
+                      }}
                     >
                       <RefreshCw size={15} /> Retake Photo
                     </button>
@@ -901,7 +934,17 @@ export const NormalCameraScanner: React.FC<NormalCameraScannerProps> = ({
                       className="btn btn-primary"
                       onClick={handleConfirmSubmit}
                       disabled={isSubmitting}
-                      style={{ flex: 1.5, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
+                      style={{
+                        flex: 1.5,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '6px',
+                        padding: '0.65rem 0.85rem',
+                        fontWeight: 700,
+                        fontSize: '0.85rem',
+                        borderRadius: '10px',
+                      }}
                     >
                       {isSubmitting ? (
                         <>

@@ -713,9 +713,13 @@ export const CameraScanner: React.FC<CameraScannerProps> = ({
         </div>
       )}
 
-      {/* 3. OMR WORKSPACE (PC: Two-panel side-by-side | Mobile: Full-bleed camera with slide-up results drawer) */}
+      {/* 3. OMR WORKSPACE (PC: Two-panel side-by-side | Mobile: Full camera or split-screen inspector with camera visible) */}
       {status !== 'error' && (
-        <div className={`omr-workspace-layout ${isMobile ? 'is-mobile-layout' : ''}`}>
+        <div
+          className={`omr-workspace-layout ${isMobile ? 'is-mobile-layout' : ''} ${
+            isMobile && mobileSheetOpen ? 'mobile-inspect-active' : ''
+          }`}
+        >
           {/* LEFT PANEL: CAMERA WORKSPACE (~62% width) */}
           <div className="omr-camera-panel">
             {/* MOBILE FLOATING TOP BAR (Rendered on mobile only) */}
@@ -787,16 +791,6 @@ export const CameraScanner: React.FC<CameraScannerProps> = ({
                     </button>
                   )}
 
-                  <button
-                    type="button"
-                    className={`omr-mobile-icon-btn ${shutterTimer > 0 ? 'active-timer' : ''}`}
-                    onClick={cycleShutterTimer}
-                    title="Shutter Delay Timer"
-                  >
-                    <Timer size={16} />
-                    {shutterTimer > 0 && <span className="omr-timer-badge">{shutterTimer}s</span>}
-                  </button>
-
                   {onSwitchToNormal && (
                     <button
                       type="button"
@@ -808,6 +802,20 @@ export const CameraScanner: React.FC<CameraScannerProps> = ({
                       title="Switch to Normal Camera"
                     >
                       <Camera size={16} />
+                    </button>
+                  )}
+
+                  {onSwitchToUpload && (
+                    <button
+                      type="button"
+                      className="omr-mobile-icon-btn"
+                      onClick={() => {
+                        stopCamera();
+                        onSwitchToUpload();
+                      }}
+                      title="Switch to File Upload"
+                    >
+                      <UploadCloud size={16} />
                     </button>
                   )}
                 </div>
@@ -928,15 +936,34 @@ export const CameraScanner: React.FC<CameraScannerProps> = ({
                 <div className="omr-preview-modal-overlay">
                   <div className="omr-preview-modal-card">
                     <div className="omr-preview-header">
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '6px' }}>
                         <span className="omr-preview-badge">
                           <CheckCircle2 size={13} /> Perspective Corrected
                         </span>
-                        {detectedStudentId && (
-                          <span className="omr-preview-id">
-                            ID: <strong>{detectedStudentId}</strong>
-                          </span>
-                        )}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          {detectedStudentId && (
+                            <span className="omr-preview-id">
+                              ID: <strong>{detectedStudentId}</strong>
+                            </span>
+                          )}
+                          <button
+                            type="button"
+                            className="btn btn-secondary"
+                            onClick={handleRetake}
+                            disabled={isProcessingSubmission}
+                            style={{
+                              padding: '2px 8px',
+                              fontSize: '0.74rem',
+                              fontWeight: 700,
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '4px',
+                              borderRadius: '6px',
+                            }}
+                          >
+                            <RefreshCw size={11} /> Retake
+                          </button>
+                        </div>
                       </div>
                       <h4 className="omr-preview-title">Scanned Answer Sheet</h4>
                       <p className="omr-preview-subtitle">
@@ -987,8 +1014,8 @@ export const CameraScanner: React.FC<CameraScannerProps> = ({
               )}
             </div>
 
-            {/* MOBILE FLOATING DOCKED PEEK CARD (Only on Mobile) */}
-            {isMobile && !previewCaptured && (
+            {/* MOBILE FLOATING DOCKED PEEK CARD (Only on Mobile when inspect panel is closed) */}
+            {isMobile && !previewCaptured && !mobileSheetOpen && (
               <div
                 className="omr-mobile-peek-card"
                 onClick={() => setMobileSheetOpen(true)}
@@ -1030,73 +1057,6 @@ export const CameraScanner: React.FC<CameraScannerProps> = ({
                     className="omr-mobile-peek-progress-bar"
                     style={{ width: `${lockedPercentage}%` }}
                   />
-                </div>
-              </div>
-            )}
-
-            {/* MOBILE BOTTOM SHUTTER BAR (Only on Mobile) */}
-            {isMobile && !previewCaptured && (
-              <div className="omr-mobile-shutter-bar">
-                <button
-                  type="button"
-                  className={`omr-mobile-mode-pill ${scanMode === 'auto-lock' ? 'mode-auto' : 'mode-manual'}`}
-                  onClick={() => setScanMode(scanMode === 'auto-lock' ? 'single-shot' : 'auto-lock')}
-                  title="Toggle continuous auto-lock bubble scanning"
-                >
-                  {scanMode === 'auto-lock' ? (
-                    <>
-                      <Sparkles size={13} />
-                      <span>Auto</span>
-                    </>
-                  ) : (
-                    <>
-                      <Camera size={13} />
-                      <span>Manual</span>
-                    </>
-                  )}
-                </button>
-
-                <div className="omr-mobile-shutter-center">
-                  <button
-                    type="button"
-                    className="omr-mobile-shutter-button"
-                    onClick={handleShutterClick}
-                    disabled={isSubmitting || !!previewCaptured}
-                    title={shutterTimer > 0 ? `Capture sheet in ${shutterTimer}s` : 'Capture sheet immediately'}
-                  >
-                    <div className="omr-mobile-shutter-inner">
-                      {shutterTimer > 0 ? (
-                        <span className="omr-mobile-shutter-timer-digit">{shutterTimer}s</span>
-                      ) : (
-                        <Camera size={26} style={{ color: '#28166f' }} />
-                      )}
-                    </div>
-                  </button>
-                </div>
-
-                <div className="omr-mobile-shutter-right">
-                  {onSwitchToUpload ? (
-                    <button
-                      type="button"
-                      className="omr-mobile-icon-btn"
-                      onClick={() => {
-                        stopCamera();
-                        onSwitchToUpload();
-                      }}
-                      title="Switch to file upload mode"
-                    >
-                      <UploadCloud size={18} />
-                    </button>
-                  ) : (
-                    <button
-                      type="button"
-                      className="omr-mobile-icon-btn"
-                      onClick={() => setMobileSheetOpen(true)}
-                      title="Inspect 50 Answers"
-                    >
-                      <span style={{ fontSize: '0.75rem', fontWeight: 800 }}>50</span>
-                    </button>
-                  )}
                 </div>
               </div>
             )}
@@ -1191,9 +1151,9 @@ export const CameraScanner: React.FC<CameraScannerProps> = ({
             )}
           </div>
 
-          {/* RIGHT PANEL: DETECTION DASHBOARD (PC Desktop Workstation) */}
-          {!isMobile && (
-            <div className="omr-detection-panel-container">
+          {/* DETECTION DASHBOARD PANEL (PC Desktop or Mobile Split-View with Live Camera Visible) */}
+          {(!isMobile || mobileSheetOpen) && (
+            <div className={`omr-detection-panel-container ${isMobile ? 'mobile-docked-panel' : ''}`}>
               <LiveScanOverlay
                 questions={questionsState}
                 lockedCount={lockedQuestionsCount}
@@ -1215,46 +1175,9 @@ export const CameraScanner: React.FC<CameraScannerProps> = ({
                 isPassing={isPassing}
                 passingThreshold={passingThreshold}
                 evaluatorStats={evaluatorStats}
+                isMobileDrawer={isMobile}
+                onCloseMobileDrawer={() => setMobileSheetOpen(false)}
               />
-            </div>
-          )}
-
-          {/* MOBILE SLIDE-UP BOTTOM SHEET DRAWER (Mobile View) */}
-          {isMobile && mobileSheetOpen && (
-            <div className="omr-mobile-drawer-sheet">
-              <div
-                className="omr-mobile-drawer-backdrop"
-                onClick={() => setMobileSheetOpen(false)}
-              />
-              <div className="omr-mobile-drawer-content">
-                <LiveScanOverlay
-                  questions={questionsState}
-                  lockedCount={lockedQuestionsCount}
-                  totalQuestions={totalQuestions}
-                  lockedPercentage={lockedPercentage}
-                  needsReviewList={needsReviewList}
-                  studentId={detectedStudentId}
-                  isSheetDetected={isSheetDetected}
-                  isSheetStable={isSheetStable}
-                  isBlurry={isBlurry}
-                  onResetScan={resetVoteBuffer}
-                  onManualCapture={() => {
-                    setMobileSheetOpen(false);
-                    finalizeAndSubmit('manual');
-                  }}
-                  isSubmitting={isSubmitting}
-                  answerKey={answerKey}
-                  examName={examName}
-                  passingScore={passingScore}
-                  liveScore={liveScore}
-                  livePercentage={livePercentage}
-                  isPassing={isPassing}
-                  passingThreshold={passingThreshold}
-                  evaluatorStats={evaluatorStats}
-                  isMobileDrawer={true}
-                  onCloseMobileDrawer={() => setMobileSheetOpen(false)}
-                />
-              </div>
             </div>
           )}
         </div>

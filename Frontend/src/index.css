@@ -1580,20 +1580,24 @@ button.bubble-btn.active {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 1.25rem;
+  padding: 1rem;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 .omr-preview-modal-card {
   background: #ffffff;
   border: 1px solid var(--border, #e2e8f0);
   border-radius: var(--radius-lg, 16px);
-  padding: 1.5rem;
+  padding: 1.25rem 1.5rem;
   max-width: 440px;
   width: 100%;
+  max-height: 92vh;
   box-shadow: 0 20px 45px rgba(18, 10, 58, 0.3);
   display: flex;
   flex-direction: column;
   gap: 0.85rem;
+  overflow-y: auto;
 }
 
 .omr-preview-header {
@@ -6312,6 +6316,37 @@ button.bubble-btn.active {
   object-fit: cover;
 }
 
+/* Mobile Split View: Live Camera Stays Visible at Top, Inspection Panel Below */
+.omr-workspace-layout.is-mobile-layout.mobile-inspect-active .omr-camera-panel {
+  flex: none;
+  height: 38vh;
+  min-height: 220px;
+  max-height: 42vh;
+  position: relative;
+  transition: height 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.omr-workspace-layout.is-mobile-layout.mobile-inspect-active .omr-detection-panel-container {
+  display: flex !important;
+  flex: 1 1 auto;
+  height: calc(100% - 38vh);
+  min-height: 0;
+  position: relative;
+  z-index: 10;
+  background: #ffffff;
+  border-top: 2px solid var(--primary-light-border, #ddd6fe);
+  box-shadow: 0 -6px 20px rgba(0, 0, 0, 0.18);
+  overflow: hidden;
+  animation: mobileDrawerSlideUp 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.omr-workspace-layout.is-mobile-layout.mobile-inspect-active .omr-detection-panel {
+  height: 100%;
+  min-height: 0;
+  max-height: 100%;
+  overflow-y: auto;
+}
+
 /* Normal Camera Container on Mobile */
 .omr-mobile-mode .normal-camera-container {
   position: relative;
@@ -6494,7 +6529,7 @@ button.bubble-btn.active {
 /* 2. Floating Mobile Docked Peek Card */
 .omr-mobile-peek-card {
   position: absolute;
-  bottom: calc(82px + env(safe-area-inset-bottom, 0px));
+  bottom: max(12px, env(safe-area-inset-bottom, 12px));
   left: 12px;
   right: 12px;
   z-index: 21;
@@ -6838,5 +6873,22 @@ button.bubble-btn.active {
 
   .omr-detection-footer {
     padding: 0.6rem 0.85rem;
+  }
+
+  /* Mobile Preview Review Modal Dialog Fixes */
+  .omr-preview-modal-overlay {
+    align-items: flex-start !important;
+    padding: 0.5rem !important;
+  }
+
+  .omr-preview-modal-card {
+    padding: 1rem !important;
+    gap: 0.65rem !important;
+    max-height: 96vh !important;
+    border-radius: 14px !important;
+  }
+
+  .omr-preview-image-box {
+    max-height: 32vh !important;
   }
 }
