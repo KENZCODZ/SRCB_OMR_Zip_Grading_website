@@ -458,7 +458,6 @@ const ROLE_MANUALS: Record<UserRole, RoleManual> = {
       "Administrative procedures for scanning stations, user account provisioning, system security, and database maintenance.",
     icon: ShieldCheck,
     quickActions: [
-      { label: "Open Quick Scanner", tab: "quick-scan", icon: Sparkles },
       { label: "Manage User Accounts", tab: "users", icon: Users },
       { label: "Exams & Records", tab: "exams", icon: BookOpen },
     ],

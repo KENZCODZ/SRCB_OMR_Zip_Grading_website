@@ -1120,7 +1120,6 @@ export default function App() {
     if (currentUser.role === "admin") {
       return [
         { key: "dashboard" as AppTab, label: "Dashboard", icon: BarChart3 },
-        { key: "quick-scan" as AppTab, label: "Quick Scan", icon: Sparkles },
         {
           key: "user-management" as AppTab,
           label: "Create Account",

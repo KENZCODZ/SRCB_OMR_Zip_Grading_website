@@ -763,7 +763,7 @@ export default function RoleDashboard({
                     Administrative Operational Hub
                   </h3>
                   <p style={{ margin: "0.15rem 0 0 0", fontSize: "0.78rem", color: "#64748b" }}>
-                    Direct shortcuts to optical grading, batch account provisioning, and institutional directory
+                    Direct shortcuts to batch account provisioning and institutional directory
                   </p>
                 </div>
 
@@ -774,73 +774,6 @@ export default function RoleDashboard({
                     gap: "1rem",
                   }}
                 >
-                  {/* Quick Scan Card */}
-                  <div
-                    style={{
-                      background: "#ffffff",
-                      border: "1px solid #e2e8f0",
-                      borderRadius: "14px",
-                      padding: "1.25rem",
-                      display: "flex",
-                      flexDirection: "column",
-                      justifyContent: "space-between",
-                      gap: "1rem",
-                      boxShadow: "0 1px 3px rgba(0, 0, 0, 0.04)",
-                      transition: "transform 0.15s ease, box-shadow 0.15s ease",
-                    }}
-                  >
-                    <div style={{ display: "flex", alignItems: "flex-start", gap: "0.85rem" }}>
-                      <div
-                        style={{
-                          width: "42px",
-                          height: "42px",
-                          borderRadius: "10px",
-                          background: "linear-gradient(135deg, #ede9fe 0%, #e0e7ff 100%)",
-                          border: "1.5px solid #c4b5fd",
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          color: "var(--primary, #28166f)",
-                          flexShrink: 0,
-                        }}
-                      >
-                        <Sparkles size={20} />
-                      </div>
-                      <div>
-                        <div style={{ fontSize: "0.95rem", fontWeight: 800, color: "#0f172a" }}>
-                          Quick OMR Sheet Scanner
-                        </div>
-                        <p style={{ margin: "0.2rem 0 0 0", fontSize: "0.78rem", color: "#64748b", lineHeight: 1.4 }}>
-                          Scan test sheets with live camera vision or upload multi-file ZIP bundles for rapid auto-grading.
-                        </p>
-                      </div>
-                    </div>
-
-                    {onNavigateTab && (
-                      <button
-                        type="button"
-                        onClick={() => onNavigateTab("quick-scan")}
-                        style={{
-                          display: "inline-flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          gap: "6px",
-                          padding: "0.55rem 1rem",
-                          background: "var(--primary, #28166f)",
-                          color: "#ffffff",
-                          border: "none",
-                          borderRadius: "8px",
-                          fontSize: "0.8rem",
-                          fontWeight: 700,
-                          cursor: "pointer",
-                          transition: "opacity 0.15s ease",
-                        }}
-                      >
-                        Launch Scanner <ArrowRight size={14} />
-                      </button>
-                    )}
-                  </div>
-
                   {/* Account Provisioning Card */}
                   <div
                     style={{

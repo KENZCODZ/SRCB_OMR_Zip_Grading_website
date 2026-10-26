@@ -2360,7 +2360,6 @@ export default function AdminUserManagement({
                         <th style={{ padding: "0.75rem 1rem", color: "#475569" }}>User Profile</th>
                         <th style={{ padding: "0.75rem 1rem", color: "#475569" }}>System Role</th>
                         <th style={{ padding: "0.75rem 1rem", color: "#475569" }}>Academic Programme</th>
-                        <th style={{ padding: "0.75rem 1rem", color: "#475569" }}>Status</th>
                         <th style={{ padding: "0.75rem 1rem", color: "#475569" }}>Registered</th>
                         {isCurrentUserAdmin && (
                           <th style={{ padding: "0.75rem 1rem", textAlign: "right", color: "#475569" }}>Action</th>
@@ -2464,37 +2463,6 @@ export default function AdminUserManagement({
                                   {u.department}
                                 </div>
                               )}
-                            </td>
-
-                            <td style={{ padding: "0.75rem 1rem" }}>
-                              <span
-                                style={{
-                                  padding: "0.18rem 0.5rem",
-                                  borderRadius: "6px",
-                                  fontSize: "0.72rem",
-                                  fontWeight: 700,
-                                  background:
-                                    u.status === "active"
-                                      ? "#ecfdf5"
-                                      : u.status === "rejected"
-                                        ? "#fef2f2"
-                                        : "#fffbeb",
-                                  color:
-                                    u.status === "active"
-                                      ? "#059669"
-                                      : u.status === "rejected"
-                                        ? "#dc2626"
-                                        : "#b45309",
-                                  border: `1px solid ${u.status === "active"
-                                      ? "#a7f3d0"
-                                      : u.status === "rejected"
-                                        ? "#fecaca"
-                                        : "#fde68a"
-                                    }`,
-                                }}
-                              >
-                                {u.status || "active"}
-                              </span>
                             </td>
 
                             <td style={{ padding: "0.75rem 1rem", color: "#64748b", fontSize: "0.76rem" }}>
