@@ -2415,7 +2415,9 @@ export default function AdminUserManagement({
                         <th style={{ padding: "0.75rem 1rem", color: "#475569" }}>Academic Programme</th>
                         <th style={{ padding: "0.75rem 1rem", color: "#475569" }}>Status</th>
                         <th style={{ padding: "0.75rem 1rem", color: "#475569" }}>Registered</th>
-                        <th style={{ padding: "0.75rem 1rem", textAlign: "right", color: "#475569" }}>Action</th>
+                        {isCurrentUserAdmin && (
+                          <th style={{ padding: "0.75rem 1rem", textAlign: "right", color: "#475569" }}>Action</th>
+                        )}
                       </tr>
                     </thead>
                     <tbody>
@@ -2553,39 +2555,41 @@ export default function AdminUserManagement({
                               {u.created_at ? new Date(u.created_at).toLocaleDateString() : "—"}
                             </td>
 
-                            <td style={{ padding: "0.75rem 1rem", textAlign: "right" }}>
-                              <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", gap: "0.4rem" }}>
-                                {isCurrentUserAdmin && !isAdmin && (
-                                  <button
-                                    type="button"
-                                    onClick={() =>
-                                      handleOpenDeleteUser({
-                                        id: u.id,
-                                        name: u.name,
-                                        email: u.email,
-                                        role: u.role,
-                                        student_id: u.student_id,
-                                      })
-                                    }
-                                    disabled={deletingId === u.id}
-                                    title="Permanently remove account"
-                                    style={{
-                                      background: "#fef2f2",
-                                      border: "1px solid #fecaca",
-                                      color: "#ef4444",
-                                      padding: "0.25rem 0.45rem",
-                                      borderRadius: "6px",
-                                      cursor: deletingId === u.id ? "not-allowed" : "pointer",
-                                      opacity: deletingId === u.id ? 0.6 : 1,
-                                      display: "inline-flex",
-                                      alignItems: "center",
-                                    }}
-                                  >
-                                    <Trash2 size={12} />
-                                  </button>
-                                )}
-                              </div>
-                            </td>
+                            {isCurrentUserAdmin && (
+                              <td style={{ padding: "0.75rem 1rem", textAlign: "right" }}>
+                                <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", gap: "0.4rem" }}>
+                                  {!isAdmin && (
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        handleOpenDeleteUser({
+                                          id: u.id,
+                                          name: u.name,
+                                          email: u.email,
+                                          role: u.role,
+                                          student_id: u.student_id,
+                                        })
+                                      }
+                                      disabled={deletingId === u.id}
+                                      title="Permanently remove account"
+                                      style={{
+                                        background: "#fef2f2",
+                                        border: "1px solid #fecaca",
+                                        color: "#ef4444",
+                                        padding: "0.25rem 0.45rem",
+                                        borderRadius: "6px",
+                                        cursor: deletingId === u.id ? "not-allowed" : "pointer",
+                                        opacity: deletingId === u.id ? 0.6 : 1,
+                                        display: "inline-flex",
+                                        alignItems: "center",
+                                      }}
+                                    >
+                                      <Trash2 size={12} />
+                                    </button>
+                                  )}
+                                </div>
+                              </td>
+                            )}
                           </tr>
                         );
                       })}

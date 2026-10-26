@@ -13,6 +13,8 @@ import {
   ArrowRight,
   AlertTriangle,
   Eye,
+  UserPlus,
+  Activity,
 } from "lucide-react";
 import type { AuthUser, Exam, Submission, StudentRosterEntry } from "../../types";
 import { calculateTransmutedGrade } from "../../utils/excelUtils";
@@ -344,8 +346,9 @@ export default function RoleDashboard({
     return Math.round((completed / exams.length) * 100);
   }, [exams, submissions]);
 
-  // Live Grade Distribution computed directly from actual database submissions
+  // Live Grade Distribution computed directly from actual database submissions (Dean only)
   const liveGradeDistribution = useMemo(() => {
+    if (user.role !== "dean") return null;
     if (!submissions || submissions.length === 0) return null;
 
     let superior = 0;
@@ -373,10 +376,13 @@ export default function RoleDashboard({
       failPct: Math.round((fail / total) * 100),
       totalCount: total,
     };
-  }, [exams, submissions]);
+  }, [user.role, exams, submissions]);
 
-  // Live Assessment Milestones computed directly from actual database records
+  // Live Assessment Milestones computed directly from actual database records (Dean only)
   const liveMilestones = useMemo(() => {
+    if (user.role !== "dean") {
+      return { passRate: "—", sheetsScanned: "0", totalExams: "0", totalStudents: "0" };
+    }
     const totalSheets = submissions.length;
     let passingCount = 0;
 
@@ -395,7 +401,7 @@ export default function RoleDashboard({
       totalExams: exams.length.toString(),
       totalStudents: summary ? summary.total_students.toString() : "0",
     };
-  }, [exams, submissions, summary]);
+  }, [user.role, exams, submissions, summary]);
 
   const liveMetrics = useMemo(() => {
     const totalExams = exams.length;
@@ -469,8 +475,8 @@ export default function RoleDashboard({
         })}
       </div>
 
-      {/* DEAN / ADMIN: OVERVIEW & PROGRESS ADVANCED PANELS */}
-      {(user.role === "dean" || user.role === "admin") && (
+      {/* DEAN: OVERVIEW & PROGRESS ADVANCED PANELS */}
+      {user.role === "dean" && (
         <>
           {/* SECTION 1: PROGRAM EXAMINATION COMPLETION PROGRESS */}
           <div
@@ -614,136 +620,459 @@ export default function RoleDashboard({
             )}
           </div>
 
-          {/* SECTION 2: INSTITUTIONAL GRADE DISTRIBUTION & BENCHMARK BAR */}
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
-              gap: "1.25rem",
-            }}
-          >
-            {/* Grade Transmutation Distribution */}
+          {/* SECTION 2: INSTITUTIONAL GRADE DISTRIBUTION & BENCHMARK BAR (Dean only) */}
+          {user.role === "dean" && (
             <div
               style={{
-                background: "#ffffff",
-                border: "1px solid #e2e8f0",
-                borderRadius: "12px",
-                padding: "1.25rem 1.4rem",
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
+                gap: "1.25rem",
               }}
             >
-              <h3 style={{ margin: 0, fontSize: "1rem", fontWeight: 800, color: "#0f172a" }}>
-                Collegiate Grade Distribution
-              </h3>
-              <p style={{ margin: "0.15rem 0 1rem 0", fontSize: "0.78rem", color: "#64748b" }}>
-                Philippine Higher Education 1.00 – 5.00 grading scale calculated from real submissions
-              </p>
+              {/* Grade Transmutation Distribution */}
+              <div
+                style={{
+                  background: "#ffffff",
+                  border: "1px solid #e2e8f0",
+                  borderRadius: "12px",
+                  padding: "1.25rem 1.4rem",
+                }}
+              >
+                <h3 style={{ margin: 0, fontSize: "1rem", fontWeight: 800, color: "#0f172a" }}>
+                  Collegiate Grade Distribution
+                </h3>
+                <p style={{ margin: "0.15rem 0 1rem 0", fontSize: "0.78rem", color: "#64748b" }}>
+                  Philippine Higher Education 1.00 – 5.00 grading scale calculated from real submissions
+                </p>
 
-              {!liveGradeDistribution ? (
-                <div style={{ textAlign: "center", padding: "1.5rem 0.5rem", color: "#64748b", fontSize: "0.8rem", background: "#f8fafc", borderRadius: "8px", border: "1px dashed #cbd5e1" }}>
-                  No graded test papers found. Transmutation breakdown will dynamically populate as exam sheets are scanned.
-                </div>
-              ) : (
-                <div style={{ display: "flex", flexDirection: "column", gap: "0.65rem" }}>
-                  <div>
-                    <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.78rem", marginBottom: "3px" }}>
-                      <span style={{ fontWeight: 600, color: "#0f172a" }}>1.00 – 1.75 (Outstanding / Superior)</span>
-                      <span style={{ fontWeight: 700, color: "#059669" }}>{liveGradeDistribution.superiorPct}%</span>
+                {!liveGradeDistribution ? (
+                  <div style={{ textAlign: "center", padding: "1.5rem 0.5rem", color: "#64748b", fontSize: "0.8rem", background: "#f8fafc", borderRadius: "8px", border: "1px dashed #cbd5e1" }}>
+                    No graded test papers found. Transmutation breakdown will dynamically populate as exam sheets are scanned.
+                  </div>
+                ) : (
+                  <div style={{ display: "flex", flexDirection: "column", gap: "0.65rem" }}>
+                    <div>
+                      <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.78rem", marginBottom: "3px" }}>
+                        <span style={{ fontWeight: 600, color: "#0f172a" }}>1.00 – 1.75 (Outstanding / Superior)</span>
+                        <span style={{ fontWeight: 700, color: "#059669" }}>{liveGradeDistribution.superiorPct}%</span>
+                      </div>
+                      <div style={{ width: "100%", height: "7px", background: "#e2e8f0", borderRadius: "4px", overflow: "hidden" }}>
+                        <div style={{ width: `${liveGradeDistribution.superiorPct}%`, height: "100%", background: "#059669", borderRadius: "4px" }} />
+                      </div>
                     </div>
-                    <div style={{ width: "100%", height: "7px", background: "#e2e8f0", borderRadius: "4px", overflow: "hidden" }}>
-                      <div style={{ width: `${liveGradeDistribution.superiorPct}%`, height: "100%", background: "#059669", borderRadius: "4px" }} />
+
+                    <div>
+                      <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.78rem", marginBottom: "3px" }}>
+                        <span style={{ fontWeight: 600, color: "#0f172a" }}>2.00 – 2.75 (Very Good / Good)</span>
+                        <span style={{ fontWeight: 700, color: "var(--primary, #28166f)" }}>{liveGradeDistribution.goodPct}%</span>
+                      </div>
+                      <div style={{ width: "100%", height: "7px", background: "#e2e8f0", borderRadius: "4px", overflow: "hidden" }}>
+                        <div style={{ width: `${liveGradeDistribution.goodPct}%`, height: "100%", background: "var(--primary, #28166f)", borderRadius: "4px" }} />
+                      </div>
+                    </div>
+
+                    <div>
+                      <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.78rem", marginBottom: "3px" }}>
+                        <span style={{ fontWeight: 600, color: "#0f172a" }}>3.00 (Passing Benchmark)</span>
+                        <span style={{ fontWeight: 700, color: "#d97706" }}>{liveGradeDistribution.passPct}%</span>
+                      </div>
+                      <div style={{ width: "100%", height: "7px", background: "#e2e8f0", borderRadius: "4px", overflow: "hidden" }}>
+                        <div style={{ width: `${liveGradeDistribution.passPct}%`, height: "100%", background: "#d97706", borderRadius: "4px" }} />
+                      </div>
+                    </div>
+
+                    <div>
+                      <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.78rem", marginBottom: "3px" }}>
+                        <span style={{ fontWeight: 600, color: "#0f172a" }}>5.00 (Academic Remediation)</span>
+                        <span style={{ fontWeight: 700, color: "#ef4444" }}>{liveGradeDistribution.failPct}%</span>
+                      </div>
+                      <div style={{ width: "100%", height: "7px", background: "#e2e8f0", borderRadius: "4px", overflow: "hidden" }}>
+                        <div style={{ width: `${liveGradeDistribution.failPct}%`, height: "100%", background: "#ef4444", borderRadius: "4px" }} />
+                      </div>
                     </div>
                   </div>
+                )}
+              </div>
 
-                  <div>
-                    <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.78rem", marginBottom: "3px" }}>
-                      <span style={{ fontWeight: 600, color: "#0f172a" }}>2.00 – 2.75 (Very Good / Good)</span>
-                      <span style={{ fontWeight: 700, color: "var(--primary, #28166f)" }}>{liveGradeDistribution.goodPct}%</span>
+              {/* Turnaround & Quality Oversight */}
+              <div
+                style={{
+                  background: "#ffffff",
+                  border: "1px solid #e2e8f0",
+                  borderRadius: "12px",
+                  padding: "1.25rem 1.4rem",
+                }}
+              >
+                <h3 style={{ margin: 0, fontSize: "1rem", fontWeight: 800, color: "#0f172a" }}>
+                  Assessment Quality Milestones
+                </h3>
+                <p style={{ margin: "0.15rem 0 1rem 0", fontSize: "0.78rem", color: "#64748b" }}>
+                  Live evaluation standards and processing metrics from database
+                </p>
+
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem" }}>
+                  <div style={{ padding: "0.85rem", background: "#f8fafc", borderRadius: "10px", border: "1px solid #e2e8f0" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: "0.4rem", color: "#059669", marginBottom: "0.2rem" }}>
+                      <CheckCircle2 size={16} />
+                      <span style={{ fontSize: "0.72rem", fontWeight: 700, textTransform: "uppercase" }}>Overall Pass Rate</span>
                     </div>
-                    <div style={{ width: "100%", height: "7px", background: "#e2e8f0", borderRadius: "4px", overflow: "hidden" }}>
-                      <div style={{ width: `${liveGradeDistribution.goodPct}%`, height: "100%", background: "var(--primary, #28166f)", borderRadius: "4px" }} />
+                    <div style={{ fontSize: "1.3rem", fontWeight: 800, color: "#0f172a" }}>{liveMilestones.passRate}</div>
+                    <div style={{ fontSize: "0.7rem", color: "#64748b" }}>≥ 75.0% passing benchmark</div>
+                  </div>
+
+                  <div style={{ padding: "0.85rem", background: "#f8fafc", borderRadius: "10px", border: "1px solid #e2e8f0" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: "0.4rem", color: "var(--primary, #28166f)", marginBottom: "0.2rem" }}>
+                      <Clock size={16} />
+                      <span style={{ fontSize: "0.72rem", fontWeight: 700, textTransform: "uppercase" }}>OMR Processing</span>
                     </div>
+                    <div style={{ fontSize: "1.3rem", fontWeight: 800, color: "#0f172a" }}>Real-time</div>
+                    <div style={{ fontSize: "0.7rem", color: "#64748b" }}>Optical mark recognition</div>
                   </div>
 
-                  <div>
-                    <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.78rem", marginBottom: "3px" }}>
-                      <span style={{ fontWeight: 600, color: "#0f172a" }}>3.00 (Passing Benchmark)</span>
-                      <span style={{ fontWeight: 700, color: "#d97706" }}>{liveGradeDistribution.passPct}%</span>
+                  <div style={{ padding: "0.85rem", background: "#f8fafc", borderRadius: "10px", border: "1px solid #e2e8f0" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: "0.4rem", color: "var(--primary, #28166f)", marginBottom: "0.2rem" }}>
+                      <Sparkles size={16} />
+                      <span style={{ fontSize: "0.72rem", fontWeight: 700, textTransform: "uppercase" }}>Sheets Scanned</span>
                     </div>
-                    <div style={{ width: "100%", height: "7px", background: "#e2e8f0", borderRadius: "4px", overflow: "hidden" }}>
-                      <div style={{ width: `${liveGradeDistribution.passPct}%`, height: "100%", background: "#d97706", borderRadius: "4px" }} />
+                    <div style={{ fontSize: "1.3rem", fontWeight: 800, color: "#0f172a" }}>{liveMilestones.sheetsScanned}</div>
+                    <div style={{ fontSize: "0.7rem", color: "#64748b" }}>Graded answer sheets</div>
+                  </div>
+
+                  <div style={{ padding: "0.85rem", background: "#f8fafc", borderRadius: "10px", border: "1px solid #e2e8f0" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: "0.4rem", color: "#059669", marginBottom: "0.2rem" }}>
+                      <Award size={16} />
+                      <span style={{ fontSize: "0.72rem", fontWeight: 700, textTransform: "uppercase" }}>Total Exams</span>
                     </div>
+                    <div style={{ fontSize: "1.3rem", fontWeight: 800, color: "#0f172a" }}>{liveMilestones.totalExams}</div>
+                    <div style={{ fontSize: "0.7rem", color: "#64748b" }}>Configured examinations</div>
                   </div>
-
-                  <div>
-                    <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.78rem", marginBottom: "3px" }}>
-                      <span style={{ fontWeight: 600, color: "#0f172a" }}>5.00 (Academic Remediation)</span>
-                      <span style={{ fontWeight: 700, color: "#ef4444" }}>{liveGradeDistribution.failPct}%</span>
-                    </div>
-                    <div style={{ width: "100%", height: "7px", background: "#e2e8f0", borderRadius: "4px", overflow: "hidden" }}>
-                      <div style={{ width: `${liveGradeDistribution.failPct}%`, height: "100%", background: "#ef4444", borderRadius: "4px" }} />
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Turnaround & Quality Oversight */}
-            <div
-              style={{
-                background: "#ffffff",
-                border: "1px solid #e2e8f0",
-                borderRadius: "12px",
-                padding: "1.25rem 1.4rem",
-              }}
-            >
-              <h3 style={{ margin: 0, fontSize: "1rem", fontWeight: 800, color: "#0f172a" }}>
-                Assessment Quality Milestones
-              </h3>
-              <p style={{ margin: "0.15rem 0 1rem 0", fontSize: "0.78rem", color: "#64748b" }}>
-                Live evaluation standards and processing metrics from database
-              </p>
-
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem" }}>
-                <div style={{ padding: "0.85rem", background: "#f8fafc", borderRadius: "10px", border: "1px solid #e2e8f0" }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: "0.4rem", color: "#059669", marginBottom: "0.2rem" }}>
-                    <CheckCircle2 size={16} />
-                    <span style={{ fontSize: "0.72rem", fontWeight: 700, textTransform: "uppercase" }}>Overall Pass Rate</span>
-                  </div>
-                  <div style={{ fontSize: "1.3rem", fontWeight: 800, color: "#0f172a" }}>{liveMilestones.passRate}</div>
-                  <div style={{ fontSize: "0.7rem", color: "#64748b" }}>≥ 75.0% passing benchmark</div>
-                </div>
-
-                <div style={{ padding: "0.85rem", background: "#f8fafc", borderRadius: "10px", border: "1px solid #e2e8f0" }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: "0.4rem", color: "var(--primary, #28166f)", marginBottom: "0.2rem" }}>
-                    <Clock size={16} />
-                    <span style={{ fontSize: "0.72rem", fontWeight: 700, textTransform: "uppercase" }}>OMR Processing</span>
-                  </div>
-                  <div style={{ fontSize: "1.3rem", fontWeight: 800, color: "#0f172a" }}>Real-time</div>
-                  <div style={{ fontSize: "0.7rem", color: "#64748b" }}>Optical mark recognition</div>
-                </div>
-
-                <div style={{ padding: "0.85rem", background: "#f8fafc", borderRadius: "10px", border: "1px solid #e2e8f0" }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: "0.4rem", color: "var(--primary, #28166f)", marginBottom: "0.2rem" }}>
-                    <Sparkles size={16} />
-                    <span style={{ fontSize: "0.72rem", fontWeight: 700, textTransform: "uppercase" }}>Sheets Scanned</span>
-                  </div>
-                  <div style={{ fontSize: "1.3rem", fontWeight: 800, color: "#0f172a" }}>{liveMilestones.sheetsScanned}</div>
-                  <div style={{ fontSize: "0.7rem", color: "#64748b" }}>Graded answer sheets</div>
-                </div>
-
-                <div style={{ padding: "0.85rem", background: "#f8fafc", borderRadius: "10px", border: "1px solid #e2e8f0" }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: "0.4rem", color: "#059669", marginBottom: "0.2rem" }}>
-                    <Award size={16} />
-                    <span style={{ fontSize: "0.72rem", fontWeight: 700, textTransform: "uppercase" }}>Total Exams</span>
-                  </div>
-                  <div style={{ fontSize: "1.3rem", fontWeight: 800, color: "#0f172a" }}>{liveMilestones.totalExams}</div>
-                  <div style={{ fontSize: "0.7rem", color: "#64748b" }}>Configured examinations</div>
                 </div>
               </div>
             </div>
-          </div>
+          )}
         </>
       )}
+
+      {/* ADMIN OPERATIONAL & SYSTEM CONTROL CENTER */}
+      {user.role === "admin" && (
+        <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
+          {/* 1. Administrative Quick Launchpad */}
+              <div>
+                <div style={{ marginBottom: "0.75rem" }}>
+                  <h3 style={{ margin: 0, fontSize: "1.05rem", fontWeight: 800, color: "#0f172a" }}>
+                    Administrative Operational Hub
+                  </h3>
+                  <p style={{ margin: "0.15rem 0 0 0", fontSize: "0.78rem", color: "#64748b" }}>
+                    Direct shortcuts to optical grading, batch account provisioning, and institutional directory
+                  </p>
+                </div>
+
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))",
+                    gap: "1rem",
+                  }}
+                >
+                  {/* Quick Scan Card */}
+                  <div
+                    style={{
+                      background: "#ffffff",
+                      border: "1px solid #e2e8f0",
+                      borderRadius: "14px",
+                      padding: "1.25rem",
+                      display: "flex",
+                      flexDirection: "column",
+                      justifyContent: "space-between",
+                      gap: "1rem",
+                      boxShadow: "0 1px 3px rgba(0, 0, 0, 0.04)",
+                      transition: "transform 0.15s ease, box-shadow 0.15s ease",
+                    }}
+                  >
+                    <div style={{ display: "flex", alignItems: "flex-start", gap: "0.85rem" }}>
+                      <div
+                        style={{
+                          width: "42px",
+                          height: "42px",
+                          borderRadius: "10px",
+                          background: "linear-gradient(135deg, #ede9fe 0%, #e0e7ff 100%)",
+                          border: "1.5px solid #c4b5fd",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          color: "var(--primary, #28166f)",
+                          flexShrink: 0,
+                        }}
+                      >
+                        <Sparkles size={20} />
+                      </div>
+                      <div>
+                        <div style={{ fontSize: "0.95rem", fontWeight: 800, color: "#0f172a" }}>
+                          Quick OMR Sheet Scanner
+                        </div>
+                        <p style={{ margin: "0.2rem 0 0 0", fontSize: "0.78rem", color: "#64748b", lineHeight: 1.4 }}>
+                          Scan test sheets with live camera vision or upload multi-file ZIP bundles for rapid auto-grading.
+                        </p>
+                      </div>
+                    </div>
+
+                    {onNavigateTab && (
+                      <button
+                        type="button"
+                        onClick={() => onNavigateTab("quick-scan")}
+                        style={{
+                          display: "inline-flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          gap: "6px",
+                          padding: "0.55rem 1rem",
+                          background: "var(--primary, #28166f)",
+                          color: "#ffffff",
+                          border: "none",
+                          borderRadius: "8px",
+                          fontSize: "0.8rem",
+                          fontWeight: 700,
+                          cursor: "pointer",
+                          transition: "opacity 0.15s ease",
+                        }}
+                      >
+                        Launch Scanner <ArrowRight size={14} />
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Account Provisioning Card */}
+                  <div
+                    style={{
+                      background: "#ffffff",
+                      border: "1px solid #e2e8f0",
+                      borderRadius: "14px",
+                      padding: "1.25rem",
+                      display: "flex",
+                      flexDirection: "column",
+                      justifyContent: "space-between",
+                      gap: "1rem",
+                      boxShadow: "0 1px 3px rgba(0, 0, 0, 0.04)",
+                      transition: "transform 0.15s ease, box-shadow 0.15s ease",
+                    }}
+                  >
+                    <div style={{ display: "flex", alignItems: "flex-start", gap: "0.85rem" }}>
+                      <div
+                        style={{
+                          width: "42px",
+                          height: "42px",
+                          borderRadius: "10px",
+                          background: "linear-gradient(135deg, #dcfce7 0%, #d1fae5 100%)",
+                          border: "1.5px solid #a7f3d0",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          color: "#059669",
+                          flexShrink: 0,
+                        }}
+                      >
+                        <UserPlus size={20} />
+                      </div>
+                      <div>
+                        <div style={{ fontSize: "0.95rem", fontWeight: 800, color: "#0f172a" }}>
+                          Account Provisioning
+                        </div>
+                        <p style={{ margin: "0.2rem 0 0 0", fontSize: "0.78rem", color: "#64748b", lineHeight: 1.4 }}>
+                          Generate institutional credentials individually or batch register students and faculty via Excel file.
+                        </p>
+                      </div>
+                    </div>
+
+                    {onNavigateTab && (
+                      <button
+                        type="button"
+                        onClick={() => onNavigateTab("user-management")}
+                        style={{
+                          display: "inline-flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          gap: "6px",
+                          padding: "0.55rem 1rem",
+                          background: "#059669",
+                          color: "#ffffff",
+                          border: "none",
+                          borderRadius: "8px",
+                          fontSize: "0.8rem",
+                          fontWeight: 700,
+                          cursor: "pointer",
+                          transition: "opacity 0.15s ease",
+                        }}
+                      >
+                        Create Accounts <ArrowRight size={14} />
+                      </button>
+                    )}
+                  </div>
+
+                  {/* User Directory Card */}
+                  <div
+                    style={{
+                      background: "#ffffff",
+                      border: "1px solid #e2e8f0",
+                      borderRadius: "14px",
+                      padding: "1.25rem",
+                      display: "flex",
+                      flexDirection: "column",
+                      justifyContent: "space-between",
+                      gap: "1rem",
+                      boxShadow: "0 1px 3px rgba(0, 0, 0, 0.04)",
+                      transition: "transform 0.15s ease, box-shadow 0.15s ease",
+                    }}
+                  >
+                    <div style={{ display: "flex", alignItems: "flex-start", gap: "0.85rem" }}>
+                      <div
+                        style={{
+                          width: "42px",
+                          height: "42px",
+                          borderRadius: "10px",
+                          background: "linear-gradient(135deg, #dbeafe 0%, #e0e7ff 100%)",
+                          border: "1.5px solid #bfdbfe",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          color: "#2563eb",
+                          flexShrink: 0,
+                        }}
+                      >
+                        <Users size={20} />
+                      </div>
+                      <div>
+                        <div style={{ fontSize: "0.95rem", fontWeight: 800, color: "#0f172a" }}>
+                          Institutional User Directory
+                        </div>
+                        <p style={{ margin: "0.2rem 0 0 0", fontSize: "0.78rem", color: "#64748b", lineHeight: 1.4 }}>
+                          Review all {summary?.total_accounts ?? "registered"} user accounts, manage department assignments, and export credentials.
+                        </p>
+                      </div>
+                    </div>
+
+                    {onNavigateTab && (
+                      <button
+                        type="button"
+                        onClick={() => onNavigateTab("user-directory")}
+                        style={{
+                          display: "inline-flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          gap: "6px",
+                          padding: "0.55rem 1rem",
+                          background: "#ffffff",
+                          color: "var(--primary, #28166f)",
+                          border: "1.5px solid var(--primary, #28166f)",
+                          borderRadius: "8px",
+                          fontSize: "0.8rem",
+                          fontWeight: 700,
+                          cursor: "pointer",
+                          transition: "all 0.15s ease",
+                        }}
+                      >
+                        Manage Directory <ArrowRight size={14} />
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* 2. System Infrastructure & OMR Engine Health Monitor */}
+              <div
+                style={{
+                  background: "#ffffff",
+                  border: "1px solid #e2e8f0",
+                  borderRadius: "14px",
+                  padding: "1.25rem 1.4rem",
+                  boxShadow: "0 1px 3px rgba(0, 0, 0, 0.04)",
+                }}
+              >
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "1rem", flexWrap: "wrap", gap: "0.5rem" }}>
+                  <div>
+                    <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                      <Activity size={18} style={{ color: "var(--primary, #28166f)" }} />
+                      <h3 style={{ margin: 0, fontSize: "1rem", fontWeight: 800, color: "#0f172a" }}>
+                        System Services & OMR Engine Infrastructure
+                      </h3>
+                    </div>
+                    <p style={{ margin: "0.15rem 0 0 0", fontSize: "0.78rem", color: "#64748b" }}>
+                      Operational readiness of computer vision grading pipelines and institutional records
+                    </p>
+                  </div>
+
+                  <span
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: "6px",
+                      fontSize: "0.72rem",
+                      fontWeight: 700,
+                      padding: "0.25rem 0.65rem",
+                      background: "#ecfdf5",
+                      color: "#059669",
+                      borderRadius: "20px",
+                      border: "1px solid #a7f3d0",
+                    }}
+                  >
+                    <span
+                      style={{
+                        width: "7px",
+                        height: "7px",
+                        borderRadius: "50%",
+                        background: "#059669",
+                        boxShadow: "0 0 6px #059669",
+                      }}
+                    />
+                    All Services Operational
+                  </span>
+                </div>
+
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "repeat(auto-fit, minmax(210px, 1fr))",
+                    gap: "0.75rem",
+                  }}
+                >
+                  <div style={{ padding: "0.85rem", background: "#f8fafc", borderRadius: "10px", border: "1px solid #e2e8f0" }}>
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "0.25rem" }}>
+                      <span style={{ fontSize: "0.72rem", fontWeight: 700, color: "#64748b", textTransform: "uppercase" }}>OMR Vision Core</span>
+                      <span style={{ fontSize: "0.7rem", fontWeight: 700, color: "#059669" }}>Active</span>
+                    </div>
+                    <div style={{ fontSize: "0.92rem", fontWeight: 800, color: "#0f172a" }}>FastCV Bubble Engine</div>
+                    <div style={{ fontSize: "0.7rem", color: "#64748b", marginTop: "2px" }}>Real-time 4-corner warp & thresholding</div>
+                  </div>
+
+                  <div style={{ padding: "0.85rem", background: "#f8fafc", borderRadius: "10px", border: "1px solid #e2e8f0" }}>
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "0.25rem" }}>
+                      <span style={{ fontSize: "0.72rem", fontWeight: 700, color: "#64748b", textTransform: "uppercase" }}>Batch Decompressor</span>
+                      <span style={{ fontSize: "0.7rem", fontWeight: 700, color: "#059669" }}>Standby</span>
+                    </div>
+                    <div style={{ fontSize: "0.92rem", fontWeight: 800, color: "#0f172a" }}>ZIP Archive Pipeline</div>
+                    <div style={{ fontSize: "0.7rem", color: "#64748b", marginTop: "2px" }}>Multi-sheet parallel extraction ready</div>
+                  </div>
+
+                  <div style={{ padding: "0.85rem", background: "#f8fafc", borderRadius: "10px", border: "1px solid #e2e8f0" }}>
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "0.25rem" }}>
+                      <span style={{ fontSize: "0.72rem", fontWeight: 700, color: "#64748b", textTransform: "uppercase" }}>Database & Storage</span>
+                      <span style={{ fontSize: "0.7rem", fontWeight: 700, color: "var(--primary, #28166f)" }}>Synced</span>
+                    </div>
+                    <div style={{ fontSize: "0.92rem", fontWeight: 800, color: "#0f172a" }}>{submissions.length} Total Scans</div>
+                    <div style={{ fontSize: "0.7rem", color: "#64748b", marginTop: "2px" }}>Indexed across {exams.length} examinations</div>
+                  </div>
+
+                  <div style={{ padding: "0.85rem", background: "#f8fafc", borderRadius: "10px", border: "1px solid #e2e8f0" }}>
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "0.25rem" }}>
+                      <span style={{ fontSize: "0.72rem", fontWeight: 700, color: "#64748b", textTransform: "uppercase" }}>Access & RBAC</span>
+                      <span style={{ fontSize: "0.7rem", fontWeight: 700, color: "#059669" }}>Secured</span>
+                    </div>
+                    <div style={{ fontSize: "0.92rem", fontWeight: 800, color: "#0f172a" }}>Institutional Security</div>
+                    <div style={{ fontSize: "0.7rem", color: "#64748b", marginTop: "2px" }}>Role isolation & credential hashes</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
 
       {/* TEACHER DEDICATED COMMAND CENTER DASHBOARD */}
       {user.role === "teacher" && (() => {
