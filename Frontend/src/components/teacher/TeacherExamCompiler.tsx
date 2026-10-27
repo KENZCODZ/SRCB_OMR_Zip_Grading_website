@@ -99,7 +99,7 @@ export const TeacherExamCompiler: React.FC<TeacherExamCompilerProps> = ({
   const handlePublishSingleGrade = async (sub: Submission, student?: StudentRosterEntry, exam?: Exam) => {
     const isCurrentlyPublished = sub.status === "published" || sub.is_published === true;
     const targetStatus = isCurrentlyPublished ? "pending" : "published";
-    const studentName = student ? student.name : `Student ID ${sub.student_id}`;
+    const studentName = sub.student_name || (student ? student.name : sub.student_id ? `Student ${sub.student_id}` : "Student");
 
     setPublishingSubId(sub.id);
     try {
@@ -381,7 +381,7 @@ export const TeacherExamCompiler: React.FC<TeacherExamCompilerProps> = ({
 
     subs.forEach((sub) => {
       const matched = rosterMap.get((sub.student_id || "").toLowerCase());
-      const studentName = matched ? matched.name : "N/A";
+      const studentName = sub.student_name || (matched ? matched.name : (sub.student_id ? `Student ${sub.student_id}` : "N/A"));
       const trans = calculateTransmutedGrade(sub.score, totalItems);
       summaryText += `${sub.student_id}\t${studentName}\t${sub.score}/${totalItems}\t${trans.percentage}%\t${trans.grade}\t${trans.status}\n`;
     });
@@ -1463,11 +1463,12 @@ export const TeacherExamCompiler: React.FC<TeacherExamCompilerProps> = ({
                                               lineHeight: 1.3,
                                             }}
                                           >
-                                            {matchedStudent
-                                              ? matchedStudent.name
-                                              : sub.student_id
-                                                ? `Student ${sub.student_id}`
-                                                : "Student Submission"}
+                                            {sub.student_name ||
+                                              (matchedStudent
+                                                ? matchedStudent.name
+                                                : sub.student_id
+                                                  ? `Student ${sub.student_id}`
+                                                  : "Student Submission")}
                                           </span>
                                           <span
                                             style={{
@@ -1678,7 +1679,7 @@ export const TeacherExamCompiler: React.FC<TeacherExamCompilerProps> = ({
                                                 if (addToast) {
                                                   addToast(
                                                     "success",
-                                                    `Downloaded score report for ${matchedStudent ? matchedStudent.name : sub.student_id}`,
+                                                    `Downloaded score report for ${sub.student_name || (matchedStudent ? matchedStudent.name : sub.student_id)}`,
                                                   );
                                                 }
                                               } catch {

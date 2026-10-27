@@ -54,7 +54,7 @@ export const SubmissionTable: React.FC<SubmissionTableProps> = ({
     return submissions.filter((sub) => {
       const examName = getExamName(sub.exam_id).toLowerCase();
       const matchedStudent = rosterMap.get((sub.student_id || '').toLowerCase());
-      const studentName = matchedStudent ? matchedStudent.name.toLowerCase() : '';
+      const studentName = (sub.student_name || (matchedStudent ? matchedStudent.name : '')).toLowerCase();
       const query = searchQuery.trim().toLowerCase();
 
       return (
@@ -136,7 +136,9 @@ export const SubmissionTable: React.FC<SubmissionTableProps> = ({
         <div className="floating-rows-list">
           {paginatedSubmissions.map((sub, index) => {
             const matchedStudent = rosterMap.get((sub.student_id || '').toLowerCase());
-            const studentDisplayName = matchedStudent ? matchedStudent.name : `Student ${sub.student_id}`;
+            const studentDisplayName =
+              sub.student_name ||
+              (matchedStudent ? matchedStudent.name : sub.student_id ? `Student (${sub.student_id})` : 'Unassigned Examinee');
             const totalQ = sub.total_questions || 50;
             const transmuted = calculateTransmutedGrade(sub.score, totalQ);
             const status = getStatusDetails(sub.score, totalQ);

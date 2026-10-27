@@ -15,6 +15,8 @@ import {
 } from "lucide-react";
 import type { AuthUser, Exam, Submission, StudentRosterEntry } from "../../types";
 import { exportExamBatchExcel, exportCompleteDatabaseExcel } from "../../utils/excelUtils";
+import { ExamInspectionSidepanel } from "../exam/ExamInspectionSidepanel";
+import { publishExamSubmissions } from "../../api";
 
 interface DeanExaminationsProps {
   currentUser: AuthUser;
@@ -49,6 +51,27 @@ export default function DeanExaminations({
   const [programmeFilter, setProgrammeFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
   const [exportingExamId, setExportingExamId] = useState<string | null>(null);
+  const [inspectingExam, setInspectingExam] = useState<Exam | null>(null);
+
+  const handleBatchPublishToggle = async (examId: string, targetStatus: "published" | "pending") => {
+    try {
+      await publishExamSubmissions(examId, targetStatus);
+      submissions.forEach((s) => {
+        if (s.exam_id === examId) {
+          s.status = targetStatus;
+          s.is_published = targetStatus === "published";
+        }
+      });
+      addToast(
+        "success",
+        targetStatus === "published"
+          ? "Examinee grades successfully published to Student Portals."
+          : "Examinee grades unpublished and reverted to pending review."
+      );
+    } catch {
+      addToast("error", "Failed to update publication status.");
+    }
+  };
 
   // Derive active exam statistics
   const totalExams = exams.length;
@@ -550,26 +573,32 @@ export default function DeanExaminations({
                   </div>
 
                   <div style={{ display: "flex", gap: "0.5rem" }}>
-                    {onInspectExam && (
-                      <button
-                        type="button"
-                        className="btn btn-primary"
-                        onClick={() => onInspectExam(exam)}
-                        style={{
-                          fontSize: "0.8rem",
-                          padding: "0.45rem 0.85rem",
-                          display: "inline-flex",
-                          alignItems: "center",
-                          gap: "0.4rem",
-                          borderRadius: "8px",
-                          background: "var(--primary, #28166f)",
-                          color: "#ffffff",
-                          border: "none",
-                        }}
-                      >
-                        <Eye size={15} /> Inspect OBE Analysis
-                      </button>
-                    )}
+                    <button
+                      type="button"
+                      className="btn btn-primary"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (onInspectExam) {
+                          onInspectExam(exam);
+                        } else {
+                          setInspectingExam(exam);
+                        }
+                      }}
+                      style={{
+                        fontSize: "0.8rem",
+                        padding: "0.45rem 0.85rem",
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: "0.4rem",
+                        borderRadius: "8px",
+                        background: "var(--primary, #28166f)",
+                        color: "#ffffff",
+                        border: "none",
+                        cursor: "pointer",
+                      }}
+                    >
+                      <Eye size={15} /> Inspect OBE Analysis
+                    </button>
 
                     <button
                       type="button"
@@ -598,6 +627,21 @@ export default function DeanExaminations({
             );
           })}
         </div>
+      )}
+
+      {/* EXAM INSPECTION UPGRADED SIDEPANEL (if not delegated to parent) */}
+      {!onInspectExam && inspectingExam && (
+        <ExamInspectionSidepanel
+          exam={inspectingExam}
+          isOpen={true}
+          onClose={() => setInspectingExam(null)}
+          submissions={submissions}
+          roster={roster}
+          currentUser={currentUser}
+          onBatchPublishToggle={handleBatchPublishToggle}
+          addToast={addToast}
+          formatDate={formatDate}
+        />
       )}
     </div>
   );

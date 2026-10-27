@@ -98,6 +98,22 @@ export const mockUsers: AuthUser[] = [
       "Access only their personal examination records",
     ],
   },
+  {
+    id: "student-002",
+    role: "student",
+    name: "Kenneth Ernest Palicte",
+    email: "k.palicte@srcb.edu.ph",
+    programme: "BSIT",
+    department: "Computer Studies",
+    studentId: "2023-0002",
+    student_id: "2023-0002",
+    scope: "Student access for BSIT",
+    permissions: [
+      "View their own examination scores",
+      "View which exam questions were answered correctly or incorrectly",
+      "Access only their personal examination records",
+    ],
+  },
 ];
 
 export const mockClassRoster: StudentRosterEntry[] = [];

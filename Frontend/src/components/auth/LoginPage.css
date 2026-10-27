@@ -561,3 +561,419 @@
     grid-column: span 1;
   }
 }
+
+/* ==========================================================================
+   Forgot Password / Institutional Account Recovery Modal Dialog
+   ========================================================================== */
+
+.forgot-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.72);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 999999;
+  padding: 1.25rem;
+  animation: forgotModalFadeIn 0.2s ease-out forwards;
+}
+
+.forgot-modal-card {
+  width: 100%;
+  max-width: 680px;
+  max-height: 90vh;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 20px;
+  box-shadow: 0 25px 50px -12px rgba(15, 23, 42, 0.35);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: forgotModalSlideUp 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Modal Header */
+.forgot-modal-header {
+  padding: 1.25rem 1.5rem;
+  background: #f8fafc;
+  border-bottom: 1px solid #e2e8f0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.forgot-modal-header-info {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+}
+
+.forgot-modal-icon-badge {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: #f3f0ff;
+  border: 1.5px solid #ddd6fe;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.forgot-modal-policy-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.68rem;
+  font-weight: 800;
+  color: #047857;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: 0.15rem;
+}
+
+.forgot-modal-title {
+  margin: 0;
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: #0f172a;
+  letter-spacing: -0.01em;
+}
+
+.forgot-modal-close-btn {
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  color: #64748b;
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+}
+
+.forgot-modal-close-btn:hover {
+  background: #fee2e2;
+  border-color: #fca5a5;
+  color: #dc2626;
+}
+
+/* Modal Body */
+.forgot-modal-body {
+  padding: 1.5rem;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.forgot-modal-alert {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  border-radius: 12px;
+  padding: 0.85rem 1rem;
+}
+
+.forgot-modal-alert-icon {
+  color: #2563eb;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.forgot-modal-alert-content {
+  font-size: 0.82rem;
+  color: #1e3a8a;
+  line-height: 1.45;
+}
+
+.forgot-modal-alert-content strong {
+  display: block;
+  font-weight: 800;
+  color: #1e40af;
+  margin-bottom: 0.2rem;
+}
+
+.forgot-modal-alert-content p {
+  margin: 0;
+}
+
+/* Channels Grid */
+.forgot-modal-channels-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1rem;
+}
+
+.forgot-channel-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  padding: 1.15rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  transition: all 0.15s ease;
+}
+
+.forgot-channel-card:hover {
+  border-color: #cbd5e1;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+}
+
+.forgot-channel-top {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  margin-bottom: 0.5rem;
+}
+
+.forgot-channel-icon-wrap {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.forgot-channel-icon-wrap.in-person {
+  background: #faf5ff;
+  border: 1px solid #e9d5ff;
+  color: #7e22ce;
+}
+
+.forgot-channel-icon-wrap.email {
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  color: #15803d;
+}
+
+.forgot-channel-heading {
+  display: flex;
+  flex-direction: column;
+}
+
+.forgot-channel-tag {
+  font-size: 0.65rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #7e22ce;
+}
+
+.forgot-channel-tag.online {
+  color: #15803d;
+}
+
+.forgot-channel-heading h4 {
+  margin: 0;
+  font-size: 0.92rem;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.forgot-channel-desc {
+  font-size: 0.77rem;
+  color: #64748b;
+  margin: 0 0 0.75rem 0;
+  line-height: 1.4;
+}
+
+.forgot-channel-details {
+  background: #f8fafc;
+  border: 1px solid #f1f5f9;
+  border-radius: 10px;
+  padding: 0.65rem 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  margin-bottom: 0.75rem;
+}
+
+.forgot-channel-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  font-size: 0.75rem;
+}
+
+.forgot-channel-item-label {
+  color: #64748b;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.forgot-channel-item-val {
+  color: #1e293b;
+  font-weight: 700;
+  text-align: right;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.forgot-channel-item-val.code {
+  font-family: monospace;
+  font-size: 0.73rem;
+  color: #28166f;
+  background: #ede9fe;
+  padding: 1px 5px;
+  border-radius: 4px;
+}
+
+.forgot-channel-notice {
+  font-size: 0.72rem;
+  color: #475569;
+  background: #f8fafc;
+  border-left: 3px solid #d97706;
+  padding: 0.45rem 0.65rem;
+  border-radius: 4px;
+}
+
+.forgot-channel-btn-row {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: auto;
+}
+
+.forgot-action-btn {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.76rem;
+  font-weight: 700;
+  border-radius: 8px;
+  cursor: pointer;
+  text-decoration: none;
+  transition: all 0.15s ease;
+}
+
+.forgot-action-btn.secondary {
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  color: #334155;
+}
+
+.forgot-action-btn.secondary:hover {
+  background: #f1f5f9;
+  border-color: #94a3b8;
+  color: #0f172a;
+}
+
+.forgot-action-btn.primary {
+  background: var(--primary, #28166f);
+  border: 1px solid var(--primary, #28166f);
+  color: #ffffff;
+}
+
+.forgot-action-btn.primary:hover {
+  background: #1c0e53;
+  border-color: #1c0e53;
+}
+
+/* Tips card */
+.forgot-modal-tips {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.65rem;
+  background: #eef2ff;
+  border: 1px solid #c7d2fe;
+  border-radius: 12px;
+  padding: 0.75rem 1rem;
+}
+
+/* Footer */
+.forgot-modal-footer {
+  padding: 1rem 1.5rem;
+  background: #f8fafc;
+  border-top: 1px solid #e2e8f0;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.forgot-footer-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0.6rem 1.25rem;
+  background: var(--primary, #28166f);
+  color: #ffffff;
+  border: none;
+  border-radius: 10px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  box-shadow: 0 4px 12px rgba(40, 22, 111, 0.25);
+}
+
+.forgot-footer-btn:hover {
+  background: #1c0e53;
+  transform: translateY(-1px);
+}
+
+@keyframes forgotModalFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes forgotModalSlideUp {
+  from {
+    opacity: 0;
+    transform: translateY(18px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@media (max-width: 640px) {
+  .forgot-modal-card {
+    border-radius: 16px;
+    max-height: 94vh;
+  }
+
+  .forgot-modal-channels-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .forgot-modal-header {
+    padding: 1rem;
+  }
+
+  .forgot-modal-body {
+    padding: 1rem;
+    gap: 1rem;
+  }
+
+  .forgot-modal-footer {
+    padding: 0.85rem 1rem;
+  }
+
+  .forgot-footer-btn {
+    width: 100%;
+    justify-content: center;
+  }
+}
+

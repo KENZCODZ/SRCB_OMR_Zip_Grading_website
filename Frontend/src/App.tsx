@@ -57,6 +57,7 @@ import {
   deleteExam,
   loginUser,
   fetchDashboardSummary,
+  publishExamSubmissions,
 } from "./api";
 import { mockUsers, mockClassRoster, mockExams, mockSubmissions } from "./data/mockData";
 import {
@@ -86,6 +87,7 @@ import {
   ItemAnalysisTable,
   ExamCreationModal,
   ExamDetailsModal,
+  ExamInspectionSidepanel,
 } from "./components/exam";
 import { RoleDashboard } from "./components/dashboard";
 import {
@@ -130,10 +132,19 @@ const getDefaultNotifications = (role?: string): AppNotification[] => {
   if (role === "admin") {
     return [
       {
+        id: "notif-adm-pwd",
+        title: "Password Assistance Request",
+        message: "A user submitted a password recovery ticket. Inspect account credentials in User Directory.",
+        timestamp: "2m ago",
+        type: "alert",
+        read: false,
+        targetTab: "user-directory",
+      },
+      {
         id: "notif-adm-1",
         title: "New Student Account Created",
         message: "Mark Kevin Alcantara (ID: 2023-00155) was successfully activated under BSIT.",
-        timestamp: "5m ago",
+        timestamp: "15m ago",
         type: "user",
         read: false,
         targetTab: "user-directory",
@@ -839,6 +850,7 @@ export default function App() {
   const confirmDeleteExam = async () => {
     if (!examToDelete) return;
     setIsDeletingExam(true);
+    addToast("info", `Deleting examination "${examToDelete.name}"...`);
     try {
       await deleteExam(examToDelete.id);
       addToast("success", `Exam "${examToDelete.name}" and its submissions deleted successfully.`);
@@ -911,6 +923,51 @@ export default function App() {
     );
   };
 
+  const resolveStudentDisplayName = (studentId?: string | null, explicitName?: string | null): string => {
+    if (explicitName && explicitName.trim() && !explicitName.toLowerCase().startsWith("student (") && explicitName.toLowerCase() !== "student") {
+      return explicitName.trim();
+    }
+    if (!studentId) return "Anonymous / Unassigned";
+    const rawId = studentId.trim();
+    const cleanId = rawId.toLowerCase().replace(/[^a-z0-9]/g, "");
+
+    // 1. Search in mockUsers and registered accounts
+    const foundUser = mockUsers.find((u) => {
+      const uSid = (u.studentId || (u as any).student_id || u.id || "").trim();
+      if (uSid.toLowerCase() === rawId.toLowerCase()) return true;
+      const cleanUSid = uSid.toLowerCase().replace(/[^a-z0-9]/g, "");
+      if (cleanUSid && cleanUSid === cleanId) return true;
+      const uDigits = uSid.replace(/\D/g, "");
+      const rawDigits = rawId.replace(/\D/g, "");
+      if (uDigits && rawDigits && uDigits.length >= 4 && (uDigits === rawDigits || uDigits.endsWith(rawDigits) || rawDigits.endsWith(uDigits))) {
+        return true;
+      }
+      return false;
+    });
+    if (foundUser?.name) return foundUser.name;
+
+    // 2. Search in student roster
+    const foundRoster = roster.find((r) => {
+      const rSid = (r.student_id || "").trim();
+      if (rSid.toLowerCase() === rawId.toLowerCase()) return true;
+      const cleanRSid = rSid.toLowerCase().replace(/[^a-z0-9]/g, "");
+      if (cleanRSid && cleanRSid === cleanId) return true;
+      const rDigits = rSid.replace(/\D/g, "");
+      const rawDigits = rawId.replace(/\D/g, "");
+      if (rDigits && rawDigits && rDigits.length >= 4 && (rDigits === rawDigits || rDigits.endsWith(rawDigits) || rawDigits.endsWith(rDigits))) {
+        return true;
+      }
+      return false;
+    });
+    if (foundRoster?.name) return foundRoster.name;
+
+    if (explicitName && explicitName.trim()) {
+      return explicitName.trim();
+    }
+
+    return rawId.startsWith("20") || !isNaN(Number(rawId)) ? `Student (${rawId})` : `Student ${rawId}`;
+  };
+
   const handleExportSingleSubmission = (targetSub?: Submission | null) => {
     const subToExport =
       targetSub ||
@@ -922,14 +979,7 @@ export default function App() {
     }
     const targetExam = exams.find((e) => e.id === subToExport.exam_id);
     exportSingleSubmissionExcel(subToExport, targetExam, roster);
-    const matchedStudent = roster.find(
-      (r) =>
-        r.student_id.toLowerCase() ===
-        (subToExport.student_id || "").toLowerCase(),
-    );
-    const studentLabel = matchedStudent
-      ? matchedStudent.name
-      : subToExport.student_id || "Student";
+    const studentLabel = resolveStudentDisplayName(subToExport.student_id, subToExport.student_name);
     addToast(
       "success",
       `Single File Export: Exported result for ${studentLabel} (.xlsx)`,
@@ -1328,31 +1378,35 @@ export default function App() {
 
   if (!currentUser) {
     return (
-      <LoginPage
-        email={loginEmail}
-        setEmail={setLoginEmail}
-        password={loginPassword}
-        setPassword={setLoginPassword}
-        loginError={loginError}
-        onSubmit={handleLoginSubmit}
-        onSelectMockUser={(userId: string) => {
-          setSelectedAuthUserId(userId);
-          const found = mockUsers.find((u) => u.id === userId);
-          if (found) {
-            let pass = "Admin@2025";
-            if (found.role === "dean") pass = "Dean@2025";
-            if (found.role === "programme-head") pass = "Ph@2025";
-            if (found.role === "teacher") pass = "Teacher@2025";
-            if (found.role === "student") pass = "Student@2025";
+      <>
+        <ToastNotification toasts={toasts} onDismiss={removeToast} />
+        <LoginPage
+          email={loginEmail}
+          setEmail={setLoginEmail}
+          password={loginPassword}
+          setPassword={setLoginPassword}
+          loginError={loginError}
+          onSubmit={handleLoginSubmit}
+          onSelectMockUser={(userId: string) => {
+            setSelectedAuthUserId(userId);
+            const found = mockUsers.find((u) => u.id === userId);
+            if (found) {
+              let pass = "Admin@2025";
+              if (found.role === "dean") pass = "Dean@2025";
+              if (found.role === "programme-head") pass = "Ph@2025";
+              if (found.role === "teacher") pass = "Teacher@2025";
+              if (found.role === "student") pass = "Student@2025";
 
-            setLoginEmail(found.email);
-            setLoginPassword(pass);
-            handleSignIn(found.id);
-          }
-        }}
-        mockUsers={mockUsers}
-        selectedAuthUserId={selectedAuthUserId}
-      />
+              setLoginEmail(found.email);
+              setLoginPassword(pass);
+              handleSignIn(found.id);
+            }
+          }}
+          mockUsers={mockUsers}
+          selectedAuthUserId={selectedAuthUserId}
+          addToast={addToast}
+        />
+      </>
     );
   }
 
@@ -1390,22 +1444,42 @@ export default function App() {
           editingExam={editingExam}
         />
 
-        {/* Exam Details / Inspect Modal */}
-        <ExamDetailsModal
-          exam={inspectExam}
-          isOpen={inspectExam !== null}
-          onClose={() => setInspectExam(null)}
-          onDelete={(id) => {
-            handleDeleteExam(id);
-            setInspectExam(null);
-          }}
-          onEdit={(exam) => {
-            setInspectExam(null);
-            setEditingExam(exam);
-            setIsExamModalOpen(true);
-          }}
-          formatDate={formatDate}
-        />
+        {/* Exam Details / Inspect Modal & Upgraded Sidepanel */}
+        {currentUser?.role === "programme-head" || currentUser?.role === "dean" ? (
+          inspectExam && (
+            <ExamInspectionSidepanel
+              exam={inspectExam}
+              isOpen={inspectExam !== null}
+              onClose={() => setInspectExam(null)}
+              submissions={submissions}
+              roster={roster}
+              currentUser={currentUser}
+              onBatchPublishToggle={async (examId, targetStatus) => {
+                await publishExamSubmissions(examId, targetStatus);
+                loadSubmissions(true);
+                loadDashboardSummary(true);
+              }}
+              addToast={addToast}
+              formatDate={formatDate}
+            />
+          )
+        ) : (
+          <ExamDetailsModal
+            exam={inspectExam}
+            isOpen={inspectExam !== null}
+            onClose={() => setInspectExam(null)}
+            onDelete={(id) => {
+              handleDeleteExam(id);
+              setInspectExam(null);
+            }}
+            onEdit={(exam) => {
+              setInspectExam(null);
+              setEditingExam(exam);
+              setIsExamModalOpen(true);
+            }}
+            formatDate={formatDate}
+          />
+        )}
 
         <UserGuideModal
           isOpen={isUserGuideOpen}
@@ -3142,14 +3216,8 @@ export default function App() {
                         )
                         : null;
 
-                      const getStudentName = (studentId?: string) => {
-                        if (!studentId) return "Anonymous / Unassigned";
-                        const found = roster.find(
-                          (r) =>
-                            r.student_id.toLowerCase() === studentId.toLowerCase(),
-                        );
-                        return found ? found.name : `Student (${studentId})`;
-                      };
+                      const getStudentName = (studentId?: string, explicitName?: string | null) =>
+                        resolveStudentDisplayName(studentId, explicitName);
 
                       return (
                         <div>
@@ -3693,7 +3761,7 @@ export default function App() {
                                               color: "#0f172a",
                                             }}
                                           >
-                                            {getStudentName(latestGradeResult.student_id)}
+                                            {getStudentName(latestGradeResult.student_id, latestGradeResult.student_name)}
                                           </h4>
                                           <span
                                             className="badge"
@@ -4737,13 +4805,10 @@ export default function App() {
                         margin: "2px 0 0 0",
                       }}
                     >
-                      {roster.find(
-                        (r) =>
-                          r.student_id.toLowerCase() ===
-                          (selectedSubmission.student_id || "").toLowerCase(),
-                      )?.name ||
-                        selectedSubmission.student_id ||
-                        "N/A"}
+                      {resolveStudentDisplayName(
+                        selectedSubmission.student_id,
+                        selectedSubmission.student_name,
+                      )}
                     </p>
                     <span
                       style={{
@@ -4751,7 +4816,18 @@ export default function App() {
                         color: "var(--text-muted)",
                       }}
                     >
-                      ID: {selectedSubmission.student_id}
+                      ID: {selectedSubmission.student_id || "Unassigned"}
+                      {selectedSubmission.student_email && (
+                        <span
+                          style={{
+                            marginLeft: "6px",
+                            color: "var(--primary, #28166f)",
+                            fontWeight: 600,
+                          }}
+                        >
+                          • {selectedSubmission.student_email}
+                        </span>
+                      )}
                     </span>
                   </div>
                   <div>

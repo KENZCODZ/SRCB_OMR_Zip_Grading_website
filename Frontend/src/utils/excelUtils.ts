@@ -153,6 +153,9 @@ export function calculateItemAnalysis(
     else if (dIndex >= 0.20) dCat = 'Marginal';
     else dCat = 'Poor';
 
+    const recommendation: 'Retain' | 'Revise' | 'Discard' =
+      dIndex >= 0.30 ? 'Retain' : dIndex >= 0.15 ? 'Revise' : 'Discard';
+
     return {
       question_number: qNum,
       correct_answer: correctOpt,
@@ -162,7 +165,9 @@ export function calculateItemAnalysis(
       difficulty_category: pCat,
       discrimination_index: dIndex,
       discrimination_category: dCat,
-      distractor_counts: distractorCounts
+      distractor_counts: distractorCounts,
+      option_counts: distractorCounts,
+      recommendation,
     };
   });
 }
@@ -260,9 +265,9 @@ export function exportSingleSubmissionExcel(
   const studentRows = [
     { 'METRIC / FIELD': '--- STUDENT PERFORMANCE ---', 'VALUE': '----------------------------------------' },
     { 'METRIC / FIELD': 'Student ID', 'VALUE': submission.student_id || 'N/A' },
-    { 'METRIC / FIELD': 'Student Full Name', 'VALUE': matched ? matched.name : 'N/A' },
+    { 'METRIC / FIELD': 'Student Full Name', 'VALUE': submission.student_name || (matched ? matched.name : (submission.student_id ? `Student ${submission.student_id}` : 'N/A')) },
     { 'METRIC / FIELD': 'Course & Section', 'VALUE': matched?.course_section || exam?.section || 'N/A' },
-    { 'METRIC / FIELD': 'Student Email', 'VALUE': matched?.email || 'N/A' },
+    { 'METRIC / FIELD': 'Student Email', 'VALUE': submission.student_email || matched?.email || 'N/A' },
     { 'METRIC / FIELD': 'Raw Score Obtained', 'VALUE': `${submission.score} / ${totalItems}` },
     { 'METRIC / FIELD': 'Equivalent Percentage', 'VALUE': `${trans.percentage}%` },
     { 'METRIC / FIELD': 'PH Transmuted Grade', 'VALUE': trans.grade },
@@ -362,7 +367,7 @@ export function exportExamBatchExcel(
 
     return {
       'Student ID': sub.student_id || 'N/A',
-      'Student Full Name': matched ? matched.name : 'N/A',
+      'Student Full Name': sub.student_name || (matched ? matched.name : (sub.student_id ? `Student ${sub.student_id}` : 'N/A')),
       'Course & Section': matched?.course_section || exam.section || 'N/A',
       'Exam Title': exam.name,
       'Exam Type': examType,
@@ -517,7 +522,7 @@ export function exportCompleteDatabaseExcel(
       'Semester': matchedExam?.semester || '1st Semester',
       'Instructor': matchedExam?.instructor_name || 'N/A',
       'Student ID': sub.student_id || 'N/A',
-      'Student Full Name': matchedStudent ? matchedStudent.name : 'N/A',
+      'Student Full Name': sub.student_name || (matchedStudent ? matchedStudent.name : (sub.student_id ? `Student ${sub.student_id}` : 'N/A')),
       'Raw Score': sub.score,
       'Total Items': totalItems,
       'Equiv Percentage': `${trans.percentage}%`,
@@ -647,7 +652,7 @@ export function exportCHEDGradeSheet(
 
     return {
       'Student ID': sub.student_id || 'N/A',
-      'Student Full Name': matched ? matched.name : 'N/A',
+      'Student Full Name': sub.student_name || (matched ? matched.name : (sub.student_id ? `Student ${sub.student_id}` : 'N/A')),
       'Course & Section': matched?.course_section || exam?.section || 'N/A',
       'Course Code': exam?.course_code || 'N/A',
       'Subject Title': exam?.subject || examName,

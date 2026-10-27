@@ -5,3 +5,4 @@ export { default as ExamDetailsModal } from "./ExamDetailsModal";
 export { ItemAnalysisTable, type ItemAnalysisTableProps } from "./ItemAnalysisTable";
 export { SubmissionTable, type SubmissionTableProps } from "./SubmissionTable";
 export { RosterImportModal, type RosterImportModalProps } from "./RosterImportModal";
+export { ExamInspectionSidepanel, type ExamInspectionSidepanelProps } from "./ExamInspectionSidepanel";

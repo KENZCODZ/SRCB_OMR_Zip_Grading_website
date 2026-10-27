@@ -11,6 +11,7 @@ import type {
   Section,
   Enrollment,
   RosterImportResponse,
+  PasswordResetRequest,
 } from './types';
 import { cacheManager } from './utils/cacheManager';
 
@@ -221,6 +222,49 @@ export async function deleteUser(userId: string): Promise<{ status: string; mess
     catchNetworkError(err, 'Failed to delete user account');
   }
 }
+
+export async function requestPasswordReset(payload: {
+  email: string;
+  name?: string;
+  student_id?: string;
+  message?: string;
+}): Promise<{ status: string; message: string; request: PasswordResetRequest }> {
+  try {
+    const response = await fetch(`${API_BASE}/api/auth/forgot-password`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    return await handleResponse<{ status: string; message: string; request: PasswordResetRequest }>(
+      response,
+      'Failed to submit password assistance request'
+    );
+  } catch (err) {
+    catchNetworkError(err, 'Failed to submit password assistance request');
+  }
+}
+
+export async function fetchPasswordResetRequests(status?: string): Promise<PasswordResetRequest[]> {
+  try {
+    const query = status ? `?status=${encodeURIComponent(status)}` : '';
+    const response = await fetch(`${API_BASE}/api/admin/password-reset-requests${query}`);
+    return await handleResponse<PasswordResetRequest[]>(response, 'Failed to fetch password reset requests');
+  } catch (err) {
+    catchNetworkError(err, 'Failed to fetch password reset requests');
+  }
+}
+
+export async function resolvePasswordResetRequest(requestId: string): Promise<{ status: string; message: string }> {
+  try {
+    const response = await fetch(`${API_BASE}/api/admin/password-reset-requests/${requestId}/resolve`, {
+      method: 'POST',
+    });
+    return await handleResponse<{ status: string; message: string }>(response, 'Failed to resolve request');
+  } catch (err) {
+    catchNetworkError(err, 'Failed to resolve request');
+  }
+}
+
 
 export async function fetchDashboardSummary(options?: {
   forceRefresh?: boolean;

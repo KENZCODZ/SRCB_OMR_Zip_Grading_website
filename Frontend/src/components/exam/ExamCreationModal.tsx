@@ -248,6 +248,7 @@ export const ExamCreationModal: React.FC<ExamCreationModalProps> = ({
     }
 
     setIsSubmitting(true);
+    addToast("info", isEditMode ? `Saving changes to "${examTitle}"...` : `Creating examination "${examTitle}"...`);
     try {
       // Trim answer key to specified numItems
       const trimmedKey: Record<string, string> = {};

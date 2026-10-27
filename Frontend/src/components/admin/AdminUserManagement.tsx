@@ -30,10 +30,18 @@ import {
   RotateCcw,
   BookOpen,
   Copy,
+  Inbox,
 } from "lucide-react";
 import * as XLSX from "xlsx";
-import type { AuthUser, PendingUser } from "../../types";
-import { fetchAllUsers, adminCreateUser, adminBatchCreateUsers, deleteUser } from "../../api";
+import type { AuthUser, PendingUser, PasswordResetRequest } from "../../types";
+import {
+  fetchAllUsers,
+  adminCreateUser,
+  adminBatchCreateUsers,
+  deleteUser,
+  fetchPasswordResetRequests,
+  resolvePasswordResetRequest,
+} from "../../api";
 import { SkeletonTable, SmoothContentTransition } from "../shared";
 import { cacheManager } from "../../utils/cacheManager";
 
@@ -199,6 +207,81 @@ export default function AdminUserManagement({
   const [isBatchEnrollModalOpen, setIsBatchEnrollModalOpen] = useState(false);
   const [isClearBatchModalOpen, setIsClearBatchModalOpen] = useState(false);
 
+  // User Directory Password & Account Inspection States
+  const [visiblePasswords, setVisiblePasswords] = useState<Record<string, boolean>>({});
+  const [copiedUserPasswordId, setCopiedUserPasswordId] = useState<string | null>(null);
+  const [inspectUserAccount, setInspectUserAccount] = useState<PendingUser | null>(null);
+  const [inspectShowPassword, setInspectShowPassword] = useState(false);
+
+  // Password Assistance Requests State (Admin Inbox)
+  const [passwordRequests, setPasswordRequests] = useState<PasswordResetRequest[]>([]);
+  const [loadingPwdRequests, setLoadingPwdRequests] = useState(false);
+  const [showPasswordRequestsPanel, setShowPasswordRequestsPanel] = useState(false);
+  const [resolvingRequestId, setResolvingRequestId] = useState<string | null>(null);
+  const [copiedReqPasswordId, setCopiedReqPasswordId] = useState<string | null>(null);
+
+  const getDefaultPasswordForRole = (role?: string) => {
+    switch (role) {
+      case "admin":
+        return "Admin@2025";
+      case "dean":
+        return "Dean@2025";
+      case "programme-head":
+        return "Ph@2025";
+      case "teacher":
+        return "Teacher@2025";
+      case "student":
+        return "Student@2025";
+      default:
+        return "User@2025";
+    }
+  };
+
+  const togglePasswordVisibility = (userId: string) => {
+    setVisiblePasswords((prev) => ({
+      ...prev,
+      [userId]: !prev[userId],
+    }));
+  };
+
+  const copyUserPassword = (userId: string, pwd?: string) => {
+    const target = users.find((u) => u.id === userId);
+    const passwordText = pwd || target?.password || getDefaultPasswordForRole(target?.role);
+    if (!passwordText) return;
+    navigator.clipboard.writeText(passwordText);
+    setCopiedUserPasswordId(userId);
+    addToast("success", "User password copied to clipboard!");
+    setTimeout(() => setCopiedUserPasswordId(null), 2000);
+  };
+
+  const loadPasswordRequests = async () => {
+    if (!isCurrentUserAdmin) return;
+    try {
+      setLoadingPwdRequests(true);
+      const data = await fetchPasswordResetRequests();
+      setPasswordRequests(data || []);
+    } catch (err: any) {
+      console.error("Failed to load password reset requests:", err);
+    } finally {
+      setLoadingPwdRequests(false);
+    }
+  };
+
+  const handleResolveRequest = async (requestId: string) => {
+    try {
+      setResolvingRequestId(requestId);
+      await resolvePasswordResetRequest(requestId);
+      addToast("success", "Password assistance request marked as resolved.");
+      setPasswordRequests((prev) =>
+        prev.map((r) => (r.id === requestId ? { ...r, status: "resolved" as const } : r))
+      );
+    } catch (err: any) {
+      addToast("error", err?.message || "Failed to resolve password request.");
+    } finally {
+      setResolvingRequestId(null);
+    }
+  };
+
   const copyToClipboard = (text: string, fieldId: string) => {
     if (!text) return;
     navigator.clipboard.writeText(text);
@@ -271,7 +354,10 @@ export default function AdminUserManagement({
 
   useEffect(() => {
     loadUsers();
-  }, []);
+    if (isCurrentUserAdmin) {
+      loadPasswordRequests();
+    }
+  }, [isCurrentUserAdmin]);
 
   const handleRoleSwitch = (newRole: "teacher" | "programme-head" | "student") => {
     setTargetRole(newRole);
@@ -365,6 +451,7 @@ export default function AdminUserManagement({
     }
 
     setSubmitting(true);
+    addToast("info", `Submitting ${targetRole} account creation for ${cleanFullName}...`);
     try {
       const res = await adminCreateUser({
         name: cleanFullName,
@@ -410,6 +497,7 @@ export default function AdminUserManagement({
 
   const handleOpenDeleteUser = (user: { id: string; name: string; email?: string; role?: string; student_id?: string }) => {
     setUserToDelete(user);
+    addToast("info", `Selected ${user.name} for deletion. Please confirm in the dialog.`);
   };
 
   const handleConfirmDeleteUser = async () => {
@@ -417,6 +505,7 @@ export default function AdminUserManagement({
     const { id: userId, name: userName } = userToDelete;
 
     setDeletingId(userId);
+    addToast("info", `Deleting account for ${userName}...`);
     try {
       await deleteUser(userId);
       addToast("success", `Account for ${userName} has been removed.`);
@@ -653,6 +742,7 @@ export default function AdminUserManagement({
 
     setIsEnrolling(true);
     setEnrollProgress({ current: 0, total: readyList.length });
+    addToast("info", `Processing batch enrollment for ${readyList.length} student accounts...`);
 
     try {
       const payload = readyList.map((s) => ({
@@ -855,6 +945,7 @@ export default function AdminUserManagement({
         "Programme": u.programme || "—",
         "Department": u.department || "—",
         "Student / Institutional ID": u.student_id || "—",
+        ...(isCurrentUserAdmin ? { "Account Password": u.password || getDefaultPasswordForRole(u.role) } : {}),
         "Account Status": u.status || "active",
         "Registered Date": u.created_at ? new Date(u.created_at).toLocaleDateString() : "—",
       }));
@@ -1941,6 +2032,56 @@ export default function AdminUserManagement({
               </div>
 
               <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                {isCurrentUserAdmin && (
+                  <button
+                    type="button"
+                    className="btn btn-secondary"
+                    onClick={() => {
+                      setShowPasswordRequestsPanel(!showPasswordRequestsPanel);
+                      if (!showPasswordRequestsPanel) loadPasswordRequests();
+                    }}
+                    title="View Forgotten Password Assistance Requests"
+                    style={{
+                      padding: "0.45rem 0.85rem",
+                      fontSize: "0.8rem",
+                      fontWeight: 700,
+                      borderRadius: "8px",
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: "0.4rem",
+                      background:
+                        passwordRequests.filter((r) => r.status === "pending").length > 0
+                          ? "#fef3c7"
+                          : "#f8fafc",
+                      color:
+                        passwordRequests.filter((r) => r.status === "pending").length > 0
+                          ? "#b45309"
+                          : "#334155",
+                      border:
+                        passwordRequests.filter((r) => r.status === "pending").length > 0
+                          ? "1px solid #fde68a"
+                          : "1px solid #e2e8f0",
+                    }}
+                  >
+                    <KeyRound size={15} />
+                    <span>Password Requests</span>
+                    {passwordRequests.filter((r) => r.status === "pending").length > 0 && (
+                      <span
+                        style={{
+                          background: "#ef4444",
+                          color: "#ffffff",
+                          fontSize: "0.68rem",
+                          padding: "1px 6px",
+                          borderRadius: "10px",
+                          fontWeight: 800,
+                        }}
+                      >
+                        {passwordRequests.filter((r) => r.status === "pending").length}
+                      </span>
+                    )}
+                  </button>
+                )}
+
                 <button
                   type="button"
                   className="btn btn-secondary"
@@ -1963,7 +2104,10 @@ export default function AdminUserManagement({
                 <button
                   type="button"
                   className="btn btn-secondary"
-                  onClick={() => loadUsers(true)}
+                  onClick={() => {
+                    loadUsers(true);
+                    if (isCurrentUserAdmin) loadPasswordRequests();
+                  }}
                   disabled={loading}
                   title="Refresh users list"
                   style={{
@@ -1980,6 +2124,290 @@ export default function AdminUserManagement({
                 </button>
               </div>
             </div>
+
+            {/* Password Reset Requests Admin Panel */}
+            {isCurrentUserAdmin && showPasswordRequestsPanel && (
+              <div
+                style={{
+                  background: "#f8fafc",
+                  border: "1.5px solid #e0e7ff",
+                  borderRadius: "14px",
+                  padding: "1.15rem 1.25rem",
+                  marginBottom: "1.5rem",
+                  boxShadow: "0 4px 16px -2px rgba(99, 102, 241, 0.08)",
+                }}
+              >
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    flexWrap: "wrap",
+                    gap: "0.75rem",
+                    marginBottom: "1rem",
+                  }}
+                >
+                  <div style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
+                    <div
+                      style={{
+                        width: "36px",
+                        height: "36px",
+                        borderRadius: "10px",
+                        background: "rgba(40, 22, 111, 0.1)",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        color: "var(--primary, #28166f)",
+                      }}
+                    >
+                      <KeyRound size={18} />
+                    </div>
+                    <div>
+                      <h4 style={{ margin: 0, fontSize: "1rem", fontWeight: 800, color: "#0f172a" }}>
+                        Password Assistance Requests Inbox
+                      </h4>
+                      <p style={{ margin: 0, fontSize: "0.76rem", color: "#64748b" }}>
+                        Users who submitted "Forgot Password" requests. You can inspect their account password, copy credentials, or send an email response.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                    <button
+                      type="button"
+                      className="btn btn-secondary"
+                      onClick={loadPasswordRequests}
+                      disabled={loadingPwdRequests}
+                      style={{ fontSize: "0.76rem", padding: "0.35rem 0.65rem" }}
+                    >
+                      <RefreshCw size={12} className={loadingPwdRequests ? "spin" : ""} /> Refresh Requests
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setShowPasswordRequestsPanel(false)}
+                      style={{
+                        background: "none",
+                        border: "none",
+                        color: "#94a3b8",
+                        cursor: "pointer",
+                        padding: "0.25rem",
+                      }}
+                      title="Hide Panel"
+                    >
+                      <X size={16} />
+                    </button>
+                  </div>
+                </div>
+
+                {passwordRequests.length === 0 ? (
+                  <div
+                    style={{
+                      textAlign: "center",
+                      padding: "2rem 1rem",
+                      background: "#ffffff",
+                      borderRadius: "10px",
+                      border: "1px dashed #cbd5e1",
+                    }}
+                  >
+                    <Inbox size={32} color="#94a3b8" style={{ marginBottom: "0.5rem" }} />
+                    <div style={{ fontWeight: 700, color: "#475569", fontSize: "0.85rem" }}>
+                      No Password Assistance Requests Found
+                    </div>
+                    <div style={{ fontSize: "0.76rem", color: "#94a3b8", marginTop: "0.2rem" }}>
+                      When a user clicks "Forgot Password" on the sign-in page and submits a request, it will appear here.
+                    </div>
+                  </div>
+                ) : (
+                  <div style={{ overflowX: "auto", background: "#ffffff", borderRadius: "10px", border: "1px solid #e2e8f0" }}>
+                    <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.8rem" }}>
+                      <thead>
+                        <tr style={{ background: "#f8fafc", borderBottom: "1px solid #e2e8f0", textAlign: "left" }}>
+                          <th style={{ padding: "0.65rem 0.85rem", color: "#475569" }}>User / Email</th>
+                          <th style={{ padding: "0.65rem 0.85rem", color: "#475569" }}>Student / Faculty ID</th>
+                          <th style={{ padding: "0.65rem 0.85rem", color: "#475569" }}>Current Account Password</th>
+                          <th style={{ padding: "0.65rem 0.85rem", color: "#475569" }}>Requester Note</th>
+                          <th style={{ padding: "0.65rem 0.85rem", color: "#475569" }}>Status</th>
+                          <th style={{ padding: "0.65rem 0.85rem", color: "#475569", textAlign: "right" }}>Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {passwordRequests.map((req) => {
+                          const isResolved = req.status === "resolved";
+                          const matchingUser = users.find(
+                            (u) => u.email.toLowerCase() === req.email.toLowerCase()
+                          );
+                          const userPassword =
+                            req.current_password ||
+                            matchingUser?.password ||
+                            getDefaultPasswordForRole(req.user_role || matchingUser?.role);
+                          const isCopied = copiedReqPasswordId === req.id;
+
+                          return (
+                            <tr
+                              key={req.id}
+                              style={{
+                                borderBottom: "1px solid #f1f5f9",
+                                background: isResolved ? "#fcfcfc" : "#ffffff",
+                                opacity: isResolved ? 0.75 : 1,
+                              }}
+                            >
+                              <td style={{ padding: "0.65rem 0.85rem" }}>
+                                <div style={{ fontWeight: 700, color: "#0f172a" }}>
+                                  {req.name || matchingUser?.name || "Unspecified User"}
+                                </div>
+                                <div style={{ fontSize: "0.74rem", color: "#64748b" }}>{req.email}</div>
+                                {req.user_role && (
+                                  <span
+                                    style={{
+                                      fontSize: "0.68rem",
+                                      fontWeight: 800,
+                                      color: "#4338ca",
+                                      background: "#eef2ff",
+                                      padding: "1px 5px",
+                                      borderRadius: "4px",
+                                      display: "inline-block",
+                                      marginTop: "2px",
+                                      textTransform: "uppercase",
+                                    }}
+                                  >
+                                    {req.user_role}
+                                  </span>
+                                )}
+                              </td>
+
+                              <td style={{ padding: "0.65rem 0.85rem", color: "#334155" }}>
+                                {req.student_id || matchingUser?.student_id || "—"}
+                              </td>
+
+                              <td style={{ padding: "0.65rem 0.85rem" }}>
+                                <div
+                                  style={{
+                                    display: "inline-flex",
+                                    alignItems: "center",
+                                    gap: "0.35rem",
+                                    background: "#ede9fe",
+                                    border: "1px solid #c4b5fd",
+                                    padding: "0.2rem 0.5rem",
+                                    borderRadius: "6px",
+                                  }}
+                                >
+                                  <span
+                                    style={{
+                                      fontFamily: "monospace",
+                                      fontSize: "0.8rem",
+                                      fontWeight: 800,
+                                      color: "#28166f",
+                                      letterSpacing: "0.5px",
+                                    }}
+                                  >
+                                    {userPassword}
+                                  </span>
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      navigator.clipboard.writeText(userPassword);
+                                      setCopiedReqPasswordId(req.id);
+                                      addToast("success", "Password copied to clipboard!");
+                                      setTimeout(() => setCopiedReqPasswordId(null), 2000);
+                                    }}
+                                    title="Copy Password"
+                                    style={{
+                                      background: "none",
+                                      border: "none",
+                                      color: isCopied ? "#059669" : "#6d28d9",
+                                      cursor: "pointer",
+                                      padding: "1px",
+                                      display: "inline-flex",
+                                    }}
+                                  >
+                                    {isCopied ? <Check size={12} color="#059669" /> : <Copy size={12} />}
+                                  </button>
+                                </div>
+                              </td>
+
+                              <td style={{ padding: "0.65rem 0.85rem", color: "#475569", maxWidth: "220px" }}>
+                                <span style={{ fontSize: "0.74rem" }}>
+                                  {req.message || "Requested password assistance via login."}
+                                </span>
+                                <div style={{ fontSize: "0.68rem", color: "#94a3b8", marginTop: "2px" }}>
+                                  {req.created_at ? new Date(req.created_at).toLocaleString() : ""}
+                                </div>
+                              </td>
+
+                              <td style={{ padding: "0.65rem 0.85rem" }}>
+                                <span
+                                  style={{
+                                    display: "inline-flex",
+                                    alignItems: "center",
+                                    gap: "4px",
+                                    padding: "0.2rem 0.5rem",
+                                    borderRadius: "6px",
+                                    fontSize: "0.7rem",
+                                    fontWeight: 800,
+                                    background: isResolved ? "#ecfdf5" : "#fef3c7",
+                                    color: isResolved ? "#059669" : "#b45309",
+                                    border: isResolved ? "1px solid #a7f3d0" : "1px solid #fde68a",
+                                  }}
+                                >
+                                  {isResolved ? "RESOLVED" : "PENDING"}
+                                </span>
+                              </td>
+
+                              <td style={{ padding: "0.65rem 0.85rem", textAlign: "right" }}>
+                                <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", gap: "0.4rem" }}>
+                                  <a
+                                    href={`mailto:${req.email}?subject=SRCB%20EduAssess%20-%20Password%20Assistance&body=Good%20day%20${encodeURIComponent(req.name || "User")},%0A%0AWe%20received%20your%20password%20assistance%20request%20for%20SRCB%20EduAssess.%0A%0AYour%20account%20password%20is:%20${encodeURIComponent(userPassword)}%0A%0APlease%20keep%20your%20credentials%20secure.%0A%0AOffice%20Location:%20Saint.%20Nino%20Building,%20GroundFloor%0AThank%20you,%0ASystem%20Administrator`}
+                                    className="btn btn-secondary"
+                                    title="Email password to user"
+                                    style={{
+                                      padding: "0.25rem 0.5rem",
+                                      fontSize: "0.72rem",
+                                      fontWeight: 700,
+                                      display: "inline-flex",
+                                      alignItems: "center",
+                                      gap: "4px",
+                                      textDecoration: "none",
+                                      color: "#28166f",
+                                    }}
+                                  >
+                                    <Mail size={12} />
+                                    <span>Email</span>
+                                  </a>
+
+                                  {!isResolved && (
+                                    <button
+                                      type="button"
+                                      onClick={() => handleResolveRequest(req.id)}
+                                      disabled={resolvingRequestId === req.id}
+                                      style={{
+                                        background: "#ecfdf5",
+                                        border: "1px solid #a7f3d0",
+                                        color: "#059669",
+                                        padding: "0.25rem 0.55rem",
+                                        borderRadius: "6px",
+                                        fontSize: "0.72rem",
+                                        fontWeight: 800,
+                                        cursor: "pointer",
+                                        display: "inline-flex",
+                                        alignItems: "center",
+                                        gap: "4px",
+                                      }}
+                                    >
+                                      <CheckCircle2 size={12} />
+                                      <span>Mark Resolved</span>
+                                    </button>
+                                  )}
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Complete Filtration Toolbar */}
             <div style={{ display: "flex", flexDirection: "column", gap: "0.85rem", marginBottom: "1.25rem" }}>
@@ -2360,6 +2788,7 @@ export default function AdminUserManagement({
                         <th style={{ padding: "0.75rem 1rem", color: "#475569" }}>User Profile</th>
                         <th style={{ padding: "0.75rem 1rem", color: "#475569" }}>System Role</th>
                         <th style={{ padding: "0.75rem 1rem", color: "#475569" }}>Academic Programme</th>
+                        <th style={{ padding: "0.75rem 1rem", color: "#475569" }}>Password &amp; Credentials</th>
                         <th style={{ padding: "0.75rem 1rem", color: "#475569" }}>Registered</th>
                         {isCurrentUserAdmin && (
                           <th style={{ padding: "0.75rem 1rem", textAlign: "right", color: "#475569" }}>Action</th>
@@ -2465,6 +2894,73 @@ export default function AdminUserManagement({
                               )}
                             </td>
 
+                            <td style={{ padding: "0.75rem 1rem" }}>
+                              {(() => {
+                                const userPwd = u.password || getDefaultPasswordForRole(u.role);
+                                const isVisible = !!visiblePasswords[u.id];
+                                const isCopied = copiedUserPasswordId === u.id;
+                                return (
+                                  <div
+                                    style={{
+                                      display: "inline-flex",
+                                      alignItems: "center",
+                                      gap: "0.35rem",
+                                      background: isVisible ? "#ede9fe" : "#f8fafc",
+                                      border: isVisible ? "1.5px solid #c4b5fd" : "1px solid #e2e8f0",
+                                      padding: "0.22rem 0.55rem",
+                                      borderRadius: "8px",
+                                      transition: "all 0.15s ease",
+                                    }}
+                                  >
+                                    <span
+                                      style={{
+                                        fontFamily: isVisible ? "inherit" : "monospace",
+                                        fontSize: isVisible ? "0.78rem" : "0.84rem",
+                                        fontWeight: 700,
+                                        color: isVisible ? "#28166f" : "#64748b",
+                                        letterSpacing: isVisible ? "normal" : "2px",
+                                        userSelect: "all",
+                                      }}
+                                    >
+                                      {isVisible ? userPwd : "••••••••"}
+                                    </span>
+                                    <button
+                                      type="button"
+                                      onClick={() => togglePasswordVisibility(u.id)}
+                                      title={isVisible ? "Hide Password" : "View Account Password"}
+                                      style={{
+                                        background: "none",
+                                        border: "none",
+                                        color: isVisible ? "#6d28d9" : "#94a3b8",
+                                        cursor: "pointer",
+                                        padding: "2px",
+                                        display: "inline-flex",
+                                        alignItems: "center",
+                                      }}
+                                    >
+                                      {isVisible ? <EyeOff size={13} /> : <Eye size={13} />}
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => copyUserPassword(u.id, userPwd)}
+                                      title="Copy password to clipboard"
+                                      style={{
+                                        background: "none",
+                                        border: "none",
+                                        color: isCopied ? "#059669" : "#94a3b8",
+                                        cursor: "pointer",
+                                        padding: "2px",
+                                        display: "inline-flex",
+                                        alignItems: "center",
+                                      }}
+                                    >
+                                      {isCopied ? <Check size={13} color="#059669" /> : <Copy size={13} />}
+                                    </button>
+                                  </div>
+                                );
+                              })()}
+                            </td>
+
                             <td style={{ padding: "0.75rem 1rem", color: "#64748b", fontSize: "0.76rem" }}>
                               {u.created_at ? new Date(u.created_at).toLocaleDateString() : "—"}
                             </td>
@@ -2472,6 +2968,31 @@ export default function AdminUserManagement({
                             {isCurrentUserAdmin && (
                               <td style={{ padding: "0.75rem 1rem", textAlign: "right" }}>
                                 <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", gap: "0.4rem" }}>
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setInspectUserAccount(u);
+                                      setInspectShowPassword(false);
+                                    }}
+                                    title="View Full Account & Password"
+                                    style={{
+                                      background: "var(--primary-light-surface, #f5f3ff)",
+                                      border: "1px solid var(--primary-light-border, #ddd6fe)",
+                                      color: "var(--primary, #28166f)",
+                                      padding: "0.25rem 0.55rem",
+                                      borderRadius: "6px",
+                                      cursor: "pointer",
+                                      display: "inline-flex",
+                                      alignItems: "center",
+                                      gap: "4px",
+                                      fontSize: "0.72rem",
+                                      fontWeight: 700,
+                                    }}
+                                  >
+                                    <KeyRound size={12} />
+                                    <span>View Account</span>
+                                  </button>
+
                                   {!isAdmin && (
                                     <button
                                       type="button"
@@ -3491,6 +4012,326 @@ export default function AdminUserManagement({
                   }}
                 >
                   <Trash2 size={14} /> Discard Batch
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+        {/* Account Credentials Inspection Modal (Admin View User Account & Password) */}
+        {inspectUserAccount && (
+          <div
+            style={{
+              position: "fixed",
+              inset: 0,
+              background: "rgba(15, 23, 42, 0.65)",
+              backdropFilter: "blur(6px)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              zIndex: 9999,
+              padding: "1rem",
+              animation: "fadeIn 0.2s ease-out",
+            }}
+          >
+            <div
+              style={{
+                background: "#ffffff",
+                borderRadius: "18px",
+                width: "100%",
+                maxWidth: "520px",
+                boxShadow: "0 25px 50px -12px rgba(15, 23, 42, 0.25)",
+                border: "1px solid #e2e8f0",
+                overflow: "hidden",
+                animation: "slideUp 0.25s ease-out",
+              }}
+            >
+              {/* Modal Header */}
+              <div
+                style={{
+                  padding: "1.25rem 1.5rem",
+                  background: "linear-gradient(135deg, #28166f 0%, #1e105a 100%)",
+                  color: "#ffffff",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                }}
+              >
+                <div style={{ display: "flex", alignItems: "center", gap: "0.65rem" }}>
+                  <div
+                    style={{
+                      width: "36px",
+                      height: "36px",
+                      borderRadius: "10px",
+                      background: "rgba(255, 255, 255, 0.15)",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      color: "#ffffff",
+                    }}
+                  >
+                    <KeyRound size={20} />
+                  </div>
+                  <div>
+                    <h3 style={{ margin: 0, fontSize: "1.05rem", fontWeight: 800, color: "#ffffff" }}>
+                      User Account &amp; Credentials
+                    </h3>
+                    <p style={{ margin: 0, fontSize: "0.76rem", color: "#c7d2fe" }}>
+                      Administrative credential review &amp; password inspection
+                    </p>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setInspectUserAccount(null)}
+                  style={{
+                    background: "rgba(255, 255, 255, 0.15)",
+                    border: "none",
+                    borderRadius: "8px",
+                    color: "#ffffff",
+                    cursor: "pointer",
+                    padding: "0.35rem",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                  title="Close"
+                >
+                  <X size={16} />
+                </button>
+              </div>
+
+              {/* Modal Body */}
+              <div style={{ padding: "1.5rem", display: "flex", flexDirection: "column", gap: "1rem" }}>
+                {/* User Identity Card */}
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "0.85rem",
+                    background: "#f8fafc",
+                    border: "1px solid #e2e8f0",
+                    borderRadius: "12px",
+                    padding: "0.85rem 1rem",
+                  }}
+                >
+                  <div
+                    style={{
+                      width: "44px",
+                      height: "44px",
+                      borderRadius: "50%",
+                      background: "var(--primary, #28166f)",
+                      color: "#ffffff",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      fontWeight: 800,
+                      fontSize: "0.95rem",
+                      flexShrink: 0,
+                    }}
+                  >
+                    {(inspectUserAccount.name || "U").slice(0, 2).toUpperCase()}
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontWeight: 800, fontSize: "0.98rem", color: "#0f172a" }}>
+                      {inspectUserAccount.name}
+                    </div>
+                    <div style={{ fontSize: "0.78rem", color: "#64748b" }}>
+                      {inspectUserAccount.email}
+                    </div>
+                    {inspectUserAccount.student_id && (
+                      <div style={{ fontSize: "0.74rem", fontWeight: 700, color: "var(--primary, #28166f)", marginTop: "2px" }}>
+                        ID Number: {inspectUserAccount.student_id}
+                      </div>
+                    )}
+                  </div>
+                  <span
+                    style={{
+                      fontSize: "0.72rem",
+                      fontWeight: 800,
+                      padding: "0.25rem 0.6rem",
+                      borderRadius: "6px",
+                      background: "#ede9fe",
+                      color: "#6d28d9",
+                      textTransform: "uppercase",
+                    }}
+                  >
+                    {inspectUserAccount.role}
+                  </span>
+                </div>
+
+                {/* Plaintext Password Inspector Card */}
+                <div
+                  style={{
+                    background: "#f5f3ff",
+                    border: "1.5px solid #c4b5fd",
+                    borderRadius: "12px",
+                    padding: "1rem 1.15rem",
+                  }}
+                >
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.45rem" }}>
+                    <label style={{ fontSize: "0.78rem", fontWeight: 800, color: "#4338ca", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+                      Account Password
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => setInspectShowPassword(!inspectShowPassword)}
+                      style={{
+                        background: "none",
+                        border: "none",
+                        color: "#6d28d9",
+                        fontSize: "0.74rem",
+                        fontWeight: 700,
+                        cursor: "pointer",
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: "4px",
+                      }}
+                    >
+                      {inspectShowPassword ? (
+                        <>
+                          <EyeOff size={13} /> Hide
+                        </>
+                      ) : (
+                        <>
+                          <Eye size={13} /> Reveal Clear Text
+                        </>
+                      )}
+                    </button>
+                  </div>
+
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      background: "#ffffff",
+                      border: "1px solid #ddd6fe",
+                      borderRadius: "10px",
+                      padding: "0.65rem 0.85rem",
+                    }}
+                  >
+                    <span
+                      style={{
+                        fontFamily: inspectShowPassword ? "inherit" : "monospace",
+                        fontSize: inspectShowPassword ? "1.05rem" : "1.2rem",
+                        fontWeight: 800,
+                        color: "#1e1b4b",
+                        letterSpacing: inspectShowPassword ? "normal" : "3px",
+                        userSelect: "all",
+                      }}
+                    >
+                      {inspectShowPassword
+                        ? inspectUserAccount.password || getDefaultPasswordForRole(inspectUserAccount.role)
+                        : "••••••••••••"}
+                    </span>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const pwd = inspectUserAccount.password || getDefaultPasswordForRole(inspectUserAccount.role);
+                        navigator.clipboard.writeText(pwd);
+                        addToast("success", "Password copied to clipboard!");
+                      }}
+                      style={{
+                        background: "var(--primary, #28166f)",
+                        color: "#ffffff",
+                        border: "none",
+                        borderRadius: "8px",
+                        padding: "0.4rem 0.75rem",
+                        fontSize: "0.76rem",
+                        fontWeight: 700,
+                        cursor: "pointer",
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: "5px",
+                        boxShadow: "0 2px 6px rgba(40, 22, 111, 0.2)",
+                      }}
+                    >
+                      <Copy size={13} />
+                      <span>Copy Password</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Account Metadata Details Grid */}
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "1fr 1fr",
+                    gap: "0.75rem",
+                    fontSize: "0.78rem",
+                  }}
+                >
+                  <div style={{ background: "#f8fafc", padding: "0.65rem 0.75rem", borderRadius: "8px", border: "1px solid #e2e8f0" }}>
+                    <div style={{ color: "#64748b", fontWeight: 600, fontSize: "0.72rem" }}>Academic Programme</div>
+                    <div style={{ fontWeight: 700, color: "#0f172a", marginTop: "2px" }}>
+                      {inspectUserAccount.programme || "Institution-wide"}
+                    </div>
+                  </div>
+
+                  <div style={{ background: "#f8fafc", padding: "0.65rem 0.75rem", borderRadius: "8px", border: "1px solid #e2e8f0" }}>
+                    <div style={{ color: "#64748b", fontWeight: 600, fontSize: "0.72rem" }}>Department</div>
+                    <div style={{ fontWeight: 700, color: "#0f172a", marginTop: "2px" }}>
+                      {inspectUserAccount.department || "N/A"}
+                    </div>
+                  </div>
+
+                  <div style={{ background: "#f8fafc", padding: "0.65rem 0.75rem", borderRadius: "8px", border: "1px solid #e2e8f0" }}>
+                    <div style={{ color: "#64748b", fontWeight: 600, fontSize: "0.72rem" }}>Account Status</div>
+                    <div style={{ fontWeight: 700, color: "#059669", marginTop: "2px", textTransform: "uppercase" }}>
+                      {inspectUserAccount.status || "active"}
+                    </div>
+                  </div>
+
+                  <div style={{ background: "#f8fafc", padding: "0.65rem 0.75rem", borderRadius: "8px", border: "1px solid #e2e8f0" }}>
+                    <div style={{ color: "#64748b", fontWeight: 600, fontSize: "0.72rem" }}>Registered Date</div>
+                    <div style={{ fontWeight: 700, color: "#0f172a", marginTop: "2px" }}>
+                      {inspectUserAccount.created_at
+                        ? new Date(inspectUserAccount.created_at).toLocaleDateString()
+                        : "—"}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Modal Footer */}
+              <div
+                style={{
+                  padding: "1rem 1.5rem",
+                  background: "#f8fafc",
+                  borderTop: "1px solid #e2e8f0",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  gap: "0.75rem",
+                }}
+              >
+                <a
+                  href={`mailto:${inspectUserAccount.email}?subject=SRCB%20EduAssess%20Account%20Credentials&body=Good%20day%20${encodeURIComponent(inspectUserAccount.name)},%0A%0AHere%20are%20your%20SRCB%20EduAssess%20account%20credentials:%0AEmail:%20${encodeURIComponent(inspectUserAccount.email)}%0APassword:%20${encodeURIComponent(inspectUserAccount.password || getDefaultPasswordForRole(inspectUserAccount.role))}%0A%0AOffice%20Location:%20Saint.%20Nino%20Building,%20GroundFloor%0AThank%20you,%0ASystem%20Administrator`}
+                  className="btn btn-secondary"
+                  style={{
+                    fontSize: "0.8rem",
+                    padding: "0.5rem 0.85rem",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "6px",
+                    textDecoration: "none",
+                    color: "#28166f",
+                    fontWeight: 700,
+                  }}
+                >
+                  <Mail size={14} />
+                  <span>Email User Credentials</span>
+                </a>
+
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={() => setInspectUserAccount(null)}
+                  style={{ fontSize: "0.82rem", padding: "0.5rem 1rem", fontWeight: 700 }}
+                >
+                  Close
                 </button>
               </div>
             </div>

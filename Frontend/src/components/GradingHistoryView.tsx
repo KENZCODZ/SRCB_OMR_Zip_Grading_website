@@ -1018,7 +1018,7 @@ export const GradingHistoryView: React.FC<GradingHistoryViewProps> = ({
                     <tbody>
                       {inspectedRecord.submissions.map((sub, idx) => {
                         const matched = rosterMap.get((sub.student_id || "").toLowerCase());
-                        const studentName = matched ? matched.name : `Student ${sub.student_id}`;
+                        const studentName = sub.student_name || (matched ? matched.name : (sub.student_id ? `Student ${sub.student_id}` : "Unassigned Student"));
                         const trans = calculateTransmutedGrade(sub.score, inspectedRecord.totalItems);
                         const hasAmbiguous =
                           sub.answers &&

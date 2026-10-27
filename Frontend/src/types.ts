@@ -34,6 +34,8 @@ export interface Submission {
   exam_id: string;
   student_id: string;
   student_id_extracted?: string;
+  student_name?: string | null;
+  student_email?: string | null;
   score: number;
   total_questions: number;
   answers: Record<string, SubmissionAnswerDetail>;
@@ -45,6 +47,7 @@ export interface Submission {
 
 export interface QuickScanResult {
   student_id: string;
+  student_name?: string | null;
   answers: Record<string, string | null>;
   overlay_image: string; // Base64 string
 }
@@ -52,6 +55,8 @@ export interface QuickScanResult {
 export interface GradeResult {
   submission_id: string;
   student_id: string;
+  student_name?: string | null;
+  student_email?: string | null;
   score: number;
   total_questions: number;
   answers: Record<string, SubmissionAnswerDetail>;
@@ -91,12 +96,27 @@ export interface PendingUser {
   id: string;
   name: string;
   email: string;
+  password?: string;
   role: UserRole;
   programme?: string;
   department?: string;
   student_id?: string;
   status: 'pending' | 'active' | 'rejected' | 'suspended';
   created_at: string;
+}
+
+export interface PasswordResetRequest {
+  id: string;
+  email: string;
+  name?: string | null;
+  student_id?: string | null;
+  user_id?: string | null;
+  user_role?: string | null;
+  current_password?: string | null;
+  message?: string | null;
+  status: 'pending' | 'resolved';
+  created_at: string;
+  resolved_at?: string | null;
 }
 
 export interface RegisterPayload {
@@ -137,6 +157,24 @@ export interface ItemAnalysisRow {
     E: number;
     empty: number;
   };
+  option_counts?: {
+    A: number;
+    B: number;
+    C: number;
+    D: number;
+    E: number;
+    empty?: number;
+  };
+  recommendation?: 'Retain' | 'Revise' | 'Discard';
+}
+
+export interface DashboardSummary {
+  total_accounts: number;
+  total_students: number;
+  total_teachers: number;
+  total_exams: number;
+  average_score: number;
+  total_submissions: number;
 }
 
 // Student Result Email Distribution Status & Record

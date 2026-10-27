@@ -15,6 +15,7 @@ import type { AuthUser, Exam, Submission, StudentRosterEntry, Program, PendingUs
 import { exportCompleteDatabaseExcel } from "../../utils/excelUtils";
 import { fetchAllUsers, fetchPrograms } from "../../api";
 import { cacheManager } from "../../utils/cacheManager";
+import { ProgrammeHeadOverview } from "../programme-head/ProgrammeHeadOverview";
 
 interface DeanAcademicManagementProps {
   currentUser: AuthUser;
@@ -39,6 +40,7 @@ export default function DeanAcademicManagement({
   exams,
   submissions,
   roster,
+  onInspectExam,
   addToast,
 }: DeanAcademicManagementProps) {
   const [searchQuery, setSearchQuery] = useState("");
@@ -304,6 +306,20 @@ export default function DeanAcademicManagement({
         d.cohorts.some((c) => c.toLowerCase().includes(q))
     );
   }, [liveDepartments, searchQuery]);
+
+  if (isProgrammeHead) {
+    return (
+      <ProgrammeHeadOverview
+        currentUser={currentUser}
+        summary={summary as any}
+        exams={exams}
+        submissions={submissions}
+        roster={roster}
+        onInspectExam={onInspectExam}
+        addToast={addToast}
+      />
+    );
+  }
 
   return (
     <div style={{ display: "grid", gap: "1.5rem" }}>
