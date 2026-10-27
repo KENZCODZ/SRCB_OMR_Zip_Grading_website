@@ -6008,7 +6008,39 @@ button.bubble-btn.active {
 
 @media (max-width: 600px) {
   .omr-dual-columns-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: 1fr 1fr;
+    gap: 4px;
+    padding: 4px;
+  }
+
+  .omr-subcolumn-header {
+    grid-template-columns: 24px 24px 1fr 28px;
+    padding: 0.25rem 0.35rem;
+    font-size: 0.58rem;
+    letter-spacing: 0;
+  }
+
+  .omr-compact-row {
+    grid-template-columns: 24px 24px 1fr 28px;
+    padding: 0.22rem 0.35rem;
+    font-size: 0.65rem;
+  }
+
+  .omr-compact-row .col-num {
+    font-size: 0.64rem;
+  }
+
+  .omr-compact-row .col-answer {
+    font-size: 0.72rem;
+  }
+
+  .omr-compact-row .col-status {
+    font-size: 0.6rem;
+    gap: 2px;
+  }
+
+  .omr-compact-row .col-conf {
+    font-size: 0.58rem;
   }
 }
 

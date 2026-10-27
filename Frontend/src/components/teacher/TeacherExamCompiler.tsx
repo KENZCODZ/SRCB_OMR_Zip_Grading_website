@@ -24,6 +24,7 @@ import {
   exportCHEDGradeSheet,
   exportCompleteDatabaseExcel,
 } from "../../utils/excelUtils";
+import { publishSubmission, publishExamSubmissions } from "../../api";
 
 export interface TeacherExamCompilerProps {
   exams: Exam[];
@@ -32,6 +33,7 @@ export interface TeacherExamCompilerProps {
   currentUser?: AuthUser | null;
   onSelectSubmission?: (submission: Submission) => void;
   onInspectExam?: (exam: Exam) => void;
+  onSubmissionsUpdated?: () => void;
   addToast?: (type: any, message: string) => void;
   formatDate: (iso: string) => string;
 }
@@ -43,6 +45,7 @@ export const TeacherExamCompiler: React.FC<TeacherExamCompilerProps> = ({
   currentUser,
   onSelectSubmission,
   onInspectExam,
+  onSubmissionsUpdated,
   addToast,
   formatDate,
 }) => {
@@ -89,34 +92,74 @@ export const TeacherExamCompiler: React.FC<TeacherExamCompilerProps> = ({
   const [selectedSection, setSelectedSection] = useState<string>("All");
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [expandedExamId, setExpandedExamId] = useState<string | null>(null);
-  const [sentSubmissionIds, setSentSubmissionIds] = useState<Set<string>>(new Set());
+  const [publishingExamId, setPublishingExamId] = useState<string | null>(null);
+  const [publishingSubId, setPublishingSubId] = useState<string | null>(null);
 
-  // Individual Student Grade Delivery Function
-  const handleSendSingleGrade = (sub: Submission, student?: StudentRosterEntry, exam?: Exam) => {
+  // Individual Student Grade Publication Function (Persisted to Database)
+  const handlePublishSingleGrade = async (sub: Submission, student?: StudentRosterEntry, exam?: Exam) => {
+    const isCurrentlyPublished = sub.status === "published" || sub.is_published === true;
+    const targetStatus = isCurrentlyPublished ? "pending" : "published";
     const studentName = student ? student.name : `Student ID ${sub.student_id}`;
-    setSentSubmissionIds((prev) => new Set(prev).add(sub.id));
-    if (addToast) {
-      addToast("success", `Official grade report sent to ${studentName} (${sub.student_id}) for "${exam?.name || "Exam"}".`);
+
+    setPublishingSubId(sub.id);
+    try {
+      await publishSubmission(sub.id, targetStatus);
+      // Optimistic update
+      sub.status = targetStatus;
+      sub.is_published = targetStatus === "published";
+      if (onSubmissionsUpdated) onSubmissionsUpdated();
+      if (addToast) {
+        if (targetStatus === "published") {
+          addToast(
+            "success",
+            `Published score for ${studentName} (${sub.student_id}) in "${exam?.name || "Exam"}". Official score is now live on Student Portal.`
+          );
+        } else {
+          addToast(
+            "info",
+            `Unpublished score for ${studentName} (${sub.student_id}) in "${exam?.name || "Exam"}". Score is now Pending in Gradebook.`
+          );
+        }
+      }
+    } catch (err: any) {
+      if (addToast) addToast("error", err.message || "Failed to update publication status.");
+    } finally {
+      setPublishingSubId(null);
     }
   };
 
-  // Batch Grade Delivery to All Students in Exam
-  const handleSendAllInGroup = (exam: Exam, groupSubs: Submission[]) => {
+  // Batch Grade Publication for All Students in Exam (Persisted to Database)
+  const handlePublishAllInGroup = async (exam: Exam, groupSubs: Submission[], forceStatus?: "published" | "pending") => {
     if (groupSubs.length === 0) return;
-    const isAllSent = groupSubs.every((s) => sentSubmissionIds.has(s.id));
-    if (isAllSent) {
+    const allArePublished = groupSubs.every((s) => s.status === "published" || s.is_published === true);
+    const targetStatus = forceStatus || (allArePublished ? "pending" : "published");
+
+    setPublishingExamId(exam.id);
+    try {
+      await publishExamSubmissions(exam.id, targetStatus);
+      // Optimistic update
+      groupSubs.forEach((s) => {
+        s.status = targetStatus;
+        s.is_published = targetStatus === "published";
+      });
+      if (onSubmissionsUpdated) onSubmissionsUpdated();
       if (addToast) {
-        addToast("info", `All student grade reports for "${exam.name}" have already been sent.`);
+        if (targetStatus === "published") {
+          addToast(
+            "success",
+            `Successfully published scores for all ${groupSubs.length} students in "${exam.name}". Live on Student Portals!`
+          );
+        } else {
+          addToast(
+            "info",
+            `Unpublished all ${groupSubs.length} scores for "${exam.name}". Reverted to Pending in Gradebook.`
+          );
+        }
       }
-      return;
-    }
-    setSentSubmissionIds((prev) => {
-      const next = new Set(prev);
-      groupSubs.forEach((s) => next.add(s.id));
-      return next;
-    });
-    if (addToast) {
-      addToast("success", `Batch grade reports delivered to all ${groupSubs.length} students in "${exam.name}".`);
+    } catch (err: any) {
+      if (addToast) addToast("error", err.message || "Failed to publish exam submissions.");
+    } finally {
+      setPublishingExamId(null);
     }
   };
 
@@ -238,6 +281,11 @@ export const TeacherExamCompiler: React.FC<TeacherExamCompilerProps> = ({
         return Object.values(s.answers).some((ans) => ans?.is_ambiguous);
       }).length;
 
+      // Gradebook Publication Counts
+      const pendingCount = examSubs.filter((s) => s.status === "pending" || !s.is_published).length;
+      const publishedCount = examSubs.filter((s) => s.status === "published" || s.is_published === true).length;
+      const isAllPublished = examSubs.length > 0 && pendingCount === 0;
+
       return {
         exam,
         submissions: examSubs,
@@ -248,6 +296,9 @@ export const TeacherExamCompiler: React.FC<TeacherExamCompilerProps> = ({
         passedCount,
         passRate,
         flaggedCount,
+        pendingCount,
+        publishedCount,
+        isAllPublished,
       };
     });
   }, [filteredExams, submissions]);
@@ -637,12 +688,12 @@ export const TeacherExamCompiler: React.FC<TeacherExamCompilerProps> = ({
                   avgPercentage,
                   passRate,
                   flaggedCount,
+                  pendingCount,
+                  publishedCount,
+                  isAllPublished,
                 } = group;
 
                 const isExpanded = expandedExamId === exam.id;
-                const isAllSent =
-                  groupSubs.length > 0 &&
-                  groupSubs.every((s) => sentSubmissionIds.has(s.id));
 
                 return (
                   <div
@@ -756,6 +807,57 @@ export const TeacherExamCompiler: React.FC<TeacherExamCompilerProps> = ({
                                 }}
                               >
                                 AY {exam.academic_year} ({exam.semester || "1st Sem"})
+                              </span>
+                            )}
+
+                            {/* Gradebook Publication Status Tag */}
+                            {totalScanned === 0 ? (
+                              <span
+                                style={{
+                                  fontSize: "0.72rem",
+                                  padding: "0.15rem 0.55rem",
+                                  borderRadius: "6px",
+                                  fontWeight: 700,
+                                  background: "#f1f5f9",
+                                  color: "#64748b",
+                                  border: "1px solid #cbd5e1",
+                                }}
+                              >
+                                ⚪ No Scans
+                              </span>
+                            ) : isAllPublished ? (
+                              <span
+                                style={{
+                                  fontSize: "0.72rem",
+                                  padding: "0.15rem 0.55rem",
+                                  borderRadius: "6px",
+                                  fontWeight: 700,
+                                  background: "#ecfdf5",
+                                  color: "#059669",
+                                  border: "1px solid #a7f3d0",
+                                  display: "inline-flex",
+                                  alignItems: "center",
+                                  gap: "4px",
+                                }}
+                              >
+                                <CheckCircle2 size={12} /> Published to Students ({publishedCount})
+                              </span>
+                            ) : (
+                              <span
+                                style={{
+                                  fontSize: "0.72rem",
+                                  padding: "0.15rem 0.55rem",
+                                  borderRadius: "6px",
+                                  fontWeight: 700,
+                                  background: "#fffbeb",
+                                  color: "#b45309",
+                                  border: "1px solid #fde68a",
+                                  display: "inline-flex",
+                                  alignItems: "center",
+                                  gap: "4px",
+                                }}
+                              >
+                                <Clock size={12} /> Pending in Gradebook ({pendingCount} unreleased)
                               </span>
                             )}
                           </div>
@@ -1005,6 +1107,42 @@ export const TeacherExamCompiler: React.FC<TeacherExamCompilerProps> = ({
                           {flaggedCount > 0 ? "Ambiguity needs review" : "Zero mark ambiguity"}
                         </div>
                       </div>
+
+                      {/* Metric 5: Gradebook Publication */}
+                      <div
+                        style={{
+                          background: pendingCount > 0 ? "#fffdf5" : "#ffffff",
+                          borderRadius: "10px",
+                          padding: "0.65rem 0.95rem",
+                          border: pendingCount > 0 ? "1px solid #fde68a" : "1px solid #e2e8f0",
+                          boxShadow: "0 1px 2px rgba(0, 0, 0, 0.02)",
+                        }}
+                      >
+                        <div
+                          style={{
+                            fontSize: "0.68rem",
+                            color: pendingCount > 0 ? "#b45309" : "#64748b",
+                            textTransform: "uppercase",
+                            fontWeight: 700,
+                            letterSpacing: "0.03em",
+                          }}
+                        >
+                          Gradebook Status
+                        </div>
+                        <div
+                          style={{
+                            fontSize: "1.1rem",
+                            fontWeight: 800,
+                            color: totalScanned === 0 ? "#64748b" : pendingCount > 0 ? "#b45309" : "#059669",
+                            marginTop: "2px",
+                          }}
+                        >
+                          {totalScanned === 0 ? "0 Sheets" : pendingCount > 0 ? `${pendingCount} Pending` : `All Published`}
+                        </div>
+                        <div style={{ fontSize: "0.72rem", color: pendingCount > 0 ? "#b45309" : "#059669", marginTop: "1px" }}>
+                          {totalScanned === 0 ? "No submissions yet" : pendingCount > 0 ? "Awaiting teacher publish" : "Live for students"}
+                        </div>
+                      </div>
                     </div>
 
                     {/* Expanded Student Examination Records Table (Review Compilation) */}
@@ -1073,51 +1211,58 @@ export const TeacherExamCompiler: React.FC<TeacherExamCompilerProps> = ({
                               <span>Download Excel Roster</span>
                             </button>
 
-                            {/* Batch Deliver Grade Reports */}
-                            <button
-                              type="button"
-                              onClick={() => handleSendAllInGroup(exam, groupSubs)}
-                              disabled={groupSubs.length === 0 || isAllSent}
-                              style={{
-                                display: "inline-flex",
-                                alignItems: "center",
-                                gap: "6px",
-                                padding: "0.55rem 0.95rem",
-                                background: isAllSent
-                                  ? "#ecfdf5"
-                                  : "var(--primary-light-surface, #f5f3ff)",
-                                border: isAllSent
-                                  ? "1px solid #a7f3d0"
-                                  : "1px solid var(--primary-light-border, #ddd6fe)",
-                                borderRadius: "8px",
-                                color: isAllSent ? "#059669" : "var(--primary, #28166f)",
-                                fontSize: "0.82rem",
-                                fontWeight: 700,
-                                cursor:
-                                  groupSubs.length === 0 || isAllSent
-                                    ? "not-allowed"
-                                    : "pointer",
-                                opacity: isAllSent ? 0.95 : 1,
-                                transition: "all 0.15s ease",
-                              }}
-                              title={
-                                isAllSent
-                                  ? `Official grade reports have already been sent to all ${groupSubs.length} students.`
-                                  : "Deliver official grade report cards to all students in this class"
-                              }
-                            >
-                              {isAllSent ? (
-                                <>
-                                  <CheckCircle2 size={14} />
-                                  <span>All Grades Sent ({groupSubs.length})</span>
-                                </>
-                              ) : (
-                                <>
-                                  <Send size={14} />
-                                  <span>Send All ({groupSubs.length})</span>
-                                </>
-                              )}
-                            </button>
+                            {/* Batch Publish Grades to Student Portal */}
+                            {(() => {
+                              const pendingInBatch = groupSubs.filter((s) => s.status === "pending" || !s.is_published).length;
+                              const publishedInBatch = groupSubs.filter((s) => s.status === "published" || s.is_published === true);
+                              const isAllGroupPublished = groupSubs.length > 0 && pendingInBatch === 0;
+                              const isBusy = publishingExamId === exam.id;
+
+                              return (
+                                <button
+                                  type="button"
+                                  onClick={() => handlePublishAllInGroup(exam, groupSubs, isAllGroupPublished ? "pending" : "published")}
+                                  disabled={groupSubs.length === 0 || isBusy}
+                                  style={{
+                                    display: "inline-flex",
+                                    alignItems: "center",
+                                    gap: "6px",
+                                    padding: "0.55rem 1rem",
+                                    background: isAllGroupPublished
+                                      ? "#ecfdf5"
+                                      : "linear-gradient(135deg, #10b981 0%, #059669 100%)",
+                                    border: isAllGroupPublished
+                                      ? "1px solid #a7f3d0"
+                                      : "1px solid #059669",
+                                    borderRadius: "8px",
+                                    color: isAllGroupPublished ? "#059669" : "#ffffff",
+                                    fontSize: "0.82rem",
+                                    fontWeight: 700,
+                                    cursor: groupSubs.length === 0 || isBusy ? "not-allowed" : "pointer",
+                                    boxShadow: isAllGroupPublished ? "none" : "0 2px 4px rgba(16, 185, 129, 0.25)",
+                                    transition: "all 0.15s ease",
+                                    opacity: isBusy ? 0.7 : 1,
+                                  }}
+                                  title={
+                                    isAllGroupPublished
+                                      ? `All ${publishedInBatch.length} scores published. Click to unpublish all back to pending in gradebook.`
+                                      : `Publish all ${pendingInBatch} pending grades to student portals`
+                                  }
+                                >
+                                  {isAllGroupPublished ? (
+                                    <>
+                                      <CheckCircle2 size={15} />
+                                      <span>All Published ({publishedInBatch.length}) • Unpublish All</span>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <Send size={15} />
+                                      <span>Publish All ({pendingInBatch} Pending)</span>
+                                    </>
+                                  )}
+                                </button>
+                              );
+                            })()}
 
                             {/* Copy Summary */}
                             <button
@@ -1249,6 +1394,16 @@ export const TeacherExamCompiler: React.FC<TeacherExamCompilerProps> = ({
                                     }}
                                   >
                                     Status
+                                  </th>
+                                  <th
+                                    style={{
+                                      padding: "1rem 1.25rem",
+                                      color: "#475569",
+                                      fontWeight: 700,
+                                      fontSize: "0.82rem",
+                                    }}
+                                  >
+                                    Gradebook Publication
                                   </th>
                                   <th
                                     style={{
@@ -1420,6 +1575,47 @@ export const TeacherExamCompiler: React.FC<TeacherExamCompilerProps> = ({
                                         </span>
                                       </td>
 
+                                      {/* Gradebook Publication Status */}
+                                      <td style={{ padding: "1.1rem 1.25rem", verticalAlign: "middle" }}>
+                                        {sub.status === "published" || sub.is_published ? (
+                                          <span
+                                            style={{
+                                              display: "inline-flex",
+                                              alignItems: "center",
+                                              gap: "5px",
+                                              padding: "0.25rem 0.75rem",
+                                              borderRadius: "9999px",
+                                              fontSize: "0.76rem",
+                                              fontWeight: 700,
+                                              background: "#ecfdf5",
+                                              color: "#059669",
+                                              border: "1px solid #a7f3d0",
+                                            }}
+                                            title={sub.published_at ? `Published on ${formatDate(sub.published_at)}` : "Live in Student Portal"}
+                                          >
+                                            <CheckCircle2 size={13} /> Published
+                                          </span>
+                                        ) : (
+                                          <span
+                                            style={{
+                                              display: "inline-flex",
+                                              alignItems: "center",
+                                              gap: "5px",
+                                              padding: "0.25rem 0.75rem",
+                                              borderRadius: "9999px",
+                                              fontSize: "0.76rem",
+                                              fontWeight: 700,
+                                              background: "#fffbeb",
+                                              color: "#b45309",
+                                              border: "1px solid #fde68a",
+                                            }}
+                                            title="Pending in Gradebook — not yet visible in student portal"
+                                          >
+                                            <Clock size={13} /> Pending in Gradebook
+                                          </span>
+                                        )}
+                                      </td>
+
                                       {/* Scanned At */}
                                       <td
                                         style={{
@@ -1509,43 +1705,51 @@ export const TeacherExamCompiler: React.FC<TeacherExamCompilerProps> = ({
                                             <Download size={16} />
                                           </button>
 
-                                          {/* Send Score to Student Portal */}
-                                          <button
-                                            type="button"
-                                            onClick={() =>
-                                              handleSendSingleGrade(sub, matchedStudent, exam)
-                                            }
-                                            style={{
-                                              width: "36px",
-                                              height: "36px",
-                                              borderRadius: "8px",
-                                              border: sentSubmissionIds.has(sub.id)
-                                                ? "1px solid #a7f3d0"
-                                                : "1px solid #cbd5e1",
-                                              background: sentSubmissionIds.has(sub.id)
-                                                ? "#ecfdf5"
-                                                : "#ffffff",
-                                              color: sentSubmissionIds.has(sub.id)
-                                                ? "#059669"
-                                                : "#334155",
-                                              display: "inline-flex",
-                                              alignItems: "center",
-                                              justifyContent: "center",
-                                              cursor: "pointer",
-                                              transition: "all 0.15s ease",
-                                            }}
-                                            title={
-                                              sentSubmissionIds.has(sub.id)
-                                                ? "Official score report delivered to student"
-                                                : "Deliver grade report to student portal"
-                                            }
-                                          >
-                                            {sentSubmissionIds.has(sub.id) ? (
-                                              <CheckCircle2 size={16} />
-                                            ) : (
-                                              <Send size={15} />
-                                            )}
-                                          </button>
+                                          {/* Publish / Unpublish Single Student Score */}
+                                          {(() => {
+                                            const isPub = sub.status === "published" || sub.is_published === true;
+                                            const isBusy = publishingSubId === sub.id;
+                                            return (
+                                              <button
+                                                type="button"
+                                                onClick={() =>
+                                                  handlePublishSingleGrade(sub, matchedStudent, exam)
+                                                }
+                                                disabled={isBusy}
+                                                style={{
+                                                  width: "36px",
+                                                  height: "36px",
+                                                  borderRadius: "8px",
+                                                  border: isPub
+                                                    ? "1px solid #a7f3d0"
+                                                    : "1px solid #fde68a",
+                                                  background: isPub
+                                                    ? "#ecfdf5"
+                                                    : "#fffbeb",
+                                                  color: isPub
+                                                    ? "#059669"
+                                                    : "#b45309",
+                                                  display: "inline-flex",
+                                                  alignItems: "center",
+                                                  justifyContent: "center",
+                                                  cursor: isBusy ? "wait" : "pointer",
+                                                  transition: "all 0.15s ease",
+                                                  opacity: isBusy ? 0.7 : 1,
+                                                }}
+                                                title={
+                                                  isPub
+                                                    ? "Official score is live in student portal. Click to unpublish and return to pending in gradebook."
+                                                    : "Publish score to Student Portal"
+                                                }
+                                              >
+                                                {isPub ? (
+                                                  <CheckCircle2 size={16} />
+                                                ) : (
+                                                  <Send size={15} />
+                                                )}
+                                              </button>
+                                            );
+                                          })()}
                                         </div>
                                       </td>
                                     </tr>

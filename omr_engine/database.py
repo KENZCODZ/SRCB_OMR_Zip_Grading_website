@@ -1,12 +1,15 @@
 import os
 import json
 import uuid
+import logging
 from datetime import datetime, timezone
 from typing import Optional, Dict, Any, List
 
 import pymysql
 import pymysql.cursors
 from dotenv import load_dotenv
+
+logger = logging.getLogger(__name__)
 
 # Load environment variables from .env
 load_dotenv(os.path.join(os.path.dirname(__file__), ".env"))
@@ -367,6 +370,21 @@ def init_db():
     # Safe additive column upgrades to submissions
     try:
         cursor.execute("ALTER TABLE submissions ADD COLUMN student_id_extracted VARCHAR(64) DEFAULT NULL")
+        conn.commit()
+    except Exception:
+        pass
+    try:
+        cursor.execute("ALTER TABLE submissions ADD COLUMN status VARCHAR(20) NOT NULL DEFAULT 'pending'")
+        conn.commit()
+    except Exception:
+        pass
+    try:
+        cursor.execute("ALTER TABLE submissions ADD COLUMN is_published TINYINT(1) NOT NULL DEFAULT 0")
+        conn.commit()
+    except Exception:
+        pass
+    try:
+        cursor.execute("ALTER TABLE submissions ADD COLUMN published_at VARCHAR(64) DEFAULT NULL")
         conn.commit()
     except Exception:
         pass
@@ -1491,18 +1509,22 @@ def save_submission(
     total_questions: int,
     answers: Dict[str, Any],
     student_id_extracted: Optional[str] = None,
+    status: str = "pending",
+    is_published: bool = False,
+    published_at: Optional[str] = None,
 ) -> Dict[str, Any]:
     created_at = datetime.now(timezone.utc).isoformat()
     answers_str = json.dumps(answers)
+    is_pub_int = 1 if (is_published or status == "published") else 0
 
     conn = get_db_connection()
     cursor = conn.cursor()
     cursor.execute(
         """
-        INSERT INTO submissions (id, exam_id, student_id, student_id_extracted, score, total_questions, answers, created_at)
-        VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+        INSERT INTO submissions (id, exam_id, student_id, student_id_extracted, score, total_questions, answers, status, is_published, published_at, created_at)
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
         """,
-        (submission_id, exam_id, student_id, student_id_extracted or student_id, score, total_questions, answers_str, created_at),
+        (submission_id, exam_id, student_id, student_id_extracted or student_id, score, total_questions, answers_str, status, is_pub_int, published_at, created_at),
     )
     conn.commit()
     cursor.close()
@@ -1516,6 +1538,9 @@ def save_submission(
         "score": score,
         "total_questions": total_questions,
         "answers": answers,
+        "status": status,
+        "is_published": bool(is_pub_int),
+        "published_at": published_at,
         "created_at": created_at,
     }
 
@@ -1525,13 +1550,15 @@ def list_submissions(exam_id: Optional[str] = None) -> List[Dict[str, Any]]:
     cursor = conn.cursor()
     if exam_id:
         cursor.execute(
-            "SELECT id, exam_id, student_id, student_id_extracted, score, total_questions, answers, created_at "
+            "SELECT id, exam_id, student_id, student_id_extracted, score, total_questions, answers, "
+            "status, is_published, published_at, created_at "
             "FROM submissions WHERE exam_id = %s ORDER BY created_at DESC",
             (exam_id,),
         )
     else:
         cursor.execute(
-            "SELECT id, exam_id, student_id, student_id_extracted, score, total_questions, answers, created_at "
+            "SELECT id, exam_id, student_id, student_id_extracted, score, total_questions, answers, "
+            "status, is_published, published_at, created_at "
             "FROM submissions ORDER BY created_at DESC"
         )
     rows = cursor.fetchall()
@@ -1544,6 +1571,13 @@ def list_submissions(exam_id: Optional[str] = None) -> List[Dict[str, Any]]:
             parsed_answers = json.loads(r["answers"])
         except Exception:
             parsed_answers = {}
+        
+        status_val = r.get("status") or "pending"
+        is_pub_val = bool(r.get("is_published", 0))
+        # Ensure consistency between status and is_published
+        if status_val == "published":
+            is_pub_val = True
+
         results.append(
             {
                 "id": r["id"],
@@ -1553,10 +1587,70 @@ def list_submissions(exam_id: Optional[str] = None) -> List[Dict[str, Any]]:
                 "score": r["score"],
                 "total_questions": r["total_questions"],
                 "answers": parsed_answers,
+                "status": status_val,
+                "is_published": is_pub_val,
+                "published_at": r.get("published_at"),
                 "created_at": r["created_at"],
             }
         )
     return results
+
+
+def update_submission_status(submission_id: str, status: str = "published") -> Optional[Dict[str, Any]]:
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    is_published = 1 if status == "published" else 0
+    published_at = datetime.now(timezone.utc).isoformat() if is_published else None
+
+    cursor.execute(
+        """
+        UPDATE submissions 
+        SET status = %s, is_published = %s, published_at = %s
+        WHERE id = %s
+        """,
+        (status, is_published, published_at, submission_id),
+    )
+    conn.commit()
+    cursor.close()
+    conn.close()
+
+    return {
+        "id": submission_id,
+        "status": status,
+        "is_published": bool(is_published),
+        "published_at": published_at,
+    }
+
+
+def batch_update_submissions_status(exam_id: str, status: str = "published", submission_ids: Optional[List[str]] = None) -> int:
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    is_published = 1 if status == "published" else 0
+    published_at = datetime.now(timezone.utc).isoformat() if is_published else None
+
+    if submission_ids and len(submission_ids) > 0:
+        placeholders = ", ".join(["%s"] * len(submission_ids))
+        query = f"""
+            UPDATE submissions 
+            SET status = %s, is_published = %s, published_at = %s
+            WHERE exam_id = %s AND id IN ({placeholders})
+        """
+        params = [status, is_published, published_at, exam_id] + submission_ids
+        cursor.execute(query, params)
+    else:
+        cursor.execute(
+            """
+            UPDATE submissions 
+            SET status = %s, is_published = %s, published_at = %s
+            WHERE exam_id = %s
+            """,
+            (status, is_published, published_at, exam_id),
+        )
+    affected = cursor.rowcount
+    conn.commit()
+    cursor.close()
+    conn.close()
+    return affected
 
 
 # ==========================================

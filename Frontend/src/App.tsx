@@ -149,12 +149,12 @@ const getDefaultNotifications = (role?: string): AppNotification[] => {
       },
       {
         id: "notif-adm-3",
-        title: "Quick Scanner WASM Initialized",
-        message: "OpenCV 4.8.0 Computer Vision worker ready for rapid 50-item bubble sheet grading.",
+        title: "Institutional Directory Synchronized",
+        message: "Faculty and student academic directory records are up to date.",
         timestamp: "3h ago",
         type: "info",
         read: true,
-        targetTab: "quick-scan",
+        targetTab: "user-directory",
       },
     ];
   }
@@ -241,7 +241,7 @@ const getDefaultNotifications = (role?: string): AppNotification[] => {
         timestamp: "1d ago",
         type: "info",
         read: true,
-        targetTab: "quick-scan",
+        targetTab: "exams",
       },
     ];
   }
@@ -275,11 +275,15 @@ export default function App() {
     () => getStoredAuthUser()
   );
   const [activeTab, setActiveTab] = useState<AppTab>(() => {
-    const saved = getStoredActiveTab();
-    if (saved) return saved as AppTab;
     const user = getStoredAuthUser();
-    if (user?.role === "admin") return "dashboard";
+    const saved = getStoredActiveTab();
+    if (user?.role === "admin") {
+      if (!saved || saved === "quick-scan") return "dashboard";
+      return saved as AppTab;
+    }
     if (user?.role === "programme-head") return "academic-management";
+    if (saved === "quick-scan") return "dashboard";
+    if (saved) return saved as AppTab;
     return "dashboard";
   });
   const [navOrigin, setNavOrigin] = useState<"dashboard" | null>(null);
@@ -287,6 +291,14 @@ export default function App() {
 
   // Mobile Sidebar State
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
+
+  // Safety safeguard: Ensure admin never lands on quick-scan
+  useEffect(() => {
+    if (currentUser?.role === "admin" && activeTab === "quick-scan") {
+      setActiveTab("dashboard");
+      storeActiveTab("dashboard");
+    }
+  }, [currentUser, activeTab]);
 
   // Lock body scroll and dismiss on Escape when mobile drawer is open
   useEffect(() => {
@@ -800,7 +812,10 @@ export default function App() {
     await Promise.all([loadSubmissions(true), loadDashboardSummary(true)]);
 
     if (successCount > 0) {
-      addToast("success", `Successfully graded ${successCount} sheet(s).`);
+      addToast(
+        "success",
+        `Successfully scanned ${successCount} sheet(s). Recorded as Pending in Gradebook. Click "Publish Scores" when ready to release to students.`
+      );
       triggerConfetti();
     } else if (lastError) {
       throw lastError;
@@ -941,7 +956,7 @@ export default function App() {
 
     const initialTab: AppTab =
       selectedUser.role === "admin"
-        ? "quick-scan"
+        ? "dashboard"
         : selectedUser.role === "programme-head"
           ? "academic-management"
           : "dashboard";
@@ -981,7 +996,7 @@ export default function App() {
         department: backendUser.department ?? undefined,
         scope:
           backendUser.role === "admin"
-            ? "Quick OMR Scanner & Account Provisioning"
+            ? "Institutional User Management & Administration"
             : backendUser.role === "dean"
               ? "Institution-wide access across all departments and programmes"
               : backendUser.role === "programme-head"
@@ -992,9 +1007,9 @@ export default function App() {
         permissions:
           backendUser.role === "admin"
             ? [
-              "Quick OMR Sheet Scanner",
-              "Create and Manage Teacher & Student Accounts",
-              "Optical Mark Recognition Realtime Processing",
+              "Create and Manage Teacher, Student, & Staff Accounts",
+              "Institutional User Directory Oversight",
+              "Role-Based Access Control and System Diagnostics",
             ]
             : backendUser.role === "dean"
               ? [
@@ -2216,7 +2231,7 @@ export default function App() {
           )}
 
           {/* QUICK SCANNER TAB */}
-          {activeTab === "quick-scan" && (
+          {activeTab === "quick-scan" && currentUser?.role !== "admin" && (
             <div>
               <div
                 style={{
@@ -4371,6 +4386,10 @@ export default function App() {
               currentUser={currentUser}
               onSelectSubmission={viewSubmissionDetails}
               onInspectExam={(exam) => setInspectExam(exam)}
+              onSubmissionsUpdated={() => {
+                loadSubmissions(true);
+                loadDashboardSummary(true);
+              }}
               addToast={addToast}
               formatDate={formatDate}
             />

@@ -5,7 +5,6 @@ import {
   GraduationCap,
   ShieldCheck,
   Award,
-  Sparkles,
   BarChart3,
   CheckCircle2,
   Camera,
@@ -362,7 +361,7 @@ const ROLE_MANUALS: Record<UserRole, RoleManual> = {
     icon: BookOpen,
     quickActions: [
       { label: "Create New Exam", tab: "exams", icon: BookOpen },
-      { label: "Open Quick Scanner", tab: "quick-scan", icon: Sparkles },
+      { label: "Examinations & Grading", tab: "exams", icon: BookOpen },
       { label: "Gradebook & Records", tab: "results-management", icon: Award },
     ],
     overview: {
@@ -455,49 +454,25 @@ const ROLE_MANUALS: Record<UserRole, RoleManual> = {
     badgeColor: "#7e22ce",
     title: "System Administrator User Guide",
     subtitle:
-      "Administrative procedures for scanning stations, user account provisioning, system security, and database maintenance.",
+      "Administrative procedures for user account provisioning, system security, institutional directories, and database maintenance.",
     icon: ShieldCheck,
     quickActions: [
       { label: "Manage User Accounts", tab: "users", icon: Users },
-      { label: "Exams & Records", tab: "exams", icon: BookOpen },
+      { label: "Institutional Directory", tab: "users", icon: BookOpen },
     ],
     overview: {
       mission:
-        "Oversee portal operations, manage institutional access for all departments, and operate high-speed physical scanning stations.",
+        "Oversee portal operations, manage institutional access for all departments, and maintain institutional records and user security.",
       keyPoints: [
-        "High-speed optical mark recognition for batch exam grading stations",
         "Account provisioning for Deans, Chairs, Faculty, and Students",
+        "Institutional user directory and role-based access control",
         "Audit logs, access permissions, and database records integrity",
       ],
     },
     sections: [
       {
-        id: "admin-quick-scanner-station",
-        title: "1. Operating the OMR Quick Scanner Station",
-        icon: Sparkles,
-        summary: "Rapid optical bubble detection and scoring station workflow.",
-        steps: [
-          {
-            title: "Camera Station Setup",
-            description:
-              "Mount the webcam or mobile camera directly above a flat, clean surface with uniform overhead lighting.",
-          },
-          {
-            title: "Four-Corner Fiducial Locking",
-            description:
-              "Align the physical ZipGrade sheet inside the guide frame until all 4 corner boxes lock into place for 99.9% optical precision.",
-            tip: "Keep ambient lighting even and avoid sharp shadows across the bubble area.",
-          },
-          {
-            title: "Instant Scoring & Overlay Verification",
-            description:
-              "The optical mark recognition engine instantly registers bubble fills, tabulates student IDs, and displays the visual grade overlay.",
-          },
-        ],
-      },
-      {
         id: "admin-user-provisioning",
-        title: "2. Institutional User Provisioning & Roles",
+        title: "1. Institutional User Provisioning & Roles",
         icon: Users,
         summary: "Provision and audit institutional accounts across departments.",
         steps: [
@@ -516,7 +491,7 @@ const ROLE_MANUALS: Record<UserRole, RoleManual> = {
       },
       {
         id: "admin-system-maintenance",
-        title: "3. Cache & Performance Optimization",
+        title: "2. Cache & Performance Optimization",
         icon: ShieldCheck,
         summary: "Maintain instantaneous navigation and offline resilience.",
         steps: [

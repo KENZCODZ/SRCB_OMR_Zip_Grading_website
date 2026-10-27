@@ -22,6 +22,7 @@ import {
   Minimize2,
   FileCheck,
   ChevronUp,
+  Columns,
 } from 'lucide-react';
 import { useLiveOmrScanner, type CornerPoint, type LiveScanResult } from '../../hooks/useLiveOmrScanner';
 import { LiveScanOverlay } from './LiveScanOverlay';
@@ -769,6 +770,30 @@ export const CameraScanner: React.FC<CameraScannerProps> = ({
                 </div>
 
                 <div className="omr-mobile-top-actions">
+                  {/* Direct 2-Col Answers Table Toggle */}
+                  <button
+                    type="button"
+                    className={`omr-mobile-icon-btn ${mobileSheetOpen ? 'active-sheet-btn' : ''}`}
+                    onClick={() => setMobileSheetOpen((prev) => !prev)}
+                    title={mobileSheetOpen ? 'Return to Full Camera' : 'Inspect 2-Col Answers Table'}
+                    style={{
+                      background: mobileSheetOpen ? 'var(--primary, #28166f)' : 'rgba(255, 255, 255, 0.92)',
+                      color: mobileSheetOpen ? '#ffffff' : '#28166f',
+                      border: '1.5px solid rgba(255, 255, 255, 0.45)',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                      padding: '4px 8px',
+                      borderRadius: '8px',
+                      fontSize: '0.72rem',
+                      fontWeight: 800,
+                      width: 'auto',
+                    }}
+                  >
+                    <Columns size={14} />
+                    <span>{mobileSheetOpen ? 'Hide' : '2-Col'}</span>
+                  </button>
+
                   {hasTorch && (
                     <button
                       type="button"
@@ -1046,8 +1071,9 @@ export const CameraScanner: React.FC<CameraScannerProps> = ({
                     )}
                   </div>
 
-                  <div className="omr-mobile-peek-cta">
-                    <span>Inspect Answers</span>
+                  <div className="omr-mobile-peek-cta" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                    <Columns size={13} />
+                    <span>2-Col Answers</span>
                     <ChevronUp size={14} />
                   </div>
                 </div>

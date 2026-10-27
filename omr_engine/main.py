@@ -42,6 +42,8 @@ from database import (
     create_section,
     list_enrollments,
     bulk_import_enrollments,
+    update_submission_status,
+    batch_update_submissions_status,
 )
 from omr import OMREngine, OMRCornerDetectionError
 
@@ -656,7 +658,7 @@ async def grade_exam_sheet(
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"An unexpected error occurred during grading: {str(e)}")
 
-    # 6. Save submission to database
+    # 6. Save submission to database (defaults to pending in the gradebook)
     submission_id = str(uuid.uuid4())
     save_submission(
         submission_id=submission_id,
@@ -666,6 +668,8 @@ async def grade_exam_sheet(
         total_questions=results["total_questions"],
         answers=results["answers"],
         student_id_extracted=results["student_id"],
+        status="pending",
+        is_published=False,
     )
 
     # 7. Return graded results
@@ -677,6 +681,8 @@ async def grade_exam_sheet(
         "total_questions": results["total_questions"],
         "answers": results["answers"],
         "template_type": results.get("template_type"),
+        "status": "pending",
+        "is_published": False,
         "overlay_image": results["overlay_base64"],
         "ar_overlay_image": results.get("ar_overlay_base64"),
     }
@@ -685,6 +691,37 @@ async def grade_exam_sheet(
 @app.get("/api/submissions")
 def get_all_submissions(exam_id: Optional[str] = None):
     return list_submissions(exam_id)
+
+
+class PublishSinglePayload(BaseModel):
+    status: str = Field("published", description="Target status: 'published' or 'pending'")
+
+
+class PublishSubmissionsPayload(BaseModel):
+    status: str = Field("published", description="Target status: 'published' or 'pending'")
+    submission_ids: Optional[List[str]] = Field(None, description="Optional list of specific submission IDs to update")
+
+
+@app.post("/api/submissions/{submission_id}/publish")
+def publish_single_submission(submission_id: str, payload: Optional[PublishSinglePayload] = None):
+    status_to_set = payload.status if payload else "published"
+    res = update_submission_status(submission_id, status_to_set)
+    if not res:
+        raise HTTPException(status_code=404, detail="Submission not found.")
+    return {"status": "success", "submission": res}
+
+
+@app.post("/api/exams/{exam_id}/publish-submissions")
+def publish_exam_submissions(exam_id: str, payload: Optional[PublishSubmissionsPayload] = None):
+    status_to_set = payload.status if payload and payload.status else "published"
+    sub_ids = payload.submission_ids if payload else None
+    affected = batch_update_submissions_status(exam_id, status_to_set, sub_ids)
+    return {
+        "status": "success",
+        "exam_id": exam_id,
+        "submission_status": status_to_set,
+        "affected_count": affected,
+    }
 
 
 @app.post("/api/extract")

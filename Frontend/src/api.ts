@@ -440,6 +440,52 @@ export async function deleteExam(examId: string): Promise<{ status: string, mess
   }
 }
 
+export async function publishSubmission(
+  submissionId: string,
+  status: 'published' | 'pending' = 'published'
+): Promise<{ status: string; submission: { id: string; status: string; is_published: boolean; published_at?: string } }> {
+  try {
+    const response = await fetch(`${API_BASE}/api/submissions/${submissionId}/publish`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ status }),
+    });
+    const result = await handleResponse<{ status: string; submission: any }>(response, 'Failed to update submission publication status');
+    cacheManager.invalidate(/^submissions/);
+    cacheManager.invalidate('dashboard_summary');
+    return result;
+  } catch (err) {
+    catchNetworkError(err, 'Failed to update submission publication status');
+  }
+}
+
+export async function publishExamSubmissions(
+  examId: string,
+  status: 'published' | 'pending' = 'published',
+  submissionIds?: string[]
+): Promise<{ status: string; exam_id: string; submission_status: string; affected_count: number }> {
+  try {
+    const response = await fetch(`${API_BASE}/api/exams/${examId}/publish-submissions`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ status, submission_ids: submissionIds }),
+    });
+    const result = await handleResponse<{ status: string; exam_id: string; submission_status: string; affected_count: number }>(
+      response,
+      'Failed to publish exam submissions'
+    );
+    cacheManager.invalidate(/^submissions/);
+    cacheManager.invalidate('dashboard_summary');
+    return result;
+  } catch (err) {
+    catchNetworkError(err, 'Failed to publish exam submissions');
+  }
+}
+
 // ── Academic Management Services (Conceptual ERD Alignment) ─────────────────
 
 export async function fetchPrograms(options?: { forceRefresh?: boolean }): Promise<Program[]> {

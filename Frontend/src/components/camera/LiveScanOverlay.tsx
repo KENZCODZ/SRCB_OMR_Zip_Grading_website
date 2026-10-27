@@ -83,11 +83,7 @@ export const LiveScanOverlay: React.FC<LiveScanOverlayProps> = ({
 
   // Layout & Telemetry State
   const [showDiagnostics, setShowDiagnostics] = useState<boolean>(false); // Collapsed by default
-  const [viewLayout, setViewLayout] = useState<'columns' | 'matrix'>(() => {
-    if (isMobileDrawer) return 'matrix';
-    if (typeof window !== 'undefined' && window.innerWidth <= 768) return 'matrix';
-    return 'columns';
-  });
+  const [viewLayout, setViewLayout] = useState<'columns' | 'matrix'>('columns');
   const [filterMode, setFilterMode] = useState<'all' | 'locked' | 'review' | 'pending'>('all');
   const [latestQNum, setLatestQNum] = useState<string>('1');
 

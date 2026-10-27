@@ -1,16 +1,18 @@
 import React from "react";
-import { BookOpen, TrendingUp, CheckCircle2 } from "lucide-react";
+import { BookOpen, TrendingUp, CheckCircle2, Clock } from "lucide-react";
 
 interface StudentStatsHeaderProps {
   totalExamsTaken: number;
   avgPercentage: number;
   passedCount: number;
+  pendingCount?: number;
 }
 
 export const StudentStatsHeader: React.FC<StudentStatsHeaderProps> = ({
   totalExamsTaken,
   avgPercentage,
   passedCount,
+  pendingCount = 0,
 }) => {
   return (
     <div
@@ -20,7 +22,7 @@ export const StudentStatsHeader: React.FC<StudentStatsHeaderProps> = ({
         gap: "0.85rem",
       }}
     >
-      {/* Exams Completed */}
+      {/* Published Exams Completed */}
       <div
         style={{
           padding: "1rem 1.15rem",
@@ -42,7 +44,7 @@ export const StudentStatsHeader: React.FC<StudentStatsHeaderProps> = ({
               marginBottom: "0.25rem",
             }}
           >
-            Exams Completed
+            Published Exams
           </div>
           <div
             style={{
@@ -71,7 +73,7 @@ export const StudentStatsHeader: React.FC<StudentStatsHeaderProps> = ({
         </div>
       </div>
 
-      {/* Average Score */}
+      {/* Average Score (Published) */}
       <div
         style={{
           padding: "1rem 1.15rem",
@@ -172,6 +174,62 @@ export const StudentStatsHeader: React.FC<StudentStatsHeaderProps> = ({
           <CheckCircle2 size={18} />
         </div>
       </div>
+
+      {/* Pending Publication Tile (Shown if any pending) */}
+      {pendingCount > 0 && (
+        <div
+          style={{
+            padding: "1rem 1.15rem",
+            background: "#fffbeb",
+            border: "1px solid #fde68a",
+            borderRadius: "12px",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            boxShadow: "0 1px 3px rgba(0, 0, 0, 0.02)",
+          }}
+        >
+          <div>
+            <div
+              style={{
+                fontSize: "0.78rem",
+                fontWeight: 600,
+                color: "#b45309",
+                marginBottom: "0.25rem",
+              }}
+            >
+              Pending in Gradebook
+            </div>
+            <div
+              style={{
+                fontSize: "1.45rem",
+                fontWeight: 800,
+                color: "#92400e",
+                lineHeight: 1.1,
+              }}
+            >
+              {pendingCount}
+            </div>
+            <div style={{ fontSize: "0.7rem", color: "#b45309", marginTop: "2px" }}>
+              Awaiting teacher publish
+            </div>
+          </div>
+          <div
+            style={{
+              width: "36px",
+              height: "36px",
+              borderRadius: "8px",
+              background: "#fef3c7",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              color: "#b45309",
+            }}
+          >
+            <Clock size={18} />
+          </div>
+        </div>
+      )}
     </div>
   );
 };

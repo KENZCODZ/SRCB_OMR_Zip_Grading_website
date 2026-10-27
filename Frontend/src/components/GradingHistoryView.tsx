@@ -1009,7 +1009,8 @@ export const GradingHistoryView: React.FC<GradingHistoryViewProps> = ({
                         <th style={{ padding: "0.6rem 0.85rem", color: "#475569", fontWeight: 700 }}>Score</th>
                         <th style={{ padding: "0.6rem 0.85rem", color: "#475569", fontWeight: 700 }}>Equiv %</th>
                         <th style={{ padding: "0.6rem 0.85rem", color: "#475569", fontWeight: 700 }}>PH CHED Grade</th>
-                        <th style={{ padding: "0.6rem 0.85rem", color: "#475569", fontWeight: 700 }}>Status</th>
+                        <th style={{ padding: "0.6rem 0.85rem", color: "#475569", fontWeight: 700 }}>Passing</th>
+                        <th style={{ padding: "0.6rem 0.85rem", color: "#475569", fontWeight: 700 }}>Publication</th>
                         <th style={{ padding: "0.6rem 0.85rem", color: "#475569", fontWeight: 700 }}>Date Graded</th>
                         <th style={{ padding: "0.6rem 0.85rem", color: "#475569", fontWeight: 700, textAlign: "right" }}>Inspect Bubble</th>
                       </tr>
@@ -1081,6 +1082,45 @@ export const GradingHistoryView: React.FC<GradingHistoryViewProps> = ({
                                 {trans.status === "Passed" ? <CheckCircle2 size={13} /> : <AlertTriangle size={13} />}
                                 {trans.status}
                               </span>
+                            </td>
+
+                            {/* Publication Status */}
+                            <td style={{ padding: "0.6rem 0.85rem" }}>
+                              {sub.status === "published" || sub.is_published ? (
+                                <span
+                                  style={{
+                                    display: "inline-flex",
+                                    alignItems: "center",
+                                    gap: "4px",
+                                    padding: "0.15rem 0.5rem",
+                                    borderRadius: "6px",
+                                    fontSize: "0.72rem",
+                                    fontWeight: 700,
+                                    background: "#ecfdf5",
+                                    color: "#059669",
+                                    border: "1px solid #a7f3d0",
+                                  }}
+                                >
+                                  <CheckCircle2 size={11} /> Published
+                                </span>
+                              ) : (
+                                <span
+                                  style={{
+                                    display: "inline-flex",
+                                    alignItems: "center",
+                                    gap: "4px",
+                                    padding: "0.15rem 0.5rem",
+                                    borderRadius: "6px",
+                                    fontSize: "0.72rem",
+                                    fontWeight: 700,
+                                    background: "#fffbeb",
+                                    color: "#b45309",
+                                    border: "1px solid #fde68a",
+                                  }}
+                                >
+                                  <Clock size={11} /> Pending
+                                </span>
+                              )}
                             </td>
 
                             <td style={{ padding: "0.6rem 0.85rem", fontSize: "0.75rem", color: "#64748b" }}>

@@ -95,9 +95,13 @@ CREATE TABLE IF NOT EXISTS submissions (
     id VARCHAR(64) NOT NULL,
     exam_id VARCHAR(64) NOT NULL,
     student_id VARCHAR(64) DEFAULT NULL,
+    student_id_extracted VARCHAR(64) DEFAULT NULL,
     score SMALLINT UNSIGNED NOT NULL,
     total_questions SMALLINT UNSIGNED NOT NULL,
-    graded_at VARCHAR(50) NOT NULL,
+    status VARCHAR(20) NOT NULL DEFAULT 'pending' COMMENT 'pending | published',
+    is_published TINYINT(1) NOT NULL DEFAULT 0,
+    published_at VARCHAR(64) DEFAULT NULL,
+    created_at VARCHAR(50) NOT NULL,
     PRIMARY KEY (id),
     KEY idx_submissions_exam (exam_id),
     CONSTRAINT fk_submissions_exam
@@ -109,7 +113,7 @@ CREATE TABLE IF NOT EXISTS submissions (
 ) ENGINE=InnoDB
   DEFAULT CHARSET=utf8mb4
   COLLATE=utf8mb4_unicode_ci
-  COMMENT='One row per graded student answer sheet';
+  COMMENT='One row per graded student answer sheet (pending until published by teacher)';
 
 -- 5. submission_answers
 CREATE TABLE IF NOT EXISTS submission_answers (

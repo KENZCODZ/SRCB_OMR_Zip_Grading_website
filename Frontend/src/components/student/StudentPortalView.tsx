@@ -95,6 +95,7 @@ export const StudentPortalView: React.FC<StudentPortalViewProps> = ({
       const totalQuestions = submission.total_questions || exam.num_items || 50;
       const percentage = Math.round((submission.score / totalQuestions) * 100);
       const transmuted = calculateTransmutedGrade(submission.score, totalQuestions);
+      const isPublished = submission.status === "published" || submission.is_published === true;
 
       return {
         submission,
@@ -102,27 +103,39 @@ export const StudentPortalView: React.FC<StudentPortalViewProps> = ({
         totalQuestions,
         percentage,
         transmuted,
+        isPublished,
       };
     });
   }, [personalSubmissions, exams]);
 
-  // Overall personal metrics
-  const totalExamsTaken = studentExamRecords.length;
+  // Overall personal metrics computed exclusively from officially PUBLISHED exams
+  const publishedRecords = useMemo(
+    () => studentExamRecords.filter((r) => r.isPublished),
+    [studentExamRecords]
+  );
+  const pendingRecords = useMemo(
+    () => studentExamRecords.filter((r) => !r.isPublished),
+    [studentExamRecords]
+  );
+
+  const totalExamsTaken = publishedRecords.length;
   const avgPercentage =
     totalExamsTaken > 0
       ? Math.round(
-          studentExamRecords.reduce((acc, curr) => acc + curr.percentage, 0) /
+          publishedRecords.reduce((acc, curr) => acc + curr.percentage, 0) /
             totalExamsTaken
         )
       : 0;
 
-  const passedCount = studentExamRecords.filter(
+  const passedCount = publishedRecords.filter(
     (r) => r.transmuted.status === "Passed"
   ).length;
 
+  const pendingCount = pendingRecords.length;
+
   const filteredRecords = studentExamRecords.filter((record) => {
-    if (filterStatus === "passed" && record.transmuted.status !== "Passed") return false;
-    if (filterStatus === "failed" && record.transmuted.status !== "Failed") return false;
+    if (filterStatus === "passed" && (!record.isPublished || record.transmuted.status !== "Passed")) return false;
+    if (filterStatus === "failed" && (!record.isPublished || record.transmuted.status !== "Failed")) return false;
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
       const matchName = record.exam.name.toLowerCase().includes(q);
@@ -185,7 +198,34 @@ export const StudentPortalView: React.FC<StudentPortalViewProps> = ({
         totalExamsTaken={totalExamsTaken}
         avgPercentage={avgPercentage}
         passedCount={passedCount}
+        pendingCount={pendingCount}
       />
+
+      {/* Pending Release Notification Banner */}
+      {pendingCount > 0 && (
+        <div
+          style={{
+            padding: "0.9rem 1.25rem",
+            background: "#fffbeb",
+            border: "1px solid #fde68a",
+            borderRadius: "12px",
+            display: "flex",
+            alignItems: "center",
+            gap: "12px",
+            fontSize: "0.83rem",
+            color: "#92400e",
+            boxShadow: "0 1px 2px rgba(0, 0, 0, 0.02)",
+          }}
+        >
+          <span style={{ fontSize: "1.2rem" }}>⏳</span>
+          <div>
+            <strong>Notice: {pendingCount} examination score(s) pending publication.</strong>
+            <div style={{ fontSize: "0.78rem", color: "#b45309", marginTop: "2px" }}>
+              Your sheet has been scanned into the instructor's gradebook. Official grades, transmutation, and test feedback will unlock here once published by your teacher.
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Filter and Search Bar */}
       <div
@@ -230,7 +270,7 @@ export const StudentPortalView: React.FC<StudentPortalViewProps> = ({
             onClick={() => setFilterStatus("all")}
             style={{ fontSize: "0.78rem", borderRadius: "20px" }}
           >
-            All Exams ({studentExamRecords.length})
+            All Submissions ({studentExamRecords.length})
           </button>
           <button
             type="button"

@@ -25,11 +25,11 @@ export const mockUsers: AuthUser[] = [
     email: "admin@srcb.edu.ph",
     programme: "Institution-wide",
     department: "IT Systems & Administration",
-    scope: "Quick OMR Scanner & Account Provisioning",
+    scope: "Institutional User Management & Administration",
     permissions: [
-      "Quick OMR Sheet Scanner",
-      "Create and Manage Teacher & Student Accounts",
-      "Optical Mark Recognition Realtime Processing",
+      "Create and Manage Teacher, Student, & Staff Accounts",
+      "Institutional User Directory Oversight",
+      "Role-Based Access Control and System Diagnostics",
     ],
   },
   {

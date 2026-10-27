@@ -33,10 +33,14 @@ export interface Submission {
   id: string;
   exam_id: string;
   student_id: string;
+  student_id_extracted?: string;
   score: number;
   total_questions: number;
   answers: Record<string, SubmissionAnswerDetail>;
   created_at: string;
+  status?: 'pending' | 'published';
+  is_published?: boolean;
+  published_at?: string;
 }
 
 export interface QuickScanResult {
@@ -55,6 +59,8 @@ export interface GradeResult {
   ar_overlay_image?: string; // Base64 string (inverse perspective AR camera photo)
   template_type?: string;
   key?: string;
+  status?: 'pending' | 'published';
+  is_published?: boolean;
 }
 
 // Student Roster Import Entry
