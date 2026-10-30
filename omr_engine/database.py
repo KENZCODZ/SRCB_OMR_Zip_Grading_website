@@ -2,6 +2,7 @@ import os
 import json
 import uuid
 import logging
+import re
 from datetime import datetime, timezone
 from typing import Optional, Dict, Any, List
 
@@ -388,6 +389,71 @@ def init_db():
         conn.commit()
     except Exception:
         pass
+    try:
+        cursor.execute("ALTER TABLE submissions ADD COLUMN student_name VARCHAR(255) DEFAULT NULL")
+        conn.commit()
+    except Exception:
+        pass
+
+    # Synchronize student ID on users from students table if missing
+    try:
+        cursor.execute("""
+            UPDATE users u
+            JOIN students s ON u.id = s.user_id
+            SET u.student_id = s.institutional_id_number
+            WHERE (u.student_id IS NULL OR u.student_id = '')
+        """)
+        conn.commit()
+    except Exception:
+        pass
+
+    # Backfill student_name on existing submissions from registered student accounts
+    try:
+        cursor.execute("""
+            UPDATE submissions s
+            JOIN users u ON (
+                (s.student_id IS NOT NULL AND u.student_id = s.student_id)
+                OR (s.student_id IS NOT NULL AND u.student_id IS NOT NULL AND REPLACE(REPLACE(u.student_id, '-', ''), ' ', '') = REPLACE(REPLACE(s.student_id, '-', ''), ' ', ''))
+                OR (s.student_id IS NOT NULL AND u.id = s.student_id)
+            )
+            SET s.student_name = u.name
+            WHERE (s.student_name IS NULL OR s.student_name = '')
+        """)
+        conn.commit()
+    except Exception:
+        pass
+
+    try:
+        cursor.execute("""
+            UPDATE submissions s
+            JOIN students st ON (
+                (s.student_id IS NOT NULL AND st.institutional_id_number = s.student_id)
+                OR (s.student_id IS NOT NULL AND st.institutional_id_number IS NOT NULL AND REPLACE(REPLACE(st.institutional_id_number, '-', ''), ' ', '') = REPLACE(REPLACE(s.student_id, '-', ''), ' ', ''))
+                OR (s.student_id IS NOT NULL AND st.student_id = s.student_id)
+            )
+            JOIN users u ON st.user_id = u.id
+            SET s.student_name = u.name
+            WHERE (s.student_name IS NULL OR s.student_name = '')
+        """)
+        conn.commit()
+    except Exception:
+        pass
+    # 10. Password Reset Assistance Requests Table
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS password_reset_requests (
+            id VARCHAR(64) PRIMARY KEY,
+            email VARCHAR(255) NOT NULL,
+            name VARCHAR(255) DEFAULT NULL,
+            student_id VARCHAR(64) DEFAULT NULL,
+            user_id VARCHAR(64) DEFAULT NULL,
+            user_role VARCHAR(50) DEFAULT NULL,
+            current_password VARCHAR(255) DEFAULT NULL,
+            message TEXT DEFAULT NULL,
+            status VARCHAR(20) NOT NULL DEFAULT 'pending',
+            created_at VARCHAR(64) NOT NULL,
+            resolved_at VARCHAR(64) DEFAULT NULL
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    """)
 
     # Seed initial default users
     now_iso = datetime.now(timezone.utc).isoformat()
@@ -941,7 +1007,7 @@ def list_all_users() -> List[Dict[str, Any]]:
     conn = get_db_connection()
     cursor = conn.cursor()
     cursor.execute(
-        "SELECT id, name, email, role, programme, department, student_id, status, created_at "
+        "SELECT id, name, email, password, role, programme, department, student_id, status, created_at "
         "FROM users ORDER BY created_at DESC"
     )
     rows = cursor.fetchall()
@@ -995,6 +1061,104 @@ def authenticate_user(email: str, password: str) -> Dict[str, Any]:
         "user": user_info,
         **user_info,
     }
+
+
+def create_password_reset_request(
+    email: str,
+    name: Optional[str] = None,
+    student_id: Optional[str] = None,
+    message: Optional[str] = None,
+) -> Dict[str, Any]:
+    email_clean = (email or "").strip().lower()
+    user = get_user_by_email(email_clean)
+    request_id = f"pwd-req-{uuid.uuid4().hex[:10]}"
+    now_iso = datetime.now(timezone.utc).isoformat()
+
+    user_id = user["id"] if user else None
+    user_role = user["role"] if user else None
+    current_password = user["password"] if user else None
+    user_name = (name or (user["name"] if user else None) or "").strip()
+    student_id_val = (student_id or (user.get("student_id") if user else None) or "").strip()
+
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute(
+        """
+        INSERT INTO password_reset_requests
+            (id, email, name, student_id, user_id, user_role, current_password, message, status, created_at)
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, 'pending', %s)
+        """,
+        (
+            request_id,
+            email_clean,
+            user_name if user_name else None,
+            student_id_val if student_id_val else None,
+            user_id,
+            user_role,
+            current_password,
+            message.strip() if message else None,
+            now_iso,
+        ),
+    )
+    conn.commit()
+    cursor.close()
+    conn.close()
+
+    return {
+        "id": request_id,
+        "email": email_clean,
+        "name": user_name,
+        "student_id": student_id_val,
+        "user_id": user_id,
+        "user_role": user_role,
+        "current_password": current_password,
+        "message": message,
+        "status": "pending",
+        "created_at": now_iso,
+        "resolved_at": None,
+    }
+
+
+def list_password_reset_requests(status_filter: Optional[str] = None) -> List[Dict[str, Any]]:
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    if status_filter:
+        cursor.execute(
+            """
+            SELECT id, email, name, student_id, user_id, user_role, current_password, message, status, created_at, resolved_at
+            FROM password_reset_requests
+            WHERE status = %s
+            ORDER BY created_at DESC
+            """,
+            (status_filter,),
+        )
+    else:
+        cursor.execute(
+            """
+            SELECT id, email, name, student_id, user_id, user_role, current_password, message, status, created_at, resolved_at
+            FROM password_reset_requests
+            ORDER BY created_at DESC
+            """
+        )
+    rows = cursor.fetchall()
+    cursor.close()
+    conn.close()
+    return list(rows)
+
+
+def resolve_password_reset_request(request_id: str) -> bool:
+    now_iso = datetime.now(timezone.utc).isoformat()
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute(
+        "UPDATE password_reset_requests SET status = 'resolved', resolved_at = %s WHERE id = %s",
+        (now_iso, request_id),
+    )
+    affected = cursor.rowcount > 0
+    conn.commit()
+    cursor.close()
+    conn.close()
+    return affected
 
 
 # ==========================================
@@ -1498,6 +1662,91 @@ def delete_exam(exam_id: str) -> bool:
 
 
 # ==========================================
+# Student Account Lookup & Resolution Operations
+# ==========================================
+
+def lookup_student_by_id(student_id: Optional[str]) -> Optional[Dict[str, Any]]:
+    """
+    Looks up a registered student account by student_id or institutional ID or user ID.
+    Supports:
+    1. Exact match against users.student_id, students.institutional_id_number, or users.id
+    2. Normalized alphanumeric match (ignoring hyphens, spaces, underscores, dots)
+    3. Digits-only match (e.g. sheet bubbles '240032' for registered student 'C240032' or '20230001' for '2023-0001')
+    """
+    if not student_id:
+        return None
+    raw = student_id.strip()
+    if not raw or raw.count("?") >= 3:
+        return None
+
+    clean_alnum = re.sub(r'[^a-zA-Z0-9]', '', raw).lower()
+    clean_digits = re.sub(r'\D', '', raw)
+
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    try:
+        cursor.execute(
+            """
+            SELECT 
+                u.id, 
+                u.name, 
+                u.email, 
+                u.role, 
+                u.programme, 
+                u.department, 
+                COALESCE(u.student_id, s.institutional_id_number) AS student_id, 
+                s.institutional_id_number,
+                u.status
+            FROM users u
+            LEFT JOIN students s ON s.user_id = u.id
+            WHERE u.role = 'student' OR u.student_id IS NOT NULL OR s.institutional_id_number IS NOT NULL
+            """
+        )
+        candidates = cursor.fetchall()
+
+        # Priority 1: Exact matches
+        for c in candidates:
+            c_sid = str(c.get("student_id") or "").strip()
+            c_inst = str(c.get("institutional_id_number") or "").strip()
+            c_uid = str(c.get("id") or "").strip()
+            if raw.lower() in [c_sid.lower(), c_inst.lower(), c_uid.lower()]:
+                return c
+
+        # Priority 2: Clean alphanumeric match (ignoring hyphens/spaces)
+        if clean_alnum:
+            for c in candidates:
+                c_sid = re.sub(r'[^a-zA-Z0-9]', '', str(c.get("student_id") or "")).lower()
+                c_inst = re.sub(r'[^a-zA-Z0-9]', '', str(c.get("institutional_id_number") or "")).lower()
+                c_uid = re.sub(r'[^a-zA-Z0-9]', '', str(c.get("id") or "")).lower()
+                if clean_alnum in [c_sid, c_inst, c_uid]:
+                    return c
+
+        # Priority 3: Digits-only match (e.g. '240032' matches 'C240032')
+        if clean_digits and len(clean_digits) >= 4:
+            for c in candidates:
+                c_sid_dig = re.sub(r'\D', '', str(c.get("student_id") or ""))
+                c_inst_dig = re.sub(r'\D', '', str(c.get("institutional_id_number") or ""))
+                if clean_digits in [c_sid_dig, c_inst_dig]:
+                    return c
+            # Also check suffix/containment for 5+ digit matches
+            if len(clean_digits) >= 5:
+                for c in candidates:
+                    c_sid_dig = re.sub(r'\D', '', str(c.get("student_id") or ""))
+                    c_inst_dig = re.sub(r'\D', '', str(c.get("institutional_id_number") or ""))
+                    for target in [c_sid_dig, c_inst_dig]:
+                        if target and (target.endswith(clean_digits) or clean_digits.endswith(target)):
+                            return c
+
+        return None
+    except Exception as e:
+        logger.warning(f"Error in lookup_student_by_id for '{student_id}': {e}")
+        return None
+    finally:
+        cursor.close()
+        conn.close()
+
+
+# ==========================================
 # Submission Operations
 # ==========================================
 
@@ -1512,19 +1761,41 @@ def save_submission(
     status: str = "pending",
     is_published: bool = False,
     published_at: Optional[str] = None,
+    student_name: Optional[str] = None,
 ) -> Dict[str, Any]:
     created_at = datetime.now(timezone.utc).isoformat()
     answers_str = json.dumps(answers)
     is_pub_int = 1 if (is_published or status == "published") else 0
 
+    resolved_name = (student_name or "").strip()
+    if not resolved_name:
+        lookup_target = student_id or student_id_extracted
+        if lookup_target:
+            matched_user = lookup_student_by_id(lookup_target)
+            if matched_user and matched_user.get("name"):
+                resolved_name = matched_user["name"].strip()
+
     conn = get_db_connection()
     cursor = conn.cursor()
     cursor.execute(
         """
-        INSERT INTO submissions (id, exam_id, student_id, student_id_extracted, score, total_questions, answers, status, is_published, published_at, created_at)
-        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+        INSERT INTO submissions (id, exam_id, student_id, student_id_extracted, student_name, score, total_questions, answers, status, is_published, published_at, created_at)
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
         """,
-        (submission_id, exam_id, student_id, student_id_extracted or student_id, score, total_questions, answers_str, status, is_pub_int, published_at, created_at),
+        (
+            submission_id,
+            exam_id,
+            student_id,
+            student_id_extracted or student_id,
+            resolved_name or None,
+            score,
+            total_questions,
+            answers_str,
+            status,
+            is_pub_int,
+            published_at,
+            created_at,
+        ),
     )
     conn.commit()
     cursor.close()
@@ -1535,6 +1806,7 @@ def save_submission(
         "exam_id": exam_id,
         "student_id": student_id,
         "student_id_extracted": student_id_extracted or student_id,
+        "student_name": resolved_name or None,
         "score": score,
         "total_questions": total_questions,
         "answers": answers,
@@ -1548,19 +1820,41 @@ def save_submission(
 def list_submissions(exam_id: Optional[str] = None) -> List[Dict[str, Any]]:
     conn = get_db_connection()
     cursor = conn.cursor()
+    select_query = """
+        SELECT 
+            s.id, 
+            s.exam_id, 
+            s.student_id, 
+            s.student_id_extracted, 
+            s.student_name,
+            s.score, 
+            s.total_questions, 
+            s.answers, 
+            s.status, 
+            s.is_published, 
+            s.published_at, 
+            s.created_at,
+            u.name AS u_name,
+            u.email AS u_email,
+            u2.name AS u2_name,
+            u2.email AS u2_email
+        FROM submissions s
+        LEFT JOIN users u ON (
+            (s.student_id IS NOT NULL AND u.student_id = s.student_id)
+            OR (s.student_id IS NOT NULL AND u.student_id IS NOT NULL AND REPLACE(REPLACE(u.student_id, '-', ''), ' ', '') = REPLACE(REPLACE(s.student_id, '-', ''), ' ', ''))
+            OR (s.student_id IS NOT NULL AND u.id = s.student_id)
+        )
+        LEFT JOIN students st ON (
+            (s.student_id IS NOT NULL AND st.institutional_id_number = s.student_id)
+            OR (s.student_id IS NOT NULL AND st.institutional_id_number IS NOT NULL AND REPLACE(REPLACE(st.institutional_id_number, '-', ''), ' ', '') = REPLACE(REPLACE(s.student_id, '-', ''), ' ', ''))
+            OR (s.student_id IS NOT NULL AND st.student_id = s.student_id)
+        )
+        LEFT JOIN users u2 ON st.user_id = u2.id
+    """
     if exam_id:
-        cursor.execute(
-            "SELECT id, exam_id, student_id, student_id_extracted, score, total_questions, answers, "
-            "status, is_published, published_at, created_at "
-            "FROM submissions WHERE exam_id = %s ORDER BY created_at DESC",
-            (exam_id,),
-        )
+        cursor.execute(select_query + " WHERE s.exam_id = %s ORDER BY s.created_at DESC", (exam_id,))
     else:
-        cursor.execute(
-            "SELECT id, exam_id, student_id, student_id_extracted, score, total_questions, answers, "
-            "status, is_published, published_at, created_at "
-            "FROM submissions ORDER BY created_at DESC"
-        )
+        cursor.execute(select_query + " ORDER BY s.created_at DESC")
     rows = cursor.fetchall()
     cursor.close()
     conn.close()
@@ -1574,9 +1868,18 @@ def list_submissions(exam_id: Optional[str] = None) -> List[Dict[str, Any]]:
         
         status_val = r.get("status") or "pending"
         is_pub_val = bool(r.get("is_published", 0))
-        # Ensure consistency between status and is_published
         if status_val == "published":
             is_pub_val = True
+
+        resolved_name = r.get("student_name") or r.get("u_name") or r.get("u2_name")
+        resolved_email = r.get("u_email") or r.get("u2_email")
+
+        # Fallback if student_name was not resolved in SQL join (e.g. numeric bubbled ID like 240032 -> C240032)
+        if not resolved_name and r.get("student_id"):
+            fallback_stud = lookup_student_by_id(r["student_id"])
+            if fallback_stud:
+                resolved_name = fallback_stud.get("name")
+                resolved_email = resolved_email or fallback_stud.get("email")
 
         results.append(
             {
@@ -1584,6 +1887,8 @@ def list_submissions(exam_id: Optional[str] = None) -> List[Dict[str, Any]]:
                 "exam_id": r["exam_id"],
                 "student_id": r["student_id"],
                 "student_id_extracted": r.get("student_id_extracted") or r["student_id"],
+                "student_name": resolved_name,
+                "student_email": resolved_email,
                 "score": r["score"],
                 "total_questions": r["total_questions"],
                 "answers": parsed_answers,

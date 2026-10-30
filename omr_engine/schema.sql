@@ -96,6 +96,7 @@ CREATE TABLE IF NOT EXISTS submissions (
     exam_id VARCHAR(64) NOT NULL,
     student_id VARCHAR(64) DEFAULT NULL,
     student_id_extracted VARCHAR(64) DEFAULT NULL,
+    student_name VARCHAR(255) DEFAULT NULL,
     score SMALLINT UNSIGNED NOT NULL,
     total_questions SMALLINT UNSIGNED NOT NULL,
     status VARCHAR(20) NOT NULL DEFAULT 'pending' COMMENT 'pending | published',
@@ -135,3 +136,24 @@ CREATE TABLE IF NOT EXISTS submission_answers (
   DEFAULT CHARSET=utf8mb4
   COLLATE=utf8mb4_unicode_ci
   COMMENT='Student-marked answer for each question of a submission';
+
+-- 6. password_reset_requests
+CREATE TABLE IF NOT EXISTS password_reset_requests (
+    id VARCHAR(64) PRIMARY KEY,
+    email VARCHAR(255) NOT NULL,
+    name VARCHAR(255) DEFAULT NULL,
+    student_id VARCHAR(64) DEFAULT NULL,
+    user_id VARCHAR(64) DEFAULT NULL,
+    user_role VARCHAR(50) DEFAULT NULL,
+    current_password VARCHAR(255) DEFAULT NULL,
+    message TEXT DEFAULT NULL,
+    status VARCHAR(20) NOT NULL DEFAULT 'pending',
+    created_at VARCHAR(64) NOT NULL,
+    resolved_at VARCHAR(64) DEFAULT NULL,
+    KEY idx_pwd_email (email),
+    KEY idx_pwd_status (status)
+) ENGINE=InnoDB
+  DEFAULT CHARSET=utf8mb4
+  COLLATE=utf8mb4_unicode_ci
+  COMMENT='Password reset requests received from forgotten password submissions';
+

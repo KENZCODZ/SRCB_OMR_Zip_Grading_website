@@ -44,6 +44,10 @@ from database import (
     bulk_import_enrollments,
     update_submission_status,
     batch_update_submissions_status,
+    create_password_reset_request,
+    list_password_reset_requests,
+    resolve_password_reset_request,
+    lookup_student_by_id,
 )
 from omr import OMREngine, OMRCornerDetectionError
 
@@ -154,6 +158,13 @@ class AdminCreateUserRequest(BaseModel):
     programme: Optional[str] = Field(default="BSIT", description="Academic Programme")
     department: Optional[str] = Field(default="Computing Studies", description="Academic Department")
     student_id: Optional[str] = Field(default=None, description="Student ID if student")
+
+
+class ForgotPasswordRequest(BaseModel):
+    email: str = Field(..., min_length=3, description="Institutional School Email")
+    name: Optional[str] = Field(default=None, description="User Full Name")
+    student_id: Optional[str] = Field(default=None, description="Student or Faculty ID")
+    message: Optional[str] = Field(default=None, description="Message or details for the administrator")
 
 
 class StudentBatchItem(BaseModel):
@@ -351,6 +362,37 @@ def remove_user(user_id: str):
     if not deleted:
         raise HTTPException(status_code=404, detail="User account not found.")
     return {"status": "success", "message": "User account successfully deleted."}
+
+
+@app.post("/api/auth/forgot-password", status_code=status.HTTP_201_CREATED)
+def submit_forgot_password(payload: ForgotPasswordRequest):
+    try:
+        req = create_password_reset_request(
+            email=payload.email,
+            name=payload.name,
+            student_id=payload.student_id,
+            message=payload.message,
+        )
+        return {
+            "status": "success",
+            "message": "Your password assistance request has been received by the System Administrator.",
+            "request": req,
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to submit assistance request: {str(e)}")
+
+
+@app.get("/api/admin/password-reset-requests")
+def get_password_reset_requests(status: Optional[str] = None):
+    return list_password_reset_requests(status_filter=status)
+
+
+@app.post("/api/admin/password-reset-requests/{request_id}/resolve")
+def resolve_pwd_request(request_id: str):
+    success = resolve_password_reset_request(request_id)
+    if not success:
+        raise HTTPException(status_code=404, detail="Password assistance request not found.")
+    return {"status": "success", "message": "Password assistance request marked as resolved."}
 
 
 @app.get("/api/dashboard/summary")
@@ -658,24 +700,32 @@ async def grade_exam_sheet(
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"An unexpected error occurred during grading: {str(e)}")
 
-    # 6. Save submission to database (defaults to pending in the gradebook)
+    # 6. Resolve registered student account and save submission to database
+    student_id_found = results.get("student_id")
+    student_account = lookup_student_by_id(student_id_found) if student_id_found else None
+    resolved_student_name = student_account.get("name") if student_account else None
+    resolved_student_email = student_account.get("email") if student_account else None
+
     submission_id = str(uuid.uuid4())
     save_submission(
         submission_id=submission_id,
         exam_id=exam_id,
-        student_id=results["student_id"],
+        student_id=student_id_found,
         score=results["score"],
         total_questions=results["total_questions"],
         answers=results["answers"],
-        student_id_extracted=results["student_id"],
+        student_id_extracted=student_id_found,
+        student_name=resolved_student_name,
         status="pending",
         is_published=False,
     )
 
-    # 7. Return graded results
+    # 7. Return graded results with resolved student name
     return {
         "submission_id": submission_id,
-        "student_id": results["student_id"],
+        "student_id": student_id_found,
+        "student_name": resolved_student_name,
+        "student_email": resolved_student_email,
         "key": results.get("key"),
         "score": results["score"],
         "total_questions": results["total_questions"],
@@ -752,9 +802,14 @@ async def extract_sheet_answers(
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"An unexpected error occurred during bubble extraction: {str(e)}")
 
-    # 5. Return results
+    # 5. Resolve student account and return results
+    student_id_found = results.get("student_id")
+    student_account = lookup_student_by_id(student_id_found) if student_id_found else None
+    resolved_student_name = student_account.get("name") if student_account else None
+
     return {
-        "student_id": results["student_id"],
+        "student_id": student_id_found,
+        "student_name": resolved_student_name,
         "answers": results["answers"],
         "template_type": results.get("template_type"),
         "overlay_image": results["overlay_base64"],
